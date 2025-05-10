@@ -13,6 +13,7 @@ This OS is not a metaphor. It is a structural blueprint.
 - BI-compatible
 - DAO-pluggable
 - Optional participation
+- life_death
 - Built-in existential drift protection
 
 ## 📦 Contents
