@@ -10,11 +10,15 @@ rebalance post-capitalist values, and support human-scale freedom of questioning
 This OS is not a metaphor. It is a structural blueprint.
 
 - Thought → Structure → Flow → Reboot
-- capitalism_limit
-- BI-compatible
-- DAO-pluggable
-- Optional participation
-- life_death
+- 01_capitalism_limit.md – Capitalism as a structural limiter of distributed value
+- 02_README.md – Overview and installation philosophy of the Koseisha OS
+- 03_flowchart.md – Logic flow of Basic Income and Thought Reboot
+- 04_dao_connection.md – DAO integration and smart contract modules
+- 05_values.md – Core value system: Question / Resonance / Connection
+- 06_social_layers.md – Social structure: participatory vs. passive modes
+- 07_life_death.md – Life as connection, death as disconnection
+- 08_install_me_if_you_dare.md – Optional execution trigger (humor module)
+- [09_happiness_module.md](./09_happiness_module.md) – Happiness as a structural outcome of connection, resonance, and sensitivity
 - Built-in existential drift protection
 
 ## 📦 Contents
