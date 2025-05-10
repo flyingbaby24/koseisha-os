@@ -10,6 +10,7 @@ rebalance post-capitalist values, and support human-scale freedom of questioning
 This OS is not a metaphor. It is a structural blueprint.
 
 - Thought → Structure → Flow → Reboot
+- capitalism_limit
 - BI-compatible
 - DAO-pluggable
 - Optional participation
