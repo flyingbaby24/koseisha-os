@@ -1,0 +1,107 @@
+ThoughtMap v0.1
+
+ThoughtMap is an experimental project that visualizes thought patterns hidden within song lyrics.
+
+Originally created from a dataset of 992 self-written songs, the project explores whether lyrics can be used to understand how a person thinks, what themes they repeatedly return to, and how their worldview evolves over time.
+
+Core Concept
+
+Instead of classifying songs by traditional genres such as love, rock, pop, or jazz, ThoughtMap analyzes lyrics based on recurring patterns of thought.
+
+Examples include:
+
+Society
+Cognition
+Experimentation
+Causality
+Introspection
+Philosophy
+Technology
+
+The goal is not to classify music, but to map the structure of thought itself.
+
+Current Features
+1. Lyric Embedding
+
+Converts lyrics into vector representations using language embeddings.
+
+2. Similarity Search
+
+Find songs that are semantically close to a given lyric or idea.
+
+3. Thought Clustering
+
+Groups songs into recurring philosophical and thematic domains.
+
+4. Thought Continent Visualization
+
+Displays songs and cluster centers on a shared semantic map.
+
+5. Civilization Profile
+
+Aggregates clusters into higher-level "civilizations" and calculates their distribution.
+
+6. Thought Search Engine
+
+Search for ideas such as:
+
+Algorithm criticism
+Subjectivity
+Failure
+Community dependency
+Capitalism criticism
+
+and discover related works.
+
+Current Workflow
+
+Lyrics
+
+↓
+
+Embedding
+
+↓
+
+Similarity Search
+
+↓
+
+Clustering
+
+↓
+
+Thought Continent
+
+↓
+
+Civilization Profile
+
+↓
+
+Thought Search
+
+Future Roadmap
+
+Planned features include:
+
+Multi-author comparison
+Similar thinker discovery
+Automatic cluster naming using AI
+New song diagnosis
+Timeline analysis
+Web application
+Public search engine
+Long-Term Vision
+
+ThoughtMap aims to become a search engine for ideas.
+
+Users will be able to:
+
+Upload lyrics or writing
+Discover their own thought profile
+Compare themselves with other creators
+Find people with similar thinking patterns
+Explore niche and common themes
+
+The project treats creative works not only as art, but also as traces of cognition.
