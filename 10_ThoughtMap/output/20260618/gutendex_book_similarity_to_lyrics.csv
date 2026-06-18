@@ -1,0 +1,83 @@
+﻿book_id,canonical_author,author,title,similarity
+1672,Plato,Plato,Gorgias,0.44988406
+22764,Darwin,"Darwin, Charles",On the Origin of Species by Means of Natural Selection: or the Preservation of Favoured Races in the Struggle for Life. (2nd edition),0.44490463
+1658,Plato,Plato,Phaedo,0.40879393
+1726,Plato,Plato,Theaetetus,0.4004181
+1636,Plato,Plato,Phaedrus,0.384996
+1600,Plato,Plato,Symposium,0.37365317
+43523,Thoreau,"Thoreau, Henry David","Familiar Letters: The Writings of Henry David Thoreau, Volume 06 (of 20)",0.37232715
+1656,Plato,Plato,Apology,0.36089265
+52263,Nietzsche,"Nietzsche, Friedrich Wilhelm","The Twilight of the Idols; or, How to Philosophize with the Hammer. The Antichrist: Complete Works, Volume Sixteen",0.35447615
+1227,Darwin,"Darwin, Charles",The Expression of the Emotions in Man and Animals,0.34748894
+26663,Tolstoy,"Tolstoy, Leo, graf",Fruits of Culture,0.34695992
+21839,Austen,"Austen, Jane",Sense and Sensibility,0.342545
+43302,Tolstoy,"Tolstoy, Leo, graf","""The Kingdom of God Is Within You"": Christianity Not as a Mystic Religion but as a New Theory of Life",0.34211457
+26661,Tolstoy,"Tolstoy, Leo, graf",The Power of Darkness,0.33313432
+1572,Plato,Plato,Timaeus,0.330908
+1998,Nietzsche,"Nietzsche, Friedrich Wilhelm",Thus Spake Zarathustra: A Book for All and None,0.3306185
+64908,Tolstoy,"Tolstoy, Leo, graf",What Is Art?,0.33055165
+52190,Nietzsche,"Nietzsche, Friedrich Wilhelm","Ecce Homo: Complete Works, Volume Seventeen",0.32733452
+58273,Thoreau,"Thoreau, Henry David",Index of the Project Gutenberg Works of Henry David Thoreau,0.32420456
+27726,Tolstoy,"Tolstoy, Leo, graf",Tolstoy on Shakespeare: A Critical Essay on Shakespeare,0.32409775
+46,Dickens,"Dickens, Charles",A Christmas Carol in Prose; Being a Ghost Story of Christmas,0.31857753
+98,Dickens,"Dickens, Charles",A Tale of Two Cities,0.31553355
+6920,Marcus Aurelius,"Marcus Aurelius, Emperor of Rome",Thoughts of Marcus Aurelius,0.31465566
+52915,Nietzsche,"Nietzsche, Friedrich Wilhelm",The Will to Power: An Attempted Transvaluation of All Values. Book III and IV,0.31126338
+59196,Dostoyevsky,"Dostoyevsky, Fyodor",Index of the Project Gutenberg Works of Fyodor Dostoevsky,0.31062055
+51356,Nietzsche,"Nietzsche, Friedrich Wilhelm","The Birth of Tragedy; or, Hellenism and Pessimism",0.3085502
+730,Dickens,"Dickens, Charles",Oliver Twist,0.30526096
+1023,Dickens,"Dickens, Charles",Bleak House,0.30325323
+52319,Nietzsche,"Nietzsche, Friedrich Wilhelm","The Genealogy of Morals: The Complete Works, Volume Thirteen, edited by Dr. Oscar Levy.",0.2998004
+1028,Bronte,"Brontë, Charlotte",The Professor,0.2965138
+23427,Butler,"Butler, Samuel","Evolution, Old & New: Or, the Theories of Buffon, Dr. Erasmus Darwin and Lamarck,; as compared with that of Charles Darwin",0.29583782
+4363,Nietzsche,"Nietzsche, Friedrich Wilhelm",Beyond Good and Evil,0.2947747
+57393,Thoreau,"Thoreau, Henry David","Journal 01, 1837-1846: The Writings of Henry David Thoreau, Volume 07 (of 20)",0.29466432
+59031,Thoreau,"Thoreau, Henry David","Journal 02, 1850-September 15, 1851: The Writings of Henry David Thoreau, Volume 08 (of 20)",0.29363638
+1022,Thoreau,"Thoreau, Henry David",Walking,0.29276082
+1400,Dickens,"Dickens, Charles",Great Expectations,0.29031816
+9182,Bronte,"Brontë, Charlotte",Villette,0.2875771
+161,Austen,"Austen, Jane",Sense and Sensibility,0.28661537
+766,Dickens,"Dickens, Charles",David Copperfield,0.28589302
+1700,Gaskell,"Gaskell, Elizabeth Cleghorn",The Life of Charlotte Brontë — Volume 2,0.28194433
+9695,Dickens,"Dickens, Charles",Bleak House,0.2777847
+4232,Thoreau,"Thoreau, Henry David",A Week on the Concord and Merrimack Rivers,0.27016652
+30486,Bronte,"Brontë, Charlotte",Shirley,0.26766682
+6157,Tolstoy,"Tolstoy, Leo, graf","What Men Live By, and Other Tales",0.26634645
+59195,Tolstoy,"Tolstoy, Leo, graf",Index of the Project Gutenberg Works of Leon Tolstoy,0.26484472
+564,Dickens,"Dickens, Charles",The Mystery of Edwin Drood,0.26474583
+55201,Plato,Plato,The Republic of Plato,0.2640515
+1399,Tolstoy,"Tolstoy, Leo, graf",Anna Karenina,0.26384145
+38145,Nietzsche,"Nietzsche, Friedrich Wilhelm","Human, All Too Human: A Book for Free Spirits",0.25994867
+19322,Nietzsche,"Nietzsche, Friedrich Wilhelm",The Antichrist,0.2582811
+71,Thoreau,"Thoreau, Henry David",On the Duty of Civil Disobedience,0.25784004
+2680,Marcus Aurelius,"Marcus Aurelius, Emperor of Rome",Meditations,0.25500515
+55317,Marcus Aurelius,"Marcus Aurelius, Emperor of Rome",The Meditations of the Emperor Marcus Aurelius Antoninus: A new rendering based on the Foulis translation of 1742,0.2513873
+205,Thoreau,"Thoreau, Henry David","Walden, and On The Duty Of Civil Disobedience",0.24845596
+1750,Plato,Plato,Laws,0.24655269
+42671,Austen,"Austen, Jane",Pride and Prejudice,0.24533087
+1260,Bronte,"Brontë, Charlotte",Jane Eyre: An Autobiography,0.23401065
+2600,Tolstoy,"Tolstoy, Leo, graf",War and Peace,0.2323647
+15877,Marcus Aurelius,"Marcus Aurelius, Emperor of Rome",Thoughts of Marcus Aurelius Antoninus,0.23030543
+1212,Austen,"Austen, Jane",Love and Freindship [sic],0.22307679
+2087,Darwin,"Darwin, Charles",Life and Letters of Charles Darwin — Volume 1,0.22303109
+121,Austen,"Austen, Jane",Northanger Abbey,0.22033852
+22728,Darwin,"Darwin, Charles",The Foundations of the Origin of Species: Two Essays written in 1842 and 1844,0.22007646
+47530,Dickens,"Dickens, Charles","Oliver Twist, Vol. 2 (of 3)",0.21621135
+1342,Austen,"Austen, Jane",Pride and Prejudice,0.21151936
+28920,Tolstoy,"Tolstoy, Leo, graf","War and Peace, Book 01: 1805",0.19751556
+24923,Darwin,"Darwin, Charles","The Variation of Animals and Plants Under Domestication, Vol. I.",0.19713375
+26301,Austen,"Austen, Jane",Pride and Prejudice,0.1939829
+25012,Nietzsche,"Nietzsche, Friedrich Wilhelm","The Case of Wagner, Nietzsche Contra Wagner, and Selected Aphorisms.",0.18892086
+59784,Marcus Aurelius,"Marcus Aurelius, Emperor of Rome",Index of the Project Gutenberg Works of Marcus Aurelius Antoninus,0.1870532
+2739,Darwin,"Darwin, Charles",More Letters of Charles Darwin — Volume 1: A Record of His Work in a Series of Hitherto Unpublished Letters,0.17706825
+1228,Darwin,"Darwin, Charles","On the Origin of Species By Means of Natural Selection: Or, the Preservation of Favoured Races in the Struggle for Life",0.15385994
+42500,Thoreau,"Thoreau, Henry David","The Maine Woods: The Writings of Henry David Thoreau, Volume 03 (of 20)",0.15353201
+21153,Darwin,"Darwin, Charles",On the Origin of Species by Means of Natural Selection,0.14980838
+21181,Bronte,"Brontë, Charlotte",Villette,0.14969453
+158,Austen,"Austen, Jane",Emma,0.14420083
+19839,Austen,"Austen, Jane",Emma,0.13531525
+31100,Austen,"Austen, Jane",The Complete Project Gutenberg Works of Jane Austen: A Linked Index of all PG Editions of Jane Austen,0.13339993
+1827,Gaskell,"Gaskell, Elizabeth Cleghorn",The Life of Charlotte Brontë — Volume 1,0.12763499
+23077,Bronte,"Brontë, Charlotte",Jane Eyre,0.12502185
+2009,Darwin,"Darwin, Charles","The Origin of Species by Means of Natural Selection: Or, the Preservation of Favoured Races in the Struggle for Life, 6th Edition",0.11340349
+26289,Thoreau,"Thoreau, Henry David",Walden,0.10763932

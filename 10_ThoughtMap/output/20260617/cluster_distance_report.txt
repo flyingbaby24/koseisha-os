@@ -1,0 +1,80 @@
+============================================================
+Cluster 0 に近いCluster
+Cluster 5: distance=0.1306
+Cluster 7: distance=0.2318
+Cluster 4: distance=0.2377
+Cluster 6: distance=0.2756
+Cluster 2: distance=0.3213
+Cluster 1: distance=0.3497
+Cluster 3: distance=0.3754
+
+============================================================
+Cluster 1 に近いCluster
+Cluster 7: distance=0.1389
+Cluster 5: distance=0.2268
+Cluster 4: distance=0.2690
+Cluster 2: distance=0.3348
+Cluster 0: distance=0.3497
+Cluster 6: distance=0.3501
+Cluster 3: distance=0.3786
+
+============================================================
+Cluster 2 に近いCluster
+Cluster 7: distance=0.2192
+Cluster 4: distance=0.2837
+Cluster 5: distance=0.2899
+Cluster 0: distance=0.3213
+Cluster 1: distance=0.3348
+Cluster 6: distance=0.4028
+Cluster 3: distance=0.5021
+
+============================================================
+Cluster 3 に近いCluster
+Cluster 4: distance=0.3064
+Cluster 5: distance=0.3172
+Cluster 7: distance=0.3354
+Cluster 0: distance=0.3754
+Cluster 1: distance=0.3786
+Cluster 6: distance=0.3900
+Cluster 2: distance=0.5021
+
+============================================================
+Cluster 4 に近いCluster
+Cluster 7: distance=0.1934
+Cluster 6: distance=0.2176
+Cluster 0: distance=0.2377
+Cluster 5: distance=0.2449
+Cluster 1: distance=0.2690
+Cluster 2: distance=0.2837
+Cluster 3: distance=0.3064
+
+============================================================
+Cluster 5 に近いCluster
+Cluster 0: distance=0.1306
+Cluster 7: distance=0.1562
+Cluster 1: distance=0.2268
+Cluster 6: distance=0.2341
+Cluster 4: distance=0.2449
+Cluster 2: distance=0.2899
+Cluster 3: distance=0.3172
+
+============================================================
+Cluster 6 に近いCluster
+Cluster 4: distance=0.2176
+Cluster 5: distance=0.2341
+Cluster 7: distance=0.2484
+Cluster 0: distance=0.2756
+Cluster 1: distance=0.3501
+Cluster 3: distance=0.3900
+Cluster 2: distance=0.4028
+
+============================================================
+Cluster 7 に近いCluster
+Cluster 1: distance=0.1389
+Cluster 5: distance=0.1562
+Cluster 4: distance=0.1934
+Cluster 2: distance=0.2192
+Cluster 0: distance=0.2318
+Cluster 6: distance=0.2484
+Cluster 3: distance=0.3354
+
