@@ -1,0 +1,3 @@
+cd D:\ThoughtMap\web
+
+C:/Users/flyin/AppData/Local/Programs/Python/Python313/python.exe -m streamlit run app.py
