@@ -1,0 +1,8 @@
+TITLE: Magna Carta 1215
+AUTHOR: England
+YEAR: 1215
+SOURCE_TYPE: charter
+SOURCE: Avalon Project
+URL: https://avalon.law.yale.edu/medieval/magframe.asp
+
+Magna Carta

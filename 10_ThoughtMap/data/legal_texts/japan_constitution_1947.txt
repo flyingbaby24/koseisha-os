@@ -1,0 +1,8 @@
+TITLE: 日本国憲法
+AUTHOR: Japan
+YEAR: 1947
+SOURCE_TYPE: constitution
+SOURCE: e-Gov
+URL: https://laws.e-gov.go.jp/law/321CONSTITUTION
+
+e-Gov 法令検索

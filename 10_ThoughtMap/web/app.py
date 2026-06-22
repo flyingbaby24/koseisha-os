@@ -415,21 +415,31 @@ def rank_color(rank):
         "E": "#6b7280",
     }
     return colors.get(rank, "#6b7280")
-def plot_status_bar(status_df):
-    # Sort by share so the composition is immediately readable.
+def plot_status_bar(status_df, title=None):
+
     ordered = status_df.iloc[::-1].copy()
+
     colors = [rank_color(rank) for rank in ordered["rank"]]
-    x_limit = get_composition_axis_limit(ordered["share_%"].values)
+
+    x_limit = get_composition_axis_limit(
+        ordered["share_%"].values
+    )
 
     fig, ax = plt.subplots(figsize=(11, 6))
+
     bars = ax.barh(
         ordered["parameter"].astype(str),
         ordered["share_%"],
         color=colors
     )
 
-    for bar, rank, score in zip(bars, ordered["rank"], ordered["share_%"]):
+    for bar, rank, score in zip(
+        bars,
+        ordered["rank"],
+        ordered["share_%"]
+    ):
         width = bar.get_width()
+
         ax.text(
             width + (x_limit * 0.015),
             bar.get_y() + bar.get_height() / 2,
@@ -439,10 +449,28 @@ def plot_status_bar(status_df):
         )
 
     ax.set_xlim(0, x_limit)
-    ax.set_title("Thought Composition")
+
+    if title:
+        chart_title = f"{title} - Thought Composition"
+    else:
+        chart_title = "Thought Composition"
+
+    ax.set_title(
+        chart_title,
+        fontsize=16,
+        pad=15,
+        fontweight="bold"
+    )
+
     ax.set_xlabel("Thought share (%)")
-    ax.grid(axis="x", alpha=0.25)
+
+    ax.grid(
+        axis="x",
+        alpha=0.25
+    )
+
     fig.tight_layout()
+
     return fig
 def plot_status_radar(status_df):
     labels = status_df["parameter"].astype(str).tolist()
@@ -566,18 +594,73 @@ if run:
     if uploaded_files:
         docs.extend(read_uploaded_files(uploaded_files))
 
-    docs.extend(split_pasted_text(pasted_text, split_mode_map[split_mode_label]))
+    docs.extend(split_pasted_text(
+        pasted_text,
+        split_mode_map[split_mode_label]
+    ))
 
-    if len(docs) < 3:
-        st.error("At least 3 documents are needed.")
+    # ----------------------------------
+    # Minimum document check
+    # ----------------------------------
+    if len(docs) < 1:
+        st.error("At least 1 document is needed.")
         st.stop()
 
-    if cluster_count >= len(docs):
-        st.error("Cluster count must be smaller than the number of documents.")
-        st.stop()
+    doc_count = len(docs)
 
-    with st.spinner("Analyzing..."):
-        df, embeddings, filter_score_df, labels = analyze(docs, cluster_count, n_neighbors, min_dist, categories)
+    # ----------------------------------
+    # Small dataset handling
+    # ----------------------------------
+    if doc_count < 3:
+
+        st.warning(
+            f"Only {doc_count} document(s) loaded. "
+            "Thought Continent and clustering are disabled."
+        )
+
+        model = load_model()
+
+        titles = [d["title"] for d in docs]
+        texts = [d["text"] for d in docs]
+
+        embeddings = model.encode(
+            texts,
+            show_progress_bar=False
+        )
+
+        df = pd.DataFrame({
+            "title": titles,
+            "cluster": [0] * doc_count,
+            "x": [0.0] * doc_count,
+            "y": [0.0] * doc_count,
+            "source": [d["source"] for d in docs],
+        })
+
+        filter_score_df = make_filter_scores(
+            embeddings,
+            categories,
+            model
+        )
+
+        if filter_score_df is not None:
+            df["top_filter"] = filter_score_df.idxmax(axis=1).values
+            df["top_filter_score"] = filter_score_df.max(axis=1).values
+
+        labels = {"0": "Profile"}
+
+    else:
+
+        if cluster_count >= doc_count:
+            cluster_count = max(2, doc_count - 1)
+
+        with st.spinner("Analyzing..."):
+            df, embeddings, filter_score_df, labels = analyze(
+                docs,
+                cluster_count,
+                min(n_neighbors, doc_count - 1),
+                min_dist,
+                categories
+            )
 
     st.session_state["df"] = df
     st.session_state["embeddings"] = embeddings
@@ -609,7 +692,16 @@ col4.metric("Model", MODEL_NAME)
 tab1, tab2, tab_status, tab3, tab4, tab5, tab6 = st.tabs(["Thought Continent", "Profile", "Composition", "Search", "Documents", "Filters", "Export"])
 
 with tab1:
-    st.pyplot(plot_map(df, labels), use_container_width=True)
+
+    if len(df) < 3:
+        st.info(
+            "Thought Continent requires at least 3 documents."
+        )
+    else:
+        st.pyplot(
+            plot_map(df, labels),
+            use_container_width=True
+        )
 
 with tab2:
     col_a, col_b = st.columns(2)
@@ -625,32 +717,117 @@ with tab_status:
 
     if filter_score_df is None:
         st.info("No filters selected or no filters loaded.")
+
     else:
         status_df = make_status_profile(filter_score_df)
         profile_class, profile_description = infer_profile_class(status_df)
 
-        col_s1, col_s2 = st.columns([1, 2])
-        with col_s1:
-            st.metric("Primary class", profile_class)
-            st.caption(profile_description)
+        # =====================================================
+        # Document Information
+        # =====================================================
+        if len(docs) == 1:
 
-            top_groups = get_top_composition_groups(status_df)
+            st.markdown(
+                f"## 📄 {docs[0]['title']}"
+            )
+
+            top3 = (
+                status_df
+                .sort_values("share_%", ascending=False)
+                .head(3)
+            )
+
+            st.caption(
+                " | ".join(
+                    f"{row['parameter']} {row['share_%']:.1f}%"
+                    for _, row in top3.iterrows()
+                )
+            )
+
+        else:
+
+            st.markdown(
+                f"## 📚 {len(docs)} Documents"
+            )
+
+        col_s1, col_s2 = st.columns([1, 2])
+
+        with col_s1:
+
+            if len(docs) == 1:
+                st.caption(
+                    f"Source: {docs[0]['title']}"
+                )
+
+            st.metric(
+                "Primary class",
+                profile_class
+            )
+
+            st.caption(
+                profile_description
+            )
+
+            top_groups = get_top_composition_groups(
+                status_df
+            )
+
             if top_groups:
-                st.write("Top composition groups")
-                card_cols = st.columns(min(3, len(top_groups)))
-                for card_col, (label, share) in zip(card_cols, top_groups):
-                    card_col.metric(label, f"{share:.1f}%")
+
+                st.write(
+                    "Top composition groups"
+                )
+
+                card_cols = st.columns(
+                    min(3, len(top_groups))
+                )
+
+                for card_col, (label, share) in zip(
+                    card_cols,
+                    top_groups
+                ):
+                    card_col.metric(
+                        label,
+                        f"{share:.1f}%"
+                    )
 
             st.write("Composition table")
+
             table_df = status_df.copy()
-            st.dataframe(table_df, use_container_width=True, hide_index=True)
+
+            st.dataframe(
+                table_df,
+                use_container_width=True,
+                hide_index=True
+            )
 
         with col_s2:
-            st.pyplot(plot_status_bar(status_df), use_container_width=True)
 
-        st.pyplot(plot_status_radar(status_df), use_container_width=True)
+            document_title = (
+                docs[0]["title"]
+                if len(docs) == 1
+                else f"{len(docs)} Documents"
+            )
 
-        st.caption("Composition shares add up to 100%. Ranks show concentration inside this profile, not ability or superiority. Raw scores are the original average filter affinities.")
+            st.pyplot(
+                plot_status_bar(
+                    status_df,
+                    title=document_title
+                ),
+                use_container_width=True
+            )
+
+        st.pyplot(
+            plot_status_radar(status_df),
+            use_container_width=True
+        )
+
+        st.caption(
+            "Composition shares add up to 100%. "
+            "Ranks show concentration inside this profile, "
+            "not ability or superiority. "
+            "Raw scores are the original average filter affinities."
+        )
 
 
 with tab3:
@@ -784,7 +961,16 @@ with tab6:
         # -------------------------
         # Composition PNG
         # -------------------------
-        fig = plot_status_bar(status_df)
+        document_title = (
+            docs[0]["title"]
+            if len(docs) == 1
+            else f"{len(docs)} Documents"
+        )
+
+        fig = plot_status_bar(
+            status_df,
+            title=document_title
+        )
 
         png_buffer = io.BytesIO()
 
@@ -797,10 +983,19 @@ with tab6:
 
         png_buffer.seek(0)
 
+        safe_title = (
+            docs[0]["title"]
+            .replace(" ", "_")
+            .replace("/", "_")
+            .replace("\\", "_")
+            if len(docs) == 1
+            else "multi_document"
+        )
+
         st.download_button(
             "Download Composition Chart PNG",
             png_buffer,
-            file_name="thought_composition.png",
+            file_name=f"{safe_title}_thought_composition.png",
             mime="image/png"
         )
 
@@ -825,6 +1020,6 @@ with tab6:
         st.download_button(
             "Download Composition Profile CSV",
             profile_csv,
-            file_name="thought_composition_profile.csv",
+            file_name=f"{safe_title}_thought_composition_profile.csv",
             mime="text/csv"
         )

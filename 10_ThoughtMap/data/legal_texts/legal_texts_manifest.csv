@@ -1,0 +1,6 @@
+id,title,author,year,source_type,language,source,url,path,chars
+japan_constitution_1947,日本国憲法,Japan,1947,constitution,ja,e-Gov,https://laws.e-gov.go.jp/law/321CONSTITUTION,D:\ThoughtMap\data\legal_texts\japan_constitution_1947.txt,10
+meiji_constitution_1889,大日本帝国憲法,Empire of Japan,1889,constitution,ja,Wikisource,https://ja.wikisource.org/wiki/大日本帝國憲法,D:\ThoughtMap\data\legal_texts\meiji_constitution_1889.txt,14543
+us_constitution_1787,The United States Constitution,United States,1787,constitution,en,Project Gutenberg,https://www.gutenberg.org/cache/epub/5/pg5.txt,D:\ThoughtMap\data\legal_texts\us_constitution_1787.txt,27850
+declaration_rights_man_1789,Declaration of the Rights of Man and of the Citizen,France National Assembly,1789,rights_declaration,en,Avalon Project,https://avalon.law.yale.edu/18th_century/rightsof.asp,D:\ThoughtMap\data\legal_texts\declaration_rights_man_1789.txt,4952
+magna_carta_1215,Magna Carta 1215,England,1215,charter,en,Avalon Project,https://avalon.law.yale.edu/medieval/magframe.asp,D:\ThoughtMap\data\legal_texts\magna_carta_1215.txt,11

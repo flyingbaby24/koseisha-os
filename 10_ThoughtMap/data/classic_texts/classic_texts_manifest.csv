@@ -1,0 +1,5 @@
+id,title,author,year,source_type,source,url,path,chars
+confucius_analects,The Analects,Confucius,-475,confucian_classic,Project Gutenberg,https://www.gutenberg.org/cache/epub/3330/pg3330.txt,D:\ThoughtMap\data\classic_texts\confucius_analects.txt,163385
+sun_tzu_art_of_war,The Art of War,Sun Tzu,-500,military_classic,Project Gutenberg,https://www.gutenberg.org/cache/epub/132/pg132.txt,D:\ThoughtMap\data\classic_texts\sun_tzu_art_of_war.txt,313205
+laozi_tao_te_ching,Tao Te Ching,Laozi,-400,taoist_classic,Internet Sacred Text Archive,https://sacred-texts.com/tao/taote.htm,D:\ThoughtMap\data\classic_texts\laozi_tao_te_ching.txt,68
+zhuangzi_musings_chinese_mystic,Musings of a Chinese Mystic,Zhuangzi / Chuang Tzu,-300,taoist_classic,Internet Sacred Text Archive,https://sacred-texts.com/tao/mcm/index.htm,D:\ThoughtMap\data\classic_texts\zhuangzi_musings_chinese_mystic.txt,130555
