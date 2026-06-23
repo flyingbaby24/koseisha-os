@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
-# plt.rcParams["font.family"] = "Meiryo"
+plt.rcParams["font.family"] = "Meiryo"
 plt.rcParams["axes.unicode_minus"] = False
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import KMeans
@@ -883,6 +883,37 @@ with tab5:
         st.pyplot(plot_single_filter_scores(filter_score_df.iloc[idx]), use_container_width=True)
 
 with tab6:
+
+        # -------------------------
+    # Embeddings CSV
+    # -------------------------
+
+    embedding_df = pd.DataFrame({
+        "title": df["title"],
+        "source": df["source"],
+        "cluster": df["cluster"],
+        "x": df["x"],
+        "y": df["y"],
+        "embedding": [
+            json.dumps(
+                emb.tolist(),
+                ensure_ascii=False
+            )
+            for emb in embeddings
+        ]
+    })
+
+    embedding_csv = embedding_df.to_csv(
+        index=False,
+        encoding="utf-8-sig"
+    ).encode("utf-8-sig")
+
+    st.download_button(
+        "Download document embeddings CSV",
+        embedding_csv,
+        file_name="thoughtmap_embeddings.csv",
+        mime="text/csv"
+    )
 
     # -------------------------
     # Cluster CSV
