@@ -1,0 +1,183 @@
+:root {
+  --bg: #f6f2ec;
+  --ink: #161616;
+  --muted: #6d665d;
+  --line: rgba(22, 22, 22, 0.12);
+  --card: rgba(255, 255, 255, 0.62);
+  --accent: #111111;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255,255,255,.85), transparent 28rem),
+    radial-gradient(circle at 82% 20%, rgba(185,174,156,.45), transparent 24rem),
+    var(--bg);
+  color: var(--ink);
+}
+
+a { color: inherit; text-decoration: none; }
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px clamp(20px, 5vw, 72px);
+  backdrop-filter: blur(18px);
+  background: rgba(246, 242, 236, 0.72);
+  border-bottom: 1px solid var(--line);
+}
+
+.logo { font-weight: 800; letter-spacing: -0.04em; }
+nav { display: flex; gap: 22px; color: var(--muted); font-size: 14px; }
+nav a:hover { color: var(--ink); }
+
+main { padding: 0 clamp(20px, 5vw, 72px); }
+
+.hero {
+  min-height: 78vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr);
+  gap: 48px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+h1, h2, h3 { margin: 0; letter-spacing: -0.06em; line-height: .95; }
+h1 { max-width: 860px; font-size: clamp(58px, 10vw, 142px); }
+h2 { font-size: clamp(38px, 5vw, 72px); max-width: 850px; }
+h3 { font-size: 30px; }
+
+.lead {
+  max-width: 650px;
+  margin: 28px 0 0;
+  font-size: clamp(18px, 2vw, 24px);
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.actions { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 34px; }
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font-weight: 700;
+  border: 1px solid var(--line);
+}
+.primary { background: var(--accent); color: white; }
+.secondary { background: rgba(255,255,255,.55); }
+
+.orb {
+  position: relative;
+  min-height: 420px;
+  display: grid;
+  place-items: center;
+}
+.core {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: #161616;
+  color: #f6f2ec;
+  display: grid;
+  place-items: center;
+  font-size: 82px;
+  font-weight: 900;
+  box-shadow: 0 40px 100px rgba(0,0,0,.25);
+}
+.ring {
+  position: absolute;
+  border: 1px solid rgba(22,22,22,.2);
+  border-radius: 50%;
+}
+.ring-one { width: 320px; height: 320px; animation: spin 18s linear infinite; }
+.ring-two { width: 420px; height: 240px; transform: rotate(-24deg); animation: spin 26s linear infinite reverse; }
+@keyframes spin { to { rotate: 360deg; } }
+
+.section {
+  padding: 92px 0;
+  border-bottom: 1px solid var(--line);
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 34px;
+}
+.card {
+  min-height: 280px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: var(--card);
+  box-shadow: 0 20px 80px rgba(0,0,0,.04);
+}
+.card.featured { background: rgba(22,22,22,.92); color: white; }
+.card p {
+  margin: 20px 0 26px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+.card.featured p { color: rgba(255,255,255,.72); }
+.card a { font-weight: 800; }
+.tag {
+  display: inline-block;
+  margin-bottom: 28px;
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+.featured .tag { color: rgba(255,255,255,.72); border-color: rgba(255,255,255,.2); }
+
+.split {
+  display: grid;
+  grid-template-columns: .9fr 1.1fr;
+  gap: 48px;
+  align-items: start;
+}
+.split > p {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 30px clamp(20px, 5vw, 72px);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+@media (max-width: 860px) {
+  .hero, .split { grid-template-columns: 1fr; }
+  .hero { padding: 80px 0; }
+  .orb { min-height: 280px; }
+  .core { width: 130px; height: 130px; font-size: 58px; }
+  .ring-one { width: 240px; height: 240px; }
+  .ring-two { width: 300px; height: 180px; }
+  .cards { grid-template-columns: 1fr; }
+  nav { display: none; }
+  footer { flex-direction: column; }
+}
