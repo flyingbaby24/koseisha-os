@@ -230,6 +230,11 @@ def analyze(docs, cluster_count: int, n_neighbors: int, min_dist: float, categor
         "y": points[:, 1],
         "source": [d["source"] for d in docs],
     })
+    
+    df["doc_id"] = [
+    f"doc_{i:06d}"
+    for i in range(len(df))
+    ]
 
     filter_score_df = make_filter_scores(embeddings, categories, model)
 
@@ -889,20 +894,37 @@ with tab6:
     # -------------------------
 
     embedding_df = pd.DataFrame({
+        "doc_id": [
+            f"doc_{i:06d}"
+            for i in range(len(df))
+        ],
+
         "title": df["title"],
+
         "source": df["source"],
+
         "cluster": df["cluster"],
+
+        "cluster_label": [
+            labels.get(
+                str(cluster),
+                f"Cluster {cluster}"
+            )
+            for cluster in df["cluster"]
+        ],
+
         "x": df["x"],
+
         "y": df["y"],
+
         "embedding": [
             json.dumps(
                 emb.tolist(),
                 ensure_ascii=False
             )
             for emb in embeddings
-        ]
+            ]
     })
-
     embedding_csv = embedding_df.to_csv(
         index=False,
         encoding="utf-8-sig"
