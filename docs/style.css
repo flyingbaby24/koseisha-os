@@ -58,7 +58,7 @@ main { padding: 0 clamp(20px, 5vw, 72px); }
 }
 
 h1, h2, h3 { margin: 0; letter-spacing: -0.06em; line-height: .95; }
-h1 { max-width: 860px; font-size: clamp(58px, 10vw, 142px); }
+h1 { max-width: 760px; font-size: clamp(54px, 8vw, 118px); }
 h2 { font-size: clamp(38px, 5vw, 72px); max-width: 850px; }
 h3 { font-size: 30px; }
 
@@ -203,4 +203,23 @@ footer {
 .hero-logo img {
   width: min(280px, 80vw);
   opacity: 0.9;
+}
+
+/* Hero layout fix */
+.hero-copy {
+  max-width: 760px;
+}
+
+h1 {
+  max-width: 760px;
+  font-size: clamp(54px, 8vw, 118px);
+}
+
+.hero-logo {
+  align-self: center;
+}
+
+.hero-logo img {
+  width: min(300px, 80vw);
+  height: auto;
 }
