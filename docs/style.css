@@ -181,3 +181,26 @@ footer {
   nav { display: none; }
   footer { flex-direction: column; }
 }
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.hero-logo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hero-logo img {
+  width: min(360px, 80vw);
+  opacity: 0.9;
+}
