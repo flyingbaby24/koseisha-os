@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
-plt.rcParams["font.family"] = "Meiryo"
+# plt.rcParams["font.family"] = "Meiryo"
 plt.rcParams["axes.unicode_minus"] = False
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import KMeans
