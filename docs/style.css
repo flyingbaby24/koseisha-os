@@ -201,6 +201,6 @@ footer {
 }
 
 .hero-logo img {
-  width: min(360px, 80vw);
+  width: min(280px, 80vw);
   opacity: 0.9;
 }
