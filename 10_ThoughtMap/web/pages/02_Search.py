@@ -461,7 +461,7 @@ else:
         source_label="Upload",
     )
 
-    with st.expander("DB columns"):
+with st.expander("DB columns"):
         st.write(df.drop(columns=["_embedding_vec"], errors="ignore").columns.tolist())
 
 
