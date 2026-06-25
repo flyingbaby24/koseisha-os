@@ -400,25 +400,66 @@ def main() -> None:
             st.warning("該当作品がありません。")
             st.stop()
 
-        view_cols = ["_row_id", "doc_id", "author", "title", "source"]
-        st.dataframe(filtered[view_cols].head(200), use_container_width=True, hide_index=True)
+       view_cols = ["_row_id", "doc_id", "author", "title", "source"]
+st.dataframe(filtered[view_cols].head(200), use_container_width=True, hide_index=True)
 
-        selected_label = st.selectbox("Uploaded target", options=filtered["label"].tolist(), index=0)
-        target = filtered.loc[filtered["label"] == selected_label].iloc[0]
+upload_mode = st.radio(
+    "Uploaded search type",
+    [
+        "Single uploaded work",
+        "Uploaded personality average",
+    ],
+    horizontal=True,
+)
 
-        render_results(
-            df=df,
-            target_title=target.get("title", ""),
-            target_author=target.get("author", ""),
-            target_doc_id=target.get("doc_id", "") or target.get("_row_id", ""),
-            target_gutenberg_id=target.get("gutenberg_id", ""),
-            target_source_url=target.get("source_url", ""),
-            target_vec=target["_embedding_vec"],
-            top=top,
-            include_self=False,
-            include_same_author=include_same_author,
-            source_label="Upload",
-        )
+if upload_mode == "Uploaded personality average":
+
+    vecs = np.stack(upload_df["_embedding_vec"].to_list())
+    avg_vec = vecs.mean(axis=0)
+
+    norm = np.linalg.norm(avg_vec)
+    if norm > 0:
+        avg_vec = avg_vec / norm
+
+    render_results(
+        df=df,
+        target_title=f"Uploaded personality ({len(upload_df)} works)",
+        target_author="Uploaded CSV",
+        target_doc_id="uploaded_personality",
+        target_gutenberg_id="",
+        target_source_url="",
+        target_vec=avg_vec,
+        top=top,
+        include_self=False,
+        include_same_author=include_same_author,
+        source_label="Upload",
+    )
+
+else:
+
+    selected_label = st.selectbox(
+        "Uploaded target",
+        options=filtered["label"].tolist(),
+        index=0,
+    )
+
+    target = filtered.loc[
+        filtered["label"] == selected_label
+    ].iloc[0]
+
+    render_results(
+        df=df,
+        target_title=target.get("title", ""),
+        target_author=target.get("author", ""),
+        target_doc_id=target.get("doc_id", "") or target.get("_row_id", ""),
+        target_gutenberg_id=target.get("gutenberg_id", ""),
+        target_source_url=target.get("source_url", ""),
+        target_vec=target["_embedding_vec"],
+        top=top,
+        include_self=False,
+        include_same_author=include_same_author,
+        source_label="Upload",
+    )
 
     with st.expander("DB columns"):
         st.write(df.drop(columns=["_embedding_vec"], errors="ignore").columns.tolist())
