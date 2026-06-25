@@ -12,8 +12,10 @@ import streamlit as st
 
 
 APP_TITLE = "ThoughtMap Similarity Search"
-DEFAULT_DB_DIR = Path("data") / "thoughtmap_db"
-FALLBACK_DB_DIR = Path("master")
+BASE_DIR = Path(__file__).resolve().parents[2]
+
+DEFAULT_DB_DIR = BASE_DIR / "data" / "thoughtmap_db"
+FALLBACK_DB_DIR = BASE_DIR / "master"
 
 
 def normalize_text(value: object) -> str:
@@ -59,11 +61,24 @@ def cosine(a: np.ndarray, b: np.ndarray) -> float:
 
 def resolve_db_dir(db_dir_text: str) -> Path:
     db_dir = Path(db_dir_text)
-    if db_dir.exists():
+
+    # 絶対パス
+    if db_dir.is_absolute() and db_dir.exists():
         return db_dir
+
+    # リポジトリ直下からの相対パス
+    repo_path = BASE_DIR / db_dir
+    if repo_path.exists():
+        return repo_path
+
+    # デフォルト
     if DEFAULT_DB_DIR.exists():
         return DEFAULT_DB_DIR
-    return FALLBACK_DB_DIR
+
+    if FALLBACK_DB_DIR.exists():
+        return FALLBACK_DB_DIR
+
+    return repo_path
 
 
 @st.cache_data(show_spinner=False)
@@ -187,10 +202,11 @@ def main() -> None:
 
     with st.sidebar:
         st.header("DB")
-        db_dir = st.text_input("DB directory", value=str(DEFAULT_DB_DIR))
+        db_dir = str(DEFAULT_DB_DIR)
+        st.caption(f"DB: {DEFAULT_DB_DIR.name}")
         top = st.slider("Top results", min_value=5, max_value=50, value=20, step=5)
-        include_same_author = st.checkbox("作者ランキングに同一作者を含める", value=False)
-        include_self = st.checkbox("作品ランキングに基準作品を含める", value=False)
+        include_same_author = st.checkbox("Include the same author in the author ranking", value=False)
+        include_self = st.checkbox("Include benchmark works in the work rankings", value=False)
         if st.button("Reload DB"):
             st.cache_data.clear()
 
