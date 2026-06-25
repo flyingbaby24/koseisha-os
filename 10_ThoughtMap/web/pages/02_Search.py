@@ -62,16 +62,13 @@ def cosine(a: np.ndarray, b: np.ndarray) -> float:
 def resolve_db_dir(db_dir_text: str) -> Path:
     db_dir = Path(db_dir_text)
 
-    # 絶対パス
     if db_dir.is_absolute() and db_dir.exists():
         return db_dir
 
-    # リポジトリ直下からの相対パス
     repo_path = BASE_DIR / db_dir
     if repo_path.exists():
         return repo_path
 
-    # デフォルト
     if DEFAULT_DB_DIR.exists():
         return DEFAULT_DB_DIR
 
@@ -121,6 +118,45 @@ def load_db_cached(db_dir_text: str) -> pd.DataFrame:
     return df.reset_index(drop=True)
 
 
+@st.cache_data(show_spinner=False)
+def load_uploaded_embeddings(uploaded_file) -> pd.DataFrame:
+    up = pd.read_csv(uploaded_file, dtype=str).fillna("")
+    if "embedding" not in up.columns:
+        raise ValueError("アップロードCSVに embedding 列がありません。")
+
+    for col in ["doc_id", "author", "title", "source", "gutenberg_id", "source_url", "status"]:
+        if col not in up.columns:
+            up[col] = ""
+
+    # ThoughtMap export may use document_id / filename-like columns in some versions.
+    if up["doc_id"].map(normalize_text).eq("").all():
+        for alt in ["document_id", "id", "file_id"]:
+            if alt in up.columns:
+                up["doc_id"] = up[alt]
+                break
+    if up["title"].map(normalize_text).eq("").all():
+        for alt in ["filename", "name", "work_title"]:
+            if alt in up.columns:
+                up["title"] = up[alt]
+                break
+
+    up["_embedding_vec"] = up["embedding"].map(parse_embedding)
+    up = up[up["_embedding_vec"].notna()].copy()
+    if up.empty:
+        raise ValueError("アップロードCSV内に有効な embedding がありません。")
+
+    up["_dim"] = up["_embedding_vec"].map(lambda x: len(x) if x is not None else 0)
+    common_dim = int(up["_dim"].value_counts().idxmax())
+    up = up[up["_dim"] == common_dim].copy()
+
+    up["_row_id"] = [f"upload_{i:06d}" for i in range(len(up))]
+    up["label"] = up.apply(
+        lambda r: f"{normalize_text(r.get('title','')) or normalize_text(r.get('doc_id','')) or r.get('_row_id','')} — {normalize_text(r.get('author',''))} [{r.get('_row_id','')}]",
+        axis=1,
+    )
+    return up.reset_index(drop=True)
+
+
 def filter_catalog(df: pd.DataFrame, query: str, source: str) -> pd.DataFrame:
     out = df.copy()
     if source and source != "All":
@@ -137,12 +173,16 @@ def filter_catalog(df: pd.DataFrame, query: str, source: str) -> pd.DataFrame:
     return out
 
 
-def work_similarity(df: pd.DataFrame, target_doc_id: str, top: int, include_self: bool = False) -> pd.DataFrame:
-    target = df[df["doc_id"].map(normalize_text) == normalize_text(target_doc_id)].iloc[0]
-    target_vec = target["_embedding_vec"]
+def work_similarity_by_vector(
+    df: pd.DataFrame,
+    target_vec: np.ndarray,
+    top: int,
+    exclude_doc_id: str = "",
+    include_self: bool = False,
+) -> pd.DataFrame:
     rows = []
     for _, row in df.iterrows():
-        if not include_self and normalize_text(row.get("doc_id", "")) == normalize_text(target_doc_id):
+        if exclude_doc_id and not include_self and normalize_text(row.get("doc_id", "")) == normalize_text(exclude_doc_id):
             continue
         rows.append({
             "similarity": cosine(target_vec, row["_embedding_vec"]),
@@ -159,17 +199,21 @@ def work_similarity(df: pd.DataFrame, target_doc_id: str, top: int, include_self
     return out
 
 
-def author_similarity(df: pd.DataFrame, target_doc_id: str, top: int, include_same_author: bool = False) -> pd.DataFrame:
-    target = df[df["doc_id"].map(normalize_text) == normalize_text(target_doc_id)].iloc[0]
-    target_vec = target["_embedding_vec"]
-    target_author_key = normalize_key(target.get("author", ""))
+def author_similarity_by_vector(
+    df: pd.DataFrame,
+    target_vec: np.ndarray,
+    target_author: str,
+    top: int,
+    include_same_author: bool = False,
+) -> pd.DataFrame:
+    target_author_key = normalize_key(target_author)
     rows = []
 
     for author, group in df.groupby("author", dropna=False):
         author = normalize_text(author)
         if not author:
             continue
-        if not include_same_author and normalize_key(author) == target_author_key:
+        if not include_same_author and target_author_key and normalize_key(author) == target_author_key:
             continue
         vecs = np.stack(group["_embedding_vec"].to_list())
         avg = vecs.mean(axis=0)
@@ -194,6 +238,71 @@ def format_similarity(df: pd.DataFrame) -> pd.DataFrame:
     if "similarity" in out.columns:
         out["similarity"] = out["similarity"].map(lambda x: round(float(x), 4))
     return out
+
+
+def render_results(
+    df: pd.DataFrame,
+    target_title: str,
+    target_author: str,
+    target_doc_id: str,
+    target_gutenberg_id: str,
+    target_source_url: str,
+    target_vec: np.ndarray,
+    top: int,
+    include_self: bool,
+    include_same_author: bool,
+    source_label: str,
+) -> None:
+    st.markdown("---")
+    st.subheader("Target")
+    st.write(f"**{target_title}**")
+    st.write(f"Author: {target_author}  |  doc_id: `{target_doc_id}`  |  Gutenberg ID: `{target_gutenberg_id}`")
+    if normalize_text(target_source_url):
+        st.write(target_source_url)
+
+    if st.button("Search similar works / authors", type="primary"):
+        work_df = work_similarity_by_vector(
+            df,
+            target_vec=target_vec,
+            top=top,
+            exclude_doc_id=target_doc_id if source_label == "DB" else "",
+            include_self=include_self,
+        )
+        author_df = author_similarity_by_vector(
+            df,
+            target_vec=target_vec,
+            target_author=target_author,
+            top=top,
+            include_same_author=include_same_author,
+        )
+
+        left, right = st.columns([3, 2])
+        with left:
+            st.subheader("Similar works")
+            st.dataframe(
+                format_similarity(work_df[["rank", "similarity", "doc_id", "gutenberg_id", "author", "title", "source"]]),
+                use_container_width=True,
+                hide_index=True,
+            )
+            st.download_button(
+                "Download similar works CSV",
+                data=work_df.to_csv(index=False, encoding="utf-8-sig"),
+                file_name=f"{target_doc_id or 'uploaded'}_similar_works.csv",
+                mime="text/csv",
+            )
+        with right:
+            st.subheader("Similar authors")
+            st.dataframe(
+                format_similarity(author_df[["rank", "similarity", "author", "works_count", "sample_titles"]]),
+                use_container_width=True,
+                hide_index=True,
+            )
+            st.download_button(
+                "Download similar authors CSV",
+                data=author_df.to_csv(index=False, encoding="utf-8-sig"),
+                file_name=f"{target_doc_id or 'uploaded'}_similar_authors.csv",
+                mime="text/csv",
+            )
 
 
 def main() -> None:
@@ -222,62 +331,94 @@ def main() -> None:
     c2.metric("Authors", df["author"].replace("", pd.NA).dropna().nunique())
     c3.metric("Sources", max(0, len(sources) - 1))
 
-    st.subheader("Select target work")
-    q_col, s_col = st.columns([3, 1])
-    query = q_col.text_input("Search title / author / Gutenberg ID / doc_id", value="")
-    source = s_col.selectbox("Source", sources, index=0)
+    mode = st.radio(
+        "Search mode",
+        ["DB work", "Upload embeddings CSV"],
+        horizontal=True,
+    )
 
-    catalog = filter_catalog(df, query, source)
-    if catalog.empty:
-        st.warning("該当作品がありません。")
-        st.stop()
+    if mode == "DB work":
+        st.subheader("Select target work")
+        q_col, s_col = st.columns([3, 1])
+        query = q_col.text_input("Search title / author / Gutenberg ID / doc_id", value="")
+        source = s_col.selectbox("Source", sources, index=0)
 
-    catalog_view = catalog[["doc_id", "gutenberg_id", "author", "title", "source", "status"]].copy()
-    st.dataframe(catalog_view.head(200), use_container_width=True, hide_index=True)
+        catalog = filter_catalog(df, query, source)
+        if catalog.empty:
+            st.warning("該当作品がありません。")
+            st.stop()
 
-    options = catalog["label"].tolist()
-    selected_label = st.selectbox("Target", options=options, index=0)
-    selected_doc_id = catalog.loc[catalog["label"] == selected_label, "doc_id"].iloc[0]
-    target = df[df["doc_id"] == selected_doc_id].iloc[0]
+        catalog_view = catalog[["doc_id", "gutenberg_id", "author", "title", "source", "status"]].copy()
+        st.dataframe(catalog_view.head(200), use_container_width=True, hide_index=True)
 
-    st.markdown("---")
-    st.subheader("Target")
-    st.write(f"**{target.get('title','')}**")
-    st.write(f"Author: {target.get('author','')}  |  doc_id: `{target.get('doc_id','')}`  |  Gutenberg ID: `{target.get('gutenberg_id','')}`")
-    if normalize_text(target.get("source_url", "")):
-        st.write(target.get("source_url", ""))
+        options = catalog["label"].tolist()
+        selected_label = st.selectbox("Target", options=options, index=0)
+        selected_doc_id = catalog.loc[catalog["label"] == selected_label, "doc_id"].iloc[0]
+        target = df[df["doc_id"] == selected_doc_id].iloc[0]
 
-    if st.button("Search similar works / authors", type="primary"):
-        work_df = work_similarity(df, selected_doc_id, top=top, include_self=include_self)
-        author_df = author_similarity(df, selected_doc_id, top=top, include_same_author=include_same_author)
+        render_results(
+            df=df,
+            target_title=target.get("title", ""),
+            target_author=target.get("author", ""),
+            target_doc_id=target.get("doc_id", ""),
+            target_gutenberg_id=target.get("gutenberg_id", ""),
+            target_source_url=target.get("source_url", ""),
+            target_vec=target["_embedding_vec"],
+            top=top,
+            include_self=include_self,
+            include_same_author=include_same_author,
+            source_label="DB",
+        )
 
-        left, right = st.columns([3, 2])
-        with left:
-            st.subheader("Similar works")
-            st.dataframe(
-                format_similarity(work_df[["rank", "similarity", "doc_id", "gutenberg_id", "author", "title", "source"]]),
-                use_container_width=True,
-                hide_index=True,
-            )
-            st.download_button(
-                "Download similar works CSV",
-                data=work_df.to_csv(index=False, encoding="utf-8-sig"),
-                file_name=f"{selected_doc_id}_similar_works.csv",
-                mime="text/csv",
-            )
-        with right:
-            st.subheader("Similar authors")
-            st.dataframe(
-                format_similarity(author_df[["rank", "similarity", "author", "works_count", "sample_titles"]]),
-                use_container_width=True,
-                hide_index=True,
-            )
-            st.download_button(
-                "Download similar authors CSV",
-                data=author_df.to_csv(index=False, encoding="utf-8-sig"),
-                file_name=f"{selected_doc_id}_similar_authors.csv",
-                mime="text/csv",
-            )
+    else:
+        st.subheader("Upload embeddings CSV")
+        st.caption("既存ThoughtMapの Export > Download document embeddings CSV をアップロードして、DB登録せずに近い作品・作者を検索します。")
+        uploaded = st.file_uploader("Embedding CSV", type=["csv"])
+        if uploaded is None:
+            st.info("embedding列を含むCSVをアップロードしてください。")
+            st.stop()
+
+        try:
+            upload_df = load_uploaded_embeddings(uploaded)
+        except Exception as exc:
+            st.error(str(exc))
+            st.stop()
+
+        db_dim = int(df["_dim"].value_counts().idxmax())
+        upload_df = upload_df[upload_df["_dim"] == db_dim].copy()
+        if upload_df.empty:
+            st.error(f"DB側のembedding次元({db_dim})と一致する行がありません。")
+            st.stop()
+
+        c1, c2 = st.columns(2)
+        c1.metric("Uploaded works", len(upload_df))
+        c2.metric("Embedding dim", db_dim)
+
+        query = st.text_input("Filter uploaded title / author / doc_id", value="")
+        filtered = filter_catalog(upload_df, query, "All")
+        if filtered.empty:
+            st.warning("該当作品がありません。")
+            st.stop()
+
+        view_cols = ["_row_id", "doc_id", "author", "title", "source"]
+        st.dataframe(filtered[view_cols].head(200), use_container_width=True, hide_index=True)
+
+        selected_label = st.selectbox("Uploaded target", options=filtered["label"].tolist(), index=0)
+        target = filtered.loc[filtered["label"] == selected_label].iloc[0]
+
+        render_results(
+            df=df,
+            target_title=target.get("title", ""),
+            target_author=target.get("author", ""),
+            target_doc_id=target.get("doc_id", "") or target.get("_row_id", ""),
+            target_gutenberg_id=target.get("gutenberg_id", ""),
+            target_source_url=target.get("source_url", ""),
+            target_vec=target["_embedding_vec"],
+            top=top,
+            include_self=False,
+            include_same_author=include_same_author,
+            source_label="Upload",
+        )
 
     with st.expander("DB columns"):
         st.write(df.drop(columns=["_embedding_vec"], errors="ignore").columns.tolist())
