@@ -14,7 +14,7 @@ import streamlit as st
 APP_TITLE = "ThoughtMap Personal Works Search"
 BASE_DIR = Path(__file__).resolve().parents[2]
 
-DEFAULT_USERS_DIR = BASE_DIR / "ThoughtMap_DB" / "users"
+DEFAULT_USERS_DIR = BASE_DIR / "data" / "thoughtmap_db" / "users"
 FALLBACK_USERS_DIR = BASE_DIR / "data" / "users"
 FALLBACK_DB_DIR = BASE_DIR / "master"
 
