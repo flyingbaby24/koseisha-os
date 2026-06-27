@@ -530,7 +530,7 @@ def render_db_work_mode(
     target = df[df["doc_id"] == selected_doc_id].iloc[0]
 
     render_results(
-        df=compare_df,
+        df=df,
         target_title=target.get("title", ""),
         target_author=target.get("author", ""),
         target_doc_id=target.get("doc_id", ""),
