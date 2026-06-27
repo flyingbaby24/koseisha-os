@@ -14,7 +14,7 @@ import streamlit as st
 APP_TITLE = "ThoughtMap Similarity Search"
 BASE_DIR = Path(__file__).resolve().parents[2]
 
-DEFAULT_DB_DIR = BASE_DIR / "ThoughtMap_DB" / "official"
+DEFAULT_DB_DIR = BASE_DIR / "data" / "thoughtmap_db" / "official"
 FALLBACK_DB_DIR = BASE_DIR / "master"
 
 
