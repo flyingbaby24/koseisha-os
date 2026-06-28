@@ -1,13 +1,24 @@
 {
   "schema_version": "user_db_v2",
   "user_id": "9caa93032b8ffb30",
+
   "display_name": "Jinn Project",
+  "author": "Jinn Project",
+
   "email_hash": "9caa93032b8ffb30bc3d726c673b619369fca47c30171fdc7e30e67cd2c281d7",
   "email_masked": "co***t@jinn-project.com",
+
   "status": "active",
   "notes": "",
+
+  "website": "https://www.jinn-project.com/",
+  "suno": "https://suno.com/@flyingbaby",
+  "note": "",
+  "bandcamp": "",
+
   "created_at": "2026-06-27T16:17:05",
   "updated_at": "2026-06-27T16:17:05",
+
   "paths": {
     "documents": "documents.csv",
     "embeddings": "embeddings.csv",
