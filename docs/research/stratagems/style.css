@@ -1,0 +1,136 @@
+:root {
+  --bg: #0d0f14;
+  --panel: #171a22;
+  --text: #f2efe8;
+  --muted: #b8b0a2;
+  --line: #2a2f3a;
+  --accent: #d6a84f;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(214,168,79,.16), transparent 32rem),
+    var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.hero {
+  padding: 72px 6vw 48px;
+  border-bottom: 1px solid var(--line);
+}
+
+.eyebrow {
+  color: var(--accent);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-size: .82rem;
+}
+
+h1 {
+  max-width: 980px;
+  font-size: clamp(2rem, 6vw, 4.5rem);
+  line-height: 1.05;
+  margin: 0.2em 0;
+}
+
+.lead {
+  max-width: 760px;
+  color: var(--muted);
+  font-size: 1.12rem;
+}
+
+main {
+  width: min(1180px, 92vw);
+  margin: 36px auto 80px;
+}
+
+.card, .table-wrap, .toolbar {
+  background: rgba(23, 26, 34, .88);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.22);
+}
+
+.card {
+  padding: 28px;
+  margin-bottom: 22px;
+}
+
+.note { color: var(--accent); }
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  margin-bottom: 22px;
+}
+
+input, select {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #0f1218;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+select { max-width: 260px; }
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 980px;
+}
+
+th, td {
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+th {
+  color: var(--accent);
+  text-align: left;
+  font-size: .86rem;
+  letter-spacing: .04em;
+}
+
+td {
+  color: #e8e2d8;
+}
+
+tr:hover td {
+  background: rgba(214,168,79,.06);
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 9px;
+  border: 1px solid rgba(214,168,79,.45);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: .8rem;
+  white-space: nowrap;
+}
+
+footer {
+  color: var(--muted);
+  text-align: center;
+  padding: 36px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 720px) {
+  .toolbar { flex-direction: column; }
+  select { max-width: none; }
+}

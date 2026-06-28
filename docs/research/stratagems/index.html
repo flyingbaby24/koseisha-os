@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Thirty-Six Stratagems × Cognitive Bias Map</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="hero">
+    <p class="eyebrow">Jinn Project Research Note</p>
+    <h1>Thirty-Six Stratagems × Cognitive Bias Map</h1>
+    <p class="lead">
+      三十六計を「兵法」ではなく、人間の認知バイアス仕様書として読み直す試み。
+    </p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Concept</h2>
+      <p>
+        三十六計は古代中国の兵法として知られる。しかし現代の認知科学・行動経済学の視点で読むと、
+        それぞれの計略は「人間がどのように誤認し、推測し、判断を歪めるか」を利用したケーススタディにも見える。
+      </p>
+      <p class="note">
+        ※この対応表は歴史的断定ではなく、現代的な再解釈です。
+      </p>
+    </section>
+
+    <section class="toolbar">
+      <input id="search" type="search" placeholder="検索：空城計 / authority / SNS など" />
+      <select id="category">
+        <option value="all">All Categories</option>
+      </select>
+    </section>
+
+    <section class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>計略</th>
+            <th>English</th>
+            <th>認知カテゴリ</th>
+            <th>認知バイアス / 特性</th>
+            <th>行動経済学的読み</th>
+            <th>現代応用例</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer>
+    <p>© Jinn Project — Experimental Cognitive Mapping</p>
+  </footer>
+
+  <script src="stratagems.js"></script>
+</body>
+</html>
