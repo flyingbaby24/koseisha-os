@@ -416,7 +416,7 @@ def render_results(
     )
 
     if normalize_text(target_source_url):
-        st.write(target_source_url)
+        st.markdown(f"[Open source]({target_source_url})")
 
     target_embedding_csv = make_embedding_download_csv(
         title=target_title,
@@ -591,7 +591,7 @@ def render_db_work_mode(
         st.warning("該当作品がありません。")
         st.stop()
 
-    view_cols = ["doc_id", "gutenberg_id", "author", "title", "source", "category", "status"]
+    view_cols = ["doc_id", "author", "title", "source", "category", "source_url", "status"]
     view_cols = [c for c in view_cols if c in catalog.columns]
     catalog_view = catalog[view_cols].copy()
     st.dataframe(catalog_view.head(200), use_container_width=True, hide_index=True)
@@ -751,7 +751,7 @@ def main() -> None:
         st.stop()
 
     user_options = [
-        f"{r.display_name} / {r.email_masked} / {r.user_id}"
+        f"{r.display_name}"
         for r in user_libraries.itertuples(index=False)
     ]
 
