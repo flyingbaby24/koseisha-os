@@ -9,7 +9,7 @@ const stratagems = [
     behavioral: "Status quo bias / habituation",
     summary: "あまりにも日常的なものは疑われにくい。反復と慣れを利用する計略。",
     example: "日常業務に紛れた情報漏洩、いつものUIに紛れた誘導",
-    i  interpretation: `
+    interpretation: `
 瞞天過海は日常に紛れる策ではない。
 
 本質は相手にとっての「正常」を設計することにある。
@@ -17,17 +17,18 @@ const stratagems = [
 人は反復されたものを正常だと認識し、
 正常性バイアスによって警戒を解く。
 `,
-
-  principle: `
+    principle: `
 「正常」は自然発生するものではない。
 物語と反復によって構築される。
 `,
-    breakdown: [ "物語を構築する",
-    "反復する",
-    "共有される",
-    "正常が形成される",
-    "正常性バイアスが働く",
-    "警戒心が低下する"],
+    breakdown: [
+      "物語を構築する",
+      "反復する",
+      "共有される",
+      "正常が形成される",
+      "正常性バイアスが働く",
+      "警戒心が低下する"
+    ],
     noteTitle: "「瞞天過海」は日常に紛れる策ではない。「正常」を設計する策である。",
     noteUrl: "https://note.com/flying_baby/n/nc73a19124331",
     relatedStratagems: [],
@@ -47,8 +48,10 @@ const stratagems = [
     behavioral: "Limited attention / opportunity cost",
     summary: "正面から助けるのではなく、相手の別の重要地点を突いて行動を変えさせる。",
     example: "競合の本丸ではなく弱点市場を攻める、交渉で別論点を突く",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -69,8 +72,10 @@ const stratagems = [
     behavioral: "Diffusion of responsibility / agency problem",
     summary: "自分の手を汚さず、他者の力・権威・怒りを利用する。",
     example: "代理店・インフルエンサー・第三者レビューを使う",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -91,8 +96,10 @@ const stratagems = [
     behavioral: "Decision fatigue / ego depletion",
     summary: "余裕を保ち、相手の疲労や焦りが判断を鈍らせるのを待つ。",
     example: "長期交渉、相手が疲れたタイミングで条件提示",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -113,8 +120,10 @@ const stratagems = [
     behavioral: "Loss aversion / scarcity under stress",
     summary: "相手が混乱や損失に直面している時に、その判断の歪みを利用する。",
     example: "市場急落時の買収、炎上中の競合から顧客獲得",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -135,8 +144,10 @@ const stratagems = [
     behavioral: "Attentional bias / misdirection",
     summary: "目立つ情報で注意を誘導し、本命を見えにくくする。",
     example: "広告・政治・SNSで本命から視線を逸らす",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -157,8 +168,10 @@ const stratagems = [
     behavioral: "Illusory truth effect / availability heuristic",
     summary: "実体が薄いものでも、反復・演出・噂によって存在感が生まれる。",
     example: "ステマ、噂、ブランド人気の演出",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -179,8 +192,10 @@ const stratagems = [
     behavioral: "Confirmation bias / inattentional blindness",
     summary: "見えている動きで相手の予測を固定し、別経路で本命を進める。",
     example: "表向きのロードマップと裏の開発、競合の盲点攻略",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -201,8 +216,10 @@ const stratagems = [
     behavioral: "Bystander effect / strategic delay",
     summary: "他者の混乱に介入せず、消耗や変化を待つ。",
     example: "競合同士の消耗を待つ、炎上を静観する",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -223,8 +240,10 @@ const stratagems = [
     behavioral: "Halo effect / affect heuristic",
     summary: "好意的な外見や態度で警戒を下げ、裏の意図を隠す。",
     example: "営業トーク、政治的微笑、親切を装った誘導",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -245,8 +264,10 @@ const stratagems = [
     behavioral: "Sunk cost control / substitution",
     summary: "重要なものを守るために、別のものを犠牲にする。",
     example: "小さな部門を切って本体を守る、炎上時の責任者交代",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -267,8 +288,10 @@ const stratagems = [
     behavioral: "Mental accounting / salience bias",
     summary: "目立たない小さな機会を拾い、相手が軽視する損失を利用する。",
     example: "追加手数料、サブスクの小額課金、細かな権限取得",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -289,8 +312,10 @@ const stratagems = [
     behavioral: "Signaling / information elicitation",
     summary: "小さな刺激を与え、隠れた相手や本音の反応を見る。",
     example: "小さな質問で本音を見る、セキュリティ監査",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -311,8 +336,10 @@ const stratagems = [
     behavioral: "Authority bias / nostalgia effect",
     summary: "既にある名義・権威・過去資産を利用して新しい意味を宿す。",
     example: "古いブランドの復活、権威ある名義を借りる",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -333,8 +360,10 @@ const stratagems = [
     behavioral: "Context effect / home advantage",
     summary: "相手を得意な場所・条件から引き離し、能力を弱める。",
     example: "相手の得意領域から引き離す、プラットフォーム変更",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -355,8 +384,10 @@ const stratagems = [
     behavioral: "Reactance theory / commitment",
     summary: "追い詰めず、あえて自由を与えることで相手の自発的接近を誘う。",
     example: "営業で押さずに選ばせる、無料トライアル",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -377,8 +408,10 @@ const stratagems = [
     behavioral: "Reciprocity / anchoring",
     summary: "小さなものを差し出し、より大きな反応や価値を引き出す。",
     example: "無料資料、安価な入口商品、釣り投稿",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -399,8 +432,10 @@ const stratagems = [
     behavioral: "Network centrality / authority bias",
     summary: "集団全体ではなく、中心人物・権威・キーノードを狙う。",
     example: "キーマン攻略、インフルエンサー獲得",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -421,8 +456,10 @@ const stratagems = [
     behavioral: "Root cause intervention / systems thinking",
     summary: "表面の火ではなく、火を支える燃料を取り除く。",
     example: "競合の資金源・供給網・流通を断つ",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -443,8 +480,10 @@ const stratagems = [
     behavioral: "Cognitive load / ambiguity exploitation",
     summary: "混乱している環境では判断精度が落ちる。その隙を利用する。",
     example: "制度変更時の便乗、炎上中の情報操作",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -465,8 +504,10 @@ const stratagems = [
     behavioral: "Continuity bias / framing",
     summary: "外見や看板を残しながら、中身だけを入れ替える。",
     example: "看板だけ残して中身を変える、ブランド移行",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -487,8 +528,10 @@ const stratagems = [
     behavioral: "Choice architecture / constraint strategy",
     summary: "出口を塞ぎ、相手の選択肢を限定する。",
     example: "契約条項、囲い込み、解約導線の制限",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -509,8 +552,10 @@ const stratagems = [
     behavioral: "Psychological distance / coalition strategy",
     summary: "遠方と組み、近くの脅威を処理する。心理的距離を利用する計略。",
     example: "遠い業界と提携し、近い競合を攻める",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -531,8 +576,10 @@ const stratagems = [
     behavioral: "Foot-in-the-door / trust exploitation",
     summary: "通行や協力を名目にアクセス権を得て、本来の目的を達成する。",
     example: "API連携から市場侵入、提携を入口にする",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -553,8 +600,10 @@ const stratagems = [
     behavioral: "Change blindness / substitution effect",
     summary: "柱や梁のような重要構造を、気づかれないうちに入れ替える。",
     example: "規約改定、UI変更で主導権を移す",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -575,8 +624,10 @@ const stratagems = [
     behavioral: "Signaling / social norm enforcement",
     summary: "直接言わず、別対象を叱ることで本命に圧力をかける。",
     example: "名指しせず牽制、組織内メッセージ",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -597,8 +648,10 @@ const stratagems = [
     behavioral: "Stereotyping / first impression effect",
     summary: "愚者のふりをして、相手の見下しや油断を引き出す。",
     example: "弱そうに見せて油断させる、初心者を装う",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -619,8 +672,10 @@ const stratagems = [
     behavioral: "Sunk cost fallacy / escalation of commitment",
     summary: "相手を一度乗せた後、退路を断って選択を固定する。",
     example: "導入後に条件変更、撤退コストを上げる",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -641,8 +696,10 @@ const stratagems = [
     behavioral: "Signaling / halo effect",
     summary: "実体以上に華やかに見せ、相手の評価を増幅させる。",
     example: "実態以上に大きく見せるPR、展示会演出",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -663,8 +720,10 @@ const stratagems = [
     behavioral: "Endowment effect / default effect",
     summary: "客の立場から入り込み、いつの間にか主導権を握る。",
     example: "外部委託先が主導権を握る、プラットフォーム依存",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -685,8 +744,10 @@ const stratagems = [
     behavioral: "Affect heuristic / attractiveness bias",
     summary: "魅力や欲望によって判断力を鈍らせる。",
     example: "広告モデル、恋愛詐欺、感情訴求",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -707,8 +768,10 @@ const stratagems = [
     behavioral: "Ambiguity aversion / predictive inference",
     summary: "情報の空白を作り、相手自身に物語を補完させる。",
     example: "沈黙による深読み、OSSの堂々公開、投資家の推測",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -729,8 +792,10 @@ const stratagems = [
     behavioral: "Trust erosion / information asymmetry",
     summary: "情報と疑念を使い、相手組織の信頼構造を壊す。",
     example: "内部不信、リーク情報、競合撹乱",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -751,8 +816,10 @@ const stratagems = [
     behavioral: "Costly signaling / credibility heuristic",
     summary: "自分に痛みを与えることで、本気度や信用を演出する。",
     example: "身銭を切るPR、謝罪演出、内部告発の信頼性",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -773,8 +840,10 @@ const stratagems = [
     behavioral: "Complexity neglect / systems trap",
     summary: "単独ではなく、複数の仕掛けを連鎖させて逃げにくくする。",
     example: "複数施策の組み合わせ、依存関係で縛る",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
@@ -795,8 +864,10 @@ const stratagems = [
     behavioral: "Sunk cost fallacy / loss aversion",
     summary: "逃げることを敗北ではなく、合理的な選択肢として扱う。",
     example: "撤退判断、ピボット、プロジェクト停止",
-    interpretation: "",
-    principle: "",
+    interpretation: `
+`,
+    principle: `
+`,
     breakdown: [],
     noteTitle: "",
     noteUrl: "",
