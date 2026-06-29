@@ -39,29 +39,72 @@ breakdown: [
     references: []
   },
   {
-    id: 2,
-    name: "囲魏救趙",
-    reading: "いぎきゅうちょう",
-    english: "Besiege Wei to rescue Zhao",
-    category: "Attention / Indirect Pressure",
-    bias: "注意分散、間接圧力への反応",
-    behavioral: "Limited attention / opportunity cost",
-    summary: "正面から助けるのではなく、相手の別の重要地点を突いて行動を変えさせる。",
-    example: "競合の本丸ではなく弱点市場を攻める、交渉で別論点を突く",
-    interpretation: `
+  id: 2,
+
+  name: "囲魏救趙",
+
+  reading: "いぎきゅうちょう",
+
+  english: "Besiege Wei to rescue Zhao",
+
+  category: "Attention / Indirect Pressure",
+
+  bias: "注意分散、間接圧力への反応",
+
+  behavioral: "Limited attention / opportunity cost",
+
+  summary: "正面から助けるのではなく、相手の別の重要地点を突いて行動を変えさせる。",
+
+  example: "競合の本丸ではなく弱点市場を攻める、交渉で別論点を突く",
+
+  interpretation: `
+囲魏救趙は「注意を逸らす計略」ではない。
+
+本質は、相手の限られたリソースをどこへ配分させるかにある。
+
+人は戦力・人材・資金・時間など有限の資源を常に配分している。
+
+その配分先を変えさせることで、本来の戦略そのものを変更させる計略である。
 `,
-    principle: `
+
+  principle: `
+人は有限なリソースを優先順位に従って配分する。
+
+新たな重要課題が生じると、
+既存のリソース配分を変更せざるを得ない。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
-  },
+
+  breakdown: [
+    "相手の現在のリソース配分を把握する",
+    "別の重要課題を発生させる",
+    "優先順位を変更させる",
+    "リソース配分を再構成させる",
+    "本命への圧力を弱める"
+  ],
+
+  noteTitle: "囲魏救趙は「注意を逸らす計略」ではない　「リソース配分を操作する計略」である",
+
+  noteUrl: "（note URL）",
+
+  relatedStratagems: [4,19],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "限定合理性",
+    "機会費用"
+  ],
+
+  relatedConcepts: [
+    "リソース配分",
+    "優先順位",
+    "意思決定"
+  ],
+
+  relatedNotes: [],
+
+  references: []
+},
   {
     id: 3,
     name: "借刀殺人",
