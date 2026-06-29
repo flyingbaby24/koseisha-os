@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Iterable
 
@@ -8,7 +9,9 @@ import pandas as pd
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_OFFICIAL_DB_DIR = BASE_DIR / "data" / "thoughtmap_db" / "official"
+FALLBACK_OFFICIAL_DB_DIR = BASE_DIR / "master"
 DEFAULT_USERS_DIR = BASE_DIR / "data" / "thoughtmap_db" / "users"
+FALLBACK_USERS_DIR = BASE_DIR / "data" / "users"
 
 DOCUMENT_REQUIRED_COLUMNS = {"doc_id"}
 EMBEDDING_REQUIRED_COLUMNS = {"doc_id", "embedding"}
@@ -110,6 +113,106 @@ def validate_db_frames(
             warnings.append(message)
 
     return warnings
+
+
+def _normalize_text(value: object) -> str:
+    if pd.isna(value):
+        return ""
+    return str(value).strip()
+
+
+def resolve_db_dir(db_dir_text: str) -> Path:
+    db_dir = Path(db_dir_text)
+
+    if db_dir.is_absolute() and db_dir.exists():
+        return db_dir
+
+    repo_path = BASE_DIR / db_dir
+    if repo_path.exists():
+        return repo_path
+
+    if DEFAULT_OFFICIAL_DB_DIR.exists():
+        return DEFAULT_OFFICIAL_DB_DIR
+
+    if FALLBACK_OFFICIAL_DB_DIR.exists():
+        return FALLBACK_OFFICIAL_DB_DIR
+
+    return repo_path
+
+
+
+
+def resolve_users_dir(users_dir_text: str) -> Path:
+    users_dir = Path(users_dir_text)
+
+    if users_dir.is_absolute() and users_dir.exists():
+        return users_dir
+
+    repo_path = BASE_DIR / users_dir
+    if repo_path.exists():
+        return repo_path
+
+    if DEFAULT_USERS_DIR.exists():
+        return DEFAULT_USERS_DIR
+
+    if FALLBACK_USERS_DIR.exists():
+        return FALLBACK_USERS_DIR
+
+    return repo_path
+
+
+def list_user_libraries(users_dir: Path) -> pd.DataFrame:
+    index_path = users_dir / "index.csv"
+    if index_path.exists():
+        try:
+            idx = pd.read_csv(index_path, dtype=str).fillna("")
+            if "user_id" in idx.columns:
+                rows = []
+                for _, r in idx.iterrows():
+                    user_id = _normalize_text(r.get("user_id", ""))
+                    if not user_id:
+                        continue
+                    user_dir = users_dir / user_id
+                    if user_dir.exists():
+                        rows.append({
+                            "user_id": user_id,
+                            "display_name": _normalize_text(r.get("display_name", "")) or user_id,
+                            "email_masked": _normalize_text(r.get("email_masked", "")),
+                            "user_dir": str(user_dir),
+                        })
+                if rows:
+                    return pd.DataFrame(rows)
+        except Exception:
+            pass
+
+    rows = []
+    if users_dir.exists():
+        for p in sorted(users_dir.iterdir()):
+            if not p.is_dir():
+                continue
+            profile_path = p / "profile.json"
+            display_name = p.name
+            email_masked = ""
+            if profile_path.exists():
+                try:
+                    profile = json.loads(profile_path.read_text(encoding="utf-8"))
+                    display_name = _normalize_text(profile.get("display_name", "")) or display_name
+                    email_masked = _normalize_text(profile.get("email_masked", ""))
+                except Exception:
+                    pass
+            rows.append({
+                "user_id": p.name,
+                "display_name": display_name,
+                "email_masked": email_masked,
+                "user_dir": str(p),
+            })
+    return pd.DataFrame(rows)
+
+
+def resolve_user_db_dir(users_dir_text: str, user_id: str) -> Path:
+    users_dir = resolve_users_dir(users_dir_text)
+    return users_dir / user_id
+
 
 
 def load_official_db(db_dir: str | Path | None = None) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame | None]:

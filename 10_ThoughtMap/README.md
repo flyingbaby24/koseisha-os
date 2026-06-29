@@ -1,110 +1,119 @@
 # ThoughtMap
 
-**Spotify maps music.
-ThoughtMap maps thought.**
+**Spotify maps music. ThoughtMap maps thought.**
 
-ThoughtMap is an experimental project that explores whether recurring patterns of thought can be visualized from long-term creative output.
+ThoughtMap is an experimental project for mapping recurring patterns of thought across large bodies of writing.
 
-Instead of measuring popularity, engagement, or quality, ThoughtMap attempts to map what people repeatedly think about.
+Instead of measuring popularity, engagement, or quality, ThoughtMap asks what repeatedly appears in a person's creative output over time.
 
-The project analyzes large collections of text using embedding models and clustering techniques to identify persistent semantic structures across lyrics, essays, notes, and other written works.
-
----
-
-## Why?
-
-People often describe themselves using labels, beliefs, or identities.
-
-ThoughtMap asks a different question:
-
-**What patterns remain after hundreds or thousands of pieces of writing?**
-
-Can long-term creative output reveal a persistent "thought structure" regardless of topic, genre, or style?
-
----
+The project analyzes text collections with sentence embeddings, similarity search, clustering, and 2D map projection. Current datasets include lyrics, notes, essays, public-domain books, classic texts, and legal/philosophical material.
 
 ## Current Features
 
-* Lyric Embedding
-* Similarity Search
-* Thought Clustering
-* Thought Continent Visualization
-* Civilization Profile Analysis
-* Author Similarity Analysis
+- Text upload and paste-based analysis in Streamlit
+- Sentence embedding generation
+- Similarity search across works and authors
+- KMeans clustering and UMAP thought maps
+- CSV export/import workflow
+- Official and personal searchable ThoughtMap databases
+- Filter/profile views for conceptual categories
 
----
+## Current Architecture
 
-## Current Dataset
+ThoughtMap is currently organized around a Streamlit prototype, with a backend-agnostic data/search layer beginning to emerge.
 
-* 992 self-written song lyrics
-* 500+ philosophical notes and essays (ongoing)
+```text
+10_ThoughtMap/
+  data/
+    thoughtmap_db/
+      official/
+      users/
+  filters/
+  gutendex_books/
+  output/
+  src/
+  web/
+    app.py
+    storage.py
+    search_utils.py
+    pages/
+      02_Search.py
+      03_Personal_Search.py
+```
 
----
+- `web/app.py` is the Streamlit analysis prototype for upload, paste, embedding, clustering, maps, profiles, and CSV export.
+- `web/pages/02_Search.py` is the official database similarity search page.
+- `web/pages/03_Personal_Search.py` is the personal library similarity search page.
+- `web/storage.py` is the backend-agnostic CSV data access layer.
+- `web/search_utils.py` contains pure search, vector, normalization, and CSV export helpers.
+- `src/` contains older batch scripts and experiments kept for reference.
 
-## Interesting Finding
+See [docs/architecture.md](docs/architecture.md) for more detail.
 
-As an experiment, I compared:
+## CSV-Based Workflow
 
-* ~1000 self-written song lyrics
-* 500+ philosophical notes
+ThoughtMap intentionally still uses CSV as its working storage and interchange format.
 
-using sentence embeddings.
+Official DB files:
 
-Despite being written in completely different formats, both datasets independently converged toward similar semantic neighborhoods.
+- `data/thoughtmap_db/official/documents_master.csv`
+- `data/thoughtmap_db/official/embeddings_master.csv`
+- `data/thoughtmap_db/official/map_points_latest.csv`
 
-Examples of nearby authors included:
+Personal DB files:
 
-* Nietzsche
-* Thoreau
-* Plato
-* Tolstoy
+- `data/thoughtmap_db/users/<user_id>/documents.csv`
+- `data/thoughtmap_db/users/<user_id>/embeddings.csv`
+- `data/thoughtmap_db/users/<user_id>/map_points.csv`
+- `data/thoughtmap_db/users/<user_id>/profile.json`
 
-The result was generated through embedding similarity rather than LLM interpretation.
+CSV remains useful because it is easy to inspect, manually upload, export, back up, and exchange between tools.
 
-The interesting part was not the authors themselves, but the emergence of a consistent semantic center across years of independent writing.
+See [docs/data_flow.md](docs/data_flow.md) for the current data flow.
 
----
+## Role of storage.py
 
-## Future Goals
+`web/storage.py` is the start of a shared backend data-access layer. It handles CSV loading, model column normalization, lightweight validation, official/personal DB path resolution, and user-library discovery.
 
-* Multi-author comparison
-* Similar thinker discovery
-* Web-based search engine
-* Automatic profile generation
-* Thought-space exploration
-* Large-scale thought mapping across users
+`storage.py` must remain backend-agnostic. Do not add Streamlit UI code, `st.cache_data`, sidebar logic, labels, selectboxes, warnings, or page rendering behavior to this module.
 
----
+Long term, this module should be usable from Streamlit, Unity tooling, Python batch scripts, a web app, or an API server.
 
-## Vision
+## Role of search_utils.py
 
-Most platforms measure popularity.
+`web/search_utils.py` contains pure helper logic shared by search pages: text normalization, embedding parsing, cosine similarity, average vectors, ranked similarity result construction, formatting, and CSV row export helpers.
 
-ThoughtMap attempts to measure persistence.
+It should stay UI-independent. Do not move Streamlit rendering functions into this file.
 
-Not what people say they believe.
+## Future Backend Goals
 
-But what repeatedly emerges from what they create.
+ThoughtMap is currently a Streamlit app, but the data/search backend should eventually be reusable from:
 
----
+- Streamlit
+- Unity
+- Python batch scripts
+- web applications
+- API servers
 
-## Visualizations Lyrics
+Possible future directions:
 
-<img width="4200" height="3000" alt="thought_continent" src="https://github.com/user-attachments/assets/831162c5-0368-4b04-9a76-ad43997c32c7" />
+- keep CSV as import/export format
+- strengthen validation for larger CSV databases
+- define a stable backend API around documents, embeddings, map points, users, and search results
+- optionally add SQLite later as a local runtime store
+- keep private or large user data out of GitHub when the project grows
 
-<img width="4500" height="3500" alt="lyrics_title_map" src="https://github.com/user-attachments/assets/4a2dc08d-b821-43b2-9158-178d61eb63b7" />
+SQLite is not the current migration target. The current priority is to keep the CSV workflow stable while making data access and search logic reusable.
 
-<img width="2400" height="2400" alt="civilization_pie" src="https://github.com/user-attachments/assets/5e89331f-1f63-4c1e-bfdd-42e4698a7d31" />
+## Development Principles
 
----
+- Keep UI behavior stable while refactoring.
+- Keep CSV import/export compatible.
+- Keep `storage.py` backend-agnostic.
+- Keep `search_utils.py` pure and UI-independent.
+- Do not rewrite working Streamlit pages without a specific reason.
+- Do not delete legacy scripts until their role is documented and replaced.
 
-## Visualizations Notes
+## Original Vision
 
-<img width="2400" height="2400" alt="notes_civilization_pie" src="https://github.com/user-attachments/assets/777090a8-34e9-4c6b-9371-aebd57341463" />
-
-<img width="4500" height="3500" alt="notes_title_map" src="https://github.com/user-attachments/assets/e65c1c45-526b-4d08-bda3-c48e5b7ffeb9" />
-
-<img width="4200" height="3000" alt="notes_thought_continent" src="https://github.com/user-attachments/assets/b530fc4c-a7e9-4988-b610-338ea44b212c" />
-
-
-
+ThoughtMap attempts to measure persistence: not what people say they believe, but what repeatedly emerges from what they create.
