@@ -87,3 +87,12 @@ def cosine(a: np.ndarray, b: np.ndarray) -> float:
     if denom == 0 or math.isnan(denom):
         return 0.0
     return float(np.dot(a, b) / denom)
+
+
+def normalized_average_vector(vecs: list[np.ndarray]) -> np.ndarray:
+    stacked = np.stack(vecs)
+    avg = stacked.mean(axis=0)
+    norm = np.linalg.norm(avg)
+    if norm > 0:
+        avg = avg / norm
+    return avg
