@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+from storage import load_user_db
+
 
 APP_TITLE = "ThoughtMap Personal Works Search"
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -174,17 +176,8 @@ def resolve_user_db_dir(users_dir_text: str, user_id: str) -> Path:
 
 @st.cache_data(show_spinner=False)
 def load_personal_db_cached(users_dir_text: str, user_id: str) -> pd.DataFrame:
-    db_dir = resolve_user_db_dir(users_dir_text, user_id)
-    docs_path = db_dir / "documents.csv"
-    embs_path = db_dir / "embeddings.csv"
-
-    if not docs_path.exists():
-        raise FileNotFoundError(f"documents.csv が見つかりません: {docs_path}")
-    if not embs_path.exists():
-        raise FileNotFoundError(f"embeddings.csv が見つかりません: {embs_path}")
-
-    docs = pd.read_csv(docs_path, dtype=str).fillna("")
-    embs = pd.read_csv(embs_path, dtype=str).fillna("")
+    users_dir = resolve_users_dir(users_dir_text)
+    docs, embs, _map_points = load_user_db(user_id, users_dir)
 
     if "doc_id" not in docs.columns or "doc_id" not in embs.columns:
         raise ValueError("documents.csv / embeddings.csv の両方に doc_id 列が必要です。")

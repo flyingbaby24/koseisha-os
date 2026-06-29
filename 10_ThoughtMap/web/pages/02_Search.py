@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+from storage import load_official_db
+
 
 APP_TITLE = "ThoughtMap Similarity Search"
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -121,16 +123,7 @@ def resolve_db_dir(db_dir_text: str) -> Path:
 @st.cache_data(show_spinner=False)
 def load_db_cached(db_dir_text: str) -> pd.DataFrame:
     db_dir = resolve_db_dir(db_dir_text)
-    docs_path = db_dir / "documents_master.csv"
-    embs_path = db_dir / "embeddings_master.csv"
-
-    if not docs_path.exists():
-        raise FileNotFoundError(f"documents_master.csv が見つかりません: {docs_path}")
-    if not embs_path.exists():
-        raise FileNotFoundError(f"embeddings_master.csv が見つかりません: {embs_path}")
-
-    docs = pd.read_csv(docs_path, dtype=str).fillna("")
-    embs = pd.read_csv(embs_path, dtype=str).fillna("")
+    docs, embs, _map_points = load_official_db(db_dir)
 
     if "doc_id" not in docs.columns or "doc_id" not in embs.columns:
         raise ValueError("documents_master.csv / embeddings_master.csv の両方に doc_id 列が必要です。")
