@@ -628,6 +628,11 @@ if run:
             "source": [d["source"] for d in docs],
         })
 
+        df["doc_id"] = [
+            f"doc_{i:06d}"
+            for i in range(len(df))
+        ]
+
         filter_score_df = make_filter_scores(
             embeddings,
             categories,
