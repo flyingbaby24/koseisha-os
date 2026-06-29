@@ -16,6 +16,8 @@ from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
 from umap import UMAP
 
+from thought_composition import make_parameter_scores
+
 
 st.set_page_config(
     page_title="ThoughtMap Web v0.2",
@@ -984,6 +986,24 @@ with tab6:
             file_name="thoughtmap_filter_scores.csv",
             mime="text/csv"
         )
+
+        try:
+            parameter_score_df = make_parameter_scores(df, filter_score_df)
+        except ValueError:
+            parameter_score_df = None
+
+        if parameter_score_df is not None:
+            parameter_score_bytes = parameter_score_df.to_csv(
+                index=False,
+                encoding="utf-8-sig"
+            ).encode("utf-8-sig")
+
+            st.download_button(
+                "Download parameter scores CSV",
+                parameter_score_bytes,
+                file_name="parameter_scores.csv",
+                mime="text/csv"
+            )
 
     # -------------------------
     # Selected Filters
