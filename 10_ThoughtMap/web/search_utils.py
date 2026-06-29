@@ -32,6 +32,31 @@ def vector_to_json(vec: np.ndarray) -> str:
     return json.dumps([float(x) for x in vec], ensure_ascii=False)
 
 
+
+def make_embedding_download_csv(
+    title: str,
+    author: str,
+    doc_id: str,
+    gutenberg_id: str,
+    source: str,
+    source_url: str,
+    embedding: str,
+    category: str = "",
+    subcategory: str = "",
+) -> str:
+    row = {
+        "doc_id": normalize_text(doc_id),
+        "author": normalize_text(author),
+        "title": normalize_text(title),
+        "source": normalize_text(source),
+        "category": normalize_text(category),
+        "subcategory": normalize_text(subcategory),
+        "gutenberg_id": normalize_text(gutenberg_id),
+        "source_url": normalize_text(source_url),
+        "embedding": normalize_text(embedding),
+    }
+    return pd.DataFrame([row]).to_csv(index=False, encoding="utf-8-sig")
+
 def parse_embedding(value: object) -> Optional[np.ndarray]:
     s = normalize_text(value)
     if not s:
