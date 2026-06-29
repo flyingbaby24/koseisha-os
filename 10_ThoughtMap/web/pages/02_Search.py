@@ -14,6 +14,7 @@ from search_utils import (
     parse_embedding,
     safe_filename,
     vector_to_json,
+    make_embedding_download_csv,
 )
 from storage import load_official_db
 
