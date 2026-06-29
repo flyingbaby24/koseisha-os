@@ -101,6 +101,29 @@ def print_missing_parameter_report(inspected: list[dict[str, object]]) -> None:
     )
 
 
+def select_document_sample(
+    documents: pd.DataFrame,
+    parameter_scores: pd.DataFrame,
+    sample_size: int,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    sample_doc_ids = parameter_scores["doc_id"].astype(str).head(sample_size)
+    scores_sample = parameter_scores[
+        parameter_scores["doc_id"].astype(str).isin(sample_doc_ids)
+    ]
+    documents_sample = documents[
+        documents["doc_id"].astype(str).isin(sample_doc_ids)
+    ]
+
+    if documents_sample.empty and {"doc_id", "title", "source"}.issubset(parameter_scores.columns):
+        metadata_columns = [
+            column for column in ["doc_id", "title", "author", "source"]
+            if column in parameter_scores.columns
+        ]
+        documents_sample = scores_sample[metadata_columns].copy()
+
+    return documents_sample, scores_sample
+
+
 def build_preview(
     documents_path: Path,
     parameter_scores_path: Path,
@@ -110,9 +133,11 @@ def build_preview(
     documents = pd.read_csv(documents_path, dtype=str).fillna("")
     parameter_scores = pd.read_csv(parameter_scores_path)
 
-    sample_doc_ids = parameter_scores["doc_id"].astype(str).head(sample_size)
-    documents_sample = documents[documents["doc_id"].astype(str).isin(sample_doc_ids)]
-    scores_sample = parameter_scores[parameter_scores["doc_id"].astype(str).isin(sample_doc_ids)]
+    documents_sample, scores_sample = select_document_sample(
+        documents,
+        parameter_scores,
+        sample_size,
+    )
 
     cards = build_cards_from_parameters(documents_sample, scores_sample)
 
