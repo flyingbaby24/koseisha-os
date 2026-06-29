@@ -20,7 +20,7 @@ from search_utils import (
     author_similarity_by_vector,
     format_similarity,
 )
-from storage import load_official_db
+from storage import load_official_db, resolve_db_dir
 
 
 APP_TITLE = "ThoughtMap Similarity Search"
@@ -30,26 +30,6 @@ DEFAULT_DB_DIR = BASE_DIR / "data" / "thoughtmap_db" / "official"
 FALLBACK_DB_DIR = BASE_DIR / "master"
 
 
-def resolve_db_dir(db_dir_text: str) -> Path:
-    db_dir = Path(db_dir_text)
-
-    if db_dir.is_absolute() and db_dir.exists():
-        return db_dir
-
-    repo_path = BASE_DIR / db_dir
-    if repo_path.exists():
-        return repo_path
-
-    if DEFAULT_DB_DIR.exists():
-        return DEFAULT_DB_DIR
-
-    if FALLBACK_DB_DIR.exists():
-        return FALLBACK_DB_DIR
-
-    return repo_path
-
-
-@st.cache_data(show_spinner=False)
 def load_db_cached(db_dir_text: str) -> pd.DataFrame:
     db_dir = resolve_db_dir(db_dir_text)
     docs, embs, _map_points = load_official_db(db_dir)
