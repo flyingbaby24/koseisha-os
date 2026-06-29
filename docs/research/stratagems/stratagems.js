@@ -51,7 +51,7 @@ breakdown: [
 
   bias: "注意分散、間接圧力への反応",
 
-  behavioral: "Limited attention / opportunity cost",
+  behavioral: "Resource allocation / Opportunity cost",
 
   summary: "正面から助けるのではなく、相手の別の重要地点を突いて行動を変えさせる。",
 
@@ -84,7 +84,7 @@ breakdown: [
 
   noteTitle: "囲魏救趙は「注意を逸らす計略」ではない　「リソース配分を操作する計略」である",
 
-  noteUrl: "（note URL）",
+  noteUrl: "https://note.com/flying_baby/n/naad914606937",
 
   relatedStratagems: [4,19],
 
@@ -104,7 +104,7 @@ breakdown: [
   relatedNotes: [],
 
   references: []
-},
+  },
   {
     id: 3,
     name: "借刀殺人",
