@@ -162,16 +162,52 @@ noteUrl: "https://note.com/flying_baby/n/n22f89c8558ea",
     summary: "余裕を保ち、相手の疲労や焦りが判断を鈍らせるのを待つ。",
     example: "長期交渉、相手が疲れたタイミングで条件提示",
     interpretation: `
+以逸待労は「疲れるまで待つ計略」ではない。
+
+本質は、相手の認知資源を消耗させる環境を設計することにある。
+
+人は常に情報を処理し、判断を繰り返している。
+情報不足、情報過多、時間制限、不確実性、疲労などは、すべて認知資源を消耗させる。
+
+認知資源が枯渇すると判断能力は低下し、最適な意思決定が難しくなる。
+
+以逸待労とは、その状態を意図的に生み出し、最も判断力が低下した瞬間を利用する戦略なのである。
 `,
-    principle: `
+
+principle: `
+疲労とは原因ではなく結果である。
+
+本質は認知資源の消耗にあり、
+認知資源が不足すると、人は優先順位や判断精度を維持できなくなる。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
+
+breakdown: [
+  "認知資源を消耗させる環境を設計する",
+  "情報過多・情報不足・時間制限・不確実性を与える",
+  "判断力を徐々に低下させる",
+  "認知資源が再配分される",
+  "最適な意思決定ができなくなった瞬間を狙う"
+],
+
+noteTitle: "以逸待労は「疲れるまで待つ計略」ではない　「認知資源を枯渇させる計略」である",
+
+noteUrl: "https://note.com/flying_baby/n/n550b83e1cf00",
+
+relatedStratagems: [2,19,35],
+
+relatedBiases: [
+  "Decision fatigue",
+  "Cognitive load",
+  "Ego depletion"
+],
+
+relatedConcepts: [
+  "認知資源",
+  "意思決定",
+  "注意資源",
+  "情報処理",
+  "リソース配分"
+],
     relatedNotes: [],
     references: []
   },
