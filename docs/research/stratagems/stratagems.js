@@ -9,11 +9,28 @@ const stratagems = [
     behavioral: "Status quo bias / habituation",
     summary: "あまりにも日常的なものは疑われにくい。反復と慣れを利用する計略。",
     example: "日常業務に紛れた情報漏洩、いつものUIに紛れた誘導",
-    interpretation: "",
+    i  interpretation: `
+瞞天過海は日常に紛れる策ではない。
+
+本質は相手にとっての「正常」を設計することにある。
+
+人は反復されたものを正常だと認識し、
+正常性バイアスによって警戒を解く。
+`,
+
+  principle: `
+「正常」は自然発生するものではない。
+物語と反復によって構築される。
+`,
     principle: "",
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
+    breakdown: [ "物語を構築する",
+    "反復する",
+    "共有される",
+    "正常が形成される",
+    "正常性バイアスが働く",
+    "警戒心が低下する"],
+    noteTitle: "「瞞天過海」は日常に紛れる策ではない。「正常」を設計する策である。",
+    noteUrl: "https://note.com/flying_baby/n/nc73a19124331",
     relatedStratagems: [],
     relatedIdioms: [],
     relatedBiases: [],
