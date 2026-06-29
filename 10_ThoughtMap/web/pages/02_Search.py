@@ -14,6 +14,11 @@ from search_utils import (
     parse_embedding,
     safe_filename,
     vector_to_json,
+    make_embedding_download_csv,
+    normalized_average_vector,
+    work_similarity_by_vector,
+    author_similarity_by_vector,
+    format_similarity,
 )
 from storage import load_official_db
 
@@ -143,96 +148,6 @@ def filter_catalog(df: pd.DataFrame, query: str, source: str, category: str = "A
         )
         out = out[mask]
 
-    return out
-
-
-def normalized_average_vector(vecs: list[np.ndarray]) -> np.ndarray:
-    stacked = np.stack(vecs)
-    avg = stacked.mean(axis=0)
-    norm = np.linalg.norm(avg)
-    if norm > 0:
-        avg = avg / norm
-    return avg
-
-
-def work_similarity_by_vector(
-    df: pd.DataFrame,
-    target_vec: np.ndarray,
-    top: int,
-    exclude_doc_id: str = "",
-    include_self: bool = False,
-) -> pd.DataFrame:
-    rows = []
-
-    for _, row in df.iterrows():
-        if exclude_doc_id and not include_self:
-            if normalize_text(row.get("doc_id", "")) == normalize_text(exclude_doc_id):
-                continue
-
-        rows.append({
-            "similarity": cosine(target_vec, row["_embedding_vec"]),
-            "doc_id": row.get("doc_id", ""),
-            "gutenberg_id": row.get("gutenberg_id", ""),
-            "author": row.get("author", ""),
-            "title": row.get("title", ""),
-            "source": row.get("source", ""),
-            "category": row.get("category", ""),
-            "subcategory": row.get("subcategory", ""),
-            "source_url": row.get("source_url", ""),
-            "model_name": row.get("model_name", ""),
-            "embedding": row.get("embedding", ""),
-        })
-
-    out = pd.DataFrame(rows)
-    if out.empty:
-        return out
-
-    out = out.sort_values("similarity", ascending=False).head(top).reset_index(drop=True)
-    out.insert(0, "rank", range(1, len(out) + 1))
-    return out
-
-
-def author_similarity_by_vector(
-    df: pd.DataFrame,
-    target_vec: np.ndarray,
-    target_author: str,
-    top: int,
-    include_same_author: bool = False,
-) -> pd.DataFrame:
-    target_author_key = normalize_key(target_author)
-    rows = []
-
-    for author, group in df.groupby("author", dropna=False):
-        author = normalize_text(author)
-        if not author:
-            continue
-
-        if not include_same_author and target_author_key and normalize_key(author) == target_author_key:
-            continue
-
-        avg = normalized_average_vector(group["_embedding_vec"].to_list())
-        rows.append({
-            "similarity": cosine(target_vec, avg),
-            "author": author,
-            "works_count": len(group),
-            "sample_titles": " | ".join(group["title"].head(3).map(normalize_text).tolist()),
-            "source": "author_average",
-            "embedding": vector_to_json(avg),
-        })
-
-    out = pd.DataFrame(rows)
-    if out.empty:
-        return out
-
-    out = out.sort_values("similarity", ascending=False).head(top).reset_index(drop=True)
-    out.insert(0, "rank", range(1, len(out) + 1))
-    return out
-
-
-def format_similarity(df: pd.DataFrame) -> pd.DataFrame:
-    out = df.copy()
-    if "similarity" in out.columns:
-        out["similarity"] = out["similarity"].map(lambda x: round(float(x), 4))
     return out
 
 
