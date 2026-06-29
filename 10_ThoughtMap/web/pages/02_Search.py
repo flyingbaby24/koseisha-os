@@ -15,6 +15,7 @@ from search_utils import (
     safe_filename,
     vector_to_json,
     make_embedding_download_csv,
+    normalized_average_vector,
 )
 from storage import load_official_db
 
@@ -145,15 +146,6 @@ def filter_catalog(df: pd.DataFrame, query: str, source: str, category: str = "A
         out = out[mask]
 
     return out
-
-
-def normalized_average_vector(vecs: list[np.ndarray]) -> np.ndarray:
-    stacked = np.stack(vecs)
-    avg = stacked.mean(axis=0)
-    norm = np.linalg.norm(avg)
-    if norm > 0:
-        avg = avg / norm
-    return avg
 
 
 def work_similarity_by_vector(
