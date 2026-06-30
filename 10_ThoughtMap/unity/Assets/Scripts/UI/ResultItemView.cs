@@ -3,10 +3,12 @@ using UnityEngine;
 
 public class ResultItemView : MonoBehaviour
 {
-    [SerializeField] private TMP_Text text;
+    [SerializeField] private TMP_Text titleText;
+    [SerializeField] private TMP_Text authorText;
 
     public void Bind(ThoughtMapSearchResult result)
     {
-        text.text = $"{result.title}\n<color=#AAAAAA>{result.author}</color>";
+        titleText.text = string.IsNullOrWhiteSpace(result.title) ? "Untitled" : result.title;
+        authorText.text = string.IsNullOrWhiteSpace(result.author) ? "Unknown" : result.author;
     }
 }

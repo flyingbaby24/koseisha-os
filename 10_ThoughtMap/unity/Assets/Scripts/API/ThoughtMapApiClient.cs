@@ -7,7 +7,7 @@ public class ThoughtMapApiClient : MonoBehaviour
 {
     [SerializeField] private string baseUrl = "http://127.0.0.1:8000";
 
-    public IEnumerator Search(string query, Action<ThoughtMapSearchResponse> onSuccess, Action<string> onError)
+    public IEnumerator Search(string query, int top, Action<ThoughtMapSearchResponse> onSuccess, Action<string> onError)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
@@ -15,7 +15,8 @@ public class ThoughtMapApiClient : MonoBehaviour
             yield break;
         }
 
-        string url = $"{baseUrl}/search?q={UnityWebRequest.EscapeURL(query)}";
+        int safeTop = Mathf.Clamp(top, 1, 50);
+        string url = $"{baseUrl}/search?q={UnityWebRequest.EscapeURL(query)}&top={safeTop}";
 
         using (UnityWebRequest request = UnityWebRequest.Get(url))
         {

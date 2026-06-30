@@ -10,8 +10,8 @@ public class ThoughtMapSearchManager : MonoBehaviour
     [Header("UI")]
     [SerializeField] private TMP_InputField searchInput;
     [SerializeField] private Button searchButton;
-    [SerializeField] private Transform resultsContent;
-    [SerializeField] private ResultItemView resultItemPrefab;
+    [SerializeField] private SearchResultsListView resultsListView;
+    [SerializeField] private int topResults = 10;
 
     private void Awake()
     {
@@ -26,38 +26,19 @@ public class ThoughtMapSearchManager : MonoBehaviour
     private void OnSearchClicked()
     {
         searchButton.interactable = false;
-        ClearResults();
-        StartCoroutine(apiClient.Search(searchInput.text, HandleSuccess, HandleError));
+        resultsListView.Clear();
+        StartCoroutine(apiClient.Search(searchInput.text, topResults, HandleSuccess, HandleError));
     }
 
     private void HandleSuccess(ThoughtMapSearchResponse response)
     {
         searchButton.interactable = true;
-        ClearResults();
-
-        if (response?.results == null)
-        {
-            return;
-        }
-
-        foreach (ThoughtMapSearchResult result in response.results)
-        {
-            ResultItemView item = Instantiate(resultItemPrefab, resultsContent);
-            item.Bind(result);
-        }
+        resultsListView.ShowResults(response?.results);
     }
 
     private void HandleError(string message)
     {
         searchButton.interactable = true;
         Debug.LogError($"ThoughtMap search failed: {message}");
-    }
-
-    private void ClearResults()
-    {
-        for (int i = resultsContent.childCount - 1; i >= 0; i--)
-        {
-            Destroy(resultsContent.GetChild(i).gameObject);
-        }
     }
 }
