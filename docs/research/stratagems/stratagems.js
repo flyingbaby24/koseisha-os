@@ -257,7 +257,7 @@ relatedConcepts: [
 
   noteTitle: "趁火打劫は「火事場泥棒」ではない──優先順位が変わった瞬間を突く計略である",
 
-  noteUrl: "https://note.com/flying_baby/",
+  noteUrl: "https://note.com/flying_baby/n/n03c2bb2b2e40",
 
   relatedStratagems: [2,4,19],
 
