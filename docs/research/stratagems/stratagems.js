@@ -353,29 +353,81 @@ relatedConcepts: [
   references: []
 },
   {
-    id: 7,
-    name: "無中生有",
-    reading: "むちゅうしょうゆう",
-    english: "Create something from nothing",
-    category: "Reality Construction",
-    bias: "真実性錯覚、存在の錯覚、反復効果",
-    behavioral: "Illusory truth effect / availability heuristic",
-    summary: "実体が薄いものでも、反復・演出・噂によって存在感が生まれる。",
-    example: "ステマ、噂、ブランド人気の演出",
-    interpretation: `
+  id: 7,
+  name: "無中生有",
+  reading: "むちゅうしょうゆう",
+  english: "Create something from nothing",
+  category: "Reality Construction / Social Attention",
+  bias: "集団注目による重要度錯覚、真実性錯覚、社会的証明",
+  behavioral: "Social proof / illusory truth effect / availability heuristic",
+  summary: "集団の注目を利用し、実体が薄いものに重要度を構築する。",
+  example: "行列、ランキング、フォロワー数、口コミ、売上No.1、話題化された商品",
+
+  interpretation: `
+無中生有は「嘘を信じ込ませる計略」ではない。
+
+本質は、人間が集団の注目を重要度として認識する本能を利用することにある。
+
+人は多くの人が注目しているものを見ると、
+「何か重要なことがあるはずだ」と判断する。
+
+これは欠陥ではなく、
+群れで生きる生物が獲得した合理的な情報収集能力である。
+
+無中生有とは、
+何もない場所に実体を作るのではなく、
+集団の注目を起点に重要度そのものを構築する計略なのである。
 `,
-    principle: `
+
+  principle: `
+人間は集団の行動を情報として利用する。
+
+多くの人が見ているもの、
+集まっている場所、
+話題になっている対象は、
+実体の有無とは別に「重要そうだ」と認識される。
+
+そのため、注目の集中を作れば、
+重要度そのものを後から発生させることができる。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
-  },
+
+  breakdown: [
+    "注目の起点を作る",
+    "集団が反応する",
+    "周囲がその反応を重要度として認識する",
+    "さらに注目が集まる",
+    "実体以上の存在感が形成される",
+    "重要度が後から構築される"
+  ],
+
+  noteTitle: "無中生有は「嘘を信じ込ませる計略」ではない──集団本能を利用する計略である",
+
+  noteUrl: "https://note.com/flying_baby/n/n1e27db01aab8",
+
+  relatedStratagems: [1,6,17,29],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "Social proof",
+    "Illusory truth effect",
+    "Availability heuristic",
+    "Bandwagon effect"
+  ],
+
+  relatedConcepts: [
+    "集団心理",
+    "社会的証明",
+    "重要度の構築",
+    "群れの本能",
+    "注目経済",
+    "アルゴリズム"
+  ],
+
+  relatedNotes: [],
+
+  references: []
+},
   {
     id: 8,
     name: "暗渡陳倉",
