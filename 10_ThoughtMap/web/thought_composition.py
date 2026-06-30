@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Iterable
 
+import numpy as np
 import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 THOUGHT_COMPOSITION_PARAMETERS = [
@@ -17,6 +19,22 @@ THOUGHT_COMPOSITION_PARAMETERS = [
     "individual",
     "community",
 ]
+
+
+def make_filter_scores(embeddings, categories, model):
+    if not categories:
+        return None
+
+    category_names = list(categories.keys())
+    category_texts = list(categories.values())
+    category_embeddings = model.encode(category_texts, show_progress_bar=False)
+    scores = cosine_similarity(embeddings, category_embeddings)
+
+    scores = np.clip(scores, 0, None)
+    totals = scores.sum(axis=1, keepdims=True)
+    scores = np.divide(scores, totals, out=np.zeros_like(scores), where=totals != 0)
+
+    return pd.DataFrame(scores, columns=category_names)
 
 
 def missing_parameter_columns(

@@ -212,77 +212,222 @@ relatedConcepts: [
     references: []
   },
   {
-    id: 5,
-    name: "趁火打劫",
-    reading: "ちんかだこう",
-    english: "Loot a burning house",
-    category: "Loss / Crisis",
-    bias: "危機時の損失回避、焦燥判断",
-    behavioral: "Loss aversion / scarcity under stress",
-    summary: "相手が混乱や損失に直面している時に、その判断の歪みを利用する。",
-    example: "市場急落時の買収、炎上中の競合から顧客獲得",
-    interpretation: `
+  id: 5,
+  name: "趁火打劫",
+  reading: "ちんかだこう",
+  english: "Loot a burning house",
+  category: "Loss / Crisis",
+  bias: "危機時の優先順位変化、損失回避、注意資源の再配分",
+  behavioral: "Loss aversion / priority reallocation",
+  summary: "危機によって優先順位が変化し、守れなくなった場所を突く。",
+  example: "競合企業の炎上中に顧客を獲得する、市場暴落時に優良資産を買う、障害対応中の隙を突くサイバー攻撃",
+
+  interpretation: `
+趁火打劫は「火事場泥棒」ではない。
+
+本質は、危機によって優先順位が変化した瞬間を利用することにある。
+
+人は危機に直面すると、
+命・財産・信用・安全など、
+守るべき対象の優先順位を急激に組み替える。
+
+その結果、
+すべてを同時には守れなくなり、
+注意もリソースも届かない空白が生まれる。
+
+趁火打劫とは、
+その空白へ最も早く到達する計略なのである。
 `,
-    principle: `
+
+  principle: `
+危機そのものが本質ではない。
+
+危機によって優先順位が再編成され、
+限られた認知資源・時間・戦力が別の場所へ集中することで、
+守れなくなった場所が必ず生まれる。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
-  },
+
+  breakdown: [
+    "危機によって優先順位が変化する",
+    "重要対象へ認知資源とリソースが集中する",
+    "守備の薄い領域が生まれる",
+    "その空白を素早く発見する",
+    "最も価値の高い機会を獲得する"
+  ],
+
+  noteTitle: "趁火打劫は「火事場泥棒」ではない──優先順位が変わった瞬間を突く計略である",
+
+  noteUrl: "https://note.com/flying_baby/n/n03c2bb2b2e40",
+
+  relatedStratagems: [2,4,19],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "Loss aversion",
+    "Attentional prioritization",
+    "Priority reallocation"
+  ],
+
+  relatedConcepts: [
+    "優先順位",
+    "認知資源",
+    "リソース配分",
+    "危機管理",
+    "機会費用"
+  ],
+
+  relatedNotes: [],
+
+  references: []
+},
   {
-    id: 6,
-    name: "声東撃西",
-    reading: "せいとうげきせい",
-    english: "Make noise in the east, attack in the west",
-    category: "Attention",
-    bias: "注意誘導、一点集中による盲点化",
-    behavioral: "Attentional bias / misdirection",
-    summary: "目立つ情報で注意を誘導し、本命を見えにくくする。",
-    example: "広告・政治・SNSで本命から視線を逸らす",
-    interpretation: `
+  id: 6,
+  name: "声東撃西",
+  reading: "せいとうげきせい",
+  english: "Make noise in the east, attack in the west",
+  category: "Attention / Priority",
+  bias: "優先順位の誤認、注意誘導、認知資源の集中",
+  behavioral: "Attentional bias / priority manipulation",
+  summary: "重要ではないものを重要だと思わせ、本命の優先順位を下げさせる。",
+  example: "派手なニュース・炎上・スキャンダルで注目を集め、本命の政策変更・侵入・交渉を通す",
+
+  interpretation: `
+声東撃西は「注意を逸らす計略」ではない。
+
+本質は、相手の優先順位を誤認させることにある。
+
+人は重要だと思ったものへ注意を向ける。
+つまり、注意は原因ではなく結果である。
+
+東へ注意が向くのは、
+東の方が重要だと思わされているからである。
+
+声東撃西とは、
+重要ではないものを重要だと思わせ、
+本当に重要な場所の優先順位を下げさせる情報戦なのである。
 `,
-    principle: `
+
+  principle: `
+人はすべてを同時には見られない。
+
+限られた認知資源は、
+「今もっとも重要だ」と認識された対象へ集中する。
+
+そのため、優先順位を誤認させれば、
+相手の注意配分そのものを操作できる。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
-  },
+
+  breakdown: [
+    "目立つ情報を提示する",
+    "相手にそれを重要だと認識させる",
+    "認知資源をそちらへ集中させる",
+    "本命の優先順位を下げさせる",
+    "誰も見ていない場所へ本命を通す"
+  ],
+
+  noteTitle: "声東撃西は「注意を逸らす計略」ではない──優先順位を騙す計略である",
+
+  noteUrl: "https://note.com/flying_baby/n/n747686dc1bfd",
+
+  relatedStratagems: [2,5,8,32],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "Attentional bias",
+    "Salience bias",
+    "Inattentional blindness"
+  ],
+
+  relatedConcepts: [
+    "優先順位",
+    "注意資源",
+    "認知資源",
+    "情報戦",
+    "ミスディレクション"
+  ],
+
+  relatedNotes: [],
+
+  references: []
+},
   {
-    id: 7,
-    name: "無中生有",
-    reading: "むちゅうしょうゆう",
-    english: "Create something from nothing",
-    category: "Reality Construction",
-    bias: "真実性錯覚、存在の錯覚、反復効果",
-    behavioral: "Illusory truth effect / availability heuristic",
-    summary: "実体が薄いものでも、反復・演出・噂によって存在感が生まれる。",
-    example: "ステマ、噂、ブランド人気の演出",
-    interpretation: `
+  id: 7,
+  name: "無中生有",
+  reading: "むちゅうしょうゆう",
+  english: "Create something from nothing",
+  category: "Reality Construction / Social Attention",
+  bias: "集団注目による重要度錯覚、真実性錯覚、社会的証明",
+  behavioral: "Social proof / illusory truth effect / availability heuristic",
+  summary: "集団の注目を利用し、実体が薄いものに重要度を構築する。",
+  example: "行列、ランキング、フォロワー数、口コミ、売上No.1、話題化された商品",
+
+  interpretation: `
+無中生有は「嘘を信じ込ませる計略」ではない。
+
+本質は、人間が集団の注目を重要度として認識する本能を利用することにある。
+
+人は多くの人が注目しているものを見ると、
+「何か重要なことがあるはずだ」と判断する。
+
+これは欠陥ではなく、
+群れで生きる生物が獲得した合理的な情報収集能力である。
+
+無中生有とは、
+何もない場所に実体を作るのではなく、
+集団の注目を起点に重要度そのものを構築する計略なのである。
 `,
-    principle: `
+
+  principle: `
+人間は集団の行動を情報として利用する。
+
+多くの人が見ているもの、
+集まっている場所、
+話題になっている対象は、
+実体の有無とは別に「重要そうだ」と認識される。
+
+そのため、注目の集中を作れば、
+重要度そのものを後から発生させることができる。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
-  },
+
+  breakdown: [
+    "注目の起点を作る",
+    "集団が反応する",
+    "周囲がその反応を重要度として認識する",
+    "さらに注目が集まる",
+    "実体以上の存在感が形成される",
+    "重要度が後から構築される"
+  ],
+
+  noteTitle: "無中生有は「嘘を信じ込ませる計略」ではない──集団本能を利用する計略である",
+
+  noteUrl: "https://note.com/flying_baby/n/n1e27db01aab8",
+
+  relatedStratagems: [1,6,17,29],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "Social proof",
+    "Illusory truth effect",
+    "Availability heuristic",
+    "Bandwagon effect"
+  ],
+
+  relatedConcepts: [
+    "集団心理",
+    "社会的証明",
+    "重要度の構築",
+    "群れの本能",
+    "注目経済",
+    "アルゴリズム"
+  ],
+
+  relatedNotes: [],
+
+  references: []
+},
   {
     id: 8,
     name: "暗渡陳倉",

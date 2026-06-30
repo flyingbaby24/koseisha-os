@@ -16,7 +16,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
 from umap import UMAP
 
-from thought_composition import make_parameter_scores
+from thought_composition import make_filter_scores, make_parameter_scores
 
 
 st.set_page_config(
@@ -182,21 +182,6 @@ def merge_selected_filters(filter_sets, selected_filter_names):
 
     return categories
 
-
-def make_filter_scores(embeddings, categories, model):
-    if not categories:
-        return None
-
-    category_names = list(categories.keys())
-    category_texts = list(categories.values())
-    category_embeddings = model.encode(category_texts, show_progress_bar=False)
-    scores = cosine_similarity(embeddings, category_embeddings)
-
-    scores = np.clip(scores, 0, None)
-    totals = scores.sum(axis=1, keepdims=True)
-    scores = np.divide(scores, totals, out=np.zeros_like(scores), where=totals != 0)
-
-    return pd.DataFrame(scores, columns=category_names)
 
 
 def auto_label_clusters(df, filter_score_df):
@@ -642,6 +627,11 @@ if run:
             "y": [0.0] * doc_count,
             "source": [d["source"] for d in docs],
         })
+
+        df["doc_id"] = [
+            f"doc_{i:06d}"
+            for i in range(len(df))
+        ]
 
         filter_score_df = make_filter_scores(
             embeddings,

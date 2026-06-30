@@ -5,19 +5,10 @@ from typing import Iterable
 
 import pandas as pd
 
+from thought_composition import THOUGHT_COMPOSITION_PARAMETERS
 
-THOUGHTMAP_PARAMETERS = [
-    "philosophy",
-    "psychology",
-    "science",
-    "economics",
-    "karma",
-    "emotion",
-    "morality",
-    "ideal",
-    "individual",
-    "community",
-]
+
+THOUGHTMAP_PARAMETERS = THOUGHT_COMPOSITION_PARAMETERS
 
 PARAMETER_TO_STAT = {
     "philosophy": "stat_physical_attack",
