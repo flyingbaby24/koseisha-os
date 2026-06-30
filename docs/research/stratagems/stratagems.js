@@ -282,29 +282,76 @@ relatedConcepts: [
   references: []
 },
   {
-    id: 6,
-    name: "声東撃西",
-    reading: "せいとうげきせい",
-    english: "Make noise in the east, attack in the west",
-    category: "Attention",
-    bias: "注意誘導、一点集中による盲点化",
-    behavioral: "Attentional bias / misdirection",
-    summary: "目立つ情報で注意を誘導し、本命を見えにくくする。",
-    example: "広告・政治・SNSで本命から視線を逸らす",
-    interpretation: `
+  id: 6,
+  name: "声東撃西",
+  reading: "せいとうげきせい",
+  english: "Make noise in the east, attack in the west",
+  category: "Attention / Priority",
+  bias: "優先順位の誤認、注意誘導、認知資源の集中",
+  behavioral: "Attentional bias / priority manipulation",
+  summary: "重要ではないものを重要だと思わせ、本命の優先順位を下げさせる。",
+  example: "派手なニュース・炎上・スキャンダルで注目を集め、本命の政策変更・侵入・交渉を通す",
+
+  interpretation: `
+声東撃西は「注意を逸らす計略」ではない。
+
+本質は、相手の優先順位を誤認させることにある。
+
+人は重要だと思ったものへ注意を向ける。
+つまり、注意は原因ではなく結果である。
+
+東へ注意が向くのは、
+東の方が重要だと思わされているからである。
+
+声東撃西とは、
+重要ではないものを重要だと思わせ、
+本当に重要な場所の優先順位を下げさせる情報戦なのである。
 `,
-    principle: `
+
+  principle: `
+人はすべてを同時には見られない。
+
+限られた認知資源は、
+「今もっとも重要だ」と認識された対象へ集中する。
+
+そのため、優先順位を誤認させれば、
+相手の注意配分そのものを操作できる。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
-  },
+
+  breakdown: [
+    "目立つ情報を提示する",
+    "相手にそれを重要だと認識させる",
+    "認知資源をそちらへ集中させる",
+    "本命の優先順位を下げさせる",
+    "誰も見ていない場所へ本命を通す"
+  ],
+
+  noteTitle: "声東撃西は「注意を逸らす計略」ではない──優先順位を騙す計略である",
+
+  noteUrl: "https://note.com/flying_baby/n/n747686dc1bfd",
+
+  relatedStratagems: [2,5,8,32],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "Attentional bias",
+    "Salience bias",
+    "Inattentional blindness"
+  ],
+
+  relatedConcepts: [
+    "優先順位",
+    "注意資源",
+    "認知資源",
+    "情報戦",
+    "ミスディレクション"
+  ],
+
+  relatedNotes: [],
+
+  references: []
+},
   {
     id: 7,
     name: "無中生有",
