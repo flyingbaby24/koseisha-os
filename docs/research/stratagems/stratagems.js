@@ -212,29 +212,75 @@ relatedConcepts: [
     references: []
   },
   {
-    id: 5,
-    name: "趁火打劫",
-    reading: "ちんかだこう",
-    english: "Loot a burning house",
-    category: "Loss / Crisis",
-    bias: "危機時の損失回避、焦燥判断",
-    behavioral: "Loss aversion / scarcity under stress",
-    summary: "相手が混乱や損失に直面している時に、その判断の歪みを利用する。",
-    example: "市場急落時の買収、炎上中の競合から顧客獲得",
-    interpretation: `
+  id: 5,
+  name: "趁火打劫",
+  reading: "ちんかだこう",
+  english: "Loot a burning house",
+  category: "Loss / Crisis",
+  bias: "危機時の優先順位変化、損失回避、注意資源の再配分",
+  behavioral: "Loss aversion / priority reallocation",
+  summary: "危機によって優先順位が変化し、守れなくなった場所を突く。",
+  example: "競合企業の炎上中に顧客を獲得する、市場暴落時に優良資産を買う、障害対応中の隙を突くサイバー攻撃",
+
+  interpretation: `
+趁火打劫は「火事場泥棒」ではない。
+
+本質は、危機によって優先順位が変化した瞬間を利用することにある。
+
+人は危機に直面すると、
+命・財産・信用・安全など、
+守るべき対象の優先順位を急激に組み替える。
+
+その結果、
+すべてを同時には守れなくなり、
+注意もリソースも届かない空白が生まれる。
+
+趁火打劫とは、
+その空白へ最も早く到達する計略なのである。
 `,
-    principle: `
+
+  principle: `
+危機そのものが本質ではない。
+
+危機によって優先順位が再編成され、
+限られた認知資源・時間・戦力が別の場所へ集中することで、
+守れなくなった場所が必ず生まれる。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
-  },
+
+  breakdown: [
+    "危機によって優先順位が変化する",
+    "重要対象へ認知資源とリソースが集中する",
+    "守備の薄い領域が生まれる",
+    "その空白を素早く発見する",
+    "最も価値の高い機会を獲得する"
+  ],
+
+  noteTitle: "趁火打劫は「火事場泥棒」ではない──優先順位が変わった瞬間を突く計略である",
+
+  noteUrl: "https://note.com/flying_baby/",
+
+  relatedStratagems: [2,4,19],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "Loss aversion",
+    "Attentional prioritization",
+    "Priority reallocation"
+  ],
+
+  relatedConcepts: [
+    "優先順位",
+    "認知資源",
+    "リソース配分",
+    "危機管理",
+    "機会費用"
+  ],
+
+  relatedNotes: [],
+
+  references: []
+},
   {
     id: 6,
     name: "声東撃西",
