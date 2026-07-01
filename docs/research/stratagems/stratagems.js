@@ -429,76 +429,234 @@ relatedConcepts: [
   references: []
 },
   {
-    id: 8,
-    name: "暗渡陳倉",
-    reading: "あんとちんそう",
-    english: "Secretly cross at Chencang",
-    category: "Expectation",
-    bias: "予想固定、見えている経路への過信",
-    behavioral: "Confirmation bias / inattentional blindness",
-    summary: "見えている動きで相手の予測を固定し、別経路で本命を進める。",
-    example: "表向きのロードマップと裏の開発、競合の盲点攻略",
-    interpretation: `
+  id: 8,
+  name: "暗渡陳倉",
+  reading: "あんとちんそう",
+  english: "Secretly cross at Chencang",
+  category: "Search Space / Exploration",
+  bias: "探索空間の限定、選択肢の固定、探索停止",
+  behavioral: "Choice architecture / search space reduction / bounded rationality",
+  summary: "相手の探索範囲を限定し、見えない経路を検討させなくする。",
+  example: "UIで機能を埋もれさせる、検索結果に出ない情報、二択だけを提示する議論",
+
+  interpretation: `
+暗渡陳倉は「裏道を通る計略」ではない。
+
+本質は、相手の探索空間を制限することにある。
+
+人は無限の可能性を探索しているわけではない。
+提示された選択肢の中で問題を解こうとする。
+
+そのため、
+相手に「ここだけ見れば十分だ」と思わせれば、
+本命の経路は探索対象から外れる。
+
+裏道が成功するのではない。
+相手が探さなくなることが成功なのである。
 `,
-    principle: `
+
+  principle: `
+思考は探索空間の中で行われる。
+
+見えている選択肢だけが比較対象となり、
+見えていない選択肢は存在していても検討されにくい。
+
+探索空間を設計することは、
+認知そのものを設計することでもある。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  breakdown: [
+    "相手に見える選択肢を提示する",
+    "その範囲だけで十分だと思わせる",
+    "探索を終了させる",
+    "本命の経路を探索対象外にする",
+    "見えない経路から目的を達成する"
+  ],
+
+  noteTitle: "暗渡陳倉は「裏道を通る計略」ではない──探索空間を制限する計略である",
+
+  noteUrl: "https://note.com/flying_baby/n/n9b053aec8f19",
+
+  relatedStratagems: [6,19,32],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "Bounded rationality",
+    "Choice architecture",
+    "Confirmation bias",
+    "Inattentional blindness"
+  ],
+
+  relatedConcepts: [
+    "探索空間",
+    "探索停止",
+    "選択肢設計",
+    "情報設計",
+    "Choice architecture",
+    "アルゴリズム"
+  ],
+
+  relatedNotes: [],
+
+  references: []
   },
   {
-    id: 9,
-    name: "隔岸観火",
-    reading: "かくがんかんか",
-    english: "Watch the fire from across the river",
-    category: "Social / Inaction",
-    bias: "傍観者効果、介入コスト回避",
-    behavioral: "Bystander effect / strategic delay",
-    summary: "他者の混乱に介入せず、消耗や変化を待つ。",
-    example: "競合同士の消耗を待つ、炎上を静観する",
-    interpretation: `
+  id: 9,
+  name: "隔岸観火",
+  reading: "かくがんか",
+  english: "Watch the fire from across the river",
+  category: "Value / Commitment",
+  bias: "撤退不能、価値観への執着、コミットメントの固定",
+  behavioral: "Escalation of commitment / sunk cost fallacy / identity protection",
+  summary: "相手が撤退できなくなる認知を利用し、時間による消耗を待つ。",
+  example: "価格競争、SNS炎上、政治対立、企業間の消耗戦",
+
+  interpretation: `
+隔岸観火は「傍観する計略」ではない。
+
+本質は、人が撤退できなくなる認知を利用することにある。
+
+人は非合理だから戦い続けるのではない。
+
+自分にとって最も重要な価値を守ろうとする結果、
+撤退できなくなるのである。
+
+時間が相手を倒すのではない。
+
+相手自身の価値観が、
+消耗戦を継続させるのである。
 `,
-    principle: `
+
+  principle: `
+合理性は利益から生まれるのではない。
+
+人は自分が最も重要だと考える価値を守るように意思決定する。
+
+名誉・信頼・信念・地位・国家・宗教など、
+守る対象が強いほど、
+撤退は心理的に困難になる。
+
+その結果、
+双方が資源を投入し続け、
+消耗戦が生まれる。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  breakdown: [
+    "相手が何を最優先で守っているかを見抜く",
+    "その価値ゆえに撤退できない状態を確認する",
+    "双方が資源を投入し続ける",
+    "時間が双方の認知資源とリソースを消耗させる",
+    "十分に弱った段階で行動する"
+  ],
+
+  noteTitle: "隔岸観火は「傍観する計略」ではない──人が撤退できなくなる認知を利用する計略である",
+
+  noteUrl: "https://note.com/flying_baby/n/n51d39f292ec2",
+
+  relatedStratagems: [4,5,11,28],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "Escalation of commitment",
+    "Sunk cost fallacy",
+    "Identity-protective cognition",
+    "Loss aversion"
+  ],
+
+  relatedConcepts: [
+    "価値観",
+    "合理性",
+    "撤退不能",
+    "コミットメント",
+    "消耗戦",
+    "優先順位"
+  ],
+
+  relatedNotes: [],
+
+  references: []
   },
   {
-    id: 10,
-    name: "笑裏蔵刀",
-    reading: "しょうりぞうとう",
-    english: "Hide a knife behind a smile",
-    category: "Trust / Impression",
-    bias: "ハロー効果、好意による警戒低下",
-    behavioral: "Halo effect / affect heuristic",
-    summary: "好意的な外見や態度で警戒を下げ、裏の意図を隠す。",
-    example: "営業トーク、政治的微笑、親切を装った誘導",
-    interpretation: `
+  id: 10,
+  name: "笑裏蔵刀",
+  reading: "しょうりぞうとう",
+  english: "Hide a knife behind a smile",
+  category: "Friend-Foe Recognition",
+  bias: "敵味方認識、ハロー効果、警戒解除",
+  behavioral: "Coalitional psychology / halo effect / costly signaling",
+
+  summary: "味方シグナルを利用し、敵味方認識を操作して警戒を解除させる。",
+
+  example: "営業、政治、詐欺、恋愛、フレンドリーなUIやブランド設計",
+
+  interpretation: `
+笑裏蔵刀は「笑顔で騙す計略」ではない。
+
+本質は、相手の敵味方認識を利用することにある。
+
+人は常に全員を警戒して生きることはできない。
+
+そのため、
+笑顔・共感・親切・同じ服装・同じ言葉など、
+味方らしいシグナルを見ると、
+一時的に警戒を下げるよう進化してきた。
+
+利用しているのは笑顔ではない。
+
+敵味方を判定する認知システムそのものである。
 `,
-    principle: `
+
+  principle: `
+共感は信用そのものではない。
+
+本来は、
+認知資源を節約するための
+「味方かもしれない」という高速判定である。
+
+味方シグナルを認識すると、
+警戒に使う認知資源は一時的に解放される。
+
+その認知を利用することで、
+本来なら警戒される行動も受け入れられやすくなる。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  breakdown: [
+    "相手が味方と認識するシグナルを把握する",
+    "味方シグナルを提示する",
+    "敵味方認識を味方側へ傾ける",
+    "警戒に使う認知資源を解除させる",
+    "本来の目的を実行する"
+  ],
+
+  noteTitle: "笑裏蔵刀は「笑顔で騙す計略」ではない──敵味方認識を利用する計略である",
+
+  noteUrl: "https://note.com/flying_baby/n/n44d85cb0464b",
+
+  relatedStratagems: [1,3,7,34],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "Halo effect",
+    "Coalitional psychology",
+    "In-group bias",
+    "Affect heuristic"
+  ],
+
+  relatedConcepts: [
+    "敵味方認識",
+    "味方シグナル",
+    "認知資源",
+    "集団生活",
+    "偽装伝達",
+    "社会的シグナル"
+  ],
+
+  relatedNotes: [],
+
+  references: []
   },
   {
     id: 11,
