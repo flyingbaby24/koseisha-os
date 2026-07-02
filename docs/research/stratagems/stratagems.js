@@ -659,101 +659,371 @@ relatedConcepts: [
   references: []
   },
   {
-    id: 11,
-    name: "李代桃僵",
-    reading: "りだいとうきょう",
-    english: "Sacrifice the plum tree to preserve the peach tree",
-    category: "Trade-off",
-    bias: "代替損失の受容、損切り判断",
-    behavioral: "Sunk cost control / substitution",
-    summary: "重要なものを守るために、別のものを犠牲にする。",
-    example: "小さな部門を切って本体を守る、炎上時の責任者交代",
-    interpretation: `
+  id: 11,
+
+  name: "李代桃僵",
+
+  reading: "りだいとうきょう",
+
+  english: "Sacrifice the plum tree to preserve the peach tree",
+
+  category: "Management / Capacity",
+
+  bias: "保持コストの不可視化、損失回避、管理限界",
+
+  behavioral: "Bounded rationality / cognitive load / loss aversion",
+
+  summary: "管理能力には限界があることを理解し、全体を守るために管理対象を整理する。",
+
+  example: "不要事業の整理、メール・ファイル整理、組織再編、人間関係の整理、在庫圧縮",
+
+  interpretation: `
+李代桃僵は「犠牲を払う計略」ではない。
+
+本質は、人間の管理能力には限界があるという認知を利用することにある。
+
+人は情報・人間関係・財産・組織・感情など、
+あらゆるものを保持しようとする。
+
+しかし、
+保持対象が増えるほど管理コストは増え、
+やがて認知資源の限界を超えてしまう。
+
+李代桃僵とは、
+一部を失うことを目的とする兵法ではない。
+
+全体を維持するため、
+限られた管理能力を最適配分する計略なのである。
 `,
-    principle: `
+
+  principle: `
+生物は変化を検知するために進化した。
+
+そのため、
+「保持し続けること」は背景となって認識されにくく、
+保持コストも意識されにくい。
+
+一方で、
+失うことだけは強く認知される。
+
+その結果、
+不要なものまで抱え込み、
+管理能力の限界を超えてしまう。
+
+管理対象を整理することは損失ではなく、
+全体最適化なのである。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  breakdown: [
+    "管理対象を把握する",
+    "認知資源・管理能力の限界を理解する",
+    "価値順位を決める",
+    "重要度の低い対象を整理する",
+    "管理対象を適正規模へ戻す",
+    "全体の維持と最適化を図る"
+  ],
+
+  noteTitle: "李代桃僵は「犠牲を払う計略」ではない──管理限界を利用する計略である",
+
+  noteUrl: "https://note.com/flying_baby/n/n2abf16217ae5",
+
+  relatedStratagems: [4,5,9,19,36],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "Loss aversion",
+    "Bounded rationality",
+    "Cognitive load",
+    "Decision fatigue"
+  ],
+
+  relatedConcepts: [
+    "認知資源",
+    "管理能力",
+    "保持コスト",
+    "全体最適",
+    "優先順位",
+    "リソース配分"
+  ],
+
+  relatedNotes: [],
+
+  references: []
   },
   {
-    id: 12,
-    name: "順手牽羊",
-    reading: "じゅんしゅけんよう",
-    english: "Take the opportunity to steal a goat",
-    category: "Opportunity",
-    bias: "小さな損失の軽視、注意外の損失",
-    behavioral: "Mental accounting / salience bias",
-    summary: "目立たない小さな機会を拾い、相手が軽視する損失を利用する。",
-    example: "追加手数料、サブスクの小額課金、細かな権限取得",
-    interpretation: `
+  id: 12,
+
+  name: "順手牽羊",
+
+  reading: "じゅんしゅけんよう",
+
+  english: "Take the opportunity to steal a goat",
+
+  category: "Background / Gradual Change",
+
+  bias: "変化閾値、背景化、漸進的変化への鈍感さ",
+
+  behavioral: "Change blindness / habituation / just noticeable difference",
+
+  summary: "認知閾値を下回る小さな変化を積み重ね、背景となった変化によって認識を書き換える。",
+
+  example: "少しずつ値上げするサブスク、UI変更を段階的に行う、毎日の広告接触、価値観の漸進的な誘導",
+
+  interpretation: `
+順手牽羊は「小さな機会を拾う計略」ではない。
+
+本質は、人間が背景化した変化を認識しにくいことを利用することにある。
+
+生物は危険を察知するため、
+変化を検知するよう進化してきた。
+
+しかし、
+認知閾値を下回る小さな変化は、
+背景となり認識されにくい。
+
+順手牽羊とは、
+目立つ変化で相手を動かす兵法ではない。
+
+背景化した小さな変化を積み重ね、
+気付かれないまま認知そのものを書き換える計略なのである。
 `,
-    principle: `
+
+  principle: `
+人は変化を検知するために進化した。
+
+しかし、
+変化量が認知閾値を超えない場合、
+その変化は背景として処理される。
+
+背景となったものは、
+意識されないまま世界を理解する基準となる。
+
+フックは注意を奪う。
+
+背景は認識を作る。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  breakdown: [
+    "認知閾値を超えない小さな変化を設計する",
+    "変化を継続的に積み重ねる",
+    "背景として認識させる",
+    "当たり前という基準を形成する",
+    "認知そのものを書き換える"
+  ],
+
+  noteTitle: "順手牽羊は「小さな機会を拾う計略」ではない──背景化した変化を利用する計略である",
+
+  noteUrl: "https://note.com/flying_baby/n/n1d83888847ae",
+
+  relatedStratagems: [1,6,10,11,25],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "Change blindness",
+    "Habituation",
+    "Just noticeable difference",
+    "Mere exposure effect"
+  ],
+
+  relatedConcepts: [
+    "背景化",
+    "認知閾値",
+    "変化検知",
+    "慣れ",
+    "反復",
+    "世界モデル"
+  ],
+
+  relatedNotes: [],
+
+  references: []
   },
   {
-    id: 13,
-    name: "打草驚蛇",
-    reading: "だそうきょうだ",
-    english: "Beat the grass to startle the snake",
-    category: "Detection",
-    bias: "反応からの推定、警戒反応の観察",
-    behavioral: "Signaling / information elicitation",
-    summary: "小さな刺激を与え、隠れた相手や本音の反応を見る。",
-    example: "小さな質問で本音を見る、セキュリティ監査",
-    interpretation: `
+  id: 13,
+
+  name: "打草驚蛇",
+
+  reading: "だそうきょうだ",
+
+  english: "Beat the grass to startle the snake",
+
+  category: "Threshold / Detection",
+
+  bias: "認知閾値、反応閾値、重要度判定",
+
+  behavioral: "Signal detection theory / threshold testing / information elicitation",
+
+  summary: "小さな刺激を与え、相手がどの変化を無視できず反応するのかを測定する。",
+
+  example: "小さな質問で本音を見る、価格変更テスト、セキュリティ監査、相手の許容範囲を探る交渉",
+
+  interpretation: `
+打草驚蛇は「反応を見る計略」ではない。
+
+本質は、相手の認知閾値を測定することにある。
+
+生物はすべての刺激に反応していては生きていけない。
+
+そのため、
+自分にとって重要だと判断した変化だけに反応する。
+
+つまり反応とは、
+その対象にとって
+無視できない変化が発生したという情報である。
+
+打草驚蛇とは、
+相手を驚かせる兵法ではない。
+
+刺激と反応を観察し、
+相手が何を重要視し、
+どの程度の変化で動くのかを測定する計略なのである。
 `,
-    principle: `
+
+  principle: `
+相手の内部状態は直接見ることができない。
+
+だから、
+外部から小さな刺激を与え、
+返ってくる反応を観察する。
+
+攻撃するのか。
+逃げるのか。
+警戒するのか。
+無視するのか。
+
+その違いによって、
+相手の価値観、恐れ、守る対象、認知閾値が見えてくる。
+
+認知閾値を知れば、
+閾値を超えて反応を引き出すことも、
+閾値を下回る変化で気付かれず消耗させることもできる。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  breakdown: [
+    "小さな刺激を与える",
+    "相手の反応を観察する",
+    "反応した刺激と無視した刺激を比較する",
+    "相手の重要対象と認知閾値を推定する",
+    "閾値を超える攻撃か、閾値以下の消耗かを選択する",
+    "その後の戦略を最適化する"
+  ],
+
+  noteTitle: "打草驚蛇は「反応を見る計略」ではない──認知閾値を測定する計略である",
+
+  noteUrl: "https://note.com/flying_baby/n/nad135c902aa0",
+
+  relatedStratagems: [8,12,20,32],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "Signal detection theory",
+    "Change detection",
+    "Salience bias",
+    "Threat perception"
+  ],
+
+  relatedConcepts: [
+    "認知閾値",
+    "反応閾値",
+    "刺激と反応",
+    "情報抽出",
+    "重要度判定",
+    "探索"
+  ],
+
+  relatedNotes: [],
+
+  references: []
   },
   {
-    id: 14,
-    name: "借屍還魂",
-    reading: "しゃくしかんこん",
-    english: "Borrow a corpse to revive the soul",
-    category: "Authority / Legacy",
-    bias: "権威バイアス、過去資産への信頼",
-    behavioral: "Authority bias / nostalgia effect",
-    summary: "既にある名義・権威・過去資産を利用して新しい意味を宿す。",
-    example: "古いブランドの復活、権威ある名義を借りる",
-    interpretation: `
+  id: 14,
+
+  name: "借屍還魂",
+
+  reading: "しゃくしかんこん",
+
+  english: "Borrow a corpse to revive the soul",
+
+  category: "Success Memory / Legacy",
+
+  bias: "成功体験、権威バイアス、過去実績への信頼",
+
+  behavioral: "Authority bias / availability heuristic / transfer of trust",
+
+  summary: "過去に成功した記憶を再利用し、新しい対象へ信頼や期待を転移させる。",
+
+  example: "復刻ブランド、老舗企業、名門校、元○○、ベストセラー、過去IPの再利用",
+
+  interpretation: `
+借屍還魂は「権威を借りる計略」ではない。
+
+本質は、人が成功体験を再利用する認知の性質を利用することにある。
+
+人は権威そのものを信じているのではない。
+
+一度成功したものは、
+もう一度成功する可能性が高いと認識しているのである。
+
+借りているのは権威ではない。
+
+過去に成功したという記憶であり、
+その記憶が新しい対象へ信頼を転移させるのである。
 `,
-    principle: `
+
+  principle: `
+成功体験は思考のショートカットである。
+
+生物は限られた認知資源で生きているため、
+毎回ゼロから判断していては間に合わない。
+
+だから、
+一度成功した行動や対象を記憶し、
+似た状況で再利用する。
+
+過去の成功、伝統、ブランド、肩書きは、
+現在の価値そのものではなく、
+成功の記憶を呼び出す装置として働く。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
-  },
+
+  breakdown: [
+    "過去に成功した対象を見つける",
+    "その成功記憶を呼び出せる名前・形式・物語を使う",
+    "相手に過去の成功を想起させる",
+    "現在の対象への検証コストを下げる",
+    "信頼や期待を新しい対象へ転移させる"
+  ],
+
+  noteTitle: "借屍還魂は「権威を借りる計略」ではない──成功体験を再利用する計略である",
+
+  noteUrl: "https://editor.note.com/notes/n7f9edbb0ab75/edit/",
+
+  relatedStratagems: [1,7,10,29,30],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "Authority bias",
+    "Availability heuristic",
+    "Halo effect",
+    "Status quo bias"
+  ],
+
+  relatedConcepts: [
+    "成功体験",
+    "思考のショートカット",
+    "信頼の転移",
+    "ブランド",
+    "伝統",
+    "過去実績"
+  ],
+
+  relatedNotes: [],
+
+  references: []
+},
   {
     id: 15,
     name: "調虎離山",
