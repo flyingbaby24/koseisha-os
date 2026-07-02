@@ -8,6 +8,7 @@ public class FilterSelectorView : MonoBehaviour
     [SerializeField] private TMP_Dropdown filterDropdown;
     [SerializeField] private TextAsset[] filterJsonFiles;
     [SerializeField] private string allFiltersLabel = "all";
+    [SerializeField] private string[] defaultFilterNames = { "general" };
 
     public event Action<string> FilterChanged;
 
@@ -38,7 +39,22 @@ public class FilterSelectorView : MonoBehaviour
             ConfigureOptions();
         }
 
-        if (filterNames.Count == 0 || filterDropdown == null)
+        if (filterDropdown == null)
+        {
+            return allFiltersLabel;
+        }
+
+        if (filterDropdown.options != null && filterDropdown.options.Count > 0)
+        {
+            int dropdownIndex = Mathf.Clamp(filterDropdown.value, 0, filterDropdown.options.Count - 1);
+            string optionText = filterDropdown.options[dropdownIndex].text;
+            if (!string.IsNullOrWhiteSpace(optionText))
+            {
+                return optionText.Trim().ToLowerInvariant();
+            }
+        }
+
+        if (filterNames.Count == 0)
         {
             return allFiltersLabel;
         }
@@ -49,22 +65,36 @@ public class FilterSelectorView : MonoBehaviour
 
     public void ConfigureOptions()
     {
+        string selected = GetCurrentDropdownText();
         filterNames.Clear();
-        filterNames.Add(allFiltersLabel);
+        AddFilterName(allFiltersLabel);
+
+        if (filterDropdown != null && filterDropdown.options != null)
+        {
+            foreach (TMP_Dropdown.OptionData option in filterDropdown.options)
+            {
+                AddFilterName(option.text);
+            }
+        }
+
+        if (defaultFilterNames != null)
+        {
+            foreach (string filterName in defaultFilterNames)
+            {
+                AddFilterName(filterName);
+            }
+        }
 
         if (filterJsonFiles != null)
         {
             foreach (TextAsset filterFile in filterJsonFiles)
             {
-                if (filterFile == null || string.IsNullOrWhiteSpace(filterFile.name))
+                if (filterFile == null)
                 {
                     continue;
                 }
 
-                if (!filterNames.Contains(filterFile.name))
-                {
-                    filterNames.Add(filterFile.name);
-                }
+                AddFilterName(filterFile.name);
             }
         }
 
@@ -75,8 +105,33 @@ public class FilterSelectorView : MonoBehaviour
 
         filterDropdown.ClearOptions();
         filterDropdown.AddOptions(filterNames);
-        filterDropdown.value = 0;
+        filterDropdown.value = Mathf.Max(0, filterNames.IndexOf(NormalizeFilterName(selected)));
         filterDropdown.RefreshShownValue();
+    }
+
+    private void AddFilterName(string value)
+    {
+        string normalized = NormalizeFilterName(value);
+        if (!string.IsNullOrWhiteSpace(normalized) && !filterNames.Contains(normalized))
+        {
+            filterNames.Add(normalized);
+        }
+    }
+
+    private string GetCurrentDropdownText()
+    {
+        if (filterDropdown == null || filterDropdown.options == null || filterDropdown.options.Count == 0)
+        {
+            return allFiltersLabel;
+        }
+
+        int index = Mathf.Clamp(filterDropdown.value, 0, filterDropdown.options.Count - 1);
+        return filterDropdown.options[index].text;
+    }
+
+    private string NormalizeFilterName(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim().ToLowerInvariant();
     }
 
     private void HandleValueChanged(int _)

@@ -12,6 +12,11 @@ public class ParameterScoresPanelView : MonoBehaviour
         SetText(emptyMessage);
     }
 
+    public void Show(ThoughtMapParameterScore[] scores)
+    {
+        ShowScores(scores);
+    }
+
     public void ShowScores(ThoughtMapParameterScore[] scores)
     {
         if (scores == null || scores.Length == 0)
