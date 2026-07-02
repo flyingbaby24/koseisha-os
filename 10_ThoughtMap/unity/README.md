@@ -127,6 +127,59 @@ This panel shows parameter scores for the search input text itself, separate fro
 
 When `/search?...&filter=general` returns `query_parameters`, this panel shows the search text parameter profile. It clears on each new search.
 
+
+## Parameter Rank Bar Display
+
+ParameterScoresPanelView now supports a horizontal bar chart style with D-S rank display. The raw numeric value remains in ThoughtMapParameterScore.value; only the visible label is converted to rank.
+
+Rank thresholds:
+
+- S: 40 or higher
+- A: 30-39.99
+- B: 20-29.99
+- C: 10-19.99
+- D: 0-9.99
+
+Recommended hierarchy:
+
+```text
+ParameterScoresPanel
+  BarContainer
+    ParameterScoreBar instances
+  ParameterScoresText optional fallback
+```
+
+Create ParameterScoreBar prefab:
+
+```text
+ParameterScoreBar
+  LabelText
+  BarBackground
+    BarFill
+  ValueText
+```
+
+Inspector wiring:
+
+1. Add ParameterScoreBarView to the ParameterScoreBar row root.
+2. Assign LabelText to Label Text.
+3. Assign BarFill RectTransform to Bar Fill.
+4. Assign ValueText to Value Text. This displays S/A/B/C/D, not the raw number.
+5. Optional: assign the BarFill Image to Bar Fill Image for rank colors.
+6. On ParameterScoresPanelView, assign BarContainer to Bar Container.
+7. Assign the ParameterScoreBar prefab to Bar Prefab.
+8. Optionally assign ParameterScoresText to Output Text as fallback.
+
+If Bar Container or Bar Prefab is not assigned, ParameterScoresPanelView falls back to rank text:
+
+```text
+Philosophy   A
+Psychology   B
+Science   C
+```
+
+Use the same ParameterScoresPanelView and ParameterScoreBar prefab for both query_parameters and results[].parameters.
+
 ## Wire ThoughtMapSearchManager
 
 Select the GameObject with `ThoughtMapSearchManager` and assign:
@@ -188,8 +241,8 @@ Rules:
 5. Confirm the result list still populates.
 6. Click one result.
 7. Confirm the right Detail Panel updates.
-8. Confirm Query Parameter Panel shows key/value rows when the API returns `query_parameters`.
-9. Confirm selected-result Parameter Scores show key/value rows when the API returns `results[].parameters`.
+8. Confirm Query Parameter Panel shows D-S rank rows or bars when the API returns `query_parameters`.
+9. Confirm selected-result Parameter Scores show D-S rank rows or bars when the API returns `results[].parameters`.
 
 ## Troubleshooting
 
