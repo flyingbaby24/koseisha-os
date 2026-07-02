@@ -19,7 +19,7 @@ public class ParameterRadarChartView : MaskableGraphic
         "community"
     };
 
-    [SerializeField] private float maxValue = 100f;
+    [SerializeField] private float maxValue = 40f;
     [SerializeField] private int gridSteps = 4;
     [SerializeField] private Color gridColor = new Color(1f, 1f, 1f, 0.18f);
     [SerializeField] private Color axisColor = new Color(1f, 1f, 1f, 0.28f);
@@ -82,7 +82,7 @@ public class ParameterRadarChartView : MaskableGraphic
                     continue;
                 }
 
-                valuesByKey[NormalizeKey(score.key)] = Mathf.Clamp(score.value, 0f, maxValue);
+                valuesByKey[NormalizeKey(score.key)] = Mathf.Max(0f, score.value);
             }
         }
 
