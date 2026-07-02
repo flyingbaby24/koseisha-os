@@ -13,22 +13,50 @@ public class ThoughtMapSearchManager : MonoBehaviour
     [SerializeField] private TMP_Dropdown sourceDropdown;
     [SerializeField] private Button searchButton;
     [SerializeField] private SearchResultsListView resultsListView;
+    [SerializeField] private DetailPanelView detailPanelView;
     [SerializeField] private int topResults = 10;
 
     private void Awake()
     {
-        searchButton.onClick.AddListener(OnSearchClicked);
+        if (searchButton != null)
+        {
+            searchButton.onClick.AddListener(OnSearchClicked);
+        }
+
+        if (resultsListView != null)
+        {
+            resultsListView.ResultSelected += OnResultSelected;
+        }
     }
 
     private void OnDestroy()
     {
-        searchButton.onClick.RemoveListener(OnSearchClicked);
+        if (searchButton != null)
+        {
+            searchButton.onClick.RemoveListener(OnSearchClicked);
+        }
+
+        if (resultsListView != null)
+        {
+            resultsListView.ResultSelected -= OnResultSelected;
+        }
     }
 
     private void OnSearchClicked()
     {
-        searchButton.interactable = false;
-        resultsListView.Clear();
+        if (apiClient == null || searchInput == null)
+        {
+            Debug.LogError("ThoughtMap search cannot start because API Client or Search Input is not assigned.");
+            return;
+        }
+
+        if (searchButton != null)
+        {
+            searchButton.interactable = false;
+        }
+
+        resultsListView?.Clear();
+        detailPanelView?.Clear();
         StartCoroutine(apiClient.Search(searchInput.text, topResults, GetSelectedMode(), GetSelectedSource(), HandleSuccess, HandleError));
     }
 
@@ -66,13 +94,27 @@ public class ThoughtMapSearchManager : MonoBehaviour
 
     private void HandleSuccess(ThoughtMapSearchResponse response)
     {
-        searchButton.interactable = true;
-        resultsListView.ShowResults(response?.results);
+        if (searchButton != null)
+        {
+            searchButton.interactable = true;
+        }
+
+        resultsListView?.ShowResults(response?.results);
     }
 
     private void HandleError(string message)
     {
-        searchButton.interactable = true;
+        if (searchButton != null)
+        {
+            searchButton.interactable = true;
+        }
+
         Debug.LogError($"ThoughtMap search failed: {message}");
+    }
+
+    private void OnResultSelected(ThoughtMapSearchResult result)
+    {
+        detailPanelView?.ShowPlaceholder(result);
+        // Future step: call GET /document/{doc_id} here and bind the response to DetailPanelView.
     }
 }
