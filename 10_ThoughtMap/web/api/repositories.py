@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 from typing import Protocol
 
@@ -9,6 +10,36 @@ from search_utils import parse_embedding
 from storage import load_official_db
 
 from .config import ApiSettings
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+DEFAULT_SQLITE_PATH = (
+    PROJECT_ROOT
+    / "data"
+    / "thoughtmap_db"
+    / "official"
+    / "thoughtmap.sqlite"
+)
+
+
+def _resolve_project_path(value: str | Path) -> Path:
+    path = Path(value)
+    if path.is_absolute():
+        return path
+    return PROJECT_ROOT / path
+
+
+def _resolve_sqlite_path(db_path: str | Path | None) -> Path:
+    if db_path is None:
+        return DEFAULT_SQLITE_PATH
+
+    path = _resolve_project_path(db_path)
+    if path.suffix:
+        return path
+
+    return path / "thoughtmap.sqlite"
 
 
 class SearchIndexRepository(Protocol):
@@ -25,7 +56,7 @@ class CsvSearchIndexRepository:
     """
 
     def __init__(self, db_dir: str | Path | None = None) -> None:
-        self.db_dir = Path(db_dir) if db_dir is not None else None
+        self.db_dir = _resolve_project_path(db_dir) if db_dir is not None else None
         self._index: pd.DataFrame | None = None
 
     def load_index(self) -> pd.DataFrame:
@@ -43,16 +74,47 @@ class CsvSearchIndexRepository:
 
 
 class SqliteSearchIndexRepository:
-    """Placeholder boundary for the future SQLite backend."""
+    """SQLite-backed search index loader.
+
+    The SQLite MVP stores embeddings as TEXT JSON, matching the current CSV
+    shape. This repository returns the same DataFrame contract as the CSV
+    repository so SearchService and Unity can remain unchanged.
+    """
 
     def __init__(self, db_path: str | Path | None = None) -> None:
-        self.db_path = Path(db_path) if db_path is not None else None
+        self.db_path = _resolve_sqlite_path(db_path)
+        self._index: pd.DataFrame | None = None
 
     def load_index(self) -> pd.DataFrame:
-        raise NotImplementedError(
-            "SQLite search index loading is not implemented yet. "
-            "Use THOUGHTMAP_BACKEND=csv until the SQLite repository is added."
-        )
+        if self._index is not None:
+            return self._index
+
+        if not self.db_path.exists():
+            raise FileNotFoundError(
+                f"SQLite database not found: {self.db_path}. "
+                "Create it with api.migrate_csv_to_sqlite first."
+            )
+
+        with sqlite3.connect(self.db_path) as conn:
+            merged = pd.read_sql_query(
+                """
+                SELECT
+                    documents.*,
+                    embeddings.embedding,
+                    embeddings.model_name
+                FROM documents
+                INNER JOIN embeddings
+                    ON documents.doc_id = embeddings.doc_id
+                """,
+                conn,
+            )
+
+        merged = merged.copy()
+        merged["_embedding_vec"] = merged["embedding"].map(parse_embedding)
+        merged = merged[merged["_embedding_vec"].notna()].reset_index(drop=True)
+
+        self._index = merged
+        return self._index
 
 
 def create_search_index_repository(settings: ApiSettings) -> SearchIndexRepository:

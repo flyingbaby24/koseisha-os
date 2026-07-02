@@ -9,6 +9,17 @@ public class ThoughtMapApiClient : MonoBehaviour
 
     public IEnumerator Search(string query, int top, Action<ThoughtMapSearchResponse> onSuccess, Action<string> onError)
     {
+        return Search(query, top, "semantic", "all", onSuccess, onError);
+    }
+
+    public IEnumerator Search(
+        string query,
+        int top,
+        string mode,
+        string source,
+        Action<ThoughtMapSearchResponse> onSuccess,
+        Action<string> onError)
+    {
         if (string.IsNullOrWhiteSpace(query))
         {
             onSuccess?.Invoke(new ThoughtMapSearchResponse { results = new ThoughtMapSearchResult[0] });
@@ -16,7 +27,14 @@ public class ThoughtMapApiClient : MonoBehaviour
         }
 
         int safeTop = Mathf.Clamp(top, 1, 50);
-        string url = $"{baseUrl}/search?q={UnityWebRequest.EscapeURL(query)}&top={safeTop}";
+        string safeMode = string.IsNullOrWhiteSpace(mode) ? "semantic" : mode.Trim().ToLowerInvariant();
+        string safeSource = string.IsNullOrWhiteSpace(source) ? "all" : source.Trim();
+        string url = $"{baseUrl}/search?q={UnityWebRequest.EscapeURL(query)}&top={safeTop}&mode={UnityWebRequest.EscapeURL(safeMode)}";
+
+        if (!string.Equals(safeSource, "all", StringComparison.OrdinalIgnoreCase))
+        {
+            url += $"&source={UnityWebRequest.EscapeURL(safeSource)}";
+        }
 
         using (UnityWebRequest request = UnityWebRequest.Get(url))
         {
