@@ -1,9 +1,22 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class ParameterScoreBarView : MonoBehaviour
 {
+    private static readonly Dictionary<string, string> DisplayLabels = new Dictionary<string, string>
+    {
+        { "社会文明", "Society" },
+        { "認識文明", "Recognition" },
+        { "因果文明", "Causality" },
+        { "内省文明", "Introspection" },
+        { "試行文明", "Trial" },
+        { "技術文明", "Technology" },
+        { "哲学文明", "Philosophy" },
+        { "問い文明", "Inquiry" },
+    };
+
     [SerializeField] private TMP_Text labelText;
     [SerializeField] private RectTransform barFill;
     [SerializeField] private TMP_Text valueText;
@@ -90,7 +103,13 @@ public class ParameterScoreBarView : MonoBehaviour
             return "Unknown";
         }
 
-        string trimmed = key.Trim().Replace("_", " ");
+        string trimmed = key.Trim();
+        if (DisplayLabels.TryGetValue(trimmed, out string label))
+        {
+            return label;
+        }
+
+        trimmed = trimmed.Replace("_", " ");
         return char.ToUpperInvariant(trimmed[0]) + trimmed.Substring(1);
     }
 

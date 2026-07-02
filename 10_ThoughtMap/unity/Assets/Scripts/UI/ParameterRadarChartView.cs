@@ -5,20 +5,6 @@ using UnityEngine.UI;
 
 public class ParameterRadarChartView : MaskableGraphic
 {
-    private static readonly string[] ParameterOrder =
-    {
-        "philosophy",
-        "psychology",
-        "science",
-        "economics",
-        "karma",
-        "emotion",
-        "morality",
-        "ideal",
-        "individual",
-        "community"
-    };
-
     [SerializeField] private float maxValue = 40f;
     [SerializeField] private int gridSteps = 4;
     [SerializeField] private Color gridColor = new Color(1f, 1f, 1f, 0.18f);
@@ -31,20 +17,13 @@ public class ParameterRadarChartView : MaskableGraphic
     [SerializeField] private TMP_Text labelPrefab;
     [SerializeField] private bool showLabels = true;
 
-    private readonly Dictionary<string, float> valuesByKey = new Dictionary<string, float>();
+    private readonly List<AxisValue> axes = new List<AxisValue>();
     private readonly List<TMP_Text> labels = new List<TMP_Text>();
 
     protected override void Awake()
     {
         base.Awake();
         raycastTarget = false;
-        RebuildLabels();
-    }
-
-    protected override void OnEnable()
-    {
-        base.OnEnable();
-        RebuildLabels();
     }
 
 #if UNITY_EDITOR
@@ -60,7 +39,8 @@ public class ParameterRadarChartView : MaskableGraphic
 
     public void Clear()
     {
-        valuesByKey.Clear();
+        axes.Clear();
+        ClearLabels();
         SetVerticesDirty();
     }
 
@@ -71,19 +51,28 @@ public class ParameterRadarChartView : MaskableGraphic
 
     public void ShowScores(ThoughtMapParameterScore[] scores)
     {
-        valuesByKey.Clear();
+        axes.Clear();
 
-        if (scores != null)
+        if (scores == null || scores.Length == 0)
         {
-            foreach (ThoughtMapParameterScore score in scores)
-            {
-                if (score == null || string.IsNullOrWhiteSpace(score.key))
-                {
-                    continue;
-                }
+            Clear();
+            return;
+        }
 
-                valuesByKey[NormalizeKey(score.key)] = Mathf.Max(0f, score.value);
+        foreach (ThoughtMapParameterScore score in scores)
+        {
+            if (score == null || string.IsNullOrWhiteSpace(score.key))
+            {
+                continue;
             }
+
+            axes.Add(new AxisValue(score.key, Mathf.Max(0f, score.value)));
+        }
+
+        if (axes.Count == 0)
+        {
+            Clear();
+            return;
         }
 
         RebuildLabels();
@@ -94,6 +83,12 @@ public class ParameterRadarChartView : MaskableGraphic
     {
         vh.Clear();
 
+        int axisCount = axes.Count;
+        if (axisCount < 3)
+        {
+            return;
+        }
+
         Vector2 center = rectTransform.rect.center;
         float radius = Mathf.Min(rectTransform.rect.width, rectTransform.rect.height) * 0.5f - labelRadiusPadding;
         if (radius <= 1f)
@@ -101,61 +96,65 @@ public class ParameterRadarChartView : MaskableGraphic
             return;
         }
 
-        DrawGrid(vh, center, radius);
-        DrawAxes(vh, center, radius);
-        DrawData(vh, center, radius);
+        DrawGrid(vh, center, radius, axisCount);
+        DrawAxes(vh, center, radius, axisCount);
+        DrawData(vh, center, radius, axisCount);
     }
 
-    private void DrawGrid(VertexHelper vh, Vector2 center, float radius)
+    private void DrawGrid(VertexHelper vh, Vector2 center, float radius, int axisCount)
     {
         for (int step = 1; step <= gridSteps; step++)
         {
             float stepRadius = radius * step / gridSteps;
-            Vector2[] points = BuildRegularPoints(center, stepRadius);
+            Vector2[] points = BuildRegularPoints(center, stepRadius, axisCount);
             AddPolyline(vh, points, gridColor, lineThickness * 0.5f, true);
         }
     }
 
-    private void DrawAxes(VertexHelper vh, Vector2 center, float radius)
+    private void DrawAxes(VertexHelper vh, Vector2 center, float radius, int axisCount)
     {
-        for (int i = 0; i < ParameterOrder.Length; i++)
+        for (int i = 0; i < axisCount; i++)
         {
-            AddLine(vh, center, GetPoint(center, radius, i), axisColor, lineThickness * 0.5f);
+            AddLine(vh, center, GetPoint(center, radius, i, axisCount), axisColor, lineThickness * 0.5f);
         }
     }
 
-    private void DrawData(VertexHelper vh, Vector2 center, float radius)
+    private void DrawData(VertexHelper vh, Vector2 center, float radius, int axisCount)
     {
-        Vector2[] points = new Vector2[ParameterOrder.Length];
-        for (int i = 0; i < ParameterOrder.Length; i++)
+        Vector2[] points = new Vector2[axisCount];
+        for (int i = 0; i < axisCount; i++)
         {
-            float value = valuesByKey.TryGetValue(ParameterOrder[i], out float found) ? found : 0f;
-            float normalized = Mathf.Clamp01(value / maxValue);
-            points[i] = GetPoint(center, radius * normalized, i);
+            float normalized = Mathf.Clamp01(axes[i].Value / maxValue);
+            points[i] = GetPoint(center, radius * normalized, i, axisCount);
         }
 
         AddFilledPolygon(vh, center, points, fillColor);
         AddPolyline(vh, points, lineColor, lineThickness, true);
     }
 
-    private Vector2[] BuildRegularPoints(Vector2 center, float radius)
+    private Vector2[] BuildRegularPoints(Vector2 center, float radius, int axisCount)
     {
-        Vector2[] points = new Vector2[ParameterOrder.Length];
-        for (int i = 0; i < ParameterOrder.Length; i++)
+        Vector2[] points = new Vector2[axisCount];
+        for (int i = 0; i < axisCount; i++)
         {
-            points[i] = GetPoint(center, radius, i);
+            points[i] = GetPoint(center, radius, i, axisCount);
         }
         return points;
     }
 
-    private Vector2 GetPoint(Vector2 center, float radius, int index)
+    private Vector2 GetPoint(Vector2 center, float radius, int index, int axisCount)
     {
-        float angle = Mathf.PI * 0.5f - (Mathf.PI * 2f * index / ParameterOrder.Length);
+        float angle = Mathf.PI * 0.5f - (Mathf.PI * 2f * index / axisCount);
         return center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
     }
 
     private void AddFilledPolygon(VertexHelper vh, Vector2 center, Vector2[] points, Color fill)
     {
+        if (points.Length < 3)
+        {
+            return;
+        }
+
         int centerIndex = vh.currentVertCount;
         vh.AddVert(center, fill, Vector2.zero);
 
@@ -204,24 +203,26 @@ public class ParameterRadarChartView : MaskableGraphic
 
     private void RebuildLabels()
     {
-        if (!showLabels || labelContainer == null || labelPrefab == null)
+        ClearLabels();
+
+        if (!showLabels || labelContainer == null || labelPrefab == null || axes.Count == 0)
         {
             return;
         }
 
-        ClearLabels();
         Rect rect = rectTransform.rect;
         Vector2 center = rect.center;
         float radius = Mathf.Min(rect.width, rect.height) * 0.5f;
+        int axisCount = axes.Count;
 
-        for (int i = 0; i < ParameterOrder.Length; i++)
+        for (int i = 0; i < axisCount; i++)
         {
             TMP_Text label = Instantiate(labelPrefab, labelContainer);
-            label.text = ParameterScoreBarView.FormatLabel(ParameterOrder[i]);
+            label.text = ParameterScoreBarView.FormatLabel(axes[i].Key);
             label.raycastTarget = false;
 
             RectTransform labelRect = label.rectTransform;
-            labelRect.anchoredPosition = GetPoint(center, radius, i) - center;
+            labelRect.anchoredPosition = GetPoint(center, radius, i, axisCount) - center;
             labels.Add(label);
         }
     }
@@ -238,8 +239,15 @@ public class ParameterRadarChartView : MaskableGraphic
         labels.Clear();
     }
 
-    private string NormalizeKey(string key)
+    private readonly struct AxisValue
     {
-        return string.IsNullOrWhiteSpace(key) ? string.Empty : key.Trim().ToLowerInvariant();
+        public AxisValue(string key, float value)
+        {
+            Key = key;
+            Value = value;
+        }
+
+        public string Key { get; }
+        public float Value { get; }
     }
 }
