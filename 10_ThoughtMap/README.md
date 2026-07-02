@@ -117,3 +117,30 @@ SQLite is not the current migration target. The current priority is to keep the 
 ## Original Vision
 
 ThoughtMap attempts to measure persistence: not what people say they believe, but what repeatedly emerges from what they create.
+
+## Unity Search UI Wiring
+
+The Unity frontend is a client for the FastAPI search backend. Search rendering should remain UI-only; search logic stays in Python/FastAPI.
+
+Current required scene wiring:
+
+- `ThoughtMapSearchManager`
+  - assign `ThoughtMapApiClient`
+  - assign `Search Input`
+  - assign `Mode Dropdown` with `semantic`, `keyword`, `hybrid`
+  - assign `Source Dropdown` with `all`, `gutendex`, `user_suno` or current source names
+  - assign `Filter Selector View` when using JSON filter selection
+  - assign `Search Button`
+  - assign `SearchResultsListView`
+  - assign `DetailPanelView`
+- `FilterSelectorView`
+  - assign a TMP Dropdown
+  - assign JSON filter files as `TextAsset` entries when available
+  - the selector uses `all` plus the JSON asset names
+- `DetailPanelView`
+  - assign the existing title, author, source, doc_id, similarity, and body text fields
+  - assign `ParameterScoresPanelView` for key/value parameter output
+- `ParameterScoresPanelView`
+  - assign one TMP Text field inside the parameter output panel
+
+Filter and parameter-score API support is still a placeholder. Unity can select and display these values, but FastAPI support should be added through the API contract before relying on them in production.

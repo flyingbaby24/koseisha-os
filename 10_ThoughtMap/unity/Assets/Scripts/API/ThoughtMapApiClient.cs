@@ -20,6 +20,18 @@ public class ThoughtMapApiClient : MonoBehaviour
         Action<ThoughtMapSearchResponse> onSuccess,
         Action<string> onError)
     {
+        return Search(query, top, mode, source, "all", onSuccess, onError);
+    }
+
+    public IEnumerator Search(
+        string query,
+        int top,
+        string mode,
+        string source,
+        string filter,
+        Action<ThoughtMapSearchResponse> onSuccess,
+        Action<string> onError)
+    {
         if (string.IsNullOrWhiteSpace(query))
         {
             onSuccess?.Invoke(new ThoughtMapSearchResponse { results = new ThoughtMapSearchResult[0] });
@@ -29,11 +41,18 @@ public class ThoughtMapApiClient : MonoBehaviour
         int safeTop = Mathf.Clamp(top, 1, 50);
         string safeMode = string.IsNullOrWhiteSpace(mode) ? "semantic" : mode.Trim().ToLowerInvariant();
         string safeSource = string.IsNullOrWhiteSpace(source) ? "all" : source.Trim();
+        string safeFilter = string.IsNullOrWhiteSpace(filter) ? "all" : filter.Trim();
         string url = $"{baseUrl}/search?q={UnityWebRequest.EscapeURL(query)}&top={safeTop}&mode={UnityWebRequest.EscapeURL(safeMode)}";
 
         if (!string.Equals(safeSource, "all", StringComparison.OrdinalIgnoreCase))
         {
             url += $"&source={UnityWebRequest.EscapeURL(safeSource)}";
+        }
+
+        // Placeholder for future FastAPI support. Current backend may ignore unknown query parameters.
+        if (!string.Equals(safeFilter, "all", StringComparison.OrdinalIgnoreCase))
+        {
+            url += $"&filter={UnityWebRequest.EscapeURL(safeFilter)}";
         }
 
         using (UnityWebRequest request = UnityWebRequest.Get(url))

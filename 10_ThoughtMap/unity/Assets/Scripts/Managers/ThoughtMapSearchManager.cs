@@ -11,6 +11,7 @@ public class ThoughtMapSearchManager : MonoBehaviour
     [SerializeField] private TMP_InputField searchInput;
     [SerializeField] private TMP_Dropdown modeDropdown;
     [SerializeField] private TMP_Dropdown sourceDropdown;
+    [SerializeField] private FilterSelectorView filterSelectorView;
     [SerializeField] private Button searchButton;
     [SerializeField] private SearchResultsListView resultsListView;
     [SerializeField] private DetailPanelView detailPanelView;
@@ -57,7 +58,7 @@ public class ThoughtMapSearchManager : MonoBehaviour
 
         resultsListView?.Clear();
         detailPanelView?.Clear();
-        StartCoroutine(apiClient.Search(searchInput.text, topResults, GetSelectedMode(), GetSelectedSource(), HandleSuccess, HandleError));
+        StartCoroutine(apiClient.Search(searchInput.text, topResults, GetSelectedMode(), GetSelectedSource(), GetSelectedFilter(), HandleSuccess, HandleError));
     }
 
     private string GetSelectedMode()
@@ -73,6 +74,11 @@ public class ThoughtMapSearchManager : MonoBehaviour
     private string GetSelectedSource()
     {
         return GetDropdownValue(sourceDropdown, "all");
+    }
+
+    private string GetSelectedFilter()
+    {
+        return filterSelectorView == null ? "all" : filterSelectorView.GetSelectedFilter();
     }
 
     private string GetDropdownValue(TMP_Dropdown dropdown, string fallback)

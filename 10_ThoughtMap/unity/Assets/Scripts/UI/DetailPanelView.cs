@@ -11,6 +11,7 @@ public class DetailPanelView : MonoBehaviour
     [SerializeField] private TMP_Text docIdText;
     [SerializeField] private TMP_Text similarityText;
     [SerializeField] private TMP_Text bodyText;
+    [SerializeField] private ParameterScoresPanelView parameterScoresPanelView;
 
     private void Awake()
     {
@@ -26,6 +27,7 @@ public class DetailPanelView : MonoBehaviour
         SetText(docIdText, "");
         SetText(similarityText, "");
         SetText(bodyText, "Select a search result to preview document details.");
+        parameterScoresPanelView?.Clear();
     }
 
     public void ShowPlaceholder(ThoughtMapSearchResult result)
@@ -46,6 +48,7 @@ public class DetailPanelView : MonoBehaviour
             bodyText,
             "Document detail API is not connected yet. This panel is ready for a future GET /document/{doc_id} response."
         );
+        parameterScoresPanelView?.ShowScores(result.parameters);
     }
 
     private void SetVisible(bool hasContent)

@@ -75,6 +75,45 @@ The response schema must remain stable for Unity and future clients.
 /search?q=Burn&mode=semantic&source=user_suno
 ```
 
+
+## Planned: JSON Filter Selection
+
+Status: Unity placeholder implemented, FastAPI support not implemented yet.
+
+Unity can expose a filter selector backed by `filters/*.json` assets. Until FastAPI support is added, this value is treated as an optional future query parameter and should not change existing `/search` behavior.
+
+Proposed future query parameter:
+
+| Parameter | Required | Default | Description |
+| --- | --- | --- | --- |
+| `filter` | No | all filters | Name of the selected JSON filter, without requiring the client to know backend file paths. |
+
+Example future request:
+
+```text
+/search?q=Plato&mode=semantic&source=gutendex&filter=general
+```
+
+## Planned: Parameter Scores
+
+Status: Unity placeholder implemented, FastAPI response support not implemented yet.
+
+Future search or document-detail responses may include parameter scores as key/value rows. This should remain optional so existing Unity result rendering continues to work when scores are absent.
+
+Proposed optional shape:
+
+```json
+{
+  "key": "philosophy",
+  "value": 82.0
+}
+```
+
+Recommended future location:
+
+- `/document/{doc_id}` for full detail display
+- optionally `/search` only if lightweight summary scores are needed in result rows
+
 ## Planned: GET /document/{doc_id}
 
 Status: planned, not implemented yet.

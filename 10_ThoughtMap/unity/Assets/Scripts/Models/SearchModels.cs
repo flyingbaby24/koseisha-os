@@ -14,4 +14,12 @@ public class ThoughtMapSearchResult
     public string author;
     public string source;
     public float similarity;
+    public ThoughtMapParameterScore[] parameters;
+}
+
+[Serializable]
+public class ThoughtMapParameterScore
+{
+    public string key;
+    public float value;
 }
