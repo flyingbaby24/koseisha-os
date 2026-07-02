@@ -12,6 +12,7 @@ public class DetailPanelView : MonoBehaviour
     [SerializeField] private TMP_Text similarityText;
     [SerializeField] private TMP_Text bodyText;
     [SerializeField] private ParameterScoresPanelView parameterScoresPanelView;
+    [SerializeField] private ParameterRadarChartView radarChartView;
 
     private void Awake()
     {
@@ -28,6 +29,7 @@ public class DetailPanelView : MonoBehaviour
         SetText(similarityText, "");
         SetText(bodyText, "Select a search result to preview document details.");
         parameterScoresPanelView?.Clear();
+        radarChartView?.Clear();
     }
 
     public void ShowResult(ThoughtMapSearchResult result)
@@ -49,6 +51,7 @@ public class DetailPanelView : MonoBehaviour
             "Document detail API is not connected yet. This panel is showing the selected search result."
         );
         parameterScoresPanelView?.ShowScores(result.parameters);
+        radarChartView?.ShowScores(result.parameters);
     }
 
     public void ShowPlaceholder(ThoughtMapSearchResult result)

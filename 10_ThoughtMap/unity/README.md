@@ -180,6 +180,63 @@ Science   C
 
 Use the same ParameterScoresPanelView and ParameterScoreBar prefab for both query_parameters and results[].parameters.
 
+
+## Parameter Radar Chart Display
+
+ParameterRadarChartView visualizes the same numeric parameter scores as a 10-axis radar chart. It assumes the standard general.json battle parameters:
+
+- philosophy
+- psychology
+- science
+- economics
+- karma
+- emotion
+- morality
+- ideal
+- individual
+- community
+
+The D-S rank list remains available through ParameterScoresPanelView. The radar chart is an additional visual layer.
+
+Recommended hierarchy:
+
+```text
+DetailPanel
+  ResultRadarChart
+  ParameterScoresPanel
+
+QueryParameterPanel
+  QueryRadarChart
+  ParameterScoresPanel
+```
+
+Create a result radar chart:
+
+1. Under DetailPanel/Content, create a UI object named ResultRadarChart.
+2. Give it a RectTransform size such as 220 x 220.
+3. Add ParameterRadarChartView to ResultRadarChart.
+4. Optional: create a child LabelContainer and assign it to Label Container.
+5. Optional: create a TMP label prefab and assign it to Label Prefab.
+6. On DetailPanelView, assign ResultRadarChart to Radar Chart View.
+
+Create a query radar chart:
+
+1. Under QueryParameterPanel, create a UI object named QueryRadarChart.
+2. Give it a RectTransform size such as 220 x 220.
+3. Add ParameterRadarChartView to QueryRadarChart.
+4. Optional: assign Label Container and Label Prefab.
+5. On QueryParameterPanelView, assign QueryRadarChart to Radar Chart View.
+
+Runtime behavior:
+
+- QueryRadarChart renders query_parameters after search.
+- ResultRadarChart renders results[].parameters when a result item is clicked.
+- Missing parameters are treated as 0.
+- Values are clamped from 0 to 100 and converted to chart radius.
+- The chart uses UI mesh drawing, so no FastAPI or API schema changes are required.
+
+For the MVP, query and selected result charts are separate. A future overlay chart can reuse ParameterRadarChartView or extend it to accept two score sets.
+
 ## Wire ThoughtMapSearchManager
 
 Select the GameObject with `ThoughtMapSearchManager` and assign:
@@ -194,6 +251,8 @@ Select the GameObject with `ThoughtMapSearchManager` and assign:
 - `Detail Panel View`: new or existing `DetailPanel`
 - `Query Parameter Panel View`: new `QueryParameterPanel`
 - `Top Results`: keep current value, usually `10`
+- `DetailPanelView.Radar Chart View`: optional `ResultRadarChart`
+- `QueryParameterPanelView.Radar Chart View`: optional `QueryRadarChart`
 
 ## Wire Result Selection
 
@@ -242,7 +301,9 @@ Rules:
 6. Click one result.
 7. Confirm the right Detail Panel updates.
 8. Confirm Query Parameter Panel shows D-S rank rows or bars when the API returns `query_parameters`.
-9. Confirm selected-result Parameter Scores show D-S rank rows or bars when the API returns `results[].parameters`.
+9. Confirm QueryRadarChart draws when `query_parameters` are present.
+10. Confirm selected-result Parameter Scores show D-S rank rows or bars when the API returns `results[].parameters`.
+11. Confirm ResultRadarChart draws after clicking a result with `results[].parameters`.
 
 ## Troubleshooting
 

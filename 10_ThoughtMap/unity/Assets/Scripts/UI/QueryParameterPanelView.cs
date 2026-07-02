@@ -4,6 +4,7 @@ using UnityEngine;
 public class QueryParameterPanelView : MonoBehaviour
 {
     [SerializeField] private ParameterScoresPanelView parameterScoresPanelView;
+    [SerializeField] private ParameterRadarChartView radarChartView;
     [SerializeField] private TMP_Text titleText;
     [SerializeField] private string titlePrefix = "Query Parameters";
 
@@ -16,6 +17,7 @@ public class QueryParameterPanelView : MonoBehaviour
     {
         SetTitle(titlePrefix);
         parameterScoresPanelView?.Clear();
+        radarChartView?.Clear();
     }
 
     public void ShowScores(string query, ThoughtMapParameterScore[] scores)
@@ -23,6 +25,7 @@ public class QueryParameterPanelView : MonoBehaviour
         string label = string.IsNullOrWhiteSpace(query) ? titlePrefix : $"{titlePrefix}: {query}";
         SetTitle(label);
         parameterScoresPanelView?.ShowScores(scores);
+        radarChartView?.ShowScores(scores);
     }
 
     private void SetTitle(string value)
