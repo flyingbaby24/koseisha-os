@@ -27,6 +27,7 @@ Search ThoughtMap documents.
 | `top` | No | backend default | Maximum number of results to return. |
 | `mode` | No | `semantic` | Search mode. Supported values: `semantic`, `keyword`, `hybrid`. |
 | `source` | No | all sources | Optional exact-match source filter, such as `gutendex` or `user_suno`. Omit this parameter to search all sources. |
+| `filter` | No | none | Optional JSON parameter filter. `general` loads `filters/general.json` and returns parameter scores for each result. |
 
 ### Search Modes
 
@@ -48,7 +49,11 @@ The response schema must remain stable for Unity and future clients.
       "title": "The Republic",
       "author": "Plato",
       "source": "gutendex",
-      "similarity": 0.92
+      "similarity": 0.92,
+      "parameters": [
+        { "key": "philosophy", "value": 82.0 },
+        { "key": "psychology", "value": 21.5 }
+      ]
     }
   ]
 }
@@ -63,6 +68,7 @@ The response schema must remain stable for Unity and future clients.
 | `author` | string | Display author or creator. |
 | `source` | string | Source namespace, such as `gutendex`, `lyrics`, `note`, or `user_suno`. |
 | `similarity` | number | Ranking score returned by the active search mode. Keyword-only results may use a normalized score. |
+| `parameters` | array, optional | Optional key/value parameter scores returned only when a supported `filter` is requested. |
 
 ### Examples
 
@@ -73,16 +79,17 @@ The response schema must remain stable for Unity and future clients.
 /search?q=Plato&mode=keyword&source=gutendex
 /search?q=Plato&mode=hybrid
 /search?q=Burn&mode=semantic&source=user_suno
+/search?q=Plato&mode=semantic&source=gutendex&filter=general
 ```
 
 
-## Planned: JSON Filter Selection
+## JSON Filter Selection
 
-Status: Unity placeholder implemented, FastAPI support not implemented yet.
+Status: implemented for `/search` with `filter=general`.
 
-Unity can expose a filter selector backed by `filters/*.json` assets. Until FastAPI support is added, this value is treated as an optional future query parameter and should not change existing `/search` behavior.
+Unity can expose a filter selector backed by `filters/*.json` assets. The selected value is sent as an optional query parameter. When omitted, `/search` keeps the existing response shape.
 
-Proposed future query parameter:
+Current query parameter:
 
 | Parameter | Required | Default | Description |
 | --- | --- | --- | --- |
@@ -94,13 +101,13 @@ Example future request:
 /search?q=Plato&mode=semantic&source=gutendex&filter=general
 ```
 
-## Planned: Parameter Scores
+## Parameter Scores
 
-Status: Unity placeholder implemented, FastAPI response support not implemented yet.
+Status: implemented as optional `/search` response data when `filter=general` is requested.
 
-Future search or document-detail responses may include parameter scores as key/value rows. This should remain optional so existing Unity result rendering continues to work when scores are absent.
+Search responses may include parameter scores as key/value rows. This remains optional so existing Unity result rendering continues to work when scores are absent.
 
-Proposed optional shape:
+Optional shape:
 
 ```json
 {
@@ -109,10 +116,13 @@ Proposed optional shape:
 }
 ```
 
+Current location:
+
+- `/search` when `filter=general` is requested
+
 Recommended future location:
 
-- `/document/{doc_id}` for full detail display
-- optionally `/search` only if lightweight summary scores are needed in result rows
+- `/document/{doc_id}` for full detail display when the detail endpoint is added
 
 ## Planned: GET /document/{doc_id}
 

@@ -30,7 +30,7 @@ public class DetailPanelView : MonoBehaviour
         parameterScoresPanelView?.Clear();
     }
 
-    public void ShowPlaceholder(ThoughtMapSearchResult result)
+    public void ShowResult(ThoughtMapSearchResult result)
     {
         if (result == null)
         {
@@ -46,9 +46,14 @@ public class DetailPanelView : MonoBehaviour
         SetText(similarityText, $"Score: {result.similarity:0.0000}");
         SetText(
             bodyText,
-            "Document detail API is not connected yet. This panel is ready for a future GET /document/{doc_id} response."
+            "Document detail API is not connected yet. This panel is showing the selected search result."
         );
         parameterScoresPanelView?.ShowScores(result.parameters);
+    }
+
+    public void ShowPlaceholder(ThoughtMapSearchResult result)
+    {
+        ShowResult(result);
     }
 
     private void SetVisible(bool hasContent)

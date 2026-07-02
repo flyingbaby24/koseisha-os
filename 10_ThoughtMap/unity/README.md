@@ -1,81 +1,200 @@
-# ThoughtMap Unity HTTP integration
+# ThoughtMap Unity Setup
 
-Unity is the frontend. FastAPI/Python is the search engine.
+This guide explains how to wire the current Unity scene to the FastAPI ThoughtMap backend and the new filter/detail/parameter UI placeholders.
 
-## Unity folders
+The current repository copy contains Unity scripts, but no editable scene or prefab asset is present here. Update `ThoughtMapMain` in the Unity Editor using the steps below.
 
-```text
-Assets/Scripts/
-  API/
-    ThoughtMapApiClient.cs
-  Managers/
-    ThoughtMapSearchManager.cs
-  Models/
-    SearchModels.cs
-  UI/
-    ResultItemView.cs
-    SearchResultsListView.cs
-    DetailPanelView.cs
-```
+## Goal
 
-## Responsibilities
+Add these UI pieces to the existing `ThoughtMapMain` scene without breaking the current search flow:
 
-- `ThoughtMapApiClient`: HTTP only.
-- `ThoughtMapSearchManager`: connects input/button to API and result list.
-- `SearchResultsListView`: owns ScrollView content creation/clearing and result selection events.
-- `ResultItemView`: binds one search result to prefab text fields and emits click selection.
-- `DetailPanelView`: owns the right-side detail panel display.
-- `SearchModels`: JSON response models.
+- Filter Dropdown for `filters/*.json` selection
+- Right-side Detail Panel
+- Parameter Scores Panel inside the Detail Panel
+- Inspector references for `ThoughtMapSearchManager`, `DetailPanelView`, and `FilterSelectorView`
 
-## Scene wiring
+## Existing Objects To Keep
 
-1. Add `ThoughtMapApiClient` to a scene object.
-2. Add `SearchResultsListView` to the ScrollView or another UI object.
-3. Add `ThoughtMapSearchManager` to a scene object.
-4. Assign:
-   - API Client
-   - Search Input: `TMP_InputField`
-   - Search Button: `Button`
-   - Mode Dropdown: `TMP_Dropdown` with `semantic`, `keyword`, `hybrid`
-   - Source Dropdown: `TMP_Dropdown` with `all`, `gutendex`, `user_suno`
-   - Results List View
-   - Detail Panel View
-5. In `SearchResultsListView`, assign:
-   - Results Content: ScrollView Content transform
-   - Result Item Prefab: prefab with `ResultItemView`
-6. On the prefab, assign title and author TMP text fields. Add or assign a `Button` for click selection.
-7. Create a right-side ScrollView or panel for details and add `DetailPanelView`. Assign:
-   - Empty State Root, optional
-   - Content Root, optional
-   - Title Text
-   - Author Text
-   - Source Text
-   - Doc ID Text
-   - Similarity Text
-   - Body Text
+Do not replace the working search UI.
 
-Selecting a result currently shows placeholder detail data from the search result. A future `GET /document/{doc_id}` call should be triggered from `ThoughtMapSearchManager.OnResultSelected`.
+Keep the existing:
 
-## Local API URL
+- Search Input
+- Search Button
+- Mode Dropdown
+- Source Dropdown
+- Results Scroll View
+- ResultItem prefab
+- `ThoughtMapApiClient`
+- `ThoughtMapSearchManager`
+- `SearchResultsListView`
 
-Default API URL is:
+## Recommended Scene Layout
+
+Use a simple two-column layout first. Appearance can be refined later.
 
 ```text
-http://127.0.0.1:8000
+Canvas
+  MainRoot
+    LeftPanel
+      SearchControls
+        SearchInput
+        SearchButton
+        ModeDropdown
+        SourceDropdown
+        FilterDropdown
+      ResultsScrollView
+    RightPanel
+      DetailPanel
+        EmptyState
+        Content
+          TitleText
+          AuthorText
+          SourceText
+          DocIdText
+          SimilarityText
+          BodyText
+          ParameterScoresPanel
+            ParameterScoresText
 ```
 
-For a device or WebGL build, replace it with a reachable host URL.
-Unity should not know whether the backend uses CSV or SQLite.
+Suggested first-pass layout:
 
-## Search Modes
+- `LeftPanel`: anchored left, width about 55-65% of screen
+- `RightPanel`: anchored right, width about 35-45% of screen
+- `ResultsScrollView`: keep the current working setup
+- `DetailPanel`: ScrollView-based if the content can grow
+- `ParameterScoresText`: plain TMP Text, one key/value pair per line
 
-The Search Manager sends mode and source query parameters to FastAPI:
+## Add Filter Dropdown
+
+1. In `ThoughtMapMain`, create a new TMP Dropdown near the existing Mode and Source dropdowns.
+2. Name it `FilterDropdown`.
+3. Add options manually for now:
+   - `all`
+   - `general`
+4. Create an empty GameObject near the dropdown named `FilterSelector`.
+5. Add `FilterSelectorView` to `FilterSelector`.
+6. Assign `FilterDropdown` to the `Filter Dropdown` field on `FilterSelectorView`.
+7. If JSON filter files are imported as Unity `TextAsset`s later, assign them to `Filter Json Files`.
+
+Note: `FilterSelectorView` uses `all` plus assigned JSON asset names. Manual dropdown options are useful while the JSON assets are not imported into Unity yet.
+
+## Add Detail Panel
+
+1. Create a right-side Panel named `DetailPanel`.
+2. Add `DetailPanelView` to `DetailPanel`.
+3. Inside it, create two child roots:
+   - `EmptyState`
+   - `Content`
+4. Under `EmptyState`, add a TMP Text such as `Select a result`.
+5. Under `Content`, add TMP Text objects:
+   - `TitleText`
+   - `AuthorText`
+   - `SourceText`
+   - `DocIdText`
+   - `SimilarityText`
+   - `BodyText`
+6. Assign these objects to the matching fields in `DetailPanelView`.
+7. Assign `EmptyState` to `Empty State Root`.
+8. Assign `Content` to `Content Root`.
+
+`DetailPanelView` currently displays selected search result data. It does not call `GET /document/{doc_id}` yet.
+
+## Add Parameter Scores Panel
+
+1. Under `DetailPanel/Content`, create a child Panel named `ParameterScoresPanel`.
+2. Add a TMP Text child named `ParameterScoresText`.
+3. Add `ParameterScoresPanelView` to `ParameterScoresPanel`.
+4. Assign `ParameterScoresText` to the `Output Text` field.
+5. On `DetailPanelView`, assign `ParameterScoresPanel` to `Parameter Scores Panel View`.
+
+When `/search?...&filter=general` returns `parameters`, this panel shows key/value rows. If parameters are absent, it shows the empty message.
+
+
+## Add Query Parameter Panel
+
+This panel shows parameter scores for the search input text itself, separate from the selected result.
+
+1. Place the panel under the Search Input or at the top of the right Detail area.
+2. Name it `QueryParameterPanel`.
+3. Add a child TMP Text for the title, such as `QueryParameterTitleText`.
+4. Add a child area with `ParameterScoresPanelView` and a TMP Text for key/value output.
+5. Add `QueryParameterPanelView` to `QueryParameterPanel`.
+6. Assign the nested `ParameterScoresPanelView` to `Parameter Scores Panel View`.
+7. Assign the title TMP Text to `Title Text`.
+8. On `ThoughtMapSearchManager`, assign `QueryParameterPanel` to `Query Parameter Panel View`.
+
+When `/search?...&filter=general` returns `query_parameters`, this panel shows the search text parameter profile. It clears on each new search.
+
+## Wire ThoughtMapSearchManager
+
+Select the GameObject with `ThoughtMapSearchManager` and assign:
+
+- `Api Client`: existing `ThoughtMapApiClient`
+- `Search Input`: existing search TMP InputField
+- `Mode Dropdown`: existing mode TMP Dropdown
+- `Source Dropdown`: existing source TMP Dropdown
+- `Filter Selector View`: new `FilterSelector`
+- `Search Button`: existing search Button
+- `Results List View`: existing `SearchResultsListView`
+- `Detail Panel View`: new or existing `DetailPanel`
+- `Query Parameter Panel View`: new `QueryParameterPanel`
+- `Top Results`: keep current value, usually `10`
+
+## Wire Result Selection
+
+The current script flow is:
 
 ```text
-/search?q=Plato&top=10&mode=keyword
-/search?q=Plato&top=10&mode=keyword&source=gutendex
-/search?q=Plato&top=10&mode=hybrid
-/search?q=Burn&top=10&mode=semantic&source=user_suno
+ResultItemView click
+  -> SearchResultsListView.ResultSelected
+  -> ThoughtMapSearchManager.OnResultSelected
+  -> DetailPanelView.ShowResult
+  -> ParameterScoresPanelView.ShowScores
 ```
 
-When Source Dropdown is `all`, the `source` query parameter is omitted.
+Make sure each `ResultItem` has:
+
+- `ResultItemView`
+- `TitleText` assigned
+- `AuthorText` assigned
+- `SelectButton` assigned, or a Button on the same GameObject
+
+## FastAPI Request Behavior
+
+Current Unity request shape:
+
+```text
+/search?q=...&top=...&mode=...&source=...&filter=...
+```
+
+Rules:
+
+- `source=all` is omitted by `ThoughtMapApiClient`.
+- `filter=all` is omitted by `ThoughtMapApiClient`.
+- `filter=general` requests parameter scores from FastAPI.
+- Existing search results continue to display only title/author in the result list.
+
+## Smoke Test
+
+1. Start FastAPI with the desired backend.
+2. Open `ThoughtMapMain` in Unity.
+3. Press Play.
+4. Search `Plato` with:
+   - Mode: `keyword` or `semantic`
+   - Source: `all` or `gutendex`
+   - Filter: `general`
+5. Confirm the result list still populates.
+6. Click one result.
+7. Confirm the right Detail Panel updates.
+8. Confirm Query Parameter Panel shows key/value rows when the API returns `query_parameters`.
+9. Confirm selected-result Parameter Scores show key/value rows when the API returns `results[].parameters`.
+
+## Troubleshooting
+
+- If search still works but DetailPanel does not update, check `ThoughtMapSearchManager.Detail Panel View`.
+- If clicking a result does nothing, check `ResultItemView.Select Button` and the Button component.
+- If filter is always `all`, check `ThoughtMapSearchManager.Filter Selector View` and `FilterSelectorView.Filter Dropdown`.
+- If parameter rows are missing, test the API URL directly with `filter=general` and check that `parameters` is included in the JSON.
+- If Unity shows script references as missing, reimport the `Assets/Scripts` folder.

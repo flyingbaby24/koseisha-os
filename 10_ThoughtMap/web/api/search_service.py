@@ -9,8 +9,9 @@ from sentence_transformers import SentenceTransformer
 from search_utils import format_similarity, normalize_text, work_similarity_by_vector
 
 from .config import ApiSettings, get_settings
+from .filter_service import ParameterFilterService
 from .repositories import SearchIndexRepository, create_search_index_repository
-from .schemas import SearchResult
+from .schemas import SearchResponse, SearchResult
 
 
 SEARCH_MODES = {"semantic", "keyword", "hybrid"}
@@ -43,6 +44,7 @@ class ThoughtMapSearchService:
         self.repository = repository
         self.model_name = model_name
         self._model: SentenceTransformer | None = None
+        self._filter_service: ParameterFilterService | None = None
 
     @property
     def model(self) -> SentenceTransformer:
@@ -50,16 +52,38 @@ class ThoughtMapSearchService:
             self._model = SentenceTransformer(self.model_name)
         return self._model
 
+    @property
+    def filter_service(self) -> ParameterFilterService:
+        if self._filter_service is None:
+            self._filter_service = ParameterFilterService(self.model)
+        return self._filter_service
+
+    def search_response(
+        self,
+        query: str,
+        top: int = 10,
+        mode: str = "semantic",
+        source: str = "",
+        filter_name: str = "",
+    ) -> SearchResponse:
+        query = str(query or "").strip()
+        filter_name = str(filter_name or "").strip()
+        results = self.search(query, top=top, mode=mode, source=source, filter_name=filter_name)
+        query_parameters = self.filter_service.score_text(query, filter_name) if filter_name else None
+        return SearchResponse(results=results, query_parameters=query_parameters)
+
     def search(
         self,
         query: str,
         top: int = 10,
         mode: str = "semantic",
         source: str = "",
+        filter_name: str = "",
     ) -> list[SearchResult]:
         query = str(query or "").strip()
         mode = str(mode or "semantic").strip().lower()
         source = str(source or "").strip()
+        filter_name = str(filter_name or "").strip()
         if not query:
             return []
         if mode not in SEARCH_MODES:
@@ -77,7 +101,7 @@ class ThoughtMapSearchService:
         else:
             results = self._semantic_search(index, query, top)
 
-        return self._to_search_results(results)
+        return self._to_search_results(results, index=index, filter_name=filter_name)
 
     def _filter_by_source(self, index: pd.DataFrame, source: str) -> pd.DataFrame:
         if not source or "source" not in index.columns:
@@ -177,19 +201,43 @@ class ThoughtMapSearchService:
             return 1.0 + keyword_score + (semantic_score * 0.1)
         return semantic_score
 
-    def _to_search_results(self, results: pd.DataFrame) -> list[SearchResult]:
+    def _to_search_results(
+        self,
+        results: pd.DataFrame,
+        index: pd.DataFrame,
+        filter_name: str = "",
+    ) -> list[SearchResult]:
         output: list[SearchResult] = []
+        embedding_by_doc_id = self._embedding_lookup(index) if filter_name else {}
+
         for _, row in results.iterrows():
+            doc_id = str(row.get("doc_id", "") or "")
+            parameters = None
+            if filter_name:
+                parameters = self.filter_service.score_embedding(
+                    embedding_by_doc_id.get(doc_id),
+                    filter_name,
+                )
+
             output.append(
                 SearchResult(
-                    doc_id=str(row.get("doc_id", "") or ""),
+                    doc_id=doc_id,
                     title=str(row.get("title", "") or ""),
                     author=str(row.get("author", "") or ""),
                     source=str(row.get("source", "") or ""),
                     similarity=float(row.get("similarity", 0.0) or 0.0),
+                    parameters=parameters,
                 )
             )
         return output
+
+    def _embedding_lookup(self, index: pd.DataFrame) -> dict[str, object]:
+        if "doc_id" not in index.columns or "_embedding_vec" not in index.columns:
+            return {}
+        return {
+            str(row.get("doc_id", "") or ""): row.get("_embedding_vec")
+            for _, row in index.iterrows()
+        }
 
 
 def create_search_service(settings: ApiSettings) -> ThoughtMapSearchService:

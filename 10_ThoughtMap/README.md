@@ -144,3 +144,7 @@ Current required scene wiring:
   - assign one TMP Text field inside the parameter output panel
 
 Filter and parameter-score API support is still a placeholder. Unity can select and display these values, but FastAPI support should be added through the API contract before relying on them in production.
+
+## Unity Frontend Setup
+
+The Unity frontend uses FastAPI as the search backend. Scene wiring instructions for the Filter Dropdown, Detail Panel, and Parameter Scores Panel are documented in [unity/README.md](unity/README.md).

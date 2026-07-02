@@ -15,6 +15,7 @@ public class ThoughtMapSearchManager : MonoBehaviour
     [SerializeField] private Button searchButton;
     [SerializeField] private SearchResultsListView resultsListView;
     [SerializeField] private DetailPanelView detailPanelView;
+    [SerializeField] private QueryParameterPanelView queryParameterPanelView;
     [SerializeField] private int topResults = 10;
 
     private void Awake()
@@ -58,6 +59,7 @@ public class ThoughtMapSearchManager : MonoBehaviour
 
         resultsListView?.Clear();
         detailPanelView?.Clear();
+        queryParameterPanelView?.Clear();
         StartCoroutine(apiClient.Search(searchInput.text, topResults, GetSelectedMode(), GetSelectedSource(), GetSelectedFilter(), HandleSuccess, HandleError));
     }
 
@@ -106,6 +108,7 @@ public class ThoughtMapSearchManager : MonoBehaviour
         }
 
         resultsListView?.ShowResults(response?.results);
+        queryParameterPanelView?.ShowScores(searchInput == null ? "" : searchInput.text, response?.query_parameters);
     }
 
     private void HandleError(string message)
@@ -115,12 +118,13 @@ public class ThoughtMapSearchManager : MonoBehaviour
             searchButton.interactable = true;
         }
 
+        queryParameterPanelView?.Clear();
         Debug.LogError($"ThoughtMap search failed: {message}");
     }
 
     private void OnResultSelected(ThoughtMapSearchResult result)
     {
-        detailPanelView?.ShowPlaceholder(result);
+        detailPanelView?.ShowResult(result);
         // Future step: call GET /document/{doc_id} here and bind the response to DetailPanelView.
     }
 }

@@ -4,6 +4,7 @@ using System;
 public class ThoughtMapSearchResponse
 {
     public ThoughtMapSearchResult[] results;
+    public ThoughtMapParameterScore[] query_parameters;
 }
 
 [Serializable]
