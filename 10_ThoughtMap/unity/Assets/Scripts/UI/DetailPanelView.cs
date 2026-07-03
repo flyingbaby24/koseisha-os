@@ -13,6 +13,7 @@ public class DetailPanelView : MonoBehaviour
     [SerializeField] private TMP_Text docIdText;
     [SerializeField] private TMP_Text similarityText;
     [SerializeField] private TMP_Text bodyText;
+    [SerializeField] private TMP_Text radarHeadingText;
     [SerializeField] private TMP_Text urlText;
     [SerializeField] private Button openLinkButton;
     [SerializeField] private TMP_Text saveStatusText;
@@ -34,6 +35,7 @@ public class DetailPanelView : MonoBehaviour
         {
             openLinkButton.onClick.AddListener(HandleOpenLinkClicked);
         }
+        ConfigureActionButtonLabels();
         Clear();
     }
 
@@ -67,6 +69,7 @@ public class DetailPanelView : MonoBehaviour
         SetText(docIdText, "");
         SetText(similarityText, "");
         SetText(bodyText, "Select a search result to preview document details.");
+        SetText(radarHeadingText, "Selected Document Profile");
         SetUrl("");
         SetSaveStatus("");
         SetSaveInteractable(false);
@@ -96,6 +99,7 @@ public class DetailPanelView : MonoBehaviour
             bodyText,
             "Document detail API is not connected yet. This panel is showing the selected search result."
         );
+        SetText(radarHeadingText, "Selected Document Profile");
         SetUrl(currentUrl);
         SetSaveStatus("");
         bool canSave = !string.IsNullOrWhiteSpace(result.doc_id);
@@ -129,6 +133,27 @@ public class DetailPanelView : MonoBehaviour
         SetSaveStatus(string.IsNullOrWhiteSpace(message) ? "Save failed" : $"Save failed: {message}");
         SetSaveInteractable(currentResult != null && !string.IsNullOrWhiteSpace(currentResult.doc_id));
         LogSaveFlow($"SetSaveError doc_id={CurrentDocIdForLog()} message={message}");
+    }
+
+
+    private void ConfigureActionButtonLabels()
+    {
+        SetButtonLabel(saveButton, "☆ Save to My Library");
+        SetButtonLabel(openLinkButton, "Open Link");
+    }
+
+    private void SetButtonLabel(Button button, string label)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        TMP_Text text = button.GetComponentInChildren<TMP_Text>(true);
+        if (text != null)
+        {
+            text.text = label;
+        }
     }
 
     private void HandleSaveClicked()

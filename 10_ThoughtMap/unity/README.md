@@ -13,6 +13,74 @@ Add these UI pieces to the existing `ThoughtMapMain` scene without breaking the 
 - Parameter Scores Panel inside the Detail Panel
 - Inspector references for `ThoughtMapSearchManager`, `DetailPanelView`, and `FilterSelectorView`
 
+
+## Dark SF / Neon UI Theme
+
+The first-stage product UI pass keeps the current hierarchy and behavior, then layers a dark navy / cyan neon style on top.
+
+### Add Theme Applier
+
+1. Create an empty GameObject under Canvas named `NeonTheme`.
+2. Add `ThoughtMapNeonTheme` to it.
+3. Assign `Canvas` or the main UI root to `Theme Root`.
+4. Assign `Main Camera` to `Target Camera` if available.
+5. Enable `Apply On Enable`.
+6. In the component menu, use `Apply Neon Theme` if you want to apply the style immediately in the Editor.
+
+This changes:
+
+- Camera/background to dark navy
+- Panels to translucent dark blue
+- Text to white/cyan tones
+- Buttons, dropdowns, and inputs to neon bordered controls
+- Result cards to dark card surfaces with cyan outlines
+
+### Result Item Card Style
+
+`ResultItemView` now supports selected-state visuals.
+
+Recommended ResultItem prefab setup:
+
+1. Add an Image to the ResultItem root if it does not already have one.
+2. Assign it to `Background Image`.
+3. Add or assign an Outline to `Selection Outline`.
+4. Optional: add a TMP Text for similarity score and assign it to `Similarity Text`.
+5. Keep `Title Text`, `Author Text`, and `Select Button` assigned.
+
+When a result is clicked, `SearchResultsListView` clears the previous selection and calls `SetSelected(true)` on the clicked item. This creates the glowing selected-card effect.
+
+### Detail Panel Product Card
+
+Keep the existing DetailPanel hierarchy, but style its root Image as a large translucent dark card. Add an Outline with cyan color for a thin neon frame.
+
+Optional additions:
+
+- Add `RadarHeadingText` near the selected-result radar chart and assign it to `DetailPanelView.Radar Heading Text`.
+- Add `RadarHeadingText` near the query radar chart and assign it to `QueryParameterPanelView.Radar Heading Text`.
+- The Save button label is set by script to `☆ Save to My Library`.
+
+### Recommended Layout Pass
+
+Use this as the first non-breaking layout direction:
+
+```text
+Canvas
+  NeonTheme
+  TitleText
+  SearchControlsRow
+  MainContentRow
+    ResultsPanel
+      Scroll View
+    DetailPanel
+      Header
+      ResultRadarChart
+      ParameterScoresPanel
+      UrlText / OpenLinkButton
+      SaveButton / SaveStatusText
+```
+
+Keep the existing object names and script references where possible. The goal of this phase is visual polish without breaking search, save, URL, radar, or D-S rank behavior.
+
 ## Existing Objects To Keep
 
 Do not replace the working search UI.

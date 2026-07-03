@@ -6,6 +6,8 @@ public class SearchResultsListView : MonoBehaviour
     [SerializeField] private Transform resultsContent;
     [SerializeField] private ResultItemView resultItemPrefab;
 
+    private ResultItemView selectedItem;
+
     public event Action<ThoughtMapSearchResult> ResultSelected;
 
     public void ShowResults(ThoughtMapSearchResult[] results)
@@ -20,12 +22,14 @@ public class SearchResultsListView : MonoBehaviour
         foreach (ThoughtMapSearchResult result in results)
         {
             ResultItemView item = Instantiate(resultItemPrefab, resultsContent);
-            item.Bind(result, HandleResultSelected);
+            item.Bind(result, selectedResult => HandleResultSelected(item, selectedResult));
         }
     }
 
     public void Clear()
     {
+        selectedItem = null;
+
         if (resultsContent == null)
         {
             return;
@@ -37,8 +41,15 @@ public class SearchResultsListView : MonoBehaviour
         }
     }
 
-    private void HandleResultSelected(ThoughtMapSearchResult result)
+    private void HandleResultSelected(ResultItemView item, ThoughtMapSearchResult result)
     {
+        if (selectedItem != null)
+        {
+            selectedItem.SetSelected(false);
+        }
+
+        selectedItem = item;
+        selectedItem?.SetSelected(true);
         ResultSelected?.Invoke(result);
     }
 }
