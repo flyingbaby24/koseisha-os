@@ -16,9 +16,14 @@ public class ParameterRadarChartView : MaskableGraphic
     [SerializeField] private Transform labelContainer;
     [SerializeField] private TMP_Text labelPrefab;
     [SerializeField] private bool showLabels = true;
+    [SerializeField] private bool animateValues = true;
+    [SerializeField] private float animationDuration = 0.45f;
 
     private readonly List<AxisValue> axes = new List<AxisValue>();
     private readonly List<TMP_Text> labels = new List<TMP_Text>();
+    private float animationProgress = 1f;
+    private float animationElapsed;
+    private bool animationPlaying;
 
     protected override void Awake()
     {
@@ -33,12 +38,35 @@ public class ParameterRadarChartView : MaskableGraphic
         maxValue = Mathf.Max(1f, maxValue);
         gridSteps = Mathf.Max(1, gridSteps);
         lineThickness = Mathf.Max(0.5f, lineThickness);
+        animationDuration = Mathf.Max(0.01f, animationDuration);
         SetVerticesDirty();
     }
 #endif
 
+    private void Update()
+    {
+        if (!animationPlaying)
+        {
+            return;
+        }
+
+        animationElapsed += Time.unscaledDeltaTime;
+        float t = Mathf.Clamp01(animationElapsed / Mathf.Max(0.01f, animationDuration));
+        animationProgress = 1f - Mathf.Pow(1f - t, 3f);
+        SetVerticesDirty();
+
+        if (t >= 1f)
+        {
+            animationPlaying = false;
+            animationProgress = 1f;
+            SetVerticesDirty();
+        }
+    }
+
     public void Clear()
     {
+        animationPlaying = false;
+        animationProgress = 1f;
         axes.Clear();
         ClearLabels();
         SetVerticesDirty();
@@ -76,6 +104,7 @@ public class ParameterRadarChartView : MaskableGraphic
         }
 
         RebuildLabels();
+        StartValueAnimation();
         SetVerticesDirty();
     }
 
@@ -124,12 +153,26 @@ public class ParameterRadarChartView : MaskableGraphic
         Vector2[] points = new Vector2[axisCount];
         for (int i = 0; i < axisCount; i++)
         {
-            float normalized = Mathf.Clamp01(axes[i].Value / maxValue);
+            float normalized = Mathf.Clamp01((axes[i].Value * animationProgress) / maxValue);
             points[i] = GetPoint(center, radius * normalized, i, axisCount);
         }
 
         AddFilledPolygon(vh, center, points, fillColor);
         AddPolyline(vh, points, lineColor, lineThickness, true);
+    }
+
+    private void StartValueAnimation()
+    {
+        if (!animateValues)
+        {
+            animationPlaying = false;
+            animationProgress = 1f;
+            return;
+        }
+
+        animationElapsed = 0f;
+        animationProgress = 0f;
+        animationPlaying = true;
     }
 
     private Vector2[] BuildRegularPoints(Vector2 center, float radius, int axisCount)

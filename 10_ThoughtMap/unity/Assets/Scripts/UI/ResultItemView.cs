@@ -13,7 +13,8 @@ public class ResultItemView : MonoBehaviour
     [SerializeField] private Outline selectionOutline;
     [SerializeField] private Color normalColor = new Color(0.015f, 0.045f, 0.10f, 0.90f);
     [SerializeField] private Color selectedColor = new Color(0.02f, 0.12f, 0.24f, 0.98f);
-    [SerializeField] private Color selectedOutlineColor = new Color(0.05f, 0.72f, 1f, 0.95f);
+    [SerializeField] private Color normalOutlineColor = new Color(0.05f, 0.42f, 0.75f, 0.38f);
+    [SerializeField] private Color selectedOutlineColor = new Color(0.05f, 0.82f, 1f, 1f);
     [SerializeField] private Color titleColor = new Color(0.92f, 0.98f, 1f, 1f);
     [SerializeField] private Color secondaryColor = new Color(0.60f, 0.78f, 0.92f, 1f);
 
@@ -101,9 +102,9 @@ public class ResultItemView : MonoBehaviour
 
         if (selectionOutline != null)
         {
-            selectionOutline.enabled = selected;
-            selectionOutline.effectColor = selectedOutlineColor;
-            selectionOutline.effectDistance = selected ? new Vector2(2.0f, -2.0f) : Vector2.zero;
+            selectionOutline.enabled = true;
+            selectionOutline.effectColor = selected ? selectedOutlineColor : normalOutlineColor;
+            selectionOutline.effectDistance = selected ? new Vector2(2.8f, -2.8f) : new Vector2(1.0f, -1.0f);
         }
     }
 

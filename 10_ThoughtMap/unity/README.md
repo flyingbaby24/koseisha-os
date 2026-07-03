@@ -413,6 +413,85 @@ Runtime behavior:
 - Duplicate saves are skipped by the API and the status text shows Already saved.
 - The API writes documents.csv, embeddings.csv, and favorites.json under data/thoughtmap_db/users/default.
 
+
+## Neon UI Layout Stage 2
+
+This stage improves spacing and hierarchy without changing FastAPI, API schemas, or existing event wiring.
+
+### Add Layout Helper
+
+1. Create an empty GameObject under Canvas named `NeonLayout`.
+2. Add `ThoughtMapNeonLayout`.
+3. Assign the following RectTransforms where available:
+   - `Results Panel` -> the panel containing the results Scroll View
+   - `Detail Panel` -> DetailPanel root
+   - `Query Parameter Panel` -> QueryParameterPanel root
+   - `Result Item Prefab Root` -> ResultItem prefab root
+   - `Result Visualization Row` -> horizontal row that contains result rank list and result radar
+   - `Result Rank List Column` -> left column containing `ParameterScoresPanel`
+   - `Result Radar Column` -> right column containing heading + `ResultRadarChart`
+   - `Result Radar Chart` -> selected-result radar chart
+   - `Result Radar Heading` -> selected-result radar heading text
+   - `Query Visualization Row` -> horizontal row that contains query rank list and query radar
+   - `Query Rank List Column` -> left column containing query `ParameterScoresPanel`
+   - `Query Radar Column` -> right column containing heading + `QueryRadarChart`
+   - `Query Radar Chart` -> query radar chart
+   - `Query Radar Heading` -> query radar heading text
+   - `Save Button` -> SaveButton RectTransform
+   - `Open Link Button` -> OpenLinkButton RectTransform
+   - `Url Text` -> UrlText RectTransform
+4. Use the component menu `Apply Neon Layout`.
+
+### Recommended DetailPanel Hierarchy
+
+Keep the existing DetailPanel, but group the parameter area like this:
+
+```text
+DetailPanel
+  HeaderRow
+    Title/Author/Source/DocId/Score
+    SaveButton
+  LinkRow
+    UrlText              (shows Source Link, not full URL)
+    OpenLinkButton       (Open Link)
+  BodyText
+  ResultVisualizationRow
+    RankListColumn
+      ParameterScoresPanel
+    RadarColumn
+      RadarHeadingText   (Selected Document Profile)
+      ResultRadarChart
+```
+
+For query parameters:
+
+```text
+QueryParameterPanel
+  QueryVisualizationRow
+    QueryRankListColumn
+      ParameterScoresPanel
+    QueryRadarColumn
+      QueryRadarHeadingText (Search Query Profile)
+      QueryRadarChart
+```
+
+### Layout Rules
+
+- Rank list goes left.
+- Radar chart goes right.
+- Radar heading must be above the radar chart inside the radar column.
+- Do not place heading under the chart.
+- Keep SaveButton and OpenLinkButton as horizontal buttons with LayoutElement sizes from `ThoughtMapNeonLayout`.
+- `DetailPanelView` displays URL text as `Source Link`; the full URL is still stored internally and used by `Application.OpenURL`.
+- Selected result item uses a stronger cyan outline; non-selected items keep a dim outline.
+
+### Button Labels
+
+- SaveButton label is set by script to `☆ Save to My Library`.
+- OpenLinkButton label is set by script to `Open Link`.
+
+If the Save button still looks like a checkbox, check that the GameObject assigned to `DetailPanelView.Save Button` is a Button root with a normal Image background, not a Toggle or small child graphic.
+
 ## FastAPI Request Behavior
 
 Current Unity request shape:
@@ -452,3 +531,561 @@ Rules:
 - If filter is always `all`, check `ThoughtMapSearchManager.Filter Selector View` and `FilterSelectorView.Filter Dropdown`.
 - If parameter rows are missing, test the API URL directly with `filter=general` and check that `parameters` is included in the JSON.
 - If Unity shows script references as missing, reimport the `Assets/Scripts` folder.
+## Neon Layout Recovery / Safe Layout
+
+If applying the old `ThoughtMapNeonLayout` caused invisible result items or overlapping radar/rank text, the likely cause is that LayoutGroup components were added to objects that already had hand-authored RectTransforms.
+
+The safe layout helper no longer changes panel roots automatically. `Apply On Enable` is off by default.
+
+### Cleanup after the old layout helper
+
+1. Select the `NeonLayout` object.
+2. In `Unsafe Layout Roots To Clean`, temporarily assign objects that were affected by the previous helper, for example:
+   - `DetailPanel`
+   - `QueryParameterPanel`
+   - `Scroll View` root, if it received a LayoutGroup
+   - `ResultVisualizationRow`, if it was not intentionally a layout container
+   - `QueryVisualizationRow`, if it was not intentionally a layout container
+   - `ParameterScoresText`, if it received a VerticalLayoutGroup
+   - `ResultRadarChart`, if it received a VerticalLayoutGroup
+   - `QueryRadarChart`, if it received a VerticalLayoutGroup
+3. Run the component menu `Remove Unsafe Layout From Assigned Roots`.
+4. Remove those temporary cleanup references when the scene looks normal again.
+
+### Safe assignments
+
+Use only these fields for normal operation:
+
+- `Result List Content`: assign `Scroll View/Viewport/Content`, not the Scroll View root.
+- `Save Button`: assign the SaveButton root RectTransform.
+- `Open Link Button`: assign the OpenLinkButton root RectTransform.
+- `Url Text`: assign UrlText RectTransform.
+- `Result Radar Chart`: assign ResultRadarChart RectTransform.
+- `Query Radar Chart`: assign QueryRadarChart RectTransform.
+
+Then run `Apply Safe Neon Layout` manually from the component menu.
+
+### What this safe helper does not do
+
+- It does not add LayoutGroup to `DetailPanel`.
+- It does not add LayoutGroup to `Scroll View` root or `Viewport`.
+- It does not move anchors, pivots, positions, or sizes of main panels.
+- It does not arrange the whole scene automatically.
+- It does not touch FastAPI, API schema, Repository, SQLite, or CSV behavior.
+
+### Result list visibility check
+
+For the result list, the only object that should normally have `VerticalLayoutGroup` and `ContentSizeFitter` is:
+
+```text
+Scroll View
+  Viewport
+    Content   <-- VerticalLayoutGroup + ContentSizeFitter
+      ResultItem(Clone)
+```
+
+Each `ResultItem(Clone)` should have a `LayoutElement` with a preferred height around 74.
+## Stable Prefab / Panel Layout Structure
+
+The Unity UI should no longer rely on manually nudging Pos Y values after every change. Use dedicated containers with LayoutGroup components instead.
+
+`ThoughtMapNeonTheme` is responsible for colors. `ThoughtMapNeonLayout` is responsible only for safe container setup and recovery. Keep them separate.
+
+### Important rule
+
+Do not add LayoutGroup components directly to hand-positioned roots such as `DetailPanel`, `Scroll View`, `Viewport`, `ResultRadarChart`, `QueryRadarChart`, `SaveButton`, or `OpenLinkButton`.
+
+LayoutGroup should be used only on dedicated containers such as:
+
+```text
+DetailPanel
+  DetailContent
+    HeaderBlock
+    ResultProfileBlock
+    SaveBlock
+    LinkBlock
+    QueryProfileBlock
+```
+
+### ThoughtMapNeonLayout context menus
+
+- `Apply Safe Neon Layout`: configures only `Scroll View/Viewport/Content` so generated result items stack correctly.
+- `Remove Unsafe Layout From Assigned Roots`: removes old unsafe LayoutGroup, LayoutElement, and ContentSizeFitter components from assigned cleanup targets.
+- `Rebuild Detail Panel Layout`: creates `DetailContent` and the five stable blocks under `DetailPanel`, then reparents assigned UI elements into those blocks.
+
+`ThoughtMapNeonLayout` does not run automatically on enable. Apply layout actions manually from the component menu.
+
+### Recommended Inspector wiring
+
+On `NeonLayout`, assign:
+
+- `Result List Content`: `Scroll View/Viewport/Content` only
+- `Detail Panel`: `DetailPanel` root
+- `Detail Content Parent`: optional existing `DetailPanelView.ContentRoot`; use this if your DetailPanel has a Content object that is toggled by script
+- `Header Block Items`: `TitleText`, `AuthorText`, `SourceText`, `DocIdText`, `SimilarityText`, `BodyText` if you want them stacked at the top
+- `Result Profile Items`: selected-result rank panel/text, selected-result heading, selected-result radar chart
+- `Save Block Items`: `SaveButton`, `SaveStatusText`
+- `Link Block Items`: `UrlText`, `OpenLinkButton`
+- `Query Profile Items`: query heading, query rank panel/text, query radar chart
+- `Known Controls`: assign `SaveButton`, `OpenLinkButton`, `UrlText`, `ResultRadarChart`, and `QueryRadarChart` so cleanup can remove old unsafe components from them
+
+Then run:
+
+1. `Remove Unsafe Layout From Assigned Roots`
+2. `Rebuild Detail Panel Layout`
+3. `Apply Safe Neon Layout`
+
+### Cleanup targets after the old layout helper
+
+If the scene still overlaps, add these to `Unsafe Layout Roots To Clean` and run cleanup again:
+
+- `DetailPanel`
+- `Scroll View` root
+- `Viewport`
+- `ResultVisualizationRow`
+- `QueryVisualizationRow`
+- `ParameterScoresText`
+- `ResultRadarChart`
+- `QueryRadarChart`
+- `SaveButton`
+- `OpenLinkButton`
+
+After cleanup, only `Scroll View/Viewport/Content` should normally have `VerticalLayoutGroup` and `ContentSizeFitter` for the result list.
+
+### Result list structure
+
+```text
+Scroll View
+  Viewport
+    Content
+      ResultItem(Clone)
+      ResultItem(Clone)
+```
+
+`Apply Safe Neon Layout` may add `VerticalLayoutGroup` and `ContentSizeFitter` only to `Content`. It may add `LayoutElement` only to generated result item children, not to buttons or radar charts.
+
+### DetailPanel structure
+
+```text
+DetailPanel
+  DetailContent
+    HeaderBlock
+      TitleText
+      AuthorText
+      SourceText
+      DocIdText
+      SimilarityText
+      BodyText
+    ResultProfileBlock
+      ParameterScoresPanel or ParameterScoresText
+      ResultRadarHeading
+      ResultRadarChart
+    SaveBlock
+      SaveButton
+      SaveStatusText
+    LinkBlock
+      UrlText
+      OpenLinkButton
+    QueryProfileBlock
+      QueryRadarHeading
+      QueryParameterScoresText or panel
+      QueryRadarChart
+```
+
+This keeps future UI changes manageable by editing spacing and padding on containers rather than fixed coordinates.
+## Non-Destructive Detail Layout Rebuild
+
+`Rebuild Detail Panel Layout` is intentionally conservative. It creates only empty containers:
+
+```text
+DetailContent
+  HeaderBlock
+  ResultProfileBlock
+  SaveBlock
+  LinkBlock
+  QueryProfileBlock
+```
+
+It does not move existing TextMeshPro, Button, RadarChart, ParameterScores, or other UI objects. This prevents the current scene from being broken by partial reparenting or mismatched preferred sizes.
+
+Recommended recovery flow:
+
+1. Run `Remove Unsafe Layout From Assigned Roots` to remove old unsafe layout components.
+2. Run `Rebuild Detail Panel Layout` to create empty stable containers only.
+3. Confirm the existing UI still appears as before.
+4. Move UI objects into the new blocks manually, one small group at a time, only after adding proper LayoutElement or wrapper objects where needed.
+
+For radar charts, create a wrapper object first:
+
+```text
+ResultRadarSlot
+  ResultRadarChart
+```
+
+Put `LayoutElement` on `ResultRadarSlot`, not directly on the chart object. Do the same for query radar charts. For long TMP text, prefer a wrapper or an explicit `LayoutElement` with a stable preferred height.
+## Neon Animation Pass
+
+This pass adds visual motion without changing the existing UI layout. It does not modify FastAPI, API schemas, Repository code, RectTransform anchors, or parent/child scene structure.
+
+### Added animation components
+
+- `NeonUIFade`: fades a UI object in with CanvasGroup.
+- `NeonSlideIn`: temporarily slides a panel from an offset and returns it to its original anchored position.
+- `NeonHoverGlow`: adds neon hover/press glow to Button-like UI objects using Image and Outline.
+- `NeonPanelPulse`: adds a subtle cyber-style pulsing outline to panel frames.
+- `LoadingIndicatorView`: shows a fading loading overlay and optional rotating spinner while search is running.
+
+### Automatic hooks
+
+- Search result items fade in when `SearchResultsListView.ShowResults()` creates them.
+- DetailPanel slides in when `DetailPanelView.ShowResult()` displays a selected result.
+- Radar chart values animate from 0 to their score when `ParameterRadarChartView.ShowScores()` is called.
+- Search, Save, and Open Link buttons receive `NeonHoverGlow` at runtime if it is missing.
+- `ThoughtMapSearchManager` can show/hide `LoadingIndicatorView` during API search if assigned.
+
+### Optional Unity Editor setup
+
+For loading:
+
+1. Create a small overlay object, for example `SearchLoadingIndicator`.
+2. Add `CanvasGroup` and `LoadingIndicatorView`.
+3. Optional: add a child image as `Spinner`.
+4. Optional: add TMP text as `Status Text`.
+5. Assign it to `ThoughtMapSearchManager.Loading Indicator View`.
+
+For panel glow:
+
+1. Add `NeonPanelPulse` to `DetailPanel`, result list panel, or other card-like panel roots.
+2. Make sure the object has an `Outline`, or let the component add one at runtime.
+
+For button glow:
+
+- Search, Save, and Open Link are wired automatically.
+- Add `NeonHoverGlow` manually to dropdowns or other buttons if needed.
+
+### Safety notes
+
+- These animation scripts do not rebuild layout.
+- They do not add LayoutGroup to existing objects.
+- `NeonSlideIn` stores the original anchored position and only offsets it temporarily during Play mode.
+- `NeonUIFade` may add CanvasGroup to the target object.
+- `NeonHoverGlow` may add Outline to the target object.
+## ThoughtMapDetailPanelV2 Prefab
+
+`ThoughtMapDetailPanelV2.prefab` is a new standalone detail panel. It does not modify the existing scene DetailPanel, RectTransforms, or hierarchy.
+
+Files:
+
+- `Assets/Prefabs/ThoughtMapDetailPanelV2.prefab`
+- `Assets/Scripts/UI/ThoughtMapDetailPanelV2View.cs`
+
+Purpose:
+
+- Receive the same `ThoughtMapSearchResult` data used by the current DetailPanel.
+- Display title, author, source, doc_id, similarity, URL label, parameter ranks, and radar chart.
+- Provide Save and Open Link buttons inside the prefab.
+- Build its own internal `DetailContent` UI at runtime, so existing scene UI is not rearranged.
+
+Usage:
+
+1. Drag `ThoughtMapDetailPanelV2.prefab` into the Canvas.
+2. Position the prefab root manually where the right detail panel should appear.
+3. Do not run `ThoughtMapNeonLayout` on the existing DetailPanel for this prefab workflow.
+4. To test data binding, call `ThoughtMapDetailPanelV2View.ShowResult(result)` from the same place that currently calls `DetailPanelView.ShowResult(result)`.
+
+Notes:
+
+- This prefab is intentionally isolated from the existing DetailPanel.
+- It does not require old UI text fields to be assigned in the Inspector.
+- It creates its child UI under its own root at runtime.
+- It does not change FastAPI, API schema, Repository, SQLite, or CSV behavior.
+- It is safe to keep the old DetailPanel in the scene while testing V2 separately.
+## ThoughtMapDemoUI + DetailPanelV2 Wiring
+
+Current scene flow may use `ThoughtMapDemoUI` directly instead of `ThoughtMapSearchManager`:
+
+```text
+SearchButton -> ThoughtMapDemoUI.OnSearchClicked()
+```
+
+The repository copy used by Codex did not include `ThoughtMapDemoUI.cs`, so the existing scene script was not modified directly. Use the following minimal patch in the local `ThoughtMapDemoUI` script.
+
+### Add fields
+
+Keep the old `DetailPanelView` field. Add V2 and a switch:
+
+```csharp
+[SerializeField] private DetailPanelView detailPanelView;
+[SerializeField] private ThoughtMapDetailPanelV2View detailPanelV2;
+[SerializeField] private bool useDetailPanelV2 = true;
+```
+
+### On result click
+
+Where `ThoughtMapDemoUI` currently handles a clicked result, call V2 when enabled:
+
+```csharp
+private void OnResultClicked(ThoughtMapSearchResult result)
+{
+    if (useDetailPanelV2 && detailPanelV2 != null)
+    {
+        detailPanelV2.ShowResult(result);
+        return;
+    }
+
+    if (detailPanelView != null)
+    {
+        detailPanelView.ShowResult(result);
+    }
+}
+```
+
+If the local method has a different name, add the same block at the point where the old detail panel currently receives the selected result.
+
+### Optional router component
+
+`ThoughtMapDetailPanelRouter` was added as a small helper. It can sit on the same GameObject as `ThoughtMapDemoUI` and hold:
+
+- `Legacy Detail Panel`
+- `Detail Panel V2`
+- `Use Detail Panel V2`
+
+Then `ThoughtMapDemoUI` can call:
+
+```csharp
+[SerializeField] private ThoughtMapDetailPanelRouter detailPanelRouter;
+
+// On result click:
+detailPanelRouter?.ShowResult(result);
+```
+
+### Inspector steps
+
+1. Drag `ThoughtMapDetailPanelV2.prefab` into the Canvas.
+2. Select the GameObject with `ThoughtMapDemoUI`.
+3. Drag the V2 prefab instance into `Detail Panel V2`.
+4. Keep the old `DetailPanelView` assignment in place.
+5. Toggle `Use Detail Panel V2` to switch between old and new detail panels.
+
+FastAPI, API schema, Repository, SQLite, and CSV behavior are unchanged.
+## ThoughtMapRuntimeController Wiring
+
+Use `ThoughtMapRuntimeController` when the scene has a missing or hidden `ThoughtMapDemoUI` reference. This controller does not depend on `ThoughtMapDemoUI` and does not modify the old DetailPanel.
+
+### Scene setup
+
+1. Create an empty GameObject under Canvas named `ThoughtMapRuntimeController`.
+2. Add the `ThoughtMapRuntimeController` component.
+3. Assign Inspector fields:
+   - `Api Client`: existing `ThoughtMapApiClient`
+   - `Search Button`: existing Search button
+   - `Search Input`: existing TMP input field
+   - `Mode Dropdown`: existing mode dropdown
+   - `Source Dropdown`: existing source dropdown
+   - `Filter Dropdown`: existing filter dropdown
+   - `Search Results List View`: existing result list view
+   - `Detail Panel V2`: `ThoughtMapDetailPanelV2` prefab instance
+   - `Loading Indicator View`: optional
+   - `Query Parameter Panel View`: optional
+
+### Replace SearchButton OnClick
+
+1. Select `SearchButton`.
+2. In the Button OnClick list, remove the old `ThoughtMapDemoUI.OnSearchClicked` entry.
+3. Add a new OnClick entry.
+4. Drag the GameObject with `ThoughtMapRuntimeController` into the target slot.
+5. Select `ThoughtMapRuntimeController.OnSearchClicked()`.
+
+### Runtime behavior
+
+```text
+SearchButton
+  -> ThoughtMapRuntimeController.OnSearchClicked()
+  -> ThoughtMapApiClient.Search()
+  -> SearchResultsListView.ShowResults()
+  -> SearchResultsListView.ResultSelected
+  -> ThoughtMapDetailPanelV2View.ShowResult(result)
+```
+
+### Notes
+
+- Existing `ThoughtMapDemoUI` and `DetailPanelView` are not touched.
+- FastAPI, API schema, Repository, SQLite, and CSV behavior are unchanged.
+- The old scene can remain intact while V2 is tested by switching only the SearchButton OnClick target.
+## DetailPanelV2 Japanese Font Setup
+
+If Japanese titles render as squares in `ThoughtMapDetailPanelV2`, assign the same TMP Font Asset used by the existing scene text that already displays Japanese correctly.
+
+Recommended setup:
+
+1. Select the `ThoughtMapDetailPanelV2` prefab instance in the scene.
+2. In `ThoughtMapDetailPanelV2View`, assign `Japanese Font Asset` to the TMP Font Asset used by the working Japanese scene text.
+3. Alternatively, drag an existing TMP text object that already displays Japanese correctly into `Font Reference Text`. V2 copies that text component font at runtime.
+4. If the prefab has already generated child texts, use the component menu `Apply Font To Generated Texts`.
+
+V2 now applies the chosen font to all generated text objects, including title, author, metadata, parameter scores, URL label, save status, and button labels.
+
+V2 visual tuning:
+
+- Wider root default size: 620 x 760
+- Larger header and profile spacing
+- Larger radar slot: 270 x 270
+- Larger parameter text area: 250 x 240
+- Parameter text uses larger font and wider line spacing
+- Save button: 220 x 44
+- Open Link button: 150 x 42
+- Text uses wrapping/ellipsis to avoid crushing Japanese strings
+
+Existing scene RectTransforms are not modified by these changes.
+## DetailPanelV2 Design Tuning
+
+`ThoughtMapDetailPanelV2View` now exposes visual tuning values in the Inspector so the V2 prefab can be adjusted without editing code or touching the old scene UI.
+
+Inspector fields:
+
+- `Radar Size`: default `330 x 330`
+- `Title Font Size`: default `22`
+- `Body Font Size`: default `14`
+- `Block Spacing`: default `16`
+- `Block Padding`: default `18`
+- `Parameter Scores Size`: default `260 x 330`
+- `Open Button Size`: default `150 x 42`
+- `Save Button Size`: default `230 x 42`
+
+Profile layout:
+
+```text
+ResultProfileBlock
+  ProfileHeadingText
+  ProfileRow
+    ParameterScoresText   // left
+    RadarSlot
+      ResultRadarChart    // right, large
+```
+
+Action layout:
+
+```text
+ActionBlock
+  Source Link
+  Open Link
+  ☆ Save to My Library
+  SaveStatusText
+```
+
+If you already generated V2 child UI in Play Mode, stop Play and run again. Runtime-generated children are not intended to be edited as the source of truth; tune the serialized values on the prefab root instead.
+
+Existing scene RectTransforms and the old DetailPanel are not modified by these V2 tuning fields.
+## DetailPanelV2 Design Adjustment Phase
+
+This phase keeps the runtime build approach and exposes more layout values in the Inspector. Existing scene RectTransforms, the old DetailPanel, FastAPI, API schema, and Repository code are not changed.
+
+Primary Inspector controls:
+
+- `Radar Size`: default `420 x 420`
+- `Title Font Size`: default `28`
+- `Body Font Size`: default `16`
+- `Block Spacing`: default `18`
+- `Block Padding`: default `22`
+- `Header Height`: default `150`
+- `Profile Height`: default `500`
+- `Action Height`: default `74`
+- `Footer Height`: default `64`
+- `Parameter Width Ratio`: default `0.4`
+- `Radar Width Ratio`: default `0.6`
+- `Open Button Size`: default `170 x 52`
+- `Save Button Size`: default `250 x 52`
+
+The selected profile area is designed as:
+
+```text
+ResultProfileBlock
+  Selected Document Profile
+  ProfileRow
+    ParameterScoresText  // left, 40%
+    RadarSlot            // right, 60%
+      ResultRadarChart
+```
+
+The action area is:
+
+```text
+ActionBlock
+  Source Link
+  Open Link
+  ☆ Save to My Library
+  SaveStatusText
+```
+
+When changing the panel root size in Unity, adjust `Header Height`, `Profile Height`, `Action Height`, and `Footer Height` first. Then tune `Parameter Width Ratio` and `Radar Width Ratio` if the score list and chart need a different split.
+## V2 Prefab Window UI Direction
+
+Future ThoughtMap UI work should prefer prefab windows instead of modifying existing scene-placed UI directly.
+
+New left-side V2 prefabs:
+
+- `Assets/Prefabs/SearchHeaderV2.prefab`
+- `Assets/Prefabs/ResultListV2.prefab`
+- `Assets/Prefabs/ResultItemV2.prefab`
+
+Runtime scripts:
+
+- `SearchHeaderV2View`
+- `ResultListV2View`
+- `ResultItemV2View`
+
+Each V2 prefab is built around a future window structure:
+
+```text
+WindowRoot
+  TitleBar
+  ContentArea
+  ActionArea
+```
+
+This structure is intended to support later add-on components such as:
+
+- `DraggableWindow`
+- `NeonUIFade`
+- `NeonSlideIn`
+- `NeonHoverGlow`
+- `NeonPanelPulse`
+
+### RuntimeController V2 assignment
+
+`ThoughtMapRuntimeController` now supports V2 window assignments while keeping the old scene UI fields intact.
+
+Assign:
+
+- `Search Header V2`: instance of `SearchHeaderV2.prefab`
+- `Result List V2`: instance of `ResultListV2.prefab`
+- `Detail Panel V2`: instance of `ThoughtMapDetailPanelV2.prefab`
+- `Api Client`: existing `ThoughtMapApiClient`
+
+When V2 fields are assigned:
+
+```text
+SearchHeaderV2.SearchRequested
+  -> ThoughtMapRuntimeController.OnSearchClicked()
+  -> ThoughtMapApiClient.Search()
+  -> ResultListV2.ShowResults()
+  -> ResultListV2.ResultSelected
+  -> ThoughtMapDetailPanelV2.ShowResult(result)
+```
+
+Old scene fields can remain assigned as fallback. If both old and V2 result lists are assigned, V2 is preferred for displaying results.
+
+### Japanese font
+
+All V2 view scripts expose:
+
+- `Japanese Font Asset`
+- `Font Reference Text`
+
+Assign the same TMP Font Asset or reference text used by the existing Japanese-capable scene UI.
+
+### Notes
+
+- Existing scene RectTransforms are not modified.
+- Existing `ThoughtMapDemoUI` and old `DetailPanelView` are not required for the V2 flow.
+- FastAPI, API schema, Repository, SQLite, and CSV behavior are unchanged.

@@ -5,6 +5,8 @@ public class SearchResultsListView : MonoBehaviour
 {
     [SerializeField] private Transform resultsContent;
     [SerializeField] private ResultItemView resultItemPrefab;
+    [SerializeField] private bool animateItems = true;
+    [SerializeField] private float itemFadeDelayStep = 0.035f;
 
     private ResultItemView selectedItem;
 
@@ -19,10 +21,21 @@ public class SearchResultsListView : MonoBehaviour
             return;
         }
 
-        foreach (ThoughtMapSearchResult result in results)
+        for (int i = 0; i < results.Length; i++)
         {
+            ThoughtMapSearchResult result = results[i];
             ResultItemView item = Instantiate(resultItemPrefab, resultsContent);
             item.Bind(result, selectedResult => HandleResultSelected(item, selectedResult));
+
+            if (animateItems)
+            {
+                NeonUIFade fade = item.GetComponent<NeonUIFade>();
+                if (fade == null)
+                {
+                    fade = item.gameObject.AddComponent<NeonUIFade>();
+                }
+                fade.Play(i * itemFadeDelayStep);
+            }
         }
     }
 

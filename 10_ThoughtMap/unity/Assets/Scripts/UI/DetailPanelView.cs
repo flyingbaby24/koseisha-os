@@ -20,6 +20,7 @@ public class DetailPanelView : MonoBehaviour
     [SerializeField] private Button saveButton;
     [SerializeField] private ParameterScoresPanelView parameterScoresPanelView;
     [SerializeField] private ParameterRadarChartView radarChartView;
+    [SerializeField] private NeonSlideIn slideInEffect;
     [SerializeField] private bool debugSaveFlow = true;
 
     private ThoughtMapSearchResult currentResult;
@@ -35,6 +36,16 @@ public class DetailPanelView : MonoBehaviour
         {
             openLinkButton.onClick.AddListener(HandleOpenLinkClicked);
         }
+        if (slideInEffect == null)
+        {
+            slideInEffect = GetComponent<NeonSlideIn>();
+        }
+
+        if (slideInEffect == null)
+        {
+            slideInEffect = gameObject.AddComponent<NeonSlideIn>();
+        }
+
         ConfigureActionButtonLabels();
         Clear();
     }
@@ -106,6 +117,7 @@ public class DetailPanelView : MonoBehaviour
         SetSaveInteractable(canSave);
         parameterScoresPanelView?.ShowScores(result.parameters);
         radarChartView?.ShowScores(result.parameters);
+        slideInEffect?.Play();
         LogSaveFlow($"ShowResult doc_id={result.doc_id} title={result.title} canSave={canSave} saveButton={(saveButton == null ? "null" : saveButton.name)}");
     }
 
@@ -138,8 +150,22 @@ public class DetailPanelView : MonoBehaviour
 
     private void ConfigureActionButtonLabels()
     {
-        SetButtonLabel(saveButton, "☆ Save to My Library");
+        SetButtonLabel(saveButton, "\u2606 Save to My Library");
         SetButtonLabel(openLinkButton, "Open Link");
+        ConfigureButtonSize(saveButton, 190f, 40f);
+        ConfigureButtonSize(openLinkButton, 132f, 36f);
+        EnsureHoverGlow(saveButton);
+        EnsureHoverGlow(openLinkButton);
+    }
+
+    private void EnsureHoverGlow(Button button)
+    {
+        if (button == null || button.GetComponent<NeonHoverGlow>() != null)
+        {
+            return;
+        }
+
+        button.gameObject.AddComponent<NeonHoverGlow>();
     }
 
     private void SetButtonLabel(Button button, string label)
@@ -154,6 +180,26 @@ public class DetailPanelView : MonoBehaviour
         {
             text.text = label;
         }
+    }
+
+
+    private void ConfigureButtonSize(Button button, float preferredWidth, float preferredHeight)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        LayoutElement layout = button.GetComponent<LayoutElement>();
+        if (layout == null)
+        {
+            layout = button.gameObject.AddComponent<LayoutElement>();
+        }
+
+        layout.minWidth = preferredWidth;
+        layout.preferredWidth = preferredWidth;
+        layout.minHeight = preferredHeight;
+        layout.preferredHeight = preferredHeight;
     }
 
     private void HandleSaveClicked()
@@ -215,7 +261,7 @@ public class DetailPanelView : MonoBehaviour
     private void SetUrl(string value)
     {
         currentUrl = string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
-        SetText(urlText, currentUrl);
+        SetText(urlText, string.IsNullOrWhiteSpace(currentUrl) ? string.Empty : "Source Link");
 
         if (urlText != null)
         {
