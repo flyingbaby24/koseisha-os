@@ -1023,102 +1023,384 @@ relatedConcepts: [
   relatedNotes: [],
 
   references: []
-},
-  {
-    id: 15,
-    name: "調虎離山",
-    reading: "ちょうこりざん",
-    english: "Lure the tiger away from the mountain",
-    category: "Context",
-    bias: "環境依存の強さ、ホーム優位",
-    behavioral: "Context effect / home advantage",
-    summary: "相手を得意な場所・条件から引き離し、能力を弱める。",
-    example: "相手の得意領域から引き離す、プラットフォーム変更",
-    interpretation: `
-`,
-    principle: `
-`,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
   },
   {
-    id: 16,
-    name: "欲擒故縦",
-    reading: "よくきんこしょう",
-    english: "To capture, first let go",
-    category: "Reactance",
-    bias: "自由を与えられると警戒が下がる、心理的リアクタンス",
-    behavioral: "Reactance theory / commitment",
-    summary: "追い詰めず、あえて自由を与えることで相手の自発的接近を誘う。",
-    example: "営業で押さずに選ばせる、無料トライアル",
-    interpretation: `
+  id: 15,
+
+  name: "調虎離山",
+
+  reading: "ちょうこりざん",
+
+  english: "Lure the tiger away from the mountain",
+
+  category: "Context / Environment",
+
+  bias: "環境依存、ホームアドバンテージ、文脈依存記憶",
+
+  behavioral: "Context-dependent cognition / home advantage / predictive processing",
+
+  summary: "能力ではなく、その能力を成立させる認知環境を崩す。",
+
+  example: "アウェー戦、異動・転職、プラットフォーム変更、市場環境の変化、兵糧攻め",
+
+  interpretation: `
+調虎離山は「得意な場所から誘い出す計略」ではない。
+
+本質は、相手が能力を発揮するための認知の前提条件を崩すことにある。
+
+人は環境そのものを覚えているのではない。
+
+「この環境ならこう行動すればよい」という予測モデルを学習している。
+
+そのため、
+環境が変わると、
+これまで使えていた予測モデルは機能しなくなる。
+
+能力が落ちたのではない。
+
+能力を支えていた認知環境が失われたのである。
 `,
-    principle: `
+
+  principle: `
+認知は環境を前提として成立する。
+
+人は限られた認知資源を節約するため、
+環境ごとの予測モデルを学習する。
+
+予測可能な環境では認知コストは低く、
+本来の能力へ資源を集中できる。
+
+一方、
+環境が変化すると、
+認知資源は環境適応へ再配分される。
+
+その結果、
+能力そのものではなく、
+能力を発揮する効率が低下する。
+
+調虎離山とは、
+人を弱くする兵法ではなく、
+能力を支える認知環境を崩す兵法なのである。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  breakdown: [
+    "相手が能力を発揮している環境を把握する",
+    "その環境から相手を切り離す",
+    "予測モデルを機能しなくする",
+    "認知資源を環境適応へ再配分させる",
+    "能力発揮効率を低下させる",
+    "その隙に目的を達成する"
+  ],
+
+  noteTitle: "調虎離山は「得意な場所から誘い出す計略」ではない──認知の前提条件を崩す計略である",
+
+  noteUrl: "https://note.com/flying_baby/n/n680ea4736142",
+
+  relatedStratagems: [4,11,19,20],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "Context-dependent cognition",
+    "Home advantage",
+    "Predictive processing",
+    "Cognitive load"
+  ],
+
+  relatedConcepts: [
+    "認知環境",
+    "予測モデル",
+    "認知資源",
+    "ホームアドバンテージ",
+    "環境依存",
+    "文脈依存記憶"
+  ],
+
+  relatedNotes: [],
+
+  references: []
   },
   {
-    id: 17,
-    name: "抛磚引玉",
-    reading: "ほうせんいんぎょく",
-    english: "Throw a brick to attract jade",
-    category: "Reciprocity / Bait",
-    bias: "返報性、アンカリング",
-    behavioral: "Reciprocity / anchoring",
-    summary: "小さなものを差し出し、より大きな反応や価値を引き出す。",
-    example: "無料資料、安価な入口商品、釣り投稿",
-    interpretation: `
+  id: 16,
+
+  name: "欲擒故縦",
+
+  reading: "よくきんこしょう",
+
+  english: "To capture, first let go",
+
+  category: "Choice / Cognitive Task",
+
+  bias: "主体性、一貫性、自己決定感、認知課題",
+
+  behavioral: "Self-perception theory / commitment & consistency / cognitive closure",
+
+  summary: "答えを与えるのではなく、相手自身に認知課題を解決させる。",
+
+  example: "営業でプランを選ばせる、UIの選択ボタン、教育で課題を考えさせる、マジシャンズ・チョイス",
+
+  interpretation: `
+欲擒故縦は「わざと逃がす計略」ではない。
+
+本質は、相手自身に認知課題を解決させることにある。
+
+人は自由だから動くのではない。
+
+提示された問題を自分で解決したと認識した時、
+その結果を自分の意思決定として受け入れる。
+
+主体性とは、
+自由から生まれるものではない。
+
+「自分で答えを出した」という認知から生まれるのである。
 `,
-    principle: `
+
+  principle: `
+人は選択することが好きなのではない。
+
+未解決の状態を終わらせたいのである。
+
+認知は、
+提示された課題を解決しようとする。
+
+そのため、
+答えを押し付けられるよりも、
+自分で導き出した答えの方が、
+責任感・主体性・一貫性・愛着を持ちやすい。
+
+欲擒故縦とは、
+相手へ自由を与える兵法ではない。
+
+認知課題を相手へ委ね、
+自ら答えを導いたという認識を形成する兵法なのである。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  breakdown: [
+    "認知課題を提示する",
+    "相手自身に解決を委ねる",
+    "自分で答えを導いたと認識させる",
+    "主体性と責任感を形成する",
+    "結果を自分の意思決定として受け入れる",
+    "自発的な行動を引き出す"
+  ],
+
+  noteTitle: "欲擒故縦は「わざと逃がす計略」ではない──認知課題を相手に解決させる計略である",
+
+  noteUrl: "https://note.com/flying_baby/n/n949e121f4ccf",
+
+  relatedStratagems: [8,10,13,17,22,32],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "Commitment and consistency",
+    "Self-perception theory",
+    "Need for cognitive closure",
+    "Choice architecture"
+  ],
+
+  relatedConcepts: [
+    "認知課題",
+    "主体性",
+    "自己決定",
+    "認知的完結欲求",
+    "意思決定",
+    "マジシャンズ・チョイス"
+  ],
+
+  relatedNotes: [],
+
+  references: []
   },
   {
-    id: 18,
-    name: "擒賊擒王",
-    reading: "きんぞくきんおう",
-    english: "Capture the leader to capture the bandits",
-    category: "Hierarchy",
-    bias: "中心人物への依存、権威集中",
-    behavioral: "Network centrality / authority bias",
-    summary: "集団全体ではなく、中心人物・権威・キーノードを狙う。",
-    example: "キーマン攻略、インフルエンサー獲得",
-    interpretation: `
+  id: 17,
+
+  name: "抛磚引玉",
+
+  reading: "ほうせんいんぎょく",
+
+  english: "Throw a brick to attract jade",
+
+  category: "Evaluation / Entry Cost",
+
+  bias: "認知コスト、試行コスト、未知回避",
+
+  behavioral: "Processing fluency / uncertainty reduction / mere exposure",
+
+  summary: "価値を渡るのではなく、認知コストの低い入口を設計する。",
+
+  example: "試食、無料体験、ゲーム体験版、無料相談、要約記事、ショート動画、AIレコメンド",
+
+  interpretation: `
+抛磚引玉は「小さなものを差し出す計略」ではない。
+
+本質は、認知コストの低い入口を提示することにある。
+
+人は未知の価値を評価することが苦手である。
+
+そのため、
+価値そのものを提示しても、
+判断できず行動できないことが多い。
+
+まずは、
+負担なく触れられる入口を設計する。
+
+未知だったものが既知になることで、
+初めて価値を評価できるようになる。
+
+利用しているのは無料ではない。
+
+価値を判断できる認知状態そのものである。
 `,
-    principle: `
+
+  principle: `
+人は価値があるから受け入れるのではない。
+
+判断しやすいから受け入れるのである。
+
+未知の対象を評価するには、
+時間・労力・お金など、
+様々な認知資源を消費する。
+
+入口の認知コストを下げれば、
+人はまず体験し、
+その後で価値を判断する。
+
+抛磚引玉とは、
+価値を提供する兵法ではない。
+
+価値へ到達するための認知的入口を設計する兵法なのである。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  breakdown: [
+    "相手にとって未知の価値を把握する",
+    "認知コストの低い入口を設計する",
+    "まず体験できる状態を作る",
+    "未知を既知へ変える",
+    "価値を評価できる認知状態を形成する",
+    "本来の価値へ自然に到達させる"
+  ],
+
+  noteTitle: "抛磚引玉は「小さなものを差し出す計略」ではない──認知コストを下げる入口を提示する計略である",
+
+  noteUrl: "https://note.com/flying_baby/n/n4f413f72b970",
+
+  relatedStratagems: [1,8,12,16,24],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "Processing fluency",
+    "Uncertainty reduction",
+    "Mere exposure effect",
+    "Choice architecture"
+  ],
+
+  relatedConcepts: [
+    "認知コスト",
+    "入口設計",
+    "試行コスト",
+    "Processing Fluency",
+    "フリーミアム",
+    "時間資源"
+  ],
+
+  relatedNotes: [],
+
+  references: []
+  },
+  {
+  id: 18,
+
+  name: "擒賊擒王",
+
+  reading: "きんぞくきんおう",
+
+  english: "Capture the leader to capture the bandits",
+
+  category: "Decision Network / Centrality",
+
+  bias: "意思決定の委譲、中心性、認知コスト",
+
+  behavioral: "Network centrality / authority heuristic / cognitive offloading",
+
+  summary: "肩書きではなく、意思決定が集約される中心を支配する。",
+
+  example: "決裁者への営業、実質的な経営者への交渉、SNSアルゴリズムの攻略、検索エンジン最適化",
+
+  interpretation: `
+擒賊擒王は「リーダーを倒す計略」ではない。
+
+本質は、意思決定が集約されている中心を支配することにある。
+
+人はすべてを自分で判断して生きているわけではない。
+
+専門家、上司、経験者などへ
+意思決定を委ねることで、
+認知コストを節約している。
+
+そのため、
+判断が集約されている場所を押さえれば、
+集団全体の行動も変化する。
+
+攻撃しているのは人物ではない。
+
+認知と意思決定のネットワークそのものである。
+`,
+
+  principle: `
+認知資源には限界がある。
+
+そのため人は、
+すべてを自分で判断せず、
+信頼できる対象へ意思決定を委譲する。
+
+意思決定が一箇所へ集約されるほど、
+集団は効率化される一方、
+その中心への依存も強くなる。
+
+擒賊擒王とは、
+肩書きを狙う兵法ではない。
+
+認知と意思決定が最も集中する場所を見抜き、
+そこへ働きかける兵法なのである。
+`,
+
+  breakdown: [
+    "集団の意思決定構造を観察する",
+    "判断が最も集約される中心を特定する",
+    "その中心へ働きかける、または排除する",
+    "集団全体の意思決定構造を変化させる",
+    "行動全体へ影響を及ぼす"
+  ],
+
+  noteTitle: "擒賊擒王は「リーダーを倒す計略」ではない──意思決定の中心を支配する計略である",
+
+  noteUrl: "https://note.com/flying_baby/n/ne78d8d9fe5f4",
+
+  relatedStratagems: [3,6,10,14,19,30],
+
+  relatedIdioms: [],
+
+  relatedBiases: [
+    "Authority heuristic",
+    "Network centrality",
+    "Cognitive offloading",
+    "Delegated decision-making"
+  ],
+
+  relatedConcepts: [
+    "意思決定",
+    "認知コスト",
+    "ネットワーク中心性",
+    "ボトルネック",
+    "意思決定の委譲",
+    "アルゴリズム"
+  ],
+
+  relatedNotes: [],
+
+  references: []
   },
   {
     id: 19,
