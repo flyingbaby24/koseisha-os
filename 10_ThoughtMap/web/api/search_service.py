@@ -226,10 +226,38 @@ class ThoughtMapSearchService:
                     author=str(row.get("author", "") or ""),
                     source=str(row.get("source", "") or ""),
                     similarity=float(row.get("similarity", 0.0) or 0.0),
+                    url=self._resolve_url(row),
                     parameters=parameters,
                 )
             )
         return output
+
+    def _resolve_url(self, row: pd.Series) -> str | None:
+        for column in ("url", "source_url", "link"):
+            if column in row.index:
+                value = normalize_text(row.get(column, ""))
+                if value:
+                    return value
+
+        doc_id = normalize_text(row.get("doc_id", ""))
+        source = normalize_text(row.get("source", "")).lower()
+        gutenberg_id = normalize_text(row.get("gutenberg_id", ""))
+        inferred_id = gutenberg_id or self._infer_gutenberg_id(doc_id)
+        if inferred_id and (source == "gutendex" or doc_id.lower().startswith("gutendex:")):
+            return f"https://www.gutenberg.org/ebooks/{inferred_id}"
+
+        return None
+
+    def _infer_gutenberg_id(self, doc_id: str) -> str:
+        text = normalize_text(doc_id)
+        if not text:
+            return ""
+
+        matches = re.findall(r"\d+", text)
+        if not matches:
+            return ""
+
+        return str(int(matches[-1]))
 
     def _embedding_lookup(self, index: pd.DataFrame) -> dict[str, object]:
         if "doc_id" not in index.columns or "_embedding_vec" not in index.columns:

@@ -145,3 +145,7 @@ curl -X DELETE "http://127.0.0.1:8000/users/default/saved/gutendex%3A12345"
 ```
 
 The MVP uses `default` only. It intentionally does not add authentication yet.
+
+## Result URLs
+
+`/search` includes optional `url` when metadata has `url`, `source_url`, or `link`. For Gutendex/Gutenberg rows, the API can infer `https://www.gutenberg.org/ebooks/{id}` from `gutenberg_id` or numeric `doc_id`.

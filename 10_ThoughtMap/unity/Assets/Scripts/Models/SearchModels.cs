@@ -15,6 +15,7 @@ public class ThoughtMapSearchResult
     public string author;
     public string source;
     public float similarity;
+    public string url;
     public ThoughtMapParameterScore[] parameters;
 }
 

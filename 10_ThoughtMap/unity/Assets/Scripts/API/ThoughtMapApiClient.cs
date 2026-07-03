@@ -7,6 +7,7 @@ using UnityEngine.Networking;
 public class ThoughtMapApiClient : MonoBehaviour
 {
     [SerializeField] private string baseUrl = "http://127.0.0.1:8000";
+    [SerializeField] private bool debugSaveFlow = true;
 
     public IEnumerator Search(string query, int top, Action<ThoughtMapSearchResponse> onSuccess, Action<string> onError)
     {
@@ -79,6 +80,8 @@ public class ThoughtMapApiClient : MonoBehaviour
             yield break;
         }
 
+        LogSaveFlow($"SaveDefaultDocument called doc_id={result.doc_id}");
+
         SaveDocumentRequest body = new SaveDocumentRequest
         {
             doc_id = result.doc_id,
@@ -86,7 +89,9 @@ public class ThoughtMapApiClient : MonoBehaviour
         };
 
         string json = JsonUtility.ToJson(body);
-        using (UnityWebRequest request = new UnityWebRequest($"{baseUrl}/users/default/save", "POST"))
+        string url = $"{baseUrl}/users/default/save";
+        LogSaveFlow($"POST {url} body={json}");
+        using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
         {
             byte[] bytes = Encoding.UTF8.GetBytes(json);
             request.uploadHandler = new UploadHandlerRaw(bytes);
@@ -94,6 +99,7 @@ public class ThoughtMapApiClient : MonoBehaviour
             request.SetRequestHeader("Content-Type", "application/json");
 
             yield return SendJsonRequest(request, onError);
+            LogSaveFlow($"POST completed result={request.result} status={request.responseCode} body={(request.downloadHandler == null ? "" : request.downloadHandler.text)}");
 
             if (request.result != UnityWebRequest.Result.Success)
             {
@@ -168,6 +174,13 @@ public class ThoughtMapApiClient : MonoBehaviour
         catch (Exception ex)
         {
             onError?.Invoke(ex.Message);
+        }
+    }
+    private void LogSaveFlow(string message)
+    {
+        if (debugSaveFlow)
+        {
+            Debug.Log($"[ThoughtMap SaveFlow][ApiClient:{GetInstanceID()}] {message}", this);
         }
     }
 }

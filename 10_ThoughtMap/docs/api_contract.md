@@ -54,6 +54,7 @@ The response schema must remain stable for Unity and future clients.
       "author": "Plato",
       "source": "gutendex",
       "similarity": 0.92,
+      "url": "https://www.gutenberg.org/ebooks/326",
       "parameters": [
         { "key": "philosophy", "value": 82.0 },
         { "key": "psychology", "value": 21.5 }
@@ -72,6 +73,7 @@ The response schema must remain stable for Unity and future clients.
 | `author` | string | Display author or creator. |
 | `source` | string | Source namespace, such as `gutendex`, `lyrics`, `note`, or `user_suno`. |
 | `similarity` | number | Ranking score returned by the active search mode. Keyword-only results may use a normalized score. |
+| `url` | string, optional | Source URL for the document. Uses existing `url`, `source_url`, or `link` metadata when available. Gutendex/Gutenberg URLs may be inferred from doc_id or gutenberg_id. |
 | `parameters` | array, optional | Optional key/value parameter scores returned per result only when a supported `filter` is requested. |
 | `query_parameters` | array, optional | Optional key/value parameter scores for the search query text itself when a supported `filter` is requested. |
 
@@ -87,6 +89,26 @@ The response schema must remain stable for Unity and future clients.
 /search?q=Plato&mode=semantic&source=gutendex&filter=general
 ```
 
+
+
+## Result URLs
+
+Status: implemented as optional `/search` result field.
+
+URL resolution order:
+
+1. `url` column if present
+2. `source_url` column if present
+3. `link` column if present
+4. Gutendex/Gutenberg inference from `gutenberg_id` or numeric `doc_id`
+
+Example inference:
+
+```text
+gutendex:doc_000326 -> https://www.gutenberg.org/ebooks/326
+```
+
+If no URL can be resolved, `url` is omitted from the response.
 
 ## JSON Filter Selection
 

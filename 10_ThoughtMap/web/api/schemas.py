@@ -14,6 +14,7 @@ class SearchResult(BaseModel):
     author: str
     source: str
     similarity: float
+    url: str | None = None
     parameters: list[ParameterScore] | None = None
 
 

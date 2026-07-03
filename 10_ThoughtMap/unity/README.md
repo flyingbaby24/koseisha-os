@@ -300,6 +300,25 @@ Make sure each `ResultItem` has:
 - `SelectButton` assigned, or a Button on the same GameObject
 
 
+
+## Detail URL Link
+
+DetailPanelView can show the selected result URL and open it in the system browser.
+
+Unity wiring:
+
+1. Add a TMP Text under DetailPanel/Content named UrlText.
+2. Add a Button named OpenLinkButton.
+3. On DetailPanelView, assign UrlText to Url Text.
+4. On DetailPanelView, assign OpenLinkButton to Open Link Button.
+
+Runtime behavior:
+
+- If result.url is present, UrlText and OpenLinkButton are shown.
+- If result.url is empty, both are hidden or disabled.
+- Pressing OpenLinkButton calls Application.OpenURL(url).
+- Gutendex results can receive inferred Gutenberg URLs from the API.
+
 ## Save Selected Result
 
 The DetailPanel can save the selected search result to the backend default user library.

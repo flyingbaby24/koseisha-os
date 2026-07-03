@@ -13,36 +13,53 @@ public class DetailPanelView : MonoBehaviour
     [SerializeField] private TMP_Text docIdText;
     [SerializeField] private TMP_Text similarityText;
     [SerializeField] private TMP_Text bodyText;
+    [SerializeField] private TMP_Text urlText;
+    [SerializeField] private Button openLinkButton;
     [SerializeField] private TMP_Text saveStatusText;
     [SerializeField] private Button saveButton;
     [SerializeField] private ParameterScoresPanelView parameterScoresPanelView;
     [SerializeField] private ParameterRadarChartView radarChartView;
+    [SerializeField] private bool debugSaveFlow = true;
 
     private ThoughtMapSearchResult currentResult;
+    private string currentUrl = string.Empty;
+    private bool saveButtonListenerRegistered;
 
     public event Action<ThoughtMapSearchResult> SaveRequested;
 
     private void Awake()
     {
-        if (saveButton != null)
+        LogSaveFlow($"Awake detailPanel={name} saveButton={(saveButton == null ? "null" : saveButton.name)}");
+        if (openLinkButton != null)
         {
-            saveButton.onClick.AddListener(HandleSaveClicked);
+            openLinkButton.onClick.AddListener(HandleOpenLinkClicked);
         }
-
         Clear();
+    }
+
+    private void OnEnable()
+    {
+        RegisterSaveButtonListener();
+    }
+
+    private void OnDisable()
+    {
+        UnregisterSaveButtonListener();
     }
 
     private void OnDestroy()
     {
-        if (saveButton != null)
+        UnregisterSaveButtonListener();
+        if (openLinkButton != null)
         {
-            saveButton.onClick.RemoveListener(HandleSaveClicked);
+            openLinkButton.onClick.RemoveListener(HandleOpenLinkClicked);
         }
     }
 
     public void Clear()
     {
         currentResult = null;
+        currentUrl = string.Empty;
         SetVisible(false);
         SetText(titleText, "Select a result");
         SetText(authorText, "");
@@ -50,21 +67,25 @@ public class DetailPanelView : MonoBehaviour
         SetText(docIdText, "");
         SetText(similarityText, "");
         SetText(bodyText, "Select a search result to preview document details.");
+        SetUrl("");
         SetSaveStatus("");
         SetSaveInteractable(false);
         parameterScoresPanelView?.Clear();
         radarChartView?.Clear();
+        LogSaveFlow("Clear currentResult=null saveButtonInteractable=false");
     }
 
     public void ShowResult(ThoughtMapSearchResult result)
     {
         if (result == null)
         {
+            LogSaveFlow("ShowResult received null result");
             Clear();
             return;
         }
 
         currentResult = result;
+        currentUrl = string.IsNullOrWhiteSpace(result.url) ? string.Empty : result.url.Trim();
         SetVisible(true);
         SetText(titleText, string.IsNullOrWhiteSpace(result.title) ? "Untitled" : result.title);
         SetText(authorText, string.IsNullOrWhiteSpace(result.author) ? "Unknown" : result.author);
@@ -75,10 +96,13 @@ public class DetailPanelView : MonoBehaviour
             bodyText,
             "Document detail API is not connected yet. This panel is showing the selected search result."
         );
+        SetUrl(currentUrl);
         SetSaveStatus("");
-        SetSaveInteractable(!string.IsNullOrWhiteSpace(result.doc_id));
+        bool canSave = !string.IsNullOrWhiteSpace(result.doc_id);
+        SetSaveInteractable(canSave);
         parameterScoresPanelView?.ShowScores(result.parameters);
         radarChartView?.ShowScores(result.parameters);
+        LogSaveFlow($"ShowResult doc_id={result.doc_id} title={result.title} canSave={canSave} saveButton={(saveButton == null ? "null" : saveButton.name)}");
     }
 
     public void ShowPlaceholder(ThoughtMapSearchResult result)
@@ -90,28 +114,94 @@ public class DetailPanelView : MonoBehaviour
     {
         SetSaveStatus("Saving...");
         SetSaveInteractable(false);
+        LogSaveFlow($"SetSaving doc_id={CurrentDocIdForLog()}");
     }
 
     public void SetSaved(bool duplicate)
     {
         SetSaveStatus(duplicate ? "Already saved" : "Saved");
         SetSaveInteractable(false);
+        LogSaveFlow($"SetSaved duplicate={duplicate} doc_id={CurrentDocIdForLog()}");
     }
 
     public void SetSaveError(string message)
     {
         SetSaveStatus(string.IsNullOrWhiteSpace(message) ? "Save failed" : $"Save failed: {message}");
         SetSaveInteractable(currentResult != null && !string.IsNullOrWhiteSpace(currentResult.doc_id));
+        LogSaveFlow($"SetSaveError doc_id={CurrentDocIdForLog()} message={message}");
     }
 
     private void HandleSaveClicked()
     {
+        int subscriberCount = SaveRequested == null ? 0 : SaveRequested.GetInvocationList().Length;
+        LogSaveFlow($"HandleSaveClicked currentResultNull={currentResult == null} doc_id={CurrentDocIdForLog()} subscribers={subscriberCount}");
+
         if (currentResult == null)
         {
+            SetSaveError("No selected result on this DetailPanelView instance.");
+            return;
+        }
+
+        if (subscriberCount == 0)
+        {
+            SetSaveError("Save event has no listener. Check ThoughtMapSearchManager Detail Panel View reference.");
             return;
         }
 
         SaveRequested?.Invoke(currentResult);
+    }
+
+    private void RegisterSaveButtonListener()
+    {
+        if (saveButton == null || saveButtonListenerRegistered)
+        {
+            LogSaveFlow($"RegisterSaveButtonListener skipped saveButtonNull={saveButton == null} alreadyRegistered={saveButtonListenerRegistered}");
+            return;
+        }
+
+        saveButton.onClick.AddListener(HandleSaveClicked);
+        saveButtonListenerRegistered = true;
+        LogSaveFlow($"Registered SaveButton listener button={saveButton.name}");
+    }
+
+    private void UnregisterSaveButtonListener()
+    {
+        if (saveButton == null || !saveButtonListenerRegistered)
+        {
+            return;
+        }
+
+        saveButton.onClick.RemoveListener(HandleSaveClicked);
+        saveButtonListenerRegistered = false;
+        LogSaveFlow($"Unregistered SaveButton listener button={saveButton.name}");
+    }
+
+
+    private void HandleOpenLinkClicked()
+    {
+        if (string.IsNullOrWhiteSpace(currentUrl))
+        {
+            return;
+        }
+
+        Application.OpenURL(currentUrl);
+    }
+
+    private void SetUrl(string value)
+    {
+        currentUrl = string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+        SetText(urlText, currentUrl);
+
+        if (urlText != null)
+        {
+            urlText.gameObject.SetActive(!string.IsNullOrWhiteSpace(currentUrl));
+        }
+
+        if (openLinkButton != null)
+        {
+            openLinkButton.gameObject.SetActive(!string.IsNullOrWhiteSpace(currentUrl));
+            openLinkButton.interactable = !string.IsNullOrWhiteSpace(currentUrl);
+        }
     }
 
     private void SetVisible(bool hasContent)
@@ -145,6 +235,19 @@ public class DetailPanelView : MonoBehaviour
         if (target != null)
         {
             target.text = value;
+        }
+    }
+
+    private string CurrentDocIdForLog()
+    {
+        return currentResult == null ? "null" : currentResult.doc_id;
+    }
+
+    private void LogSaveFlow(string message)
+    {
+        if (debugSaveFlow)
+        {
+            Debug.Log($"[ThoughtMap SaveFlow][DetailPanelView:{GetInstanceID()}] {message}", this);
         }
     }
 }

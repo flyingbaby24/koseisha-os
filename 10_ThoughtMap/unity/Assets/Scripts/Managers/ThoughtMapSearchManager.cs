@@ -17,9 +17,11 @@ public class ThoughtMapSearchManager : MonoBehaviour
     [SerializeField] private DetailPanelView detailPanelView;
     [SerializeField] private QueryParameterPanelView queryParameterPanelView;
     [SerializeField] private int topResults = 10;
+    [SerializeField] private bool debugSaveFlow = true;
 
     private void Awake()
     {
+        LogSaveFlow($"Awake manager={name} apiClient={(apiClient == null ? "null" : apiClient.name)} detailPanelView={(detailPanelView == null ? "null" : detailPanelView.name)}");
         if (searchButton != null)
         {
             searchButton.onClick.AddListener(OnSearchClicked);
@@ -33,6 +35,7 @@ public class ThoughtMapSearchManager : MonoBehaviour
         if (detailPanelView != null)
         {
             detailPanelView.SaveRequested += OnSaveRequested;
+            LogSaveFlow($"Subscribed SaveRequested detailPanelView={detailPanelView.name} detailInstance={detailPanelView.GetInstanceID()}");
         }
     }
 
@@ -51,6 +54,7 @@ public class ThoughtMapSearchManager : MonoBehaviour
         if (detailPanelView != null)
         {
             detailPanelView.SaveRequested -= OnSaveRequested;
+            LogSaveFlow($"Unsubscribed SaveRequested detailPanelView={detailPanelView.name} detailInstance={detailPanelView.GetInstanceID()}");
         }
     }
 
@@ -134,12 +138,14 @@ public class ThoughtMapSearchManager : MonoBehaviour
 
     private void OnResultSelected(ThoughtMapSearchResult result)
     {
+        LogSaveFlow($"OnResultSelected doc_id={(result == null ? "null" : result.doc_id)} detailPanelView={(detailPanelView == null ? "null" : detailPanelView.name)} detailInstance={(detailPanelView == null ? 0 : detailPanelView.GetInstanceID())}");
         detailPanelView?.ShowResult(result);
         // Future step: call GET /document/{doc_id} here and bind the response to DetailPanelView.
     }
 
     private void OnSaveRequested(ThoughtMapSearchResult result)
     {
+        LogSaveFlow($"OnSaveRequested doc_id={(result == null ? "null" : result.doc_id)} apiClient={(apiClient == null ? "null" : apiClient.name)}");
         if (apiClient == null)
         {
             detailPanelView?.SetSaveError("API Client is not assigned.");
@@ -147,17 +153,27 @@ public class ThoughtMapSearchManager : MonoBehaviour
         }
 
         detailPanelView?.SetSaving();
+        LogSaveFlow($"Starting SaveDefaultDocument coroutine doc_id={result.doc_id}");
         StartCoroutine(apiClient.SaveDefaultDocument(result, HandleSaveSuccess, HandleSaveError));
     }
 
     private void HandleSaveSuccess(SaveDocumentResponse response)
     {
+        LogSaveFlow($"HandleSaveSuccess saved={(response == null ? "null" : response.saved.ToString())} duplicate={(response == null ? "null" : response.duplicate.ToString())}");
         detailPanelView?.SetSaved(response != null && response.duplicate);
     }
 
     private void HandleSaveError(string message)
     {
+        LogSaveFlow($"HandleSaveError message={message}");
         detailPanelView?.SetSaveError(message);
         Debug.LogError($"ThoughtMap save failed: {message}");
+    }
+    private void LogSaveFlow(string message)
+    {
+        if (debugSaveFlow)
+        {
+            Debug.Log($"[ThoughtMap SaveFlow][SearchManager:{GetInstanceID()}] {message}", this);
+        }
     }
 }
