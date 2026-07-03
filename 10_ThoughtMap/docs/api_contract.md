@@ -43,6 +43,10 @@ The response schema must remain stable for Unity and future clients.
 
 ```json
 {
+  "query_parameters": [
+    { "key": "philosophy", "value": 74.0 },
+    { "key": "psychology", "value": 33.5 }
+  ],
   "results": [
     {
       "doc_id": "gutendex:12345",
@@ -68,7 +72,8 @@ The response schema must remain stable for Unity and future clients.
 | `author` | string | Display author or creator. |
 | `source` | string | Source namespace, such as `gutendex`, `lyrics`, `note`, or `user_suno`. |
 | `similarity` | number | Ranking score returned by the active search mode. Keyword-only results may use a normalized score. |
-| `parameters` | array, optional | Optional key/value parameter scores returned only when a supported `filter` is requested. |
+| `parameters` | array, optional | Optional key/value parameter scores returned per result only when a supported `filter` is requested. |
+| `query_parameters` | array, optional | Optional key/value parameter scores for the search query text itself when a supported `filter` is requested. |
 
 ### Examples
 
@@ -105,7 +110,7 @@ Example future request:
 
 Status: implemented as optional `/search` response data when `filter=general` is requested.
 
-Search responses may include parameter scores as key/value rows. This remains optional so existing Unity result rendering continues to work when scores are absent.
+Search responses may include parameter scores as key/value rows. This remains optional so existing Unity result rendering continues to work when scores are absent. `parameters` describes each result, while `query_parameters` describes the search query text itself.
 
 Optional shape:
 
@@ -119,6 +124,8 @@ Optional shape:
 Current location:
 
 - `/search` when `filter=general` is requested
+  - `query_parameters`: scores for the query text
+  - `results[].parameters`: scores for each returned document
 
 Recommended future location:
 
@@ -173,6 +180,51 @@ Current MVP storage shape:
 - `map_points`
 
 Embedding values are currently stored as JSON text.
+
+
+## User Saved Library
+
+Status: MVP implemented for user_id `default`.
+
+These endpoints let Unity save selected search results into a local user library. Authentication is intentionally not implemented yet.
+
+Storage path:
+
+```text
+data/thoughtmap_db/users/default/
+  documents.csv
+  embeddings.csv
+  favorites.json
+```
+
+### POST /users/default/save
+
+Save one selected document by `doc_id`.
+
+Request:
+
+```json
+{
+  "doc_id": "gutendex:12345",
+  "parameters": [
+    { "key": "philosophy", "value": 42.0 }
+  ]
+}
+```
+
+Only `doc_id` is required. `parameters` is optional and is used by Unity to persist the currently displayed filter scores.
+
+Duplicate saves are skipped and return `duplicate: true`.
+
+### GET /users/default/saved
+
+Return saved items from `favorites.json`.
+
+### DELETE /users/default/saved/{doc_id}
+
+Remove a saved item from `favorites.json`, `documents.csv`, and `embeddings.csv`.
+
+Future user registration can generalize the `default` path to `/users/{user_id}/...` without changing the saved CSV shape.
 
 ## Repository Hygiene
 

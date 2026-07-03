@@ -29,6 +29,11 @@ public class ThoughtMapSearchManager : MonoBehaviour
         {
             resultsListView.ResultSelected += OnResultSelected;
         }
+
+        if (detailPanelView != null)
+        {
+            detailPanelView.SaveRequested += OnSaveRequested;
+        }
     }
 
     private void OnDestroy()
@@ -41,6 +46,11 @@ public class ThoughtMapSearchManager : MonoBehaviour
         if (resultsListView != null)
         {
             resultsListView.ResultSelected -= OnResultSelected;
+        }
+
+        if (detailPanelView != null)
+        {
+            detailPanelView.SaveRequested -= OnSaveRequested;
         }
     }
 
@@ -126,5 +136,28 @@ public class ThoughtMapSearchManager : MonoBehaviour
     {
         detailPanelView?.ShowResult(result);
         // Future step: call GET /document/{doc_id} here and bind the response to DetailPanelView.
+    }
+
+    private void OnSaveRequested(ThoughtMapSearchResult result)
+    {
+        if (apiClient == null)
+        {
+            detailPanelView?.SetSaveError("API Client is not assigned.");
+            return;
+        }
+
+        detailPanelView?.SetSaving();
+        StartCoroutine(apiClient.SaveDefaultDocument(result, HandleSaveSuccess, HandleSaveError));
+    }
+
+    private void HandleSaveSuccess(SaveDocumentResponse response)
+    {
+        detailPanelView?.SetSaved(response != null && response.duplicate);
+    }
+
+    private void HandleSaveError(string message)
+    {
+        detailPanelView?.SetSaveError(message);
+        Debug.LogError($"ThoughtMap save failed: {message}");
     }
 }

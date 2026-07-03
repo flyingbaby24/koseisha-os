@@ -1,5 +1,7 @@
+using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class DetailPanelView : MonoBehaviour
 {
@@ -11,16 +13,36 @@ public class DetailPanelView : MonoBehaviour
     [SerializeField] private TMP_Text docIdText;
     [SerializeField] private TMP_Text similarityText;
     [SerializeField] private TMP_Text bodyText;
+    [SerializeField] private TMP_Text saveStatusText;
+    [SerializeField] private Button saveButton;
     [SerializeField] private ParameterScoresPanelView parameterScoresPanelView;
     [SerializeField] private ParameterRadarChartView radarChartView;
 
+    private ThoughtMapSearchResult currentResult;
+
+    public event Action<ThoughtMapSearchResult> SaveRequested;
+
     private void Awake()
     {
+        if (saveButton != null)
+        {
+            saveButton.onClick.AddListener(HandleSaveClicked);
+        }
+
         Clear();
+    }
+
+    private void OnDestroy()
+    {
+        if (saveButton != null)
+        {
+            saveButton.onClick.RemoveListener(HandleSaveClicked);
+        }
     }
 
     public void Clear()
     {
+        currentResult = null;
         SetVisible(false);
         SetText(titleText, "Select a result");
         SetText(authorText, "");
@@ -28,6 +50,8 @@ public class DetailPanelView : MonoBehaviour
         SetText(docIdText, "");
         SetText(similarityText, "");
         SetText(bodyText, "Select a search result to preview document details.");
+        SetSaveStatus("");
+        SetSaveInteractable(false);
         parameterScoresPanelView?.Clear();
         radarChartView?.Clear();
     }
@@ -40,6 +64,7 @@ public class DetailPanelView : MonoBehaviour
             return;
         }
 
+        currentResult = result;
         SetVisible(true);
         SetText(titleText, string.IsNullOrWhiteSpace(result.title) ? "Untitled" : result.title);
         SetText(authorText, string.IsNullOrWhiteSpace(result.author) ? "Unknown" : result.author);
@@ -50,6 +75,8 @@ public class DetailPanelView : MonoBehaviour
             bodyText,
             "Document detail API is not connected yet. This panel is showing the selected search result."
         );
+        SetSaveStatus("");
+        SetSaveInteractable(!string.IsNullOrWhiteSpace(result.doc_id));
         parameterScoresPanelView?.ShowScores(result.parameters);
         radarChartView?.ShowScores(result.parameters);
     }
@@ -57,6 +84,34 @@ public class DetailPanelView : MonoBehaviour
     public void ShowPlaceholder(ThoughtMapSearchResult result)
     {
         ShowResult(result);
+    }
+
+    public void SetSaving()
+    {
+        SetSaveStatus("Saving...");
+        SetSaveInteractable(false);
+    }
+
+    public void SetSaved(bool duplicate)
+    {
+        SetSaveStatus(duplicate ? "Already saved" : "Saved");
+        SetSaveInteractable(false);
+    }
+
+    public void SetSaveError(string message)
+    {
+        SetSaveStatus(string.IsNullOrWhiteSpace(message) ? "Save failed" : $"Save failed: {message}");
+        SetSaveInteractable(currentResult != null && !string.IsNullOrWhiteSpace(currentResult.doc_id));
+    }
+
+    private void HandleSaveClicked()
+    {
+        if (currentResult == null)
+        {
+            return;
+        }
+
+        SaveRequested?.Invoke(currentResult);
     }
 
     private void SetVisible(bool hasContent)
@@ -70,6 +125,19 @@ public class DetailPanelView : MonoBehaviour
         {
             contentRoot.SetActive(hasContent);
         }
+    }
+
+    private void SetSaveInteractable(bool value)
+    {
+        if (saveButton != null)
+        {
+            saveButton.interactable = value;
+        }
+    }
+
+    private void SetSaveStatus(string value)
+    {
+        SetText(saveStatusText, value);
     }
 
     private void SetText(TMP_Text target, string value)

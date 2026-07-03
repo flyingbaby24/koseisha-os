@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -49,7 +50,6 @@ public class ThoughtMapApiClient : MonoBehaviour
             url += $"&source={UnityWebRequest.EscapeURL(safeSource)}";
         }
 
-        // Placeholder for future FastAPI support. Current backend may ignore unknown query parameters.
         if (!string.Equals(safeFilter, "all", StringComparison.OrdinalIgnoreCase))
         {
             url += $"&filter={UnityWebRequest.EscapeURL(safeFilter)}";
@@ -57,23 +57,117 @@ public class ThoughtMapApiClient : MonoBehaviour
 
         using (UnityWebRequest request = UnityWebRequest.Get(url))
         {
-            yield return request.SendWebRequest();
+            yield return SendJsonRequest(request, onError);
 
             if (request.result != UnityWebRequest.Result.Success)
             {
-                onError?.Invoke(request.error);
                 yield break;
             }
 
-            try
+            TryParse(request.downloadHandler.text, onSuccess, onError, new ThoughtMapSearchResponse { results = new ThoughtMapSearchResult[0] });
+        }
+    }
+
+    public IEnumerator SaveDefaultDocument(
+        ThoughtMapSearchResult result,
+        Action<SaveDocumentResponse> onSuccess,
+        Action<string> onError)
+    {
+        if (result == null || string.IsNullOrWhiteSpace(result.doc_id))
+        {
+            onError?.Invoke("No document is selected.");
+            yield break;
+        }
+
+        SaveDocumentRequest body = new SaveDocumentRequest
+        {
+            doc_id = result.doc_id,
+            parameters = result.parameters
+        };
+
+        string json = JsonUtility.ToJson(body);
+        using (UnityWebRequest request = new UnityWebRequest($"{baseUrl}/users/default/save", "POST"))
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(json);
+            request.uploadHandler = new UploadHandlerRaw(bytes);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Content-Type", "application/json");
+
+            yield return SendJsonRequest(request, onError);
+
+            if (request.result != UnityWebRequest.Result.Success)
             {
-                ThoughtMapSearchResponse response = JsonUtility.FromJson<ThoughtMapSearchResponse>(request.downloadHandler.text);
-                onSuccess?.Invoke(response ?? new ThoughtMapSearchResponse { results = new ThoughtMapSearchResult[0] });
+                yield break;
             }
-            catch (Exception ex)
+
+            TryParse(request.downloadHandler.text, onSuccess, onError, null);
+        }
+    }
+
+    public IEnumerator GetDefaultSaved(
+        Action<SavedDocumentsResponse> onSuccess,
+        Action<string> onError)
+    {
+        using (UnityWebRequest request = UnityWebRequest.Get($"{baseUrl}/users/default/saved"))
+        {
+            yield return SendJsonRequest(request, onError);
+
+            if (request.result != UnityWebRequest.Result.Success)
             {
-                onError?.Invoke(ex.Message);
+                yield break;
             }
+
+            TryParse(request.downloadHandler.text, onSuccess, onError, new SavedDocumentsResponse { items = new SavedDocument[0] });
+        }
+    }
+
+    public IEnumerator DeleteDefaultSaved(
+        string docId,
+        Action<DeleteSavedDocumentResponse> onSuccess,
+        Action<string> onError)
+    {
+        if (string.IsNullOrWhiteSpace(docId))
+        {
+            onError?.Invoke("doc_id is required.");
+            yield break;
+        }
+
+        string url = $"{baseUrl}/users/default/saved/{UnityWebRequest.EscapeURL(docId)}";
+        using (UnityWebRequest request = UnityWebRequest.Delete(url))
+        {
+            request.downloadHandler = new DownloadHandlerBuffer();
+            yield return SendJsonRequest(request, onError);
+
+            if (request.result != UnityWebRequest.Result.Success)
+            {
+                yield break;
+            }
+
+            TryParse(request.downloadHandler.text, onSuccess, onError, null);
+        }
+    }
+
+    private IEnumerator SendJsonRequest(UnityWebRequest request, Action<string> onError)
+    {
+        yield return request.SendWebRequest();
+
+        if (request.result != UnityWebRequest.Result.Success)
+        {
+            string body = request.downloadHandler == null ? string.Empty : request.downloadHandler.text;
+            onError?.Invoke(string.IsNullOrWhiteSpace(body) ? request.error : body);
+        }
+    }
+
+    private void TryParse<T>(string json, Action<T> onSuccess, Action<string> onError, T fallback) where T : class
+    {
+        try
+        {
+            T response = JsonUtility.FromJson<T>(json);
+            onSuccess?.Invoke(response ?? fallback);
+        }
+        catch (Exception ex)
+        {
+            onError?.Invoke(ex.Message);
         }
     }
 }

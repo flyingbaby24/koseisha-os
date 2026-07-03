@@ -114,3 +114,34 @@ python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
 When `THOUGHTMAP_DB_DIR` points to a directory, the SQLite repository uses
 `thoughtmap.sqlite` inside that directory. You can also pass a direct `.sqlite`
 file path.
+
+## User Saved Library MVP
+
+The API can save selected search results into the local default user library:
+
+```text
+data/thoughtmap_db/users/default/
+  documents.csv
+  embeddings.csv
+  favorites.json
+```
+
+Save a selected document:
+
+```powershell
+curl -X POST "http://127.0.0.1:8000/users/default/save" -H "Content-Type: application/json" -d "{"doc_id":"gutendex:12345"}"
+```
+
+List saved documents:
+
+```powershell
+curl "http://127.0.0.1:8000/users/default/saved"
+```
+
+Delete a saved document:
+
+```powershell
+curl -X DELETE "http://127.0.0.1:8000/users/default/saved/gutendex%3A12345"
+```
+
+The MVP uses `default` only. It intentionally does not add authentication yet.

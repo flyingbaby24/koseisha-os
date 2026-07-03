@@ -183,7 +183,7 @@ Use the same ParameterScoresPanelView and ParameterScoreBar prefab for both quer
 
 ## Parameter Radar Chart Display
 
-ParameterRadarChartView visualizes the same numeric parameter scores as a 10-axis radar chart. It assumes the standard general.json battle parameters:
+ParameterRadarChartView visualizes the same numeric parameter scores as a radar chart. Axis count is dynamic: it uses the number and order of the received scores. `general` can render 10 axes, while filters such as `basic_thought`, `basic_literature`, or `jinn_os` can render 8 axes. The radar chart treats 40 as the outer radius because 40 or higher is S rank. Values above 40 are still preserved as raw scores, but visually clamp to the outer edge.
 
 - philosophy
 - psychology
@@ -196,24 +196,42 @@ ParameterRadarChartView visualizes the same numeric parameter scores as a 10-axi
 - individual
 - community
 
+Other filters can use fewer axes, for example:
+
+- basic_thought
+- basic_literature
+- jinn_os
+
 The D-S rank list remains available through ParameterScoresPanelView. The radar chart is an additional visual layer.
 
 Recommended hierarchy:
 
 ```text
 DetailPanel
-  ResultRadarChart
-  ParameterScoresPanel
+  ParameterVisualizationRow
+    RankListColumn
+      ParameterScoresPanel
+    RadarColumn
+      ResultRadarChart
 
 QueryParameterPanel
-  QueryRadarChart
-  ParameterScoresPanel
+  QueryVisualizationRow
+    QueryRankListColumn
+      ParameterScoresPanel
+    QueryRadarColumn
+      QueryRadarChart
 ```
+
+Recommended layout:
+
+- Rank list: left
+- Radar chart: right
+- Keep both under the same horizontal row so they do not overlap.
 
 Create a result radar chart:
 
 1. Under DetailPanel/Content, create a UI object named ResultRadarChart.
-2. Give it a RectTransform size such as 220 x 220.
+2. Place it in the right RadarColumn, separate from the rank list. Give it a RectTransform size such as 220 x 220.
 3. Add ParameterRadarChartView to ResultRadarChart.
 4. Optional: create a child LabelContainer and assign it to Label Container.
 5. Optional: create a TMP label prefab and assign it to Label Prefab.
@@ -222,17 +240,25 @@ Create a result radar chart:
 Create a query radar chart:
 
 1. Under QueryParameterPanel, create a UI object named QueryRadarChart.
-2. Give it a RectTransform size such as 220 x 220.
+2. Place it in the right QueryRadarColumn, separate from the query rank list. Give it a RectTransform size such as 220 x 220.
 3. Add ParameterRadarChartView to QueryRadarChart.
 4. Optional: assign Label Container and Label Prefab.
 5. On QueryParameterPanelView, assign QueryRadarChart to Radar Chart View.
+
+Inspector note:
+
+- Radar max value defaults to 40. Keep this aligned with the D-S rank threshold where S starts at 40.
+- Increase Max Value only if the rank system changes later.
 
 Runtime behavior:
 
 - QueryRadarChart renders query_parameters after search.
 - ResultRadarChart renders results[].parameters when a result item is clicked.
-- Missing parameters are treated as 0.
-- Values are clamped from 0 to 100 and converted to chart radius.
+- Axis count equals the received score count.
+- Axis labels are generated from scores[i].key.
+- Axis order follows the received score order.
+- Scores that are null or empty clear the chart.
+- Values are normalized as value / 40 by default. 40 or higher is S rank and reaches the outer radius.
 - The chart uses UI mesh drawing, so no FastAPI or API schema changes are required.
 
 For the MVP, query and selected result charts are separate. A future overlay chart can reuse ParameterRadarChartView or extend it to accept two score sets.
@@ -272,6 +298,33 @@ Make sure each `ResultItem` has:
 - `TitleText` assigned
 - `AuthorText` assigned
 - `SelectButton` assigned, or a Button on the same GameObject
+
+
+## Save Selected Result
+
+The DetailPanel can save the selected search result to the backend default user library.
+
+Backend endpoint:
+
+```text
+POST /users/default/save
+```
+
+Unity wiring:
+
+1. Add a Button under DetailPanel/Content named SaveButton.
+2. Add a TMP Text near it named SaveStatusText.
+3. On DetailPanelView, assign SaveButton to Save Button.
+4. On DetailPanelView, assign SaveStatusText to Save Status Text.
+5. Keep ThoughtMapSearchManager.Api Client assigned.
+
+Runtime behavior:
+
+- Selecting a result enables the Save button.
+- Pressing Save sends the selected result doc_id and current result parameters.
+- On success the status text shows Saved.
+- Duplicate saves are skipped by the API and the status text shows Already saved.
+- The API writes documents.csv, embeddings.csv, and favorites.json under data/thoughtmap_db/users/default.
 
 ## FastAPI Request Behavior
 
