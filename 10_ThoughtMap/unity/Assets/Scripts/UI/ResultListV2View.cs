@@ -8,6 +8,8 @@ public class ResultListV2View : MonoBehaviour
 {
     [Header("Runtime Build")]
     [SerializeField] private bool buildOnAwake = true;
+    [SerializeField] private Vector2 defaultPosition = new Vector2(-420f, -80f);
+    [SerializeField] private Vector2 defaultSize = new Vector2(640f, 620f);
     [SerializeField] private ResultItemV2View resultItemPrefab;
 
     [Header("Fonts")]
@@ -37,6 +39,8 @@ public class ResultListV2View : MonoBehaviour
 
     public void BuildIfNeeded()
     {
+        ApplyDefaultWindowRect();
+
         if (contentRoot != null || transform.Find("WindowContent") != null)
         {
             CacheReferences();
@@ -221,5 +225,17 @@ public class ResultListV2View : MonoBehaviour
     private void SetText(TMP_Text text, string value)
     {
         if (text != null) text.text = value;
+    }
+
+    private void ApplyDefaultWindowRect()
+    {
+        RectTransform rect = transform as RectTransform;
+        if (rect == null) return;
+
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = defaultPosition;
+        rect.sizeDelta = defaultSize;
     }
 }

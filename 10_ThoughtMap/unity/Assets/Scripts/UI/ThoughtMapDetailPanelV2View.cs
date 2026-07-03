@@ -10,6 +10,8 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
     [Header("Runtime Build")]
     [SerializeField] private bool buildOnAwake = true;
     [SerializeField] private bool debugSaveFlow = false;
+    [SerializeField] private Vector2 defaultPosition = new Vector2(410f, -70f);
+    [SerializeField] private Vector2 defaultSize = new Vector2(860f, 900f);
 
     [Header("Fonts")]
     [Tooltip("Assign the TMP Font Asset used by the existing scene for Japanese text.")]
@@ -71,16 +73,12 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
 
     public void BuildIfNeeded()
     {
+        ApplyDefaultWindowRect();
+
         if (contentRoot != null || transform.Find("DetailContent") != null)
         {
             CacheBuiltReferences();
             return;
-        }
-
-        RectTransform rootRect = EnsureRectTransform(gameObject);
-        if (rootRect != null && rootRect.sizeDelta == Vector2.zero)
-        {
-            rootRect.sizeDelta = new Vector2(860f, 900f);
         }
 
         Image panelImage = GetComponent<Image>();
@@ -457,6 +455,18 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
             Debug.LogWarning("ThoughtMapDetailPanelV2View should be placed under a Canvas so its root has a RectTransform.", this);
         }
         return rect;
+    }
+
+    private void ApplyDefaultWindowRect()
+    {
+        RectTransform rect = EnsureRectTransform(gameObject);
+        if (rect == null) return;
+
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = defaultPosition;
+        rect.sizeDelta = defaultSize;
     }
 
     private void SetText(TMP_Text target, string value)

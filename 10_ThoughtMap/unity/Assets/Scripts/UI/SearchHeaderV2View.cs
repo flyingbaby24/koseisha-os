@@ -9,6 +9,8 @@ public class SearchHeaderV2View : MonoBehaviour
 {
     [Header("Runtime Build")]
     [SerializeField] private bool buildOnAwake = true;
+    [SerializeField] private Vector2 defaultPosition = new Vector2(-310f, 320f);
+    [SerializeField] private Vector2 defaultSize = new Vector2(760f, 180f);
 
     [Header("Fonts")]
     [SerializeField] private TMP_FontAsset japaneseFontAsset;
@@ -55,6 +57,8 @@ public class SearchHeaderV2View : MonoBehaviour
 
     public void BuildIfNeeded()
     {
+        ApplyDefaultWindowRect();
+
         if (searchInput != null || transform.Find("WindowContent") != null)
         {
             CacheReferences();
@@ -320,5 +324,17 @@ public class SearchHeaderV2View : MonoBehaviour
             searchButton.onClick.RemoveListener(HandleSearchClicked);
             searchButton.onClick.AddListener(HandleSearchClicked);
         }
+    }
+
+    private void ApplyDefaultWindowRect()
+    {
+        RectTransform rect = transform as RectTransform;
+        if (rect == null) return;
+
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = defaultPosition;
+        rect.sizeDelta = defaultSize;
     }
 }
