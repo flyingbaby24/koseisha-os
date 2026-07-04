@@ -1403,101 +1403,350 @@ relatedConcepts: [
   references: []
   },
   {
-    id: 19,
-    name: "釜底抽薪",
-    reading: "ふていちゅうしん",
-    english: "Remove the firewood from under the pot",
-    category: "Root Cause",
-    bias: "表面現象への注意偏り",
-    behavioral: "Root cause intervention / systems thinking",
-    summary: "表面の火ではなく、火を支える燃料を取り除く。",
-    example: "競合の資金源・供給網・流通を断つ",
-    interpretation: `
+  "id": 19,
+  "name": "釜底抽薪",
+  "reading": "ふていちゅうしん",
+  "english": "Remove the firewood from under the pot",
+  "category": "Background / Infrastructure",
+  "bias": "背景化、変化盲、土台の不可視化",
+  "behavioral": "Change blindness / background processing / systems thinking",
+  "summary": "背景化された基盤へ介入し、表面現象そのものを成立させなくする。",
+  "example": "資金源を断つ、半導体供給を止める、サーバー停止、通信網遮断、物流停止、エネルギー供給を絶つ",
+
+  "interpretation": `
+釜底抽薪は「土台を狙う計略」ではない。
+
+本質は、人間が変化しないものを背景として処理する認知の性質を利用することにある。
+
+人は危険を素早く察知するため、
+変化したものへ注意を向ける。
+
+その一方で、
+変化しないものは認知資源を節約するため、
+背景として処理される。
+
+土台とは下にあるものではない。
+
+変化しにくいため、
+誰も意識しなくなった構造そのものなのである。
+
+釜底抽薪とは、
+目立つ現象を攻撃する兵法ではない。
+
+背景化された基盤へ介入し、
+その現象自体を成立させなくする計略なのである。
 `,
-    principle: `
+
+  "principle": `
+背景とは重要ではないものではない。
+
+認知資源を節約するため、
+脳が意識的な処理を省略している対象である。
+
+電気、水道、通信、物流、法律、言語など、
+変化しないものほど背景となる。
+
+しかし、
+それらが失われた瞬間、
+初めて人は世界を支えていた基盤だったことに気付く。
+
+釜底抽薪とは、
+背景として見落とされた構造そのものへ介入する兵法なのである。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  "breakdown": [
+    "相手を支える背景構造を把握する",
+    "背景化されている基盤を特定する",
+    "その基盤へ介入する",
+    "表面現象を成立できなくする",
+    "相手は原因を理解する前に機能を失う"
+  ],
+
+  "noteTitle": "釜底抽薪は「土台を狙う計略」ではない──人は変化しないものを背景化する",
+
+  "noteUrl": "https://note.com/flying_baby/n/n8fdaac4a18b8",
+
+  "relatedStratagems": [11,12,15,25],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Change blindness",
+    "Habituation",
+    "Background processing",
+    "Systems thinking"
+  ],
+
+  "relatedConcepts": [
+    "背景化",
+    "変化検知",
+    "認知資源",
+    "インフラ",
+    "システム思考",
+    "土台構造"
+  ],
+
+  "relatedNotes": [],
+
+  "references": []
   },
   {
-    id: 20,
-    name: "渾水摸魚",
-    reading: "こんすいぼぎょ",
-    english: "Fish in troubled waters",
-    category: "Chaos",
-    bias: "混乱時の注意低下、認知負荷",
-    behavioral: "Cognitive load / ambiguity exploitation",
-    summary: "混乱している環境では判断精度が落ちる。その隙を利用する。",
-    example: "制度変更時の便乗、炎上中の情報操作",
-    interpretation: `
+  "id": 20,
+  "name": "渾水摸魚",
+  "reading": "こんすいぼぎょ",
+  "english": "Fish in troubled waters",
+  "category": "Decision / Cognitive Load",
+  "bias": "判断軸の喪失、認知負荷、比較対象の増加",
+  "behavioral": "Cognitive load / choice overload / bounded rationality",
+  "summary": "判断軸を曖昧にし、認知負荷を高めることで正常な意思決定を困難にする。",
+  "example": "専門家が異なる基準で議論する、SNSで相反する情報を大量に流す、制度変更で判断基準を複雑化する",
+
+  "interpretation": `
+渾水摸魚は「混乱に乗じる計略」ではない。
+
+本質は、人間が判断軸を失うと認知負荷が急激に増加することを利用することにある。
+
+混乱とは情報量が多いことではない。
+
+何を基準に判断すればよいか分からなくなった状態である。
+
+人は比較する基準が明確なら、
+大量の情報でも整理できる。
+
+しかし、
+判断軸そのものが曖昧になると、
+認知資源は急速に消耗し、
+正常な意思決定が難しくなる。
+
+渾水摸魚とは、
+混乱を起こす兵法ではない。
+
+相手の判断軸そのものを曖昧にし、
+認知負荷を高める計略なのである。
 `,
-    principle: `
+
+  "principle": `
+認知負荷は情報量だけでは決まらない。
+
+人は比較対象や判断軸が増えるほど、
+どの基準で評価すべきかを考え続ける必要がある。
+
+その結果、
+認知資源が限界へ近づくと、
+思考を省略し、
+権威、感情、第一印象などの認知のショートカットへ依存しやすくなる。
+
+判断軸を失わせることは、
+判断能力そのものを低下させるのである。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  "breakdown": [
+    "相手が依存している判断軸を把握する",
+    "異なる評価軸や比較基準を提示する",
+    "判断軸を曖昧にする",
+    "認知負荷を急激に高める",
+    "思考を省略させ認知のショートカットへ誘導する"
+  ],
+
+  "noteTitle": "渾水摸魚は「混乱に乗じる計略」ではない──人は判断軸を失うと認知負荷が爆発する",
+
+  "noteUrl": "https://note.com/flying_baby/",
+
+  "relatedStratagems": [4,6,13,16,32],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Cognitive load",
+    "Choice overload",
+    "Bounded rationality",
+    "Decision fatigue"
+  ],
+
+  "relatedConcepts": [
+    "判断軸",
+    "比較基準",
+    "認知負荷",
+    "認知資源",
+    "意思決定",
+    "判断コスト"
+  ],
+
+  "relatedNotes": [],
+
+  "references": []
   },
   {
-    id: 21,
-    name: "金蝉脱殻",
-    reading: "きんせんだっかく",
-    english: "Shed the shell like a golden cicada",
-    category: "Appearance",
-    bias: "外形維持による継続錯覚",
-    behavioral: "Continuity bias / framing",
-    summary: "外見や看板を残しながら、中身だけを入れ替える。",
-    example: "看板だけ残して中身を変える、ブランド移行",
-    interpretation: `
+  "id": 21,
+  "name": "金蝉脱殻",
+  "reading": "きんせんだっかく",
+  "english": "Shed the shell like a golden cicada",
+  "category": "Continuity / Cognitive Model",
+  "bias": "継続性錯覚、認知モデルの再利用、更新コスト",
+  "behavioral": "Continuity bias / schema persistence / cognitive economy",
+  "summary": "相手の認知モデルを更新させず、継続性を維持させる。",
+  "example": "ブランド名は同じまま経営交代、ロゴは同じだが中身が変わるサービス、企業買収後も同じブランドを維持する",
+
+  "interpretation": `
+金蝉脱殻は「外見を残す計略」ではない。
+
+本質は、人間が一度形成した認知モデルを簡単には更新しないことを利用することにある。
+
+人は毎回世界を理解し直しているわけではない。
+
+一度学習した人物、会社、ブランド、制度などを
+認知のショートカットとして再利用している。
+
+そのため、
+外見や名前が維持されている限り、
+中身まで同じだと認識しやすい。
+
+金蝉脱殻とは、
+外見を偽装する兵法ではない。
+
+相手が既に持っている認知モデルそのものを利用し、
+更新させない計略なのである。
 `,
-    principle: `
+
+  "principle": `
+認知モデルは認知資源を節約するために存在する。
+
+人は毎回ゼロから対象を理解するのではなく、
+過去の経験・記憶・評価をまとめた認知モデルを再利用する。
+
+一度形成したモデルを書き換えるには、
+記憶・経験・評価・行動まで再構築しなければならない。
+
+そのため脳は、
+理解よりも維持を優先する。
+
+外見が変わらなければ、
+認知モデルも更新されにくいのである。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  "breakdown": [
+    "相手が持つ認知モデルを把握する",
+    "外見や名称など継続性の手掛かりを維持する",
+    "内部だけを変化させる",
+    "相手に認知モデルを更新させない",
+    "従来と同じ対象だと思わせたまま目的を達成する"
+  ],
+
+  "noteTitle": "金蝉脱殻は「外見を残す計略」ではない──人は認知モデルを簡単には更新しない",
+
+  "noteUrl": "https://note.com/flying_baby/n/n317720c624cd",
+
+  "relatedStratagems": [1,10,14,25,30],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Continuity bias",
+    "Schema persistence",
+    "Status quo bias",
+    "Cognitive economy"
+  ],
+
+  "relatedConcepts": [
+    "認知モデル",
+    "認知のショートカット",
+    "継続性",
+    "更新コスト",
+    "スキーマ",
+    "ブランド認知"
+  ],
+
+  "relatedNotes": [],
+
+  "references": []
   },
   {
-    id: 22,
-    name: "関門捉賊",
-    reading: "かんもんそくぞく",
-    english: "Shut the door to catch the thief",
-    category: "Constraint",
-    bias: "逃げ道を失うと選択肢が狭まる",
-    behavioral: "Choice architecture / constraint strategy",
-    summary: "出口を塞ぎ、相手の選択肢を限定する。",
-    example: "契約条項、囲い込み、解約導線の制限",
-    interpretation: `
+  "id": 22,
+  "name": "関門捉賊",
+  "reading": "かんもんそくぞく",
+  "english": "Shut the door to catch the thief",
+  "category": "Action Cost / Choice Architecture",
+  "bias": "実行コスト、選択アーキテクチャ、現状維持バイアス",
+  "behavioral": "Choice architecture / friction cost / status quo bias",
+  "summary": "実行コストを操作し、実質的な選択肢を制御する。",
+  "example": "解約導線を複雑化する、違約金を設定する、レコメンドで候補を限定する、UIで望む行動を押しやすくする",
+
+  "interpretation": `
+関門捉賊は「逃げ道を塞ぐ計略」ではない。
+
+本質は、人間が実行コストの低い行動を選ぶことを利用することにある。
+
+人は存在する選択肢の中から行動を選んでいるわけではない。
+
+時間、労力、危険、金銭、手間など、
+実行に必要なコストを無意識に比較し、
+最も実行しやすい選択肢を選んでいる。
+
+そのため、
+逃げ道を消さなくても、
+逃げるためのコストを十分に高くすれば、
+人は別の選択肢を選ぶようになる。
+
+関門捉賊とは、
+出口を物理的に塞ぐ兵法ではない。
+
+実行コストそのものを設計し、
+相手の行動を制御する計略なのである。
 `,
-    principle: `
+
+  "principle": `
+人は可能な行動ではなく、
+実行しやすい行動を選ぶ。
+
+選択肢が存在していても、
+実行コストが高ければ、
+実質的には選択肢として機能しない。
+
+逆に、
+望む行動の実行コストを下げれば、
+人は自由意思だと感じたまま、
+その方向へ自然に行動する。
+
+実行コストを設計することは、
+選択そのものを設計することなのである。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
-  },
+
+  "breakdown": [
+    "相手が取り得る選択肢を把握する",
+    "望まない行動の実行コストを高める",
+    "望む行動の実行コストを下げる",
+    "実質的な選択肢を限定する",
+    "相手は自発的に望む行動を選択する"
+  ],
+
+  "noteTitle": "関門捉賊は「逃げ道を塞ぐ計略」ではない──実行コストを操作し、行動を制御する",
+
+  "noteUrl": "https://note.com/flying_baby/n/n89e0e2d28def",
+
+  "relatedStratagems": [8,16,17,28,30],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Choice architecture",
+    "Status quo bias",
+    "Friction cost",
+    "Default effect"
+  ],
+
+  "relatedConcepts": [
+    "実行コスト",
+    "選択アーキテクチャ",
+    "認知コスト",
+    "UI/UX",
+    "レコメンド",
+    "行動設計"
+  ],
+
+  "relatedNotes": [],
+
+  "references": []
+},
   {
     id: 23,
     name: "遠交近攻",
