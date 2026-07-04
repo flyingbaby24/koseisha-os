@@ -44,13 +44,33 @@ public class ResultItemV2View : MonoBehaviour
 
     public void Bind(ThoughtMapSearchResult result, Action<ThoughtMapSearchResult> onSelected)
     {
+        int entryParameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
+        Debug.Log($"[ResultItemV2] Bind entry doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={entryParameterCount}", this);
+
         BuildIfNeeded();
         boundResult = result;
         selectedCallback = onSelected;
+        int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
+        Debug.Log($"[ResultItemV2] Bind doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
+        ApplyFontToGeneratedTexts();
         SetText(titleText, result == null || string.IsNullOrWhiteSpace(result.title) ? "Untitled" : result.title);
         SetText(authorText, result == null || string.IsNullOrWhiteSpace(result.author) ? "Unknown" : result.author);
         SetText(scoreText, result == null ? string.Empty : result.similarity.ToString("0.0000"));
         SetSelected(false);
+    }
+
+    public void SetResult(ThoughtMapSearchResult result, Action<ThoughtMapSearchResult> onSelected)
+    {
+        int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
+        Debug.Log($"[ResultItemV2] SetResult entry doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
+        Bind(result, onSelected);
+    }
+
+    public void BindResult(ThoughtMapSearchResult result, Action<ThoughtMapSearchResult> onSelected)
+    {
+        int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
+        Debug.Log($"[ResultItemV2] BindResult entry doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
+        Bind(result, onSelected);
     }
 
     public void SetSelected(bool selected)
@@ -114,6 +134,32 @@ public class ResultItemV2View : MonoBehaviour
         return text;
     }
 
+    public void SetFontAsset(TMP_FontAsset fontAsset)
+    {
+        japaneseFontAsset = fontAsset;
+        ApplyFontToGeneratedTexts();
+    }
+
+    public void SetFontAsset(TMP_FontAsset fontAsset, TMP_Text referenceText)
+    {
+        japaneseFontAsset = fontAsset;
+        if (referenceText != null)
+        {
+            fontReferenceText = referenceText;
+        }
+        ApplyFontToGeneratedTexts();
+    }
+
+    [ContextMenu("Apply Font To Generated Texts")]
+    public void ApplyFontToGeneratedTexts()
+    {
+        TMP_Text[] texts = GetComponentsInChildren<TMP_Text>(true);
+        foreach (TMP_Text text in texts)
+        {
+            ApplyFont(text);
+        }
+    }
+
     private void ApplyFont(TMP_Text text)
     {
         TMP_FontAsset font = japaneseFontAsset != null ? japaneseFontAsset : fontReferenceText == null ? null : fontReferenceText.font;
@@ -124,6 +170,8 @@ public class ResultItemV2View : MonoBehaviour
     {
         if (boundResult != null)
         {
+            int parameterCount = boundResult.parameters == null ? 0 : boundResult.parameters.Length;
+            Debug.Log($"[ResultItemV2] Clicked doc_id={boundResult.doc_id} parameter count={parameterCount}", this);
             selectedCallback?.Invoke(boundResult);
         }
     }

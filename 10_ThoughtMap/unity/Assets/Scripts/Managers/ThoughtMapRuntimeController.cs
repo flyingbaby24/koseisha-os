@@ -154,7 +154,27 @@ public class ThoughtMapRuntimeController : MonoBehaviour
 
         if (resultListV2 != null)
         {
+            if (results != null)
+            {
+                for (int i = 0; i < results.Length; i++)
+                {
+                    ThoughtMapSearchResult result = results[i];
+                    int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
+                    Debug.Log($"[ThoughtMapRuntimeController] Before ResultListV2.SetResults result index={i} doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
+                }
+            }
+
             resultListV2.SetResults(results);
+            if (results != null)
+            {
+                for (int i = 0; i < results.Length; i++)
+                {
+                    ThoughtMapSearchResult result = results[i];
+                    int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
+                    Debug.Log($"[ThoughtMapRuntimeController] Immediately before ResultListV2 updated count result index={i} doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
+                }
+            }
+
             LogRuntime($"ResultListV2 updated count={resultCount}");
         }
         else

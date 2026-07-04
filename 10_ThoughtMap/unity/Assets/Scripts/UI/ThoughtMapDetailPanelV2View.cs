@@ -184,6 +184,9 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         }
 
         currentResult = result;
+        int parameterCount = result.parameters == null ? 0 : result.parameters.Length;
+        Debug.Log($"[ThoughtMapDetailPanelV2] ShowResult doc_id={result.doc_id} parameter count={parameterCount}", this);
+        EnsureDynamicReferences();
         currentUrl = string.IsNullOrWhiteSpace(result.url) ? string.Empty : result.url.Trim();
         SetText(titleText, string.IsNullOrWhiteSpace(result.title) ? "Untitled" : result.title);
         SetText(authorText, string.IsNullOrWhiteSpace(result.author) ? "Unknown" : result.author);
@@ -191,12 +194,19 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         SetText(docIdText, string.IsNullOrWhiteSpace(result.doc_id) ? "Doc ID: Unknown" : $"Doc ID: {result.doc_id}");
         SetText(similarityText, $"Score: {result.similarity:0.0000}");
         SetText(bodyText, "Document detail API is not connected yet. This panel is showing the selected search result.");
-        SetText(parameterText, FormatParameters(result.parameters));
+        ApplyParameterScores(result.parameters);
         SetText(urlText, string.IsNullOrWhiteSpace(currentUrl) ? string.Empty : "Source Link");
         if (openLinkButton != null) openLinkButton.gameObject.SetActive(!string.IsNullOrWhiteSpace(currentUrl));
         if (saveButton != null) saveButton.interactable = !string.IsNullOrWhiteSpace(result.doc_id);
         SetText(saveStatusText, string.Empty);
-        radarChartView?.ShowScores(result.parameters);
+        if (radarChartView != null)
+        {
+            radarChartView.ShowScores(result.parameters);
+        }
+        else
+        {
+            Debug.LogWarning("[ThoughtMapDetailPanelV2] ResultRadarChart reference is missing. Parameters were shown as text only.", this);
+        }
     }
 
     public void SetSaving()
@@ -275,6 +285,70 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
     private void CacheBuiltReferences()
     {
         contentRoot = transform.Find("DetailContent") as RectTransform;
+        EnsureDynamicReferences();
+    }
+
+    private void EnsureDynamicReferences()
+    {
+        titleText = titleText == null ? FindText("TitleText") : titleText;
+        authorText = authorText == null ? FindText("AuthorText") : authorText;
+        sourceText = sourceText == null ? FindText("SourceText") : sourceText;
+        docIdText = docIdText == null ? FindText("DocIdText") : docIdText;
+        similarityText = similarityText == null ? FindText("SimilarityText") : similarityText;
+        bodyText = bodyText == null ? FindText("BodyText") : bodyText;
+        parameterText = parameterText == null ? FindText("ParameterScoresText") : parameterText;
+        urlText = urlText == null ? FindText("UrlText") : urlText;
+        saveStatusText = saveStatusText == null ? FindText("SaveStatusText") : saveStatusText;
+        saveButton = saveButton == null ? FindComponentByName<Button>("SaveButton") : saveButton;
+        openLinkButton = openLinkButton == null ? FindComponentByName<Button>("OpenLinkButton") : openLinkButton;
+        radarChartView = radarChartView == null ? GetComponentInChildren<ParameterRadarChartView>(true) : radarChartView;
+    }
+
+    private void ApplyParameterScores(ThoughtMapParameterScore[] scores)
+    {
+        int parameterCount = scores == null ? 0 : scores.Length;
+        Debug.Log($"[ThoughtMapDetailPanelV2] ApplyParameterScores count={parameterCount} parameterText={(parameterText == null ? "null" : parameterText.name)} radar={(radarChartView == null ? "null" : radarChartView.name)}", this);
+
+        if (parameterText == null)
+        {
+            Debug.LogWarning("[ThoughtMapDetailPanelV2] ParameterScoresText reference is missing. Cannot display parameters.", this);
+            return;
+        }
+
+        if (scores != null && scores.Length > 0)
+        {
+            parameterText.gameObject.SetActive(true);
+            SetText(parameterText, FormatParameters(scores));
+            return;
+        }
+
+        SetText(parameterText, "Parameter scores are not available yet.");
+    }
+
+    private TMP_Text FindText(string objectName)
+    {
+        TMP_Text[] texts = GetComponentsInChildren<TMP_Text>(true);
+        foreach (TMP_Text text in texts)
+        {
+            if (text != null && text.name == objectName)
+            {
+                return text;
+            }
+        }
+        return null;
+    }
+
+    private T FindComponentByName<T>(string objectName) where T : Component
+    {
+        T[] components = GetComponentsInChildren<T>(true);
+        foreach (T component in components)
+        {
+            if (component != null && component.name == objectName)
+            {
+                return component;
+            }
+        }
+        return null;
     }
 
     private RectTransform CreateBlock(RectTransform parent, string name)

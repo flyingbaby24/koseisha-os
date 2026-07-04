@@ -15,6 +15,7 @@ from .schemas import SearchResponse, SearchResult
 
 
 SEARCH_MODES = {"semantic", "keyword", "hybrid"}
+DEFAULT_PARAMETER_FILTER = "general"
 KEYWORD_COLUMNS = [
     "title",
     "author",
@@ -67,7 +68,7 @@ class ThoughtMapSearchService:
         filter_name: str = "",
     ) -> SearchResponse:
         query = str(query or "").strip()
-        filter_name = str(filter_name or "").strip()
+        filter_name = self._effective_filter_name(filter_name)
         results = self.search(query, top=top, mode=mode, source=source, filter_name=filter_name)
         query_parameters = self.filter_service.score_text(query, filter_name) if filter_name else None
         return SearchResponse(results=results, query_parameters=query_parameters)
@@ -83,7 +84,7 @@ class ThoughtMapSearchService:
         query = str(query or "").strip()
         mode = str(mode or "semantic").strip().lower()
         source = str(source or "").strip()
-        filter_name = str(filter_name or "").strip()
+        filter_name = self._effective_filter_name(filter_name)
         if not query:
             return []
         if mode not in SEARCH_MODES:
@@ -102,6 +103,12 @@ class ThoughtMapSearchService:
             results = self._semantic_search(index, query, top)
 
         return self._to_search_results(results, index=index, filter_name=filter_name)
+
+    def _effective_filter_name(self, filter_name: str) -> str:
+        name = str(filter_name or "").strip().lower()
+        if not name or name == "all":
+            return DEFAULT_PARAMETER_FILTER
+        return name
 
     def _filter_by_source(self, index: pd.DataFrame, source: str) -> pd.DataFrame:
         if not source or "source" not in index.columns:

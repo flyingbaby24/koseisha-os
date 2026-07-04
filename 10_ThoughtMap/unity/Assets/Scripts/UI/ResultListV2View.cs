@@ -87,17 +87,29 @@ public class ResultListV2View : MonoBehaviour
 
     public void SetResults(ThoughtMapSearchResult[] results)
     {
+        int resultCount = results == null ? 0 : results.Length;
+        Debug.Log($"[ResultListV2] SetResults entry count={resultCount}", this);
+        if (results != null)
+        {
+            for (int i = 0; i < results.Length; i++)
+            {
+                ThoughtMapSearchResult result = results[i];
+                int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
+                Debug.Log($"[ResultListV2] SetResults item index={i} doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
+            }
+        }
+
         ShowResults(results);
     }
 
     public void ShowResults(ThoughtMapSearchResult[] results)
     {
         BuildIfNeeded();
-        Clear();
         int resultCount = results == null ? 0 : results.Length;
         Debug.Log($"[ResultListV2] SetResults count={resultCount}", this);
         if (results == null || itemContent == null)
         {
+            HideExistingItems(0);
             if (itemContent == null)
             {
                 Debug.LogWarning("[ResultListV2] itemContent is not assigned. Results cannot be displayed.", this);
@@ -105,15 +117,23 @@ public class ResultListV2View : MonoBehaviour
             SetText(statusText, "No results");
             return;
         }
+        Debug.Log($"[ResultListV2] ShowResults entering item generation loop count={results.Length}", this);
         for (int i = 0; i < results.Length; i++)
         {
-            ResultItemV2View item = CreateItem();
+            ThoughtMapSearchResult result = results[i];
+            int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
+            Debug.Log($"[ResultListV2] SetResults item index={i} doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
+            ResultItemV2View item = GetOrCreateItem(i);
+            item.SetFontAsset(ResolveFont());
             AddLayout(item.gameObject, 0f, itemHeight, false, true);
-            item.Bind(results[i], result => HandleSelected(item, result));
+            int beforeBindParameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
+            Debug.Log($"[ResultListV2] Before ResultItemV2.SetResult index={i} doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={beforeBindParameterCount}", this);
+            item.SetResult(result, selectedResult => HandleSelected(item, selectedResult));
             NeonUIFade fade = item.GetComponent<NeonUIFade>();
             if (fade == null) fade = item.gameObject.AddComponent<NeonUIFade>();
             fade.Play(i * 0.035f);
         }
+        HideExistingItems(results.Length);
         SetText(statusText, $"{results.Length} results");
     }
 
@@ -132,11 +152,56 @@ public class ResultListV2View : MonoBehaviour
     {
         if (resultItemPrefab != null)
         {
-            return Instantiate(resultItemPrefab, itemContent);
+            ResultItemV2View prefabInstance = Instantiate(resultItemPrefab, itemContent);
+            prefabInstance.SetFontAsset(ResolveFont());
+            return prefabInstance;
         }
         GameObject obj = new GameObject("ResultItemV2", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button), typeof(ResultItemV2View));
         obj.transform.SetParent(itemContent, false);
-        return obj.GetComponent<ResultItemV2View>();
+        ResultItemV2View generatedItem = obj.GetComponent<ResultItemV2View>();
+        generatedItem.SetFontAsset(ResolveFont());
+        return generatedItem;
+    }
+
+    private ResultItemV2View GetOrCreateItem(int index)
+    {
+        if (itemContent != null && index < itemContent.childCount)
+        {
+            Transform existing = itemContent.GetChild(index);
+            ResultItemV2View existingItem = existing.GetComponent<ResultItemV2View>();
+            if (existingItem != null)
+            {
+                existingItem.gameObject.SetActive(true);
+                Debug.Log($"[ResultListV2] Reusing existing ResultItemV2 index={index} name={existingItem.name}", this);
+                return existingItem;
+            }
+        }
+
+        ResultItemV2View createdItem = CreateItem();
+        Debug.Log($"[ResultListV2] Created ResultItemV2 index={index} name={createdItem.name}", this);
+        return createdItem;
+    }
+
+    private void HideExistingItems(int startIndex)
+    {
+        if (itemContent == null)
+        {
+            return;
+        }
+
+        for (int i = startIndex; i < itemContent.childCount; i++)
+        {
+            Transform child = itemContent.GetChild(i);
+            if (child != null)
+            {
+                ResultItemV2View item = child.GetComponent<ResultItemV2View>();
+                if (item != null)
+                {
+                    item.SetSelected(false);
+                }
+                child.gameObject.SetActive(false);
+            }
+        }
     }
 
     private void HandleSelected(ResultItemV2View item, ThoughtMapSearchResult result)
@@ -144,6 +209,8 @@ public class ResultListV2View : MonoBehaviour
         if (selectedItem != null) selectedItem.SetSelected(false);
         selectedItem = item;
         selectedItem?.SetSelected(true);
+        int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
+        Debug.Log($"[ResultListV2] ResultSelected doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
         ResultSelected?.Invoke(result);
     }
 
@@ -209,10 +276,40 @@ public class ResultListV2View : MonoBehaviour
         layout.flexibleHeight = height <= 0f ? 1f : 0f;
     }
 
+    private TMP_FontAsset ResolveFont()
+    {
+        return japaneseFontAsset != null ? japaneseFontAsset : fontReferenceText == null ? null : fontReferenceText.font;
+    }
+
     private void ApplyFont(TMP_Text text)
     {
-        TMP_FontAsset font = japaneseFontAsset != null ? japaneseFontAsset : fontReferenceText == null ? null : fontReferenceText.font;
+        TMP_FontAsset font = ResolveFont();
         if (font != null) text.font = font;
+    }
+
+    [ContextMenu("Apply Font To Generated Items")]
+    public void ApplyFontToGeneratedItems()
+    {
+        ApplyFontToGeneratedTexts();
+        ResultItemV2View[] items = GetComponentsInChildren<ResultItemV2View>(true);
+        TMP_FontAsset font = ResolveFont();
+        foreach (ResultItemV2View item in items)
+        {
+            if (item != null)
+            {
+                item.SetFontAsset(font);
+                item.ApplyFontToGeneratedTexts();
+            }
+        }
+    }
+
+    private void ApplyFontToGeneratedTexts()
+    {
+        TMP_Text[] texts = GetComponentsInChildren<TMP_Text>(true);
+        foreach (TMP_Text text in texts)
+        {
+            ApplyFont(text);
+        }
     }
 
     private void CacheReferences()

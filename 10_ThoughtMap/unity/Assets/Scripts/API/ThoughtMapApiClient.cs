@@ -8,6 +8,7 @@ public class ThoughtMapApiClient : MonoBehaviour
 {
     [SerializeField] private string baseUrl = "http://127.0.0.1:8000";
     [SerializeField] private bool debugSaveFlow = true;
+    [SerializeField] private bool debugSearchJson = true;
 
     public IEnumerator Search(string query, int top, Action<ThoughtMapSearchResponse> onSuccess, Action<string> onError)
     {
@@ -65,7 +66,7 @@ public class ThoughtMapApiClient : MonoBehaviour
                 yield break;
             }
 
-            TryParse(request.downloadHandler.text, onSuccess, onError, new ThoughtMapSearchResponse { results = new ThoughtMapSearchResult[0] });
+            TryParseSearchResponse(request.downloadHandler.text, onSuccess, onError);
         }
     }
 
@@ -176,6 +177,82 @@ public class ThoughtMapApiClient : MonoBehaviour
             onError?.Invoke(ex.Message);
         }
     }
+
+    private void TryParseSearchResponse(
+        string json,
+        Action<ThoughtMapSearchResponse> onSuccess,
+        Action<string> onError)
+    {
+        try
+        {
+            int rawLength = string.IsNullOrEmpty(json) ? 0 : json.Length;
+            bool containsParameters = ContainsJsonField(json, "parameters");
+            bool containsQueryParameters = ContainsJsonField(json, "query_parameters");
+            LogSearchJson(
+                "raw length=" + rawLength
+                + " contains parameters=" + containsParameters
+                + " contains query_parameters=" + containsQueryParameters
+            );
+
+            if (!string.IsNullOrEmpty(json))
+            {
+                string preview = json;
+                if (preview.Length > 1000)
+                {
+                    preview = preview.Substring(0, 1000);
+                }
+
+                preview = preview
+                    .Replace("\\r", " ")
+                    .Replace("\\n", " ")
+                    .Replace("\r", " ")
+                    .Replace("\n", " ");
+
+                LogSearchJson("raw preview=" + preview);
+            }
+
+            ThoughtMapSearchResponse response = JsonUtility.FromJson<ThoughtMapSearchResponse>(json);
+            ThoughtMapSearchResult[] results = response == null ? null : response.results;
+            int resultCount = results == null ? 0 : results.Length;
+            int queryParameterCount = response == null || response.query_parameters == null ? 0 : response.query_parameters.Length;
+            LogSearchJson($"parsed result count={resultCount} query_parameter count={queryParameterCount}");
+
+            if (results != null)
+            {
+                for (int i = 0; i < results.Length; i++)
+                {
+                    ThoughtMapSearchResult result = results[i];
+                    int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
+                    string docId = result == null ? "(null)" : result.doc_id;
+                    LogSearchJson(
+                        "parsed result index=" + i
+                        + " doc_id=" + docId
+                        + " parameter count=" + parameterCount
+                    );
+                }
+            }
+
+            onSuccess?.Invoke(response ?? new ThoughtMapSearchResponse { results = new ThoughtMapSearchResult[0] });
+        }
+        catch (Exception ex)
+        {
+            onError?.Invoke(ex.Message);
+        }
+    }
+
+    private bool ContainsJsonField(string json, string fieldName)
+    {
+        return !string.IsNullOrEmpty(json) && json.Contains("\"" + fieldName + "\"");
+    }
+
+    private void LogSearchJson(string message)
+    {
+        if (debugSearchJson)
+        {
+            Debug.Log("[ThoughtMap SearchJson][ApiClient:" + GetInstanceID() + "] " + message, this);
+        }
+    }
+
     private void LogSaveFlow(string message)
     {
         if (debugSaveFlow)
