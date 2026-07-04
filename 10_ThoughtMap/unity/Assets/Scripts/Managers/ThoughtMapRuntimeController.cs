@@ -30,8 +30,12 @@ public class ThoughtMapRuntimeController : MonoBehaviour
     [SerializeField] private QueryParameterPanelView queryParameterPanelView;
     [SerializeField] private bool debugRuntimeFlow = true;
 
+    private bool detailPanelV2SaveSubscribed;
+
     private void Awake()
     {
+        ResolveDetailPanelV2();
+
         if (searchHeaderV2 != null)
         {
             searchHeaderV2.SearchRequested += OnSearchClicked;
@@ -58,9 +62,11 @@ public class ThoughtMapRuntimeController : MonoBehaviour
             searchResultsListView.ResultSelected += OnResultSelected;
         }
 
-        if (detailPanelV2 != null)
+        SubscribeDetailPanelV2();
+
+        if (detailPanelV2 == null)
         {
-            detailPanelV2.SaveRequested += OnSaveRequested;
+            Debug.LogWarning("[ThoughtMapRuntimeController] ThoughtMapDetailPanelV2 reference is missing. Result selection cannot update DetailPanelV2.", this);
         }
     }
 
@@ -86,9 +92,10 @@ public class ThoughtMapRuntimeController : MonoBehaviour
             searchResultsListView.ResultSelected -= OnResultSelected;
         }
 
-        if (detailPanelV2 != null)
+        if (detailPanelV2 != null && detailPanelV2SaveSubscribed)
         {
             detailPanelV2.SaveRequested -= OnSaveRequested;
+            detailPanelV2SaveSubscribed = false;
         }
     }
 
@@ -135,6 +142,16 @@ public class ThoughtMapRuntimeController : MonoBehaviour
         ThoughtMapSearchResult[] results = response == null ? null : response.results;
         int resultCount = results == null ? 0 : results.Length;
         LogRuntime($"API search success result count={resultCount}");
+        if (results != null)
+        {
+            for (int i = 0; i < results.Length; i++)
+            {
+                ThoughtMapSearchResult result = results[i];
+                int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
+                Debug.Log($"[ThoughtMapRuntimeController] SearchSuccess result index={i} doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
+            }
+        }
+
         if (resultListV2 != null)
         {
             resultListV2.SetResults(results);
@@ -159,10 +176,16 @@ public class ThoughtMapRuntimeController : MonoBehaviour
     private void OnResultSelected(ThoughtMapSearchResult result)
     {
         LogRuntime($"Result selected doc_id={(result == null ? "(null)" : result.doc_id)}");
-        if (detailPanelV2 != null)
+        ThoughtMapDetailPanelV2View targetDetailPanel = ResolveDetailPanelV2();
+        if (targetDetailPanel == null)
         {
-            detailPanelV2.ShowResult(result);
+            Debug.LogWarning("[ThoughtMapRuntimeController] detailPanelV2 is null. Assign ThoughtMapDetailPanelV2View to RuntimeController or place ThoughtMapDetailPanelV2 in the scene.", this);
+            return;
         }
+
+        int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
+        LogRuntime($"Calling ThoughtMapDetailPanelV2.ShowResult doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount} detailInstance={targetDetailPanel.GetInstanceID()}");
+        targetDetailPanel.ShowResult(result);
     }
 
     private void OnSaveRequested(ThoughtMapSearchResult result)
@@ -256,5 +279,36 @@ public class ThoughtMapRuntimeController : MonoBehaviour
         {
             Debug.Log($"[ThoughtMapRuntimeController] {message}", this);
         }
+    }
+
+    private ThoughtMapDetailPanelV2View ResolveDetailPanelV2()
+    {
+        if (detailPanelV2 != null)
+        {
+            return detailPanelV2;
+        }
+
+        ThoughtMapDetailPanelV2View[] panels = FindObjectsByType<ThoughtMapDetailPanelV2View>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (panels == null || panels.Length == 0)
+        {
+            return null;
+        }
+
+        detailPanelV2 = panels[0];
+        LogRuntime($"Resolved ThoughtMapDetailPanelV2 automatically instance={detailPanelV2.GetInstanceID()}.");
+        SubscribeDetailPanelV2();
+        return detailPanelV2;
+    }
+
+    private void SubscribeDetailPanelV2()
+    {
+        if (detailPanelV2 == null || detailPanelV2SaveSubscribed)
+        {
+            return;
+        }
+
+        detailPanelV2.SaveRequested += OnSaveRequested;
+        detailPanelV2SaveSubscribed = true;
+        LogRuntime($"ThoughtMapDetailPanelV2 subscribed instance={detailPanelV2.GetInstanceID()}.");
     }
 }
