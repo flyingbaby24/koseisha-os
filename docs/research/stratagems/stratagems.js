@@ -1748,53 +1748,181 @@ relatedConcepts: [
   "references": []
 },
   {
-    id: 23,
-    name: "遠交近攻",
-    reading: "えんこうきんこう",
-    english: "Befriend distant states while attacking nearby ones",
-    category: "Distance / Alliance",
-    bias: "近接脅威の過大評価、遠方リスクの過小評価",
-    behavioral: "Psychological distance / coalition strategy",
-    summary: "遠方と組み、近くの脅威を処理する。心理的距離を利用する計略。",
-    example: "遠い業界と提携し、近い競合を攻める",
-    interpretation: `
+  "id": 23,
+  "name": "遠交近攻",
+  "reading": "えんこうきんこう",
+  "english": "Befriend distant states while attacking nearby ones",
+  "category": "Community / Relationship Cost",
+  "bias": "近接競争、利害調整コスト、共同体維持コスト",
+  "behavioral": "Coalition formation / transaction cost / resource allocation",
+  "summary": "共同体に発生する関係維持コストを最適化し、競争と協力の境界を設計する。",
+  "example": "遠い業界との提携、APIエコシステム、異業種連携、家族や組織の役割分担、プラットフォーム戦略",
+
+  "interpretation": `
+遠交近攻は「遠くと組む計略」ではない。
+
+本質は、共同体に発生する関係維持コストを最適化することにある。
+
+近い者ほど生活圏・市場・資源・役割が重なり、
+利害調整が必要になる。
+
+共同体を維持するには、
+説明・相談・配慮・合意形成など、
+継続的な認知コストを支払い続けなければならない。
+
+一方で、
+利害が重なりにくい遠い相手とは、
+競争よりも補完関係を築きやすい。
+
+遠交近攻とは、
+距離そのものではなく、
+関係維持コストを設計し、
+競争と協力の境界を最適化する計略なのである。
 `,
-    principle: `
+
+  "principle": `
+共同体は価値観だけでは成立しない。
+
+役割・利益・責任・ルールを継続的に調整できることが、
+共同体を維持する条件である。
+
+人は距離そのものではなく、
+利害調整に必要な認知コストによって、
+協力相手と競争相手を選択する。
+
+API連携やプラットフォーム戦略も、
+共同体を形成し、
+関係維持コストを共有することで、
+競争を協力へ変換しているのである。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  "breakdown": [
+    "利害が重なる相手を把握する",
+    "共同体形成に必要な調整コストを理解する",
+    "競争の大きい相手との利害を整理する",
+    "補完関係を築ける相手と共同体を形成する",
+    "関係維持コストを最適化する",
+    "競争と協力の境界を設計する"
+  ],
+
+  "noteTitle": "遠交近攻は「遠くと組む計略」ではない──共同体の関係維持コストを最適化する計略である",
+
+  "noteUrl": "https://note.com/flying_baby/n/n646f410976f7",
+
+  "relatedStratagems": [3,11,18,22,24,30],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Coalition formation",
+    "Transaction cost",
+    "Resource allocation",
+    "Social exchange theory"
+  ],
+
+  "relatedConcepts": [
+    "共同体",
+    "関係税",
+    "関係維持コスト",
+    "利害調整",
+    "APIエコシステム",
+    "プラットフォーム",
+    "競争",
+    "協力"
+  ],
+
+  "relatedNotes": [],
+
+  "references": []
   },
   {
-    id: 24,
-    name: "仮道伐虢",
-    reading: "かどうばっかく",
-    english: "Borrow a path to attack Guo",
-    category: "Access",
-    bias: "協力要請への油断、目的の誤認",
-    behavioral: "Foot-in-the-door / trust exploitation",
-    summary: "通行や協力を名目にアクセス権を得て、本来の目的を達成する。",
-    example: "API連携から市場侵入、提携を入口にする",
-    interpretation: `
+  "id": 24,
+  "name": "仮道伐虢",
+  "reading": "かどうばっかく",
+  "english": "Borrow a path to attack Guo",
+  "category": "Generalization / Cognitive Model",
+  "bias": "普遍化、認知モデルの再利用、信頼の一般化",
+  "behavioral": "Generalization / schema learning / trust transfer",
+  "summary": "一度形成された認知モデルを普遍化させ、小さな許可を前提へ変える。",
+  "example": "API連携、OAuth認証、無料トライアル、SaaS導入、社内ツール導入、プラットフォーム連携",
+
+  "interpretation": `
+仮道伐虢は「協力を装う計略」ではない。
+
+本質は、人間が一度形成した認知モデルを普遍化することにある。
+
+人は毎回ゼロから相手を評価しているわけではない。
+
+一度安全だと判断すると、
+その判断を次の場面にも適用する。
+
+小さな許可は、
+単なる一回の承認ではない。
+
+その後の判断全体を書き換える認知モデルの入口となる。
+
+仮道伐虢とは、
+道を借りる兵法ではない。
+
+入口で形成された認知を普遍化し、
+やがて前提そのものへ変える計略なのである。
 `,
-    principle: `
+
+  "principle": `
+信頼とは道徳ではない。
+
+認知資源を節約するため、
+過去の成功体験を未来へ一般化する認知の働きである。
+
+一度安全だと判断した対象は、
+以後も安全だという認知モデルが形成される。
+
+APIやプラットフォームも、
+最初は便利な機能として導入されるが、
+やがて存在そのものが前提となる。
+
+入口を作ることより、
+入口を当たり前へ変えることが本質なのである。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
-  },
+
+  "breakdown": [
+    "小さな許可や協力関係を獲得する",
+    "安全な存在という認知モデルを形成する",
+    "その認知を別の場面へ普遍化させる",
+    "存在そのものを前提へ変える",
+    "本来の目的へ自然に到達する"
+  ],
+
+  "noteTitle": "仮道伐虢は「協力を装う計略」ではない──認知の普遍化を利用して前提になる計略である",
+
+  "noteUrl": "https://note.com/flying_baby/n/n0c425763e918",
+
+  "relatedStratagems": [10,14,17,21,22,30],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Generalization",
+    "Schema learning",
+    "Trust transfer",
+    "Cognitive economy"
+  ],
+
+  "relatedConcepts": [
+    "普遍化",
+    "一般化",
+    "認知モデル",
+    "信頼",
+    "API",
+    "プラットフォーム",
+    "ロックイン",
+    "前提条件"
+  ],
+
+  "relatedNotes": [],
+
+  "references": []
+},
   {
     id: 25,
     name: "偸梁換柱",
