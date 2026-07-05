@@ -1089,3 +1089,134 @@ Assign the same TMP Font Asset or reference text used by the existing Japanese-c
 - Existing scene RectTransforms are not modified.
 - Existing `ThoughtMapDemoUI` and old `DetailPanelView` are not required for the V2 flow.
 - FastAPI, API schema, Repository, SQLite, and CSV behavior are unchanged.
+
+## V2 Window Interaction Pass
+
+This pass adds movement and motion without changing FastAPI, Repository, SQLite, Python, or existing search data flow.
+
+Added scripts:
+
+- `ThoughtMapDraggableWindow`: drag a window from a header or block handle.
+- `ThoughtMapWindowMotion`: fade-in plus subtle scale-up using CanvasGroup.
+- `ParameterRadarChartView`: flat 2D radar chart for parameter comparison.
+- `HologramRadarBaseView`: separate background Graphic for restrained hologram base rings.
+
+Runtime behavior:
+
+- `SearchHeaderV2View` automatically makes `WindowContent/TitleBar` drag the Search window.
+- `ResultListV2View` automatically makes `WindowContent/TitleBar` drag the Results window.
+- `ThoughtMapDetailPanelV2View` automatically enables drag handles for:
+  - HeaderBlock: moves the whole DetailPanelV2 window
+  - Selected Document Profile heading: moves the selected profile block
+  - Search Query Profile heading: moves the query profile block
+  - ActionBlock / Source Link area: moves the source/save action block
+- Dragging is clamped so the target cannot move completely outside its parent.
+- V2 windows use `ThoughtMapWindowMotion` for show animation.
+- Result and query radar charts remain flat 2D. `Enable Radar 3D Motion` is kept for compatibility, but it no longer tilts, rotates, or deforms the radar chart body.
+
+Inspector controls:
+
+- On `SearchHeaderV2View`: `Enable Dragging`, `Enable Window Motion`
+- On `ResultListV2View`: `Enable Dragging`, `Enable Window Motion`
+- On `ThoughtMapDetailPanelV2View`: `Enable Dragging`, `Enable Window Motion`, `Enable Radar 3D Motion` where the radar value is compatibility-only.
+- On each `ParameterRadarChartView`: axis, fill, outline, vertex, and label settings only.
+- On each `HologramRadarBaseView`: base ring count, ring color, glow color, ring scale, and ring rotation speed.
+
+Manual Unity setup:
+
+1. Confirm the scene has `SearchHeaderV2`, `ResultListV2`, and `ThoughtMapDetailPanelV2` instances under Canvas.
+2. Press Play once. The V2 scripts attach drag and motion components automatically during runtime build.
+3. Drag Search and Results from their title bars.
+4. Drag DetailPanelV2 from its header block.
+5. Drag Selected Document Profile and Search Query Profile from their headings.
+6. Drag the Source Link / Save action area from its panel background.
+7. Radar charts are always drawn as flat 2D charts. Hologram base rings are separate sibling Graphics behind the chart.
+
+Safety notes:
+
+- These scripts do not add LayoutGroup to old scene roots.
+- They do not modify FastAPI, API schemas, Repository, SQLite, or CSV behavior.
+- Drag handles are additive runtime behavior; existing search, selection, Save, Open Link, parameter text, and radar rendering remain unchanged.
+
+## Hologram Radar Chart Style
+
+`ParameterRadarChartView` is now a normal flat Unity UI `Graphic` for data visualization only. Hologram effects are rendered by a separate `HologramRadarBaseView` Graphic placed behind it.
+
+- The radar body stays flat and front-facing.
+- The radar polygon, grid, axes, vertex points, and labels are not tilted or rotated.
+- A restrained stack of ellipse rings is drawn by `HologramRadarBaseView` below/behind the chart as a hologram base.
+- The parameter polygon is filled with a transparent neon color.
+- Selected Document uses cyan by default; Search Query uses magenta by default when created by `ThoughtMapDetailPanelV2View`.
+- Each vertex can show category and D-S rank labels.
+- The chart itself does not float, tilt, rotate, or extrude.
+- Base rings are almost static; they imply depth without competing with the polygon area.
+
+Recommended defaults:
+
+- `Enable Vertex Labels`: on
+- `Show Category Labels`: on
+- `Show Rank Labels`: on
+- `Label Radius Offset`: 36
+- `Label Font Size`: 16
+- `Fill Alpha`: 0.46
+
+For `HologramRadarBaseView`:
+
+- `Ring Count`: 5
+- `Ring Rotation Speed`: 0.15
+- `Base Width Scale`: 1.35
+- `Base Height Scale`: 0.16
+
+Avoid increasing `Ring Rotation Speed`; the base should feel ambient, not like a rotating chart.
+
+Color tuning:
+
+- On `ThoughtMapDetailPanelV2View`, use `Selected Radar Line` / `Selected Radar Fill` for the selected document chart.
+- Use `Query Radar Line` / `Query Radar Fill` for the search query chart.
+- On an individual `ParameterRadarChartView`, adjust `Fill Alpha` if the filled polygon is too strong or too faint.
+
+Label notes:
+
+- Labels are generated automatically if no `Label Prefab` is assigned.
+- Assign `Label Container` and `Label Prefab` only if you want a custom TMP label style.
+- Labels stay as UI text children, so they remain front-facing while the hologram base and fill pulse animate.
+
+### Reset old serialized radar settings
+
+If an existing scene or prefab still looks like the radar polygon is tilted, extruded, or floating, it may have old serialized Inspector values from the earlier 3D experiment.
+
+The current rule is:
+
+```text
+Radar chart = flat 2D data visualization
+Hologram effect = background/base only
+```
+
+Safety behavior in code:
+
+- `ParameterRadarChartView` no longer contains 3D tilt/floating/hologram mesh logic.
+- The chart RectTransform local rotation is reset at runtime.
+- `Enable Hologram Style` on `ParameterRadarChartView` is retained only as a backward-compatible no-op.
+- Base rings and glow are drawn by `HologramRadarBaseView`, not by the radar chart.
+- Grid, axes, polygon fill, polygon outline, vertex points, and labels use fixed 2D colors instead of hologram pulse colors.
+- The filled polygon no longer uses center-fan fill. It uses polygon triangulation for one flat 2D filled area.
+
+Manual reset steps in Unity:
+
+1. Select `ResultRadarChart` and `QueryRadarChart`.
+2. In `ParameterRadarChartView`, set:
+   - RectTransform Rotation: `0, 0, 0`
+   - `Fill Alpha`: a readable value such as `0.35-0.5`
+   - `Vertex Radius`: small, such as `2-4`
+3. Confirm `ResultRadarHologramBase` and `QueryRadarHologramBase` are separate sibling objects behind the chart.
+4. If values still look stale, use the component gear menu and choose `Reset`, then reapply only:
+   - colors
+   - label settings
+   - fill alpha
+5. Stop and restart Play Mode so runtime-generated V2 chart objects are rebuilt.
+
+Runtime compatibility:
+
+- If an older scene already contains `ResultRadarChart` or `QueryRadarChart` without a separate base object, `ThoughtMapDetailPanelV2View` creates the missing `ResultRadarHologramBase` / `QueryRadarHologramBase` sibling automatically.
+- The base object is placed as the first sibling so it renders behind the radar chart.
+- The radar chart is placed as the last sibling so grid, axes, polygon, outline, vertices, and labels stay in front.

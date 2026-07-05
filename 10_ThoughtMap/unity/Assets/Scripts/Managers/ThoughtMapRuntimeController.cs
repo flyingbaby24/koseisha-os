@@ -31,6 +31,7 @@ public class ThoughtMapRuntimeController : MonoBehaviour
     [SerializeField] private bool debugRuntimeFlow = true;
 
     private bool detailPanelV2SaveSubscribed;
+    private ThoughtMapParameterScore[] currentQueryParameters;
 
     private void Awake()
     {
@@ -123,6 +124,7 @@ public class ThoughtMapRuntimeController : MonoBehaviour
         searchResultsListView?.Clear();
         detailPanelV2?.Clear();
         queryParameterPanelView?.Clear();
+        currentQueryParameters = null;
 
         LogRuntime($"API search started query={query} top={topResults} mode={mode} source={source} filter={filter}");
         StartCoroutine(apiClient.Search(
@@ -140,8 +142,11 @@ public class ThoughtMapRuntimeController : MonoBehaviour
     {
         SetSearching(false);
         ThoughtMapSearchResult[] results = response == null ? null : response.results;
+        currentQueryParameters = response == null ? null : response.query_parameters;
         int resultCount = results == null ? 0 : results.Length;
+        int queryParameterCount = currentQueryParameters == null ? 0 : currentQueryParameters.Length;
         LogRuntime($"API search success result count={resultCount}");
+        LogRuntime($"API search success query_parameter count={queryParameterCount}");
         if (results != null)
         {
             for (int i = 0; i < results.Length; i++)
@@ -182,12 +187,20 @@ public class ThoughtMapRuntimeController : MonoBehaviour
             searchResultsListView?.ShowResults(results);
             LogRuntime($"Legacy SearchResultsListView updated count={resultCount}");
         }
-        queryParameterPanelView?.ShowScores(GetQueryText(), response == null ? null : response.query_parameters);
+
+        string queryText = GetQueryText();
+        queryParameterPanelView?.ShowScores(queryText, currentQueryParameters);
+        ThoughtMapDetailPanelV2View targetDetailPanel = ResolveDetailPanelV2();
+        if (targetDetailPanel != null)
+        {
+            targetDetailPanel.ShowQueryParameters(queryText, currentQueryParameters);
+        }
     }
 
     private void HandleSearchError(string message)
     {
         SetSearching(false);
+        currentQueryParameters = null;
         queryParameterPanelView?.Clear();
         LogRuntime($"API search failed message={message}");
         Debug.LogError($"ThoughtMap search failed: {message}", this);
@@ -206,6 +219,7 @@ public class ThoughtMapRuntimeController : MonoBehaviour
         int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
         LogRuntime($"Calling ThoughtMapDetailPanelV2.ShowResult doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount} detailInstance={targetDetailPanel.GetInstanceID()}");
         targetDetailPanel.ShowResult(result);
+        targetDetailPanel.ShowQueryParameters(GetQueryText(), currentQueryParameters);
     }
 
     private void OnSaveRequested(ThoughtMapSearchResult result)

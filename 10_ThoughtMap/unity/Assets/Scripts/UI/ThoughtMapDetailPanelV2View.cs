@@ -25,6 +25,10 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
     [SerializeField] private Color textPrimary = new Color(0.92f, 0.98f, 1f, 1f);
     [SerializeField] private Color textSecondary = new Color(0.60f, 0.78f, 0.92f, 1f);
     [SerializeField] private Color cyan = new Color(0.05f, 0.82f, 1f, 0.88f);
+    [SerializeField] private Color selectedRadarLine = new Color(0.08f, 0.85f, 1f, 0.96f);
+    [SerializeField] private Color selectedRadarFill = new Color(0.08f, 0.85f, 1f, 0.34f);
+    [SerializeField] private Color queryRadarLine = new Color(1f, 0.28f, 0.92f, 0.96f);
+    [SerializeField] private Color queryRadarFill = new Color(1f, 0.28f, 0.92f, 0.32f);
 
     [Header("Layout Tuning")]
     [SerializeField] private Vector2 radarSize = new Vector2(420f, 420f);
@@ -43,6 +47,11 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
     [SerializeField] private Vector2 openButtonSize = new Vector2(170f, 52f);
     [SerializeField] private Vector2 saveButtonSize = new Vector2(250f, 52f);
 
+    [Header("Window Interaction")]
+    [SerializeField] private bool enableDragging = true;
+    [SerializeField] private bool enableWindowMotion = true;
+    [SerializeField] private bool enableRadar3DMotion = true;
+
     private RectTransform contentRoot;
     private TMP_Text titleText;
     private TMP_Text authorText;
@@ -51,11 +60,15 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
     private TMP_Text similarityText;
     private TMP_Text bodyText;
     private TMP_Text parameterText;
+    private TMP_Text queryParameterText;
     private TMP_Text urlText;
     private TMP_Text saveStatusText;
     private Button saveButton;
     private Button openLinkButton;
     private ParameterRadarChartView radarChartView;
+    private ParameterRadarChartView queryRadarChartView;
+    private HologramRadarBaseView radarBaseView;
+    private HologramRadarBaseView queryRadarBaseView;
     private ThoughtMapSearchResult currentResult;
     private string currentUrl = string.Empty;
 
@@ -78,6 +91,8 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         if (contentRoot != null || transform.Find("DetailContent") != null)
         {
             CacheBuiltReferences();
+            EnsureQueryProfileBlock();
+            EnsureWindowFeatures();
             return;
         }
 
@@ -118,6 +133,7 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         ConfigureVertical(profile, blockPadding, 16);
         TMP_Text profileHeading = CreateText(profile, "ProfileHeadingText", "Selected Document Profile", Mathf.Max(18, titleFontSize - 2), FontStyles.Bold, textPrimary);
         profileHeading.color = textPrimary;
+        EnableDragHandle(profileHeading.gameObject, profile, true);
         RectTransform profileRow = CreateContainer(profile, "ProfileRow", false);
         AddPreferredSize(profileRow.gameObject, 0f, Mathf.Max(120f, profileHeight - 90f), false);
         ConfigureHorizontal(profileRow, blockPadding, blockSpacing);
@@ -127,6 +143,7 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         AddRatioSize(parameterText.gameObject, parameterWidthRatio, Mathf.Max(120f, profileHeight - 120f));
         RectTransform radarSlot = CreateContainer(profileRow, "RadarSlot", false);
         AddRatioSize(radarSlot.gameObject, radarWidthRatio, Mathf.Min(radarSize.y, Mathf.Max(160f, profileHeight - 120f)));
+        radarBaseView = CreateHologramBase(radarSlot, "ResultRadarHologramBase", selectedRadarLine, selectedRadarFill);
         GameObject radarObject = new GameObject("ResultRadarChart", typeof(RectTransform), typeof(CanvasRenderer), typeof(ParameterRadarChartView));
         RectTransform radarRect = radarObject.GetComponent<RectTransform>();
         radarRect.SetParent(radarSlot, false);
@@ -135,6 +152,10 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         radarRect.offsetMin = Vector2.zero;
         radarRect.offsetMax = Vector2.zero;
         radarChartView = radarObject.GetComponent<ParameterRadarChartView>();
+        radarChartView.SetHologramStyleEnabled(enableRadar3DMotion);
+        radarChartView.SetChartColors(selectedRadarLine, selectedRadarFill);
+
+        CreateQueryProfileBlock();
 
         RectTransform body = CreateBlock(contentRoot, "FooterBlock");
         AddPreferredSize(body.gameObject, 0f, footerHeight, false);
@@ -144,6 +165,7 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         RectTransform action = CreateBlock(contentRoot, "ActionBlock");
         AddPreferredSize(action.gameObject, 0f, actionHeight, false);
         ConfigureHorizontal(action, blockPadding, blockSpacing);
+        EnableDragHandle(action.gameObject, action, true);
         urlText = CreateText(action, "UrlText", string.Empty, Mathf.Max(13, bodyFontSize), FontStyles.Normal, textSecondary);
         AddPreferredSize(urlText.gameObject, 180, actionHeight - blockPadding, true);
         openLinkButton = CreateButton(action, "OpenLinkButton", "Open Link", openButtonSize);
@@ -153,6 +175,7 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         saveStatusText = CreateText(action, "SaveStatusText", string.Empty, Mathf.Max(12, bodyFontSize - 1), FontStyles.Normal, textSecondary);
         AddPreferredSize(saveStatusText.gameObject, 150, actionHeight - blockPadding, true);
 
+        EnsureWindowFeatures();
         Clear();
     }
 
@@ -167,11 +190,13 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         SetText(similarityText, string.Empty);
         SetText(bodyText, "Select a search result to preview document details.");
         SetText(parameterText, "Parameter scores are not available yet.");
+        SetText(queryParameterText, "Search query parameters are not available yet.");
         SetText(urlText, string.Empty);
         SetText(saveStatusText, string.Empty);
         if (saveButton != null) saveButton.interactable = false;
         if (openLinkButton != null) openLinkButton.gameObject.SetActive(false);
         radarChartView?.Clear();
+        queryRadarChartView?.Clear();
     }
 
     public void ShowResult(ThoughtMapSearchResult result)
@@ -184,9 +209,12 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         }
 
         currentResult = result;
+        PlayWindowShow(gameObject);
         int parameterCount = result.parameters == null ? 0 : result.parameters.Length;
         Debug.Log($"[ThoughtMapDetailPanelV2] ShowResult doc_id={result.doc_id} parameter count={parameterCount}", this);
         EnsureDynamicReferences();
+        PlayWindowShow((transform.Find("DetailContent/ResultProfileBlock") as RectTransform)?.gameObject);
+        PlayWindowShow((transform.Find("DetailContent/ActionBlock") as RectTransform)?.gameObject);
         currentUrl = string.IsNullOrWhiteSpace(result.url) ? string.Empty : result.url.Trim();
         SetText(titleText, string.IsNullOrWhiteSpace(result.title) ? "Untitled" : result.title);
         SetText(authorText, string.IsNullOrWhiteSpace(result.author) ? "Unknown" : result.author);
@@ -201,11 +229,34 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         SetText(saveStatusText, string.Empty);
         if (radarChartView != null)
         {
+            radarChartView.SetHologramStyleEnabled(enableRadar3DMotion);
+            radarChartView.SetChartColors(selectedRadarLine, selectedRadarFill);
             radarChartView.ShowScores(result.parameters);
         }
         else
         {
             Debug.LogWarning("[ThoughtMapDetailPanelV2] ResultRadarChart reference is missing. Parameters were shown as text only.", this);
+        }
+    }
+
+    public void ShowQueryParameters(string queryText, ThoughtMapParameterScore[] queryParameters)
+    {
+        BuildIfNeeded();
+        PlayWindowShow(gameObject);
+        EnsureDynamicReferences();
+        PlayWindowShow((transform.Find("DetailContent/QueryProfileBlock") as RectTransform)?.gameObject);
+        int parameterCount = queryParameters == null ? 0 : queryParameters.Length;
+        Debug.Log($"[ThoughtMapDetailPanelV2] ShowQueryParameters query={queryText} parameter count={parameterCount}", this);
+        ApplyQueryParameterScores(queryParameters);
+        if (queryRadarChartView != null)
+        {
+            queryRadarChartView.SetHologramStyleEnabled(enableRadar3DMotion);
+            queryRadarChartView.SetChartColors(queryRadarLine, queryRadarFill);
+            queryRadarChartView.ShowScores(queryParameters);
+        }
+        else
+        {
+            Debug.LogWarning("[ThoughtMapDetailPanelV2] QueryRadarChart reference is missing. Query parameters were shown as text only.", this);
         }
     }
 
@@ -297,11 +348,23 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         similarityText = similarityText == null ? FindText("SimilarityText") : similarityText;
         bodyText = bodyText == null ? FindText("BodyText") : bodyText;
         parameterText = parameterText == null ? FindText("ParameterScoresText") : parameterText;
+        queryParameterText = queryParameterText == null ? FindText("QueryParameterScoresText") : queryParameterText;
         urlText = urlText == null ? FindText("UrlText") : urlText;
         saveStatusText = saveStatusText == null ? FindText("SaveStatusText") : saveStatusText;
         saveButton = saveButton == null ? FindComponentByName<Button>("SaveButton") : saveButton;
         openLinkButton = openLinkButton == null ? FindComponentByName<Button>("OpenLinkButton") : openLinkButton;
-        radarChartView = radarChartView == null ? GetComponentInChildren<ParameterRadarChartView>(true) : radarChartView;
+        radarChartView = radarChartView == null ? FindComponentByName<ParameterRadarChartView>("ResultRadarChart") : radarChartView;
+        queryRadarChartView = queryRadarChartView == null ? FindComponentByName<ParameterRadarChartView>("QueryRadarChart") : queryRadarChartView;
+        radarBaseView = radarBaseView == null ? FindComponentByName<HologramRadarBaseView>("ResultRadarHologramBase") : radarBaseView;
+        queryRadarBaseView = queryRadarBaseView == null ? FindComponentByName<HologramRadarBaseView>("QueryRadarHologramBase") : queryRadarBaseView;
+        if (radarChartView != null) radarChartView.SetHologramStyleEnabled(enableRadar3DMotion);
+        if (queryRadarChartView != null) queryRadarChartView.SetHologramStyleEnabled(enableRadar3DMotion);
+        if (radarChartView != null) radarChartView.SetChartColors(selectedRadarLine, selectedRadarFill);
+        if (queryRadarChartView != null) queryRadarChartView.SetChartColors(queryRadarLine, queryRadarFill);
+        if (radarBaseView != null) radarBaseView.SetColors(selectedRadarLine, selectedRadarFill);
+        if (queryRadarBaseView != null) queryRadarBaseView.SetColors(queryRadarLine, queryRadarFill);
+        EnsureRadarBaseSibling(radarChartView, ref radarBaseView, "ResultRadarHologramBase", selectedRadarLine, selectedRadarFill);
+        EnsureRadarBaseSibling(queryRadarChartView, ref queryRadarBaseView, "QueryRadarHologramBase", queryRadarLine, queryRadarFill);
     }
 
     private void ApplyParameterScores(ThoughtMapParameterScore[] scores)
@@ -323,6 +386,229 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         }
 
         SetText(parameterText, "Parameter scores are not available yet.");
+    }
+
+    private void ApplyQueryParameterScores(ThoughtMapParameterScore[] scores)
+    {
+        int parameterCount = scores == null ? 0 : scores.Length;
+        Debug.Log($"[ThoughtMapDetailPanelV2] ApplyQueryParameterScores count={parameterCount} queryParameterText={(queryParameterText == null ? "null" : queryParameterText.name)} queryRadar={(queryRadarChartView == null ? "null" : queryRadarChartView.name)}", this);
+
+        if (queryParameterText == null)
+        {
+            Debug.LogWarning("[ThoughtMapDetailPanelV2] QueryParameterScoresText reference is missing. Cannot display query parameters.", this);
+            return;
+        }
+
+        if (scores != null && scores.Length > 0)
+        {
+            queryParameterText.gameObject.SetActive(true);
+            SetText(queryParameterText, FormatParameters(scores));
+            return;
+        }
+
+        SetText(queryParameterText, "Search query parameters are not available yet.");
+    }
+
+    private void EnsureQueryProfileBlock()
+    {
+        if (contentRoot == null)
+        {
+            contentRoot = transform.Find("DetailContent") as RectTransform;
+        }
+
+        if (contentRoot == null || transform.Find("DetailContent/QueryProfileBlock") != null)
+        {
+            EnsureDynamicReferences();
+            return;
+        }
+
+        CreateQueryProfileBlock();
+        EnsureDynamicReferences();
+    }
+
+    private void CreateQueryProfileBlock()
+    {
+        if (contentRoot == null)
+        {
+            return;
+        }
+
+        RectTransform queryProfile = CreateBlock(contentRoot, "QueryProfileBlock");
+        float queryProfileHeight = Mathf.Max(280f, profileHeight * 0.72f);
+        AddPreferredSize(queryProfile.gameObject, 0f, queryProfileHeight, false);
+        ConfigureVertical(queryProfile, blockPadding, 16);
+        TMP_Text queryHeading = CreateText(queryProfile, "QueryProfileHeadingText", "Search Query Profile", Mathf.Max(18, titleFontSize - 2), FontStyles.Bold, textPrimary);
+        queryHeading.color = textPrimary;
+        EnableDragHandle(queryHeading.gameObject, queryProfile, true);
+
+        RectTransform queryRow = CreateContainer(queryProfile, "QueryProfileRow", false);
+        AddPreferredSize(queryRow.gameObject, 0f, Mathf.Max(120f, queryProfileHeight - 90f), false);
+        ConfigureHorizontal(queryRow, blockPadding, blockSpacing);
+
+        queryParameterText = CreateText(queryRow, "QueryParameterScoresText", "Search query parameters are not available yet.", Mathf.Max(18, bodyFontSize + 2), FontStyles.Normal, textSecondary);
+        queryParameterText.lineSpacing = 24f;
+        queryParameterText.enableWordWrapping = false;
+        AddRatioSize(queryParameterText.gameObject, parameterWidthRatio, Mathf.Max(120f, queryProfileHeight - 120f));
+
+        RectTransform queryRadarSlot = CreateContainer(queryRow, "QueryRadarSlot", false);
+        AddRatioSize(queryRadarSlot.gameObject, radarWidthRatio, Mathf.Min(radarSize.y, Mathf.Max(160f, queryProfileHeight - 120f)));
+        queryRadarBaseView = CreateHologramBase(queryRadarSlot, "QueryRadarHologramBase", queryRadarLine, queryRadarFill);
+        GameObject queryRadarObject = new GameObject("QueryRadarChart", typeof(RectTransform), typeof(CanvasRenderer), typeof(ParameterRadarChartView));
+        RectTransform queryRadarRect = queryRadarObject.GetComponent<RectTransform>();
+        queryRadarRect.SetParent(queryRadarSlot, false);
+        queryRadarRect.anchorMin = Vector2.zero;
+        queryRadarRect.anchorMax = Vector2.one;
+        queryRadarRect.offsetMin = Vector2.zero;
+        queryRadarRect.offsetMax = Vector2.zero;
+        queryRadarChartView = queryRadarObject.GetComponent<ParameterRadarChartView>();
+        queryRadarChartView.SetHologramStyleEnabled(enableRadar3DMotion);
+        queryRadarChartView.SetChartColors(queryRadarLine, queryRadarFill);
+        EnsureMotion(queryProfile.gameObject, false);
+    }
+
+    private HologramRadarBaseView CreateHologramBase(RectTransform parent, string name, Color line, Color fill)
+    {
+        GameObject baseObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(HologramRadarBaseView));
+        RectTransform baseRect = baseObject.GetComponent<RectTransform>();
+        baseRect.SetParent(parent, false);
+        baseRect.anchorMin = Vector2.zero;
+        baseRect.anchorMax = Vector2.one;
+        baseRect.offsetMin = Vector2.zero;
+        baseRect.offsetMax = Vector2.zero;
+        HologramRadarBaseView baseView = baseObject.GetComponent<HologramRadarBaseView>();
+        baseView.SetColors(line, fill);
+        return baseView;
+    }
+
+    private void EnsureRadarBaseSibling(ParameterRadarChartView chart, ref HologramRadarBaseView baseView, string name, Color line, Color fill)
+    {
+        if (chart == null)
+        {
+            return;
+        }
+
+        RectTransform chartRect = chart.transform as RectTransform;
+        RectTransform parent = chartRect == null ? null : chartRect.parent as RectTransform;
+        if (parent == null)
+        {
+            return;
+        }
+
+        if (baseView == null)
+        {
+            Transform existing = parent.Find(name);
+            baseView = existing == null ? null : existing.GetComponent<HologramRadarBaseView>();
+        }
+
+        if (baseView == null)
+        {
+            baseView = CreateHologramBase(parent, name, line, fill);
+        }
+
+        baseView.SetColors(line, fill);
+        RectTransform baseRect = baseView.transform as RectTransform;
+        if (baseRect != null)
+        {
+            baseRect.SetAsFirstSibling();
+        }
+
+        chartRect.SetAsLastSibling();
+    }
+
+    private void EnsureWindowFeatures()
+    {
+        EnsureMotion(gameObject, true);
+
+        if (!enableDragging)
+        {
+            return;
+        }
+
+        RectTransform rootRect = transform as RectTransform;
+        RectTransform headerBlock = transform.Find("DetailContent/HeaderBlock") as RectTransform;
+        if (headerBlock != null)
+        {
+            EnableDragHandle(headerBlock.gameObject, rootRect, false);
+        }
+
+        RectTransform resultProfile = transform.Find("DetailContent/ResultProfileBlock") as RectTransform;
+        if (resultProfile != null)
+        {
+            TMP_Text heading = FindText("ProfileHeadingText");
+            EnableDragHandle(heading == null ? resultProfile.gameObject : heading.gameObject, resultProfile, true);
+            EnsureMotion(resultProfile.gameObject, false);
+        }
+
+        RectTransform queryProfile = transform.Find("DetailContent/QueryProfileBlock") as RectTransform;
+        if (queryProfile != null)
+        {
+            TMP_Text heading = FindText("QueryProfileHeadingText");
+            EnableDragHandle(heading == null ? queryProfile.gameObject : heading.gameObject, queryProfile, true);
+            EnsureMotion(queryProfile.gameObject, false);
+        }
+
+        RectTransform actionBlock = transform.Find("DetailContent/ActionBlock") as RectTransform;
+        if (actionBlock != null)
+        {
+            EnableDragHandle(actionBlock.gameObject, actionBlock, true);
+            EnsureMotion(actionBlock.gameObject, false);
+        }
+    }
+
+    private void EnableDragHandle(GameObject handleObject, RectTransform target, bool detachFromLayoutOnDrag)
+    {
+        if (!enableDragging || handleObject == null || target == null)
+        {
+            return;
+        }
+
+        Graphic graphic = handleObject.GetComponent<Graphic>();
+        if (graphic != null)
+        {
+            graphic.raycastTarget = true;
+        }
+
+        ThoughtMapDraggableWindow drag = handleObject.GetComponent<ThoughtMapDraggableWindow>();
+        if (drag == null)
+        {
+            drag = handleObject.AddComponent<ThoughtMapDraggableWindow>();
+        }
+        drag.Configure(target, detachFromLayoutOnDrag);
+    }
+
+    private ThoughtMapWindowMotion EnsureMotion(GameObject target, bool playNow)
+    {
+        if (!enableWindowMotion || target == null)
+        {
+            return null;
+        }
+
+        ThoughtMapWindowMotion motion = target.GetComponent<ThoughtMapWindowMotion>();
+        if (motion == null)
+        {
+            motion = target.AddComponent<ThoughtMapWindowMotion>();
+        }
+
+        if (playNow)
+        {
+            motion.Show();
+        }
+
+        return motion;
+    }
+
+    private void PlayWindowShow(GameObject target)
+    {
+        if (!enableWindowMotion || target == null)
+        {
+            return;
+        }
+
+        ThoughtMapWindowMotion motion = target.GetComponent<ThoughtMapWindowMotion>();
+        if (motion != null)
+        {
+            motion.Show();
+        }
     }
 
     private TMP_Text FindText(string objectName)

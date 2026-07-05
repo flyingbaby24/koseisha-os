@@ -25,6 +25,10 @@ public class ResultListV2View : MonoBehaviour
     [SerializeField] private int spacing = 10;
     [SerializeField] private float itemHeight = 92f;
 
+    [Header("Window Interaction")]
+    [SerializeField] private bool enableDragging = true;
+    [SerializeField] private bool enableWindowMotion = true;
+
     private RectTransform contentRoot;
     private RectTransform itemContent;
     private TMP_Text statusText;
@@ -44,6 +48,7 @@ public class ResultListV2View : MonoBehaviour
         if (contentRoot != null || transform.Find("WindowContent") != null)
         {
             CacheReferences();
+            EnsureWindowFeatures();
             return;
         }
         Image panel = GetComponent<Image>();
@@ -83,6 +88,7 @@ public class ResultListV2View : MonoBehaviour
         scrollRect.vertical = true;
         RectTransform action = CreateBlock(contentRoot, "ActionArea", titleBarColor, 38f);
         statusText = CreateText(action, "StatusText", "No results", 13, FontStyles.Normal, textPrimary);
+        EnsureWindowFeatures();
     }
 
     public void SetResults(ThoughtMapSearchResult[] results)
@@ -105,6 +111,7 @@ public class ResultListV2View : MonoBehaviour
     public void ShowResults(ThoughtMapSearchResult[] results)
     {
         BuildIfNeeded();
+        PlayWindowShow();
         int resultCount = results == null ? 0 : results.Length;
         Debug.Log($"[ResultListV2] SetResults count={resultCount}", this);
         if (results == null || itemContent == null)
@@ -317,6 +324,51 @@ public class ResultListV2View : MonoBehaviour
         contentRoot = transform.Find("WindowContent") as RectTransform;
         Transform content = transform.Find("WindowContent/ContentArea/Viewport/Content");
         itemContent = content as RectTransform;
+    }
+
+    private void EnsureWindowFeatures()
+    {
+        if (enableWindowMotion)
+        {
+            ThoughtMapWindowMotion motion = GetComponent<ThoughtMapWindowMotion>();
+            if (motion == null)
+            {
+                motion = gameObject.AddComponent<ThoughtMapWindowMotion>();
+            }
+            motion.Show();
+        }
+
+        if (!enableDragging)
+        {
+            return;
+        }
+
+        RectTransform titleBar = transform.Find("WindowContent/TitleBar") as RectTransform;
+        if (titleBar == null)
+        {
+            return;
+        }
+
+        ThoughtMapDraggableWindow drag = titleBar.GetComponent<ThoughtMapDraggableWindow>();
+        if (drag == null)
+        {
+            drag = titleBar.gameObject.AddComponent<ThoughtMapDraggableWindow>();
+        }
+        drag.Configure(transform as RectTransform, false);
+    }
+
+    private void PlayWindowShow()
+    {
+        if (!enableWindowMotion)
+        {
+            return;
+        }
+
+        ThoughtMapWindowMotion motion = GetComponent<ThoughtMapWindowMotion>();
+        if (motion != null)
+        {
+            motion.Show();
+        }
     }
 
     private void SetText(TMP_Text text, string value)

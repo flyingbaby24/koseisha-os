@@ -32,6 +32,10 @@ public class SearchHeaderV2View : MonoBehaviour
     [SerializeField] private int padding = 14;
     [SerializeField] private int spacing = 10;
 
+    [Header("Window Interaction")]
+    [SerializeField] private bool enableDragging = true;
+    [SerializeField] private bool enableWindowMotion = true;
+
     private TMP_InputField searchInput;
     private TMP_Dropdown modeDropdown;
     private TMP_Dropdown sourceDropdown;
@@ -62,6 +66,7 @@ public class SearchHeaderV2View : MonoBehaviour
         if (searchInput != null || transform.Find("WindowContent") != null)
         {
             CacheReferences();
+            EnsureWindowFeatures();
             return;
         }
         Image panel = GetComponent<Image>();
@@ -85,6 +90,7 @@ public class SearchHeaderV2View : MonoBehaviour
         searchButton.onClick.AddListener(HandleSearchClicked);
         RectTransform action = CreateBlock(content, "ActionArea", titleBarColor, 34f);
         CreateText(action, "HintText", "Search mode, source, and filter are frontend controls for the FastAPI search endpoint.", 12, FontStyles.Normal, textSecondary);
+        EnsureWindowFeatures();
     }
 
     public void SetInteractable(bool value)
@@ -324,6 +330,37 @@ public class SearchHeaderV2View : MonoBehaviour
             searchButton.onClick.RemoveListener(HandleSearchClicked);
             searchButton.onClick.AddListener(HandleSearchClicked);
         }
+    }
+
+    private void EnsureWindowFeatures()
+    {
+        if (enableWindowMotion)
+        {
+            ThoughtMapWindowMotion motion = GetComponent<ThoughtMapWindowMotion>();
+            if (motion == null)
+            {
+                motion = gameObject.AddComponent<ThoughtMapWindowMotion>();
+            }
+            motion.Show();
+        }
+
+        if (!enableDragging)
+        {
+            return;
+        }
+
+        RectTransform titleBar = transform.Find("WindowContent/TitleBar") as RectTransform;
+        if (titleBar == null)
+        {
+            return;
+        }
+
+        ThoughtMapDraggableWindow drag = titleBar.GetComponent<ThoughtMapDraggableWindow>();
+        if (drag == null)
+        {
+            drag = titleBar.gameObject.AddComponent<ThoughtMapDraggableWindow>();
+        }
+        drag.Configure(transform as RectTransform, false);
     }
 
     private void ApplyDefaultWindowRect()
