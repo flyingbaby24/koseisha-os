@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import re
+import json
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 import numpy as np
 import pandas as pd
@@ -28,6 +32,290 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 DEFAULT_DB_DIR = BASE_DIR / "data" / "thoughtmap_db" / "official"
 FALLBACK_DB_DIR = BASE_DIR / "master"
+DEFAULT_API_BASE_URL = "http://127.0.0.1:8000"
+SEARCH_MODES = ["semantic", "keyword", "hybrid"]
+DEFAULT_FILTERS = ["general", "basic_thought", "basic_literature", "jinn_os"]
+
+
+def normalize_api_base_url(value: str) -> str:
+    text = str(value or "").strip().rstrip("/")
+    return text or DEFAULT_API_BASE_URL
+
+
+def build_search_api_url(
+    api_base_url: str,
+    query: str,
+    top: int,
+    mode: str,
+    source: str,
+    filter_name: str,
+) -> dict:
+    base_url = normalize_api_base_url(api_base_url)
+    params = {
+        "q": query,
+        "top": int(top),
+        "mode": mode,
+    }
+    if source and source != "all":
+        params["source"] = source
+    if filter_name and filter_name != "none":
+        params["filter"] = filter_name
+
+    return f"{base_url}/search?{urlencode(params)}"
+
+
+@st.cache_data(show_spinner=False, ttl=10)
+def call_search_api(
+    api_base_url: str,
+    query: str,
+    top: int,
+    mode: str,
+    source: str,
+    filter_name: str,
+) -> dict:
+    base_url = normalize_api_base_url(api_base_url)
+    url = build_search_api_url(api_base_url, query, top, mode, source, filter_name)
+    request = Request(url, headers={"Accept": "application/json"})
+    try:
+        with urlopen(request, timeout=30) as response:
+            raw = response.read().decode("utf-8")
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"FastAPI returned HTTP {exc.code}: {detail}") from exc
+    except URLError as exc:
+        raise RuntimeError(f"Could not connect to FastAPI at {base_url}: {exc.reason}") from exc
+    except TimeoutError as exc:
+        raise RuntimeError(f"FastAPI request timed out: {base_url}") from exc
+
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"FastAPI returned non-JSON response: {raw[:500]}") from exc
+
+    return payload
+
+
+def parameters_to_frame(parameters: list[dict] | None) -> pd.DataFrame:
+    rows = []
+    for item in parameters or []:
+        if not isinstance(item, dict):
+            continue
+        key = str(item.get("key", "") or "")
+        if not key:
+            continue
+        rows.append({"parameter": key, "value": float(item.get("value", 0.0) or 0.0)})
+    return pd.DataFrame(rows)
+
+
+def results_to_frame(results: list[dict] | None) -> pd.DataFrame:
+    rows = []
+    for result in results or []:
+        if not isinstance(result, dict):
+            continue
+        rows.append(
+            {
+                "doc_id": result.get("doc_id", ""),
+                "title": result.get("title", ""),
+                "author": result.get("author", ""),
+                "source": result.get("source", ""),
+                "similarity": result.get("similarity", 0.0),
+                "url": result.get("url", ""),
+                "parameter_count": len(result.get("parameters") or []),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def author_summary_from_results(results: list[dict] | None) -> pd.DataFrame:
+    frame = results_to_frame(results)
+    if frame.empty or "author" not in frame.columns:
+        return pd.DataFrame()
+
+    frame["author"] = frame["author"].fillna("").astype(str)
+    frame = frame[frame["author"].str.strip() != ""]
+    if frame.empty:
+        return pd.DataFrame()
+
+    summary = (
+        frame.groupby("author", dropna=False)
+        .agg(
+            works_count=("doc_id", "count"),
+            best_similarity=("similarity", "max"),
+            sources=("source", lambda x: ", ".join(sorted({str(v) for v in x if str(v)}))),
+            sample_titles=("title", lambda x: " / ".join([str(v) for v in list(x)[:3] if str(v)])),
+        )
+        .reset_index()
+        .sort_values(["best_similarity", "works_count", "author"], ascending=[False, False, True])
+    )
+    summary.insert(0, "rank", range(1, len(summary) + 1))
+    summary["best_similarity"] = summary["best_similarity"].map(lambda x: round(float(x or 0), 4))
+    return summary
+
+
+def render_parameter_profile(title: str, parameters: list[dict] | None) -> None:
+    st.subheader(title)
+    frame = parameters_to_frame(parameters)
+    if frame.empty:
+        st.info("Parameter scores are not available in this response.")
+        return
+
+    frame["rank"] = frame["value"].map(format_parameter_rank)
+    st.dataframe(frame, use_container_width=True, hide_index=True)
+    render_radar_chart(frame, title)
+
+
+def format_parameter_rank(value: float) -> str:
+    if value >= 40:
+        return "S"
+    if value >= 30:
+        return "A"
+    if value >= 20:
+        return "B"
+    if value >= 10:
+        return "C"
+    return "D"
+
+
+def render_radar_chart(frame: pd.DataFrame, title: str) -> None:
+    if len(frame) < 3:
+        st.caption("Radar chart needs at least 3 parameters.")
+        return
+
+    try:
+        import matplotlib.pyplot as plt
+    except Exception:
+        st.caption("matplotlib is not available; showing the parameter table only.")
+        return
+
+    labels = frame["parameter"].astype(str).tolist()
+    values = frame["value"].astype(float).clip(lower=0, upper=40).tolist()
+    values += values[:1]
+
+    angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
+    angles += angles[:1]
+
+    fig = plt.figure(figsize=(4.8, 4.8))
+    ax = fig.add_subplot(111, polar=True)
+    ax.plot(angles, values, linewidth=2)
+    ax.fill(angles, values, alpha=0.22)
+    ax.set_thetagrids(np.degrees(angles[:-1]), labels)
+    ax.set_ylim(0, 40)
+    ax.set_title(title)
+    ax.grid(True, alpha=0.35)
+    st.pyplot(fig, use_container_width=True)
+
+
+def render_api_search_mode() -> None:
+    st.caption("FastAPI /search is the source of truth. Streamlit is acting as an API client and review console.")
+
+    with st.sidebar:
+        st.header("FastAPI")
+        api_base_url = st.text_input("API Base URL", value=DEFAULT_API_BASE_URL)
+        top = st.slider("Top results", min_value=1, max_value=50, value=10, step=1)
+        mode = st.selectbox("Search mode", SEARCH_MODES, index=0)
+        source = st.text_input("Source filter", value="", placeholder="all / gutendex / user_suno")
+        filter_name = st.selectbox("Parameter filter", DEFAULT_FILTERS, index=0)
+        show_raw_json = st.checkbox("Show raw API JSON", value=True)
+
+        if st.button("Clear API cache"):
+            st.cache_data.clear()
+
+    query = st.text_input("Search query", value="Plato", placeholder="Search title, author, concept, source...")
+    submitted = st.button("Search FastAPI", type="primary")
+
+    if not submitted and "api_search_payload" not in st.session_state:
+        st.info("Enter a query and call FastAPI. Example: Plato / keyword / gutendex / general.")
+        return
+
+    if submitted:
+        if not query.strip():
+            st.warning("Please enter a search query.")
+            return
+        try:
+            with st.spinner("Calling FastAPI /search..."):
+                st.session_state["api_search_payload"] = call_search_api(
+                    api_base_url=api_base_url,
+                    query=query,
+                    top=top,
+                    mode=mode,
+                    source=normalize_text(source).lower(),
+                    filter_name=filter_name,
+                )
+        except Exception as exc:
+            st.error(str(exc))
+            return
+
+    payload = st.session_state.get("api_search_payload", {})
+    results = payload.get("results", [])
+    result_frame = results_to_frame(results)
+
+    st.success(f"FastAPI response received: {len(results)} result(s)")
+    st.caption(build_search_api_url(
+        api_base_url=api_base_url,
+        query=query,
+        top=top,
+        mode=mode,
+        source=normalize_text(source).lower(),
+        filter_name=filter_name,
+    ))
+
+    st.download_button(
+        "Download API response JSON",
+        data=json.dumps(payload, ensure_ascii=False, indent=2),
+        file_name="thoughtmap_search_response.json",
+        mime="application/json",
+    )
+
+    st.subheader("Similar works")
+    if result_frame.empty:
+        st.info("No results.")
+    else:
+        display = result_frame.copy()
+        if "similarity" in display.columns:
+            display["similarity"] = display["similarity"].map(lambda x: round(float(x or 0), 4))
+        st.dataframe(display, use_container_width=True, hide_index=True)
+        st.download_button(
+            "Download result table CSV",
+            data=result_frame.to_csv(index=False, encoding="utf-8-sig"),
+            file_name="thoughtmap_search_results.csv",
+            mime="text/csv",
+        )
+
+    left, right = st.columns(2)
+    with left:
+        render_parameter_profile("Query Profile", payload.get("query_parameters"))
+
+    with right:
+        if results:
+            options = [
+                f"{i + 1}. {r.get('title', 'Untitled')} - {r.get('author', '')} [{r.get('doc_id', '')}]"
+                for i, r in enumerate(results)
+            ]
+            selected = st.selectbox("Selected result", options)
+            selected_result = results[options.index(selected)]
+            st.subheader("Selected Profile")
+            st.write(f"**{selected_result.get('title', 'Untitled')}**")
+            st.write(f"Author: {selected_result.get('author', '')}")
+            st.write(f"Source: `{selected_result.get('source', '')}`")
+            st.write(f"doc_id: `{selected_result.get('doc_id', '')}`")
+            st.write(f"Similarity: `{float(selected_result.get('similarity', 0.0) or 0.0):.4f}`")
+            if selected_result.get("url"):
+                st.markdown(f"[Open source]({selected_result['url']})")
+            render_parameter_profile("Selected Profile Radar", selected_result.get("parameters"))
+        else:
+            st.info("No selected result.")
+
+    st.subheader("Similar authors")
+    author_frame = author_summary_from_results(results)
+    if author_frame.empty:
+        st.info("No author summary is available from the current API results.")
+    else:
+        st.caption("Grouped from the current /search response only. No separate CSV search is performed.")
+        st.dataframe(author_frame, use_container_width=True, hide_index=True)
+
+    if show_raw_json:
+        with st.expander("Raw FastAPI response", expanded=True):
+            st.json(payload)
 
 
 def load_db_cached(db_dir_text: str) -> pd.DataFrame:
@@ -465,8 +753,23 @@ def main() -> None:
     st.set_page_config(page_title=APP_TITLE, layout="wide")
     st.title(APP_TITLE)
 
+    search_backend = st.sidebar.radio(
+        "Search backend",
+        ["FastAPI / shared backend", "Legacy CSV local mode"],
+        index=0,
+    )
+
+    if search_backend == "FastAPI / shared backend":
+        render_api_search_mode()
+        return
+
+    st.warning(
+        "Legacy CSV local mode is kept for manual CSV workflows only. "
+        "Unity and the future shared backend use FastAPI /search as the source of truth."
+    )
+
     with st.sidebar:
-        st.header("DB")
+        st.header("Legacy CSV DB")
         db_dir = str(DEFAULT_DB_DIR)
         st.caption(f"DB: {DEFAULT_DB_DIR.name}")
 
