@@ -25,7 +25,7 @@ public class ThoughtMapBattleSimulator
             return report;
         }
 
-        report.logLines.Add("=== ThoughtMap Card Battle MVP ===");
+        report.logLines.Add("=== Source of Thought Battle MVP ===");
         report.logLines.Add($"Player: {DescribeTeam(playerUnits)}");
         report.logLines.Add($"Enemy : {DescribeTeam(enemyUnits)}");
 

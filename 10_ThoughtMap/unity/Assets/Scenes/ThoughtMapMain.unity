@@ -5002,6 +5002,8 @@ MonoBehaviour:
   themeRoot: {fileID: 936788466}
   targetCamera: {fileID: 330585545}
   applyOnEnable: 1
+  replaceLegacyTitleText: 1
+  displayTitle: Source of Thought
   backgroundColor: {r: 0.005, g: 0.018, b: 0.05, a: 1}
   panelColor: {r: 0.012, g: 0.045, b: 0.1, a: 0.82}
   cardColor: {r: 0.015, g: 0.055, b: 0.12, a: 0.9}
@@ -5501,6 +5503,121 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 570347907}
   m_CullTransparentMesh: 1
+--- !u!1 &572555004
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 572555005}
+  - component: {fileID: 572555007}
+  - component: {fileID: 572555006}
+  m_Layer: 5
+  m_Name: ThoughtMapBattleMVP
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &572555005
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 572555004}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 936788466}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &572555006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 572555004}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 869950bb5917a344794fa6bb8485147e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  controller: {fileID: 572555007}
+  buildOnAwake: 1
+  showOnStart: 1
+  panelRoot: {fileID: 0}
+  defaultSize: {x: 860, y: 720}
+  defaultPosition: {x: 0, y: 0}
+  startBattleButton: {fileID: 0}
+  toggleVisibilityButton: {fileID: 0}
+  playerDeckText: {fileID: 0}
+  enemyDeckText: {fileID: 0}
+  battleLogText: {fileID: 0}
+  battleResultText: {fileID: 0}
+  warningText: {fileID: 0}
+  gridRoot: {fileID: 0}
+--- !u!114 &572555007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 572555004}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b00e887bc2fda94d8f8e4b6b7ac07be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cardsCsvAsset: {fileID: 0}
+  streamingAssetsCsvPath: cards.csv
+  useStreamingAssetsFallback: 1
+  deckSize: 10
+  deployedCount: 5
+  playerDeckStartIndex: 0
+  enemyDeckStartIndex: 10
+  mirrorPlayerDeckWhenEnemyMissing: 1
+  playerDeployedDeckIndexes: 0000000001000000020000000300000004000000
+  enemyDeployedDeckIndexes: 0000000001000000020000000300000004000000
+  playerPositions:
+  - x: 0
+    y: 0
+  - x: 1
+    y: 0
+  - x: 2
+    y: 0
+  - x: 3
+    y: 0
+  - x: 4
+    y: 0
+  enemyPositions:
+  - x: 0
+    y: 4
+  - x: 1
+    y: 4
+  - x: 2
+    y: 4
+  - x: 3
+    y: 4
+  - x: 4
+    y: 4
+  maxRounds: 20
+  runOnStart: 0
+  gridRoot: {fileID: 0}
+  playerDeckText: {fileID: 0}
+  enemyDeckText: {fileID: 0}
+  battleLogText: {fileID: 0}
+  battleResultText: {fileID: 0}
+  warningText: {fileID: 0}
 --- !u!1 &573527459
 GameObject:
   m_ObjectHideFlags: 0
@@ -8072,6 +8189,7 @@ MonoBehaviour:
   loadingIndicatorView: {fileID: 0}
   queryParameterPanelView: {fileID: 0}
   debugRuntimeFlow: 1
+  debugParameterFlow: 0
 --- !u!1 &914320536
 GameObject:
   m_ObjectHideFlags: 0
@@ -8404,6 +8522,7 @@ RectTransform:
   - {fileID: 1307428685}
   - {fileID: 1801971714}
   - {fileID: 901955548}
+  - {fileID: 572555005}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -13149,7 +13268,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: ThoughtMap Search
+  m_text: Source of Thought - Search
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -19014,7 +19133,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: ThoughtMap
+  m_text: Source of Thought
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: fe601d6492084c446900202195a24f55, type: 2}
   m_sharedMaterial: {fileID: -1696483692792904847, guid: fe601d6492084c446900202195a24f55, type: 2}

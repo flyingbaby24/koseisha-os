@@ -67,7 +67,7 @@ public class ResultListV2View : MonoBehaviour
         contentRoot = CreateContainer(transform, "WindowContent", true);
         ConfigureVertical(contentRoot, padding, spacing);
         RectTransform titleBar = CreateBlock(contentRoot, "TitleBar", titleBarColor, 44f);
-        CreateText(titleBar, "TitleText", "Results", 18, FontStyles.Bold, textPrimary);
+        CreateText(titleBar, "TitleText", "Source of Thought - Results", 18, FontStyles.Bold, textPrimary);
         RectTransform scrollRoot = CreateContainer(contentRoot, "ContentArea", false);
         AddLayout(scrollRoot.gameObject, 0f, 0f, false, true);
         ScrollRect scrollRect = scrollRoot.gameObject.AddComponent<ScrollRect>();
@@ -329,6 +329,20 @@ public class ResultListV2View : MonoBehaviour
         contentRoot = transform.Find("WindowContent") as RectTransform;
         Transform content = transform.Find("WindowContent/ContentArea/Viewport/Content");
         itemContent = content as RectTransform;
+        SetText(FindTextByName("TitleText"), "Source of Thought - Results");
+    }
+
+    private TMP_Text FindTextByName(string objectName)
+    {
+        TMP_Text[] texts = GetComponentsInChildren<TMP_Text>(true);
+        foreach (TMP_Text text in texts)
+        {
+            if (text != null && text.name == objectName)
+            {
+                return text;
+            }
+        }
+        return null;
     }
 
     private void EnsureWindowFeatures()

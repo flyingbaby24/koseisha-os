@@ -48,6 +48,8 @@ public class ThoughtMapBattleMvpController : MonoBehaviour
     [SerializeField] private TMP_Text playerDeckText;
     [SerializeField] private TMP_Text enemyDeckText;
     [SerializeField] private TMP_Text battleLogText;
+    [SerializeField] private TMP_Text battleResultText;
+    [SerializeField] private TMP_Text warningText;
 
     private readonly List<TMP_Text> gridCells = new List<TMP_Text>();
     private List<ThoughtMapBattleCardData> loadedCards = new List<ThoughtMapBattleCardData>();
@@ -60,13 +62,20 @@ public class ThoughtMapBattleMvpController : MonoBehaviour
         }
     }
 
-    [ContextMenu("Run ThoughtMap Battle MVP")]
+    [ContextMenu("Run Source of Thought Battle MVP")]
+    public void Run()
+    {
+        RunBattle();
+    }
+
     public void RunBattle()
     {
+        ClearStatus();
         loadedCards = LoadCards();
         if (loadedCards.Count == 0)
         {
-            WriteLog("No cards loaded. Assign a cards.csv TextAsset or place cards.csv in StreamingAssets.");
+            WriteWarning("No cards loaded. Assign a cards.csv TextAsset or place cards.csv in StreamingAssets.");
+            WriteLog("Battle did not start because cards.csv was not loaded.");
             return;
         }
 
@@ -85,18 +94,43 @@ public class ThoughtMapBattleMvpController : MonoBehaviour
         ThoughtMapBattleSimulator simulator = new ThoughtMapBattleSimulator();
         ThoughtMapBattleReport report = simulator.Simulate(playerUnits, enemyUnits, maxRounds);
         WriteLog(report.ToMultilineLog());
+        WriteResult($"Winner: {report.winner} / Rounds: {report.rounds}");
+    }
+
+    public void SetUiTargets(
+        TMP_Text playerDeck,
+        TMP_Text enemyDeck,
+        TMP_Text battleLog,
+        TMP_Text battleResult,
+        TMP_Text warning,
+        Transform grid
+    )
+    {
+        playerDeckText = playerDeck;
+        enemyDeckText = enemyDeck;
+        battleLogText = battleLog;
+        battleResultText = battleResult;
+        warningText = warning;
+        gridRoot = grid;
     }
 
     public List<ThoughtMapBattleCardData> LoadCards()
     {
-        if (cardsCsvAsset != null)
+        try
         {
-            return ThoughtMapCardsCsvLoader.LoadFromText(cardsCsvAsset.text);
-        }
+            if (cardsCsvAsset != null)
+            {
+                return ThoughtMapCardsCsvLoader.LoadFromText(cardsCsvAsset.text);
+            }
 
-        if (useStreamingAssetsFallback)
+            if (useStreamingAssetsFallback)
+            {
+                return ThoughtMapCardsCsvLoader.LoadFromStreamingAssets(streamingAssetsCsvPath);
+            }
+        }
+        catch (System.Exception exc)
         {
-            return ThoughtMapCardsCsvLoader.LoadFromStreamingAssets(streamingAssetsCsvPath);
+            WriteWarning($"Could not load cards.csv: {exc.Message}");
         }
 
         return new List<ThoughtMapBattleCardData>();
@@ -282,6 +316,42 @@ public class ThoughtMapBattleMvpController : MonoBehaviour
             battleLogText.text = message;
         }
         Debug.Log("[ThoughtMapBattle]\n" + message, this);
+    }
+
+    private void WriteResult(string message)
+    {
+        if (battleResultText != null)
+        {
+            battleResultText.text = message;
+        }
+        Debug.Log("[ThoughtMapBattle] " + message, this);
+    }
+
+    private void WriteWarning(string message)
+    {
+        if (warningText != null)
+        {
+            warningText.text = message;
+            warningText.gameObject.SetActive(true);
+        }
+        Debug.LogWarning("[ThoughtMapBattle] " + message, this);
+    }
+
+    private void ClearStatus()
+    {
+        if (warningText != null)
+        {
+            warningText.text = "";
+            warningText.gameObject.SetActive(false);
+        }
+        if (battleResultText != null)
+        {
+            battleResultText.text = "Battle not started.";
+        }
+        if (battleLogText != null)
+        {
+            battleLogText.text = "";
+        }
     }
 
     private void DestroyRuntimeObject(Object target)

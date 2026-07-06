@@ -26,6 +26,7 @@ Added scripts:
 - `Assets/Scripts/Battle/ThoughtMapHateCalculator.cs`: target selection by hate score.
 - `Assets/Scripts/Battle/ThoughtMapBattleSimulator.cs`: 5vs5 auto-battle loop and log generation.
 - `Assets/Scripts/Battle/ThoughtMapBattleMvpController.cs`: scene-facing component that loads cards, deploys units, draws an optional 5x5 grid, and writes the battle log.
+- `Assets/Scripts/Battle/ThoughtMapBattleMvpPanelView.cs`: minimal runtime UI panel with Start Battle, player/enemy deck summaries, grid, battle log, result, and missing-CSV warning.
 
 ### Expected cards.csv columns
 
@@ -80,10 +81,36 @@ Assets/StreamingAssets/cards.csv
 5. Assign either:
    - `Cards Csv Asset`, or
    - leave it empty and keep `Streaming Assets Csv Path = cards.csv`.
-6. Optional UI:
-   - Assign a `Grid Root` RectTransform to auto-create a 5x5 text grid.
-   - Assign `Player Deck Text`, `Enemy Deck Text`, and `Battle Log Text` TMP fields.
-7. Press the component context menu `Run ThoughtMap Battle MVP`, or enable `Run On Start`.
+6. Keep `Run On Start` off for manual MVP testing.
+7. Add `ThoughtMapBattleMvpPanelView` to the same GameObject.
+8. Assign the `Controller` field to the `ThoughtMapBattleMvpController` on the same GameObject.
+9. Leave `Build On Awake` enabled to create the simple Battle panel at runtime.
+10. Press Play, then press `Start Battle` in the Battle panel.
+
+The panel creates:
+
+- Battle screen parent panel
+- Start Battle button
+- Player Deck text area
+- Enemy Deck text area
+- 5x5 grid area
+- Battle Result text
+- Battle Log text
+- Missing `cards.csv` warning text
+
+If `cards.csv` is not assigned and is not found in `Assets/StreamingAssets/cards.csv`, the Start Battle button will not crash the scene. It shows a warning in the panel and writes a warning to the Console.
+
+The Battle UI is independent from the existing ThoughtMap search UI. To hide/show it from another button, wire that button to `ThoughtMapBattleMvpPanelView.ToggleVisible()`.
+
+The older optional manual UI fields on `ThoughtMapBattleMvpController` still work. `ThoughtMapBattleMvpPanelView` simply binds its generated TMP fields to the controller by calling `SetUiTargets(...)`.
+
+### Battle MVP checks
+
+- Unity compiles after adding the Battle scripts.
+- `Run On Start` is off unless you intentionally want auto-run.
+- Play mode shows the Battle panel without changing the search UI.
+- Pressing `Start Battle` with a valid `cards.csv` fills Player Deck, Enemy Deck, Battle Grid, Battle Result, and Battle Log.
+- Pressing `Start Battle` without `cards.csv` shows the warning text and does not throw an exception.
 
 This MVP is deliberately log-first. It proves that cards can be loaded, deployed, placed on a grid, and resolved through an auto-battle loop before any polished battle UI or skill generation is added.
 

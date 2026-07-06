@@ -10,6 +10,8 @@ public class ThoughtMapNeonTheme : MonoBehaviour
     [SerializeField] private Transform themeRoot;
     [SerializeField] private Camera targetCamera;
     [SerializeField] private bool applyOnEnable = true;
+    [SerializeField] private bool replaceLegacyTitleText = true;
+    [SerializeField] private string displayTitle = "Source of Thought";
 
     [Header("Palette")]
     [SerializeField] private Color backgroundColor = new Color(0.005f, 0.018f, 0.05f, 1f);
@@ -90,6 +92,11 @@ public class ThoughtMapNeonTheme : MonoBehaviour
     {
         foreach (TMP_Text text in root.GetComponentsInChildren<TMP_Text>(true))
         {
+            if (replaceLegacyTitleText && IsLegacyTitleText(text.text))
+            {
+                text.text = ReplacementTitle(text.text);
+            }
+
             string lowerName = text.name.ToLowerInvariant();
             if (lowerName.Contains("title") || lowerName.Contains("thoughtmap"))
             {
@@ -106,6 +113,25 @@ public class ThoughtMapNeonTheme : MonoBehaviour
 
             text.color = textPrimary;
         }
+    }
+
+    private bool IsLegacyTitleText(string value)
+    {
+        string normalized = (value ?? string.Empty).Trim();
+        return normalized == "ThoughtMap"
+            || normalized == "T h o u g h t M a p"
+            || normalized == "ThoughtMap Search";
+    }
+
+    private string ReplacementTitle(string value)
+    {
+        string normalized = (value ?? string.Empty).Trim();
+        if (normalized == "ThoughtMap Search")
+        {
+            return displayTitle + " - Search";
+        }
+
+        return displayTitle;
     }
 
     private void ApplyButtons(Transform root)

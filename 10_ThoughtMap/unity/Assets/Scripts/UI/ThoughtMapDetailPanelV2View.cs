@@ -153,7 +153,7 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         RectTransform profile = CreateBlock(contentRoot, "ResultProfileBlock");
         AddPreferredSize(profile.gameObject, 0f, profileHeight, false);
         ConfigureVertical(profile, blockPadding, 16);
-        TMP_Text profileHeading = CreateText(profile, "ProfileHeadingText", "Selected Document Profile", Mathf.Max(18, titleFontSize - 2), FontStyles.Bold, textPrimary);
+        TMP_Text profileHeading = CreateText(profile, "ProfileHeadingText", "Source of Thought - Selected Document", Mathf.Max(18, titleFontSize - 2), FontStyles.Bold, textPrimary);
         profileHeading.color = textPrimary;
         RectTransform profileRow = CreateContainer(profile, "ProfileRow", false);
         AddPreferredSize(profileRow.gameObject, 0f, Mathf.Max(120f, profileHeight - 90f), false);
@@ -383,6 +383,8 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         queryRadarChartView = queryRadarChartView == null ? FindComponentByName<ParameterRadarChartView>("QueryRadarChart") : queryRadarChartView;
         radarBaseView = radarBaseView == null ? FindComponentByName<HologramRadarBaseView>("ResultRadarHologramBase") : radarBaseView;
         queryRadarBaseView = queryRadarBaseView == null ? FindComponentByName<HologramRadarBaseView>("QueryRadarHologramBase") : queryRadarBaseView;
+        SetText(FindText("ProfileHeadingText"), "Source of Thought - Selected Document");
+        SetText(FindText("QueryProfileHeadingText"), "Source of Thought - Query Profile");
         if (radarChartView != null) radarChartView.SetHologramStyleEnabled(enableRadar3DMotion);
         if (queryRadarChartView != null) queryRadarChartView.SetHologramStyleEnabled(enableRadar3DMotion);
         if (radarChartView != null) radarChartView.SetChartColors(selectedRadarLine, selectedRadarFill);
@@ -463,7 +465,7 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         float queryProfileHeight = Mathf.Max(280f, profileHeight * 0.72f);
         AddPreferredSize(queryProfile.gameObject, 0f, queryProfileHeight, false);
         ConfigureVertical(queryProfile, blockPadding, 16);
-        TMP_Text queryHeading = CreateText(queryProfile, "QueryProfileHeadingText", "Search Query Profile", Mathf.Max(18, titleFontSize - 2), FontStyles.Bold, textPrimary);
+        TMP_Text queryHeading = CreateText(queryProfile, "QueryProfileHeadingText", "Source of Thought - Query Profile", Mathf.Max(18, titleFontSize - 2), FontStyles.Bold, textPrimary);
         queryHeading.color = textPrimary;
 
         RectTransform queryRow = CreateContainer(queryProfile, "QueryProfileRow", false);

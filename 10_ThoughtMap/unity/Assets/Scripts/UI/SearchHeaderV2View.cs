@@ -108,7 +108,7 @@ public class SearchHeaderV2View : MonoBehaviour
         RectTransform content = CreateContainer(transform, "WindowContent", true);
         ConfigureVertical(content, padding, spacing);
         RectTransform titleBar = CreateBlock(content, "TitleBar", titleBarColor, 42f);
-        CreateText(titleBar, "TitleText", "ThoughtMap Search", 18, FontStyles.Bold, textPrimary);
+        CreateText(titleBar, "TitleText", "Source of Thought - Search", 18, FontStyles.Bold, textPrimary);
 
         RectTransform topRow = CreateContainer(content, "SearchTopRow", false);
         ConfigureHorizontal(topRow, padding, spacing);
@@ -419,6 +419,7 @@ public class SearchHeaderV2View : MonoBehaviour
 
     private void CacheReferences()
     {
+        SetText(FindComponentByName<TMP_Text>("TitleText"), "Source of Thought - Search");
         modeDropdown = FindComponentByName<TMP_Dropdown>("ModeDropdown");
         sourceDropdown = FindComponentByName<TMP_Dropdown>("SourceDropdown");
         filterDropdown = FindComponentByName<TMP_Dropdown>("FilterDropdown");
