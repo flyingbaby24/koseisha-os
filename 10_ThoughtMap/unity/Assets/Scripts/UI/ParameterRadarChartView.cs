@@ -3,6 +3,9 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+// Flat 2D radar chart. This component owns only data visualization:
+// grid, axes, filled polygon, outline, vertex points, and labels.
+// Hologram/base decoration belongs in HologramRadarBaseView.
 public class ParameterRadarChartView : MaskableGraphic
 {
     [Header("Scale")]

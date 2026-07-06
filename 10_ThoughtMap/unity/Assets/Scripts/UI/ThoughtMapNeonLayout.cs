@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 
+// Recovery/editor helper only. Do not use this as the runtime layout system for V2 windows.
+// V2 UI layout is owned by SearchHeaderV2View, ResultListV2View, and ThoughtMapDetailPanelV2View.
 [ExecuteAlways]
 public class ThoughtMapNeonLayout : MonoBehaviour
 {
@@ -112,23 +114,10 @@ public class ThoughtMapNeonLayout : MonoBehaviour
         ConfigureHorizontalGroup(linkBlock, blockPadding, blockSpacing);
         ConfigureHorizontalGroup(queryProfileBlock, blockPadding, blockSpacing);
 
-        ReparentItems(headerBlock, headerBlockItems);
-        ReparentItems(resultProfileBlock, resultProfileItems);
-        ReparentItems(saveBlock, saveBlockItems);
-        ReparentItems(linkBlock, linkBlockItems);
-        ReparentItems(queryProfileBlock, queryProfileItems);
-
-        ReparentIfAssigned(saveBlock, saveButton);
-        ReparentIfAssigned(linkBlock, urlText);
-        ReparentIfAssigned(linkBlock, openLinkButton);
-        ReparentIfAssigned(resultProfileBlock, resultRadarChart);
-        ReparentIfAssigned(queryProfileBlock, queryRadarChart);
-
-        RemoveUnsafeLayout(saveButton, true);
-        RemoveUnsafeLayout(openLinkButton, true);
-        RemoveUnsafeLayout(urlText, true);
-        RemoveUnsafeLayout(resultRadarChart, true);
-        RemoveUnsafeLayout(queryRadarChart, true);
+        Debug.Log(
+            "ThoughtMapNeonLayout created empty DetailContent/HeaderBlock/ResultProfileBlock/SaveBlock/LinkBlock/QueryProfileBlock containers only. Existing UI was not moved. Move UI elements manually after confirming the block structure.",
+            this
+        );
     }
 
     private void ConfigureResultListContent()

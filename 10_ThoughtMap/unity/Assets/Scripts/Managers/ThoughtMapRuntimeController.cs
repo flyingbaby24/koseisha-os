@@ -29,6 +29,7 @@ public class ThoughtMapRuntimeController : MonoBehaviour
     [SerializeField] private LoadingIndicatorView loadingIndicatorView;
     [SerializeField] private QueryParameterPanelView queryParameterPanelView;
     [SerializeField] private bool debugRuntimeFlow = true;
+    [SerializeField] private bool debugParameterFlow = false;
 
     private bool detailPanelV2SaveSubscribed;
     private ThoughtMapParameterScore[] currentQueryParameters;
@@ -112,7 +113,8 @@ public class ThoughtMapRuntimeController : MonoBehaviour
         string mode = GetSelectedMode();
         string source = GetSelectedSource();
         string filter = GetSelectedFilter();
-        LogRuntime($"V2 search requested query={query} mode={mode} source={source} filter={filter}");
+        int top = GetTopResults();
+        LogRuntime($"V2 search requested query={query} mode={mode} source={source} filter={filter} top={top}");
         if (string.IsNullOrWhiteSpace(query))
         {
             Debug.LogWarning("ThoughtMapRuntimeController search query is empty.", this);
@@ -126,10 +128,10 @@ public class ThoughtMapRuntimeController : MonoBehaviour
         queryParameterPanelView?.Clear();
         currentQueryParameters = null;
 
-        LogRuntime($"API search started query={query} top={topResults} mode={mode} source={source} filter={filter}");
+        LogRuntime($"API search started query={query} top={top} mode={mode} source={source} filter={filter}");
         StartCoroutine(apiClient.Search(
             query,
-            topResults,
+            top,
             mode,
             source,
             filter,
@@ -153,7 +155,7 @@ public class ThoughtMapRuntimeController : MonoBehaviour
             {
                 ThoughtMapSearchResult result = results[i];
                 int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
-                Debug.Log($"[ThoughtMapRuntimeController] SearchSuccess result index={i} doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
+                LogParameterFlow($"SearchSuccess result index={i} doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}");
             }
         }
 
@@ -165,21 +167,11 @@ public class ThoughtMapRuntimeController : MonoBehaviour
                 {
                     ThoughtMapSearchResult result = results[i];
                     int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
-                    Debug.Log($"[ThoughtMapRuntimeController] Before ResultListV2.SetResults result index={i} doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
+                    LogParameterFlow($"Before ResultListV2.SetResults result index={i} doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}");
                 }
             }
 
             resultListV2.SetResults(results);
-            if (results != null)
-            {
-                for (int i = 0; i < results.Length; i++)
-                {
-                    ThoughtMapSearchResult result = results[i];
-                    int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
-                    Debug.Log($"[ThoughtMapRuntimeController] Immediately before ResultListV2 updated count result index={i} doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
-                }
-            }
-
             LogRuntime($"ResultListV2 updated count={resultCount}");
         }
         else
@@ -295,6 +287,16 @@ public class ThoughtMapRuntimeController : MonoBehaviour
         return string.IsNullOrWhiteSpace(value) ? GetDropdownValue(filterDropdown, "all") : value;
     }
 
+    private int GetTopResults()
+    {
+        if (searchHeaderV2 != null)
+        {
+            return Mathf.Clamp(searchHeaderV2.SelectedLimit, 1, 100);
+        }
+
+        return Mathf.Clamp(topResults, 1, 100);
+    }
+
     private string GetDropdownValue(TMP_Dropdown dropdown, string fallback)
     {
         if (dropdown == null || dropdown.options == null || dropdown.options.Count == 0)
@@ -310,6 +312,14 @@ public class ThoughtMapRuntimeController : MonoBehaviour
     private void LogRuntime(string message)
     {
         if (debugRuntimeFlow)
+        {
+            Debug.Log($"[ThoughtMapRuntimeController] {message}", this);
+        }
+    }
+
+    private void LogParameterFlow(string message)
+    {
+        if (debugParameterFlow)
         {
             Debug.Log($"[ThoughtMapRuntimeController] {message}", this);
         }

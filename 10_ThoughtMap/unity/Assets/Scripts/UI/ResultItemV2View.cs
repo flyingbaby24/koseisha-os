@@ -25,6 +25,9 @@ public class ResultItemV2View : MonoBehaviour
     [SerializeField] private int padding = 12;
     [SerializeField] private int spacing = 4;
 
+    [Header("Diagnostics")]
+    [SerializeField] private bool debugResultFlow = false;
+
     private Image backgroundImage;
     private Outline outline;
     private Button button;
@@ -45,13 +48,13 @@ public class ResultItemV2View : MonoBehaviour
     public void Bind(ThoughtMapSearchResult result, Action<ThoughtMapSearchResult> onSelected)
     {
         int entryParameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
-        Debug.Log($"[ResultItemV2] Bind entry doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={entryParameterCount}", this);
+        LogResultFlow($"Bind entry doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={entryParameterCount}");
 
         BuildIfNeeded();
         boundResult = result;
         selectedCallback = onSelected;
         int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
-        Debug.Log($"[ResultItemV2] Bind doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
+        LogResultFlow($"Bind doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}");
         ApplyFontToGeneratedTexts();
         SetText(titleText, result == null || string.IsNullOrWhiteSpace(result.title) ? "Untitled" : result.title);
         SetText(authorText, result == null || string.IsNullOrWhiteSpace(result.author) ? "Unknown" : result.author);
@@ -62,14 +65,14 @@ public class ResultItemV2View : MonoBehaviour
     public void SetResult(ThoughtMapSearchResult result, Action<ThoughtMapSearchResult> onSelected)
     {
         int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
-        Debug.Log($"[ResultItemV2] SetResult entry doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
+        LogResultFlow($"SetResult entry doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}");
         Bind(result, onSelected);
     }
 
     public void BindResult(ThoughtMapSearchResult result, Action<ThoughtMapSearchResult> onSelected)
     {
         int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
-        Debug.Log($"[ResultItemV2] BindResult entry doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
+        LogResultFlow($"BindResult entry doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}");
         Bind(result, onSelected);
     }
 
@@ -171,7 +174,7 @@ public class ResultItemV2View : MonoBehaviour
         if (boundResult != null)
         {
             int parameterCount = boundResult.parameters == null ? 0 : boundResult.parameters.Length;
-            Debug.Log($"[ResultItemV2] Clicked doc_id={boundResult.doc_id} parameter count={parameterCount}", this);
+            LogResultFlow($"Clicked doc_id={boundResult.doc_id} parameter count={parameterCount}");
             selectedCallback?.Invoke(boundResult);
         }
     }
@@ -179,5 +182,13 @@ public class ResultItemV2View : MonoBehaviour
     private void SetText(TMP_Text target, string value)
     {
         if (target != null) target.text = value;
+    }
+
+    private void LogResultFlow(string message)
+    {
+        if (debugResultFlow)
+        {
+            Debug.Log($"[ResultItemV2] {message}", this);
+        }
     }
 }

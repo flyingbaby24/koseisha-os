@@ -10,6 +10,7 @@ public class ThoughtMapDraggableWindow : MonoBehaviour, IBeginDragHandler, IDrag
     [SerializeField] private bool clampInsideParent = true;
     [SerializeField] private float clampPadding = 12f;
     [SerializeField] private bool ignoreLayoutWhileDragging;
+    [SerializeField] private bool keepDetachedFromLayout;
 
     private RectTransform handleRect;
     private RectTransform parentRect;
@@ -30,8 +31,14 @@ public class ThoughtMapDraggableWindow : MonoBehaviour, IBeginDragHandler, IDrag
 
     public void Configure(RectTransform target, bool detachFromLayoutOnDrag)
     {
+        Configure(target, detachFromLayoutOnDrag, false);
+    }
+
+    public void Configure(RectTransform target, bool detachFromLayoutOnDrag, bool keepDetached)
+    {
         targetWindow = target == null ? transform as RectTransform : target;
         ignoreLayoutWhileDragging = detachFromLayoutOnDrag;
+        keepDetachedFromLayout = keepDetached;
         handleRect = transform as RectTransform;
         CacheParent();
     }
@@ -93,7 +100,7 @@ public class ThoughtMapDraggableWindow : MonoBehaviour, IBeginDragHandler, IDrag
             targetWindow.anchoredPosition = ClampAnchoredPosition(targetWindow.anchoredPosition);
         }
 
-        if (targetLayoutElement != null)
+        if (targetLayoutElement != null && !keepDetachedFromLayout)
         {
             targetLayoutElement.ignoreLayout = previousIgnoreLayout;
             targetLayoutElement = null;

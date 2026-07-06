@@ -2,6 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+// Editor/theme helper for legacy scene objects. V2 prefabs own their runtime colors directly.
 [ExecuteAlways]
 public class ThoughtMapNeonTheme : MonoBehaviour
 {

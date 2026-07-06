@@ -3,6 +3,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+// Legacy V1 result item kept for existing scenes and fallback wiring.
+// New work should target ResultItemV2View.
 public class ResultItemView : MonoBehaviour
 {
     [SerializeField] private TMP_Text titleText;

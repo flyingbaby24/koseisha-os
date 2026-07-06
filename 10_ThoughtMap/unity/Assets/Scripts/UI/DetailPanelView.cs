@@ -3,6 +3,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+// Legacy V1 detail panel kept for existing scenes and fallback wiring.
+// New work should target ThoughtMapDetailPanelV2View.
 public class DetailPanelView : MonoBehaviour
 {
     [SerializeField] private GameObject emptyStateRoot;

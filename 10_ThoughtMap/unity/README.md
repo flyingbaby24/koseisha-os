@@ -1,17 +1,130 @@
 # ThoughtMap Unity Setup
 
-This guide explains how to wire the current Unity scene to the FastAPI ThoughtMap backend and the new filter/detail/parameter UI placeholders.
+This guide explains how to wire the current Unity scene to the FastAPI ThoughtMap backend and the V2 prefab-based Unity UI.
 
-The current repository copy contains Unity scripts, but no editable scene or prefab asset is present here. Update `ThoughtMapMain` in the Unity Editor using the steps below.
+The current Unity baseline is V2-first:
+
+- `SearchHeaderV2.prefab`: search query, mode, source, and filter controls.
+- `ResultListV2.prefab`: scrollable search results.
+- `ResultItemV2.prefab`: one clickable result card.
+- `ThoughtMapDetailPanelV2.prefab`: selected document, query profile, Save, Open Link, and radar visualizations.
+
+Legacy V1 scripts and Neon recovery helpers remain in the project for existing scenes, but new work should target the V2 prefabs.
+
+## Current Unity Architecture
+
+Runtime flow:
+
+1. `ThoughtMapRuntimeController` reads V2 search controls.
+2. `ThoughtMapApiClient` calls FastAPI.
+3. `ResultListV2View` renders results using `ResultItemV2View`.
+4. Selecting a result sends the full `ThoughtMapSearchResult` to `ThoughtMapDetailPanelV2View`.
+5. `ParameterRadarChartView` draws only the flat 2D radar chart.
+6. `HologramRadarBaseView` draws only the background hologram base behind the chart.
+
+Responsibility boundaries:
+
+- `SearchHeaderV2View`: owns search-window UI and emits `SearchRequested`.
+- `ResultListV2View`: owns result-window rendering and emits `ResultSelected`.
+- `ResultItemV2View`: owns a single result card and preserves the bound result object.
+- `ThoughtMapDetailPanelV2View`: owns selected-document/query display and Save/Open Link events.
+- `ParameterRadarChartView`: data visualization only; no search, no API, no hologram base, no 3D transform.
+- `HologramRadarBaseView`: decorative background only; no parameter labels or scores.
+- `ThoughtMapDraggableWindow`: drag behavior only.
+- `ThoughtMapResizableWindow`: bottom-right resize handle behavior only.
+- `ThoughtMapWindowMotion`: show/hide motion only.
+- `NeonHoverGlow`, `NeonPanelPulse`, `NeonSlideIn`, `NeonUIFade`: optional visual effects only.
+
+Legacy / recovery status:
+
+- `DetailPanelView`, `SearchResultsListView`, and `ResultItemView` are V1 fallback scripts.
+- `ThoughtMapSearchManager` is the older V1 manager. Prefer `ThoughtMapRuntimeController` for V2.
+- `ThoughtMapNeonLayout` is a recovery/editor helper, not the runtime layout system.
+- `ThoughtMapNeonTheme` is useful for old scene objects. V2 prefabs own their runtime colors directly.
+
+Inspector controls to check:
+
+- `ThoughtMapRuntimeController`: assign `Api Client`, `SearchHeaderV2`, `ResultListV2`, and `ThoughtMapDetailPanelV2`.
+- `SearchHeaderV2View`: confirm default position/size, Japanese font, search/filter dropdown options, `Show File Drop Area`, and min resize size.
+- `ResultListV2View`: confirm `ResultItemV2` prefab, Japanese font, item height, and optional diagnostics.
+- `ThoughtMapDetailPanelV2View`: confirm Japanese font, block sizes, radar colors, and optional diagnostics.
+- `ParameterRadarChartView`: tune max value, grid steps, fill alpha, vertex labels, and label font size.
+- `HologramRadarBaseView`: tune base ring count, base scale, ring color, and ring rotation speed.
+
+SearchHeaderV2 layout:
+
+- Top row: `Mode`, `Source`, `Filter`, `Limit`, and the right-aligned `Search` button.
+- Second row: a large labeled `Search Keyword` field. This is the flexible field and should stretch naturally when the window width changes.
+- Third row: optional `FileDropArea`.
+- `Limit` is a small numeric field and maps to the `/search` `top` parameter through `ThoughtMapRuntimeController`.
+- `FileDropArea` is a visible placeholder only. It does not read files yet and does not change the current `/search` API call.
+- If an older generated one-row layout remains in the scene, `SearchHeaderV2View` rebuilds its generated `WindowContent` at runtime.
+
+File Drop future connection point:
+
+1. Add pointer/drop handling to `SearchHeaderV2View` or a dedicated file-drop component.
+2. Parse text / CSV / JSON into either a query string or a temporary local search target.
+3. Pass the derived query/search context to `ThoughtMapRuntimeController`.
+4. Keep FastAPI changes separate from this UI placeholder.
+
+Window resizing:
+
+- `SearchHeaderV2View`, `ResultListV2View`, and `ThoughtMapDetailPanelV2View` create a bottom-right `ResizeHandle` at runtime.
+- The handle uses `ThoughtMapResizableWindow`.
+- Each V2 view exposes a minimum size in the Inspector.
+- Dragging and resizing are window-root behaviors. Child blocks remain layout-managed content.
+
+Runtime hierarchy audit:
+
+- Editable `ThoughtMapMain` scene YAML is not present in this repository copy, so the audit is based on the runtime-generated V2 hierarchy in scripts and prefabs.
+- `SearchHeaderV2View` creates all search UI under `SearchHeaderV2/WindowContent`.
+- `ResultListV2View` creates all result UI under `ResultListV2/WindowContent`.
+- `ThoughtMapDetailPanelV2View` creates all detail UI under `ThoughtMapDetailPanelV2/DetailContent`.
+- Previously, `HeaderBlock`, `ResultProfileBlock`, `ActionBlock`, and `QueryProfileBlock` were made independently draggable/resizable. That allowed blocks to detach from `DetailContent` layout and appear as separate floating panels.
+- Current behavior restores `ThoughtMapDetailPanelV2` as the only movable/resizable Detail window root. Existing stale block drag/resize components under `DetailContent` are removed at runtime and are not re-added during search/result updates.
+
+DetailPanelV2 block layout:
+
+- The root `ThoughtMapDetailPanelV2` is only a faint frame and data owner.
+- Window rule: only the `ThoughtMapDetailPanelV2` root may move or resize.
+- Block rule: every object under `DetailContent` is layout-managed content, not a movement target.
+- The visual/interactive blocks are:
+  - `HeaderBlock`: Document Header Block
+  - `ResultProfileBlock`: Selected Document Profile Block
+  - `ActionBlock`: Source Link Block with Open Link and Save
+  - `QueryProfileBlock`: Search Query Profile Block
+- Each block gets its own background and outline, but does not move independently.
+- The root `ThoughtMapDetailPanelV2` owns the drag target and bottom-right resize handle.
+- `HeaderBlock`, `ResultProfileBlock`, `FooterBlock`, `ActionBlock`, and `QueryProfileBlock` must keep `LayoutElement.ignoreLayout = false`.
+- Do not add `ThoughtMapDraggableWindow` or `ThoughtMapResizableWindow` to any object below `DetailContent`.
+- `FooterBlock` remains a small note/status block for the temporary document-detail placeholder.
+
+DetailPanelV2 block interaction:
+
+- `Enable Detail Block Dragging` and `Enable Detail Block Resizing` are deprecated compatibility fields and should remain off.
+- Drag target: drag the `ThoughtMapDetailPanelV2` window surface. Block backgrounds are configured to pass pointer events through to the root, while action buttons remain clickable.
+- Resize target: use the root window's bottom-right cyan square.
+- After `ShowResult()` or `ShowQueryParameters()`, the runtime reapplies the root-only drag/resize setup and removes stale block-level interaction components.
+- For diagnostics, enable `Debug Block Interaction` on `ThoughtMapDetailPanelV2View`. The Console should report `rootDrag=True`, `rootResize=True`, and `illegalBlockDrag=0`, `illegalBlockResize=0`.
+- If content separates from the panel, enable `Debug Block Interaction` on `ThoughtMapDetailPanelV2View` and confirm stale block drag/resize components are being removed.
+
+Reset old serialized values:
+
+1. Select any existing `ResultRadarChart` or `QueryRadarChart`.
+2. Confirm RectTransform Rotation is `0, 0, 0`.
+3. Confirm the component is `ParameterRadarChartView` and no old tilt/floating fields remain.
+4. Confirm `ResultRadarHologramBase` / `QueryRadarHologramBase` are separate sibling objects behind the chart.
+5. If the Inspector still shows stale fields, remove and re-add `ParameterRadarChartView`, then reapply colors and label settings.
 
 ## Goal
 
-Add these UI pieces to the existing `ThoughtMapMain` scene without breaking the current search flow:
+Keep these UI pieces wired in the existing `ThoughtMapMain` scene without breaking the current search flow:
 
-- Filter Dropdown for `filters/*.json` selection
-- Right-side Detail Panel
-- Parameter Scores Panel inside the Detail Panel
-- Inspector references for `ThoughtMapSearchManager`, `DetailPanelView`, and `FilterSelectorView`
+- V2 Search Header for query/mode/source/filter selection
+- V2 Results Window for clickable search results
+- V2 Detail Panel for selected document, Source Link, Save, and parameter profiles
+- 2D radar chart plus separate hologram base
+- Inspector references for `ThoughtMapRuntimeController`, `SearchHeaderV2View`, `ResultListV2View`, and `ThoughtMapDetailPanelV2View`
 
 
 ## Dark SF / Neon UI Theme
@@ -1096,7 +1209,7 @@ This pass adds movement and motion without changing FastAPI, Repository, SQLite,
 
 Added scripts:
 
-- `ThoughtMapDraggableWindow`: drag a window from a header or block handle.
+- `ThoughtMapDraggableWindow`: drag a window root.
 - `ThoughtMapWindowMotion`: fade-in plus subtle scale-up using CanvasGroup.
 - `ParameterRadarChartView`: flat 2D radar chart for parameter comparison.
 - `HologramRadarBaseView`: separate background Graphic for restrained hologram base rings.
@@ -1105,11 +1218,9 @@ Runtime behavior:
 
 - `SearchHeaderV2View` automatically makes `WindowContent/TitleBar` drag the Search window.
 - `ResultListV2View` automatically makes `WindowContent/TitleBar` drag the Results window.
-- `ThoughtMapDetailPanelV2View` automatically enables drag handles for:
-  - HeaderBlock: moves the whole DetailPanelV2 window
-  - Selected Document Profile heading: moves the selected profile block
-  - Search Query Profile heading: moves the query profile block
-  - ActionBlock / Source Link area: moves the source/save action block
+- `ThoughtMapDetailPanelV2View` automatically keeps drag/resize on the `ThoughtMapDetailPanelV2` root only.
+- `DetailContent` blocks are repaired as layout-managed content after runtime build, search, and result selection.
+- Stale block-level `ThoughtMapDraggableWindow` / `ThoughtMapResizableWindow` components under `DetailContent` are removed.
 - Dragging is clamped so the target cannot move completely outside its parent.
 - V2 windows use `ThoughtMapWindowMotion` for show animation.
 - Result and query radar charts remain flat 2D. `Enable Radar 3D Motion` is kept for compatibility, but it no longer tilts, rotates, or deforms the radar chart body.
@@ -1127,9 +1238,9 @@ Manual Unity setup:
 1. Confirm the scene has `SearchHeaderV2`, `ResultListV2`, and `ThoughtMapDetailPanelV2` instances under Canvas.
 2. Press Play once. The V2 scripts attach drag and motion components automatically during runtime build.
 3. Drag Search and Results from their title bars.
-4. Drag DetailPanelV2 from its header block.
-5. Drag Selected Document Profile and Search Query Profile from their headings.
-6. Drag the Source Link / Save action area from its panel background.
+4. Drag DetailPanelV2 from the window surface. The root moves as one unit.
+5. Confirm Selected Document Profile, Search Query Profile, Source Link, Save, and Open Link all follow the same DetailPanelV2 root.
+6. Confirm DetailContent blocks do not detach from the DetailPanelV2 layout.
 7. Radar charts are always drawn as flat 2D charts. Hologram base rings are separate sibling Graphics behind the chart.
 
 Safety notes:

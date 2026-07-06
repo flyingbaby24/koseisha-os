@@ -10,7 +10,7 @@ public class SearchHeaderV2View : MonoBehaviour
     [Header("Runtime Build")]
     [SerializeField] private bool buildOnAwake = true;
     [SerializeField] private Vector2 defaultPosition = new Vector2(-310f, 320f);
-    [SerializeField] private Vector2 defaultSize = new Vector2(760f, 180f);
+    [SerializeField] private Vector2 defaultSize = new Vector2(820f, 260f);
 
     [Header("Fonts")]
     [SerializeField] private TMP_FontAsset japaneseFontAsset;
@@ -21,6 +21,10 @@ public class SearchHeaderV2View : MonoBehaviour
     [SerializeField] private string[] sourceOptions = { "all", "gutendex", "user_suno" };
     [SerializeField] private string[] filterOptions = { "all", "general", "basic_thought", "basic_literature", "jinn_os" };
     [SerializeField] private string defaultQuery = "";
+    [SerializeField] private int defaultLimit = 10;
+    [SerializeField] private bool showFileDropArea = true;
+    [TextArea(2, 3)]
+    [SerializeField] private string fileDropMessage = "Drop text / CSV / JSON file here\nor click to select file";
 
     [Header("Style")]
     [SerializeField] private Color panelColor = new Color(0.012f, 0.045f, 0.10f, 0.88f);
@@ -31,16 +35,26 @@ public class SearchHeaderV2View : MonoBehaviour
     [SerializeField] private Color cyan = new Color(0.05f, 0.82f, 1f, 0.8f);
     [SerializeField] private int padding = 14;
     [SerializeField] private int spacing = 10;
+    [SerializeField] private float modeWidth = 128f;
+    [SerializeField] private float sourceWidth = 138f;
+    [SerializeField] private float filterWidth = 150f;
+    [SerializeField] private float keywordMinWidth = 260f;
+    [SerializeField] private float limitWidth = 86f;
+    [SerializeField] private float searchButtonWidth = 110f;
 
     [Header("Window Interaction")]
     [SerializeField] private bool enableDragging = true;
     [SerializeField] private bool enableWindowMotion = true;
+    [SerializeField] private bool enableResizing = true;
+    [SerializeField] private Vector2 minWindowSize = new Vector2(680f, 220f);
 
     private TMP_InputField searchInput;
+    private TMP_InputField limitInput;
     private TMP_Dropdown modeDropdown;
     private TMP_Dropdown sourceDropdown;
     private TMP_Dropdown filterDropdown;
     private Button searchButton;
+    private TMP_Text fileDropText;
 
     public event Action SearchRequested;
 
@@ -48,6 +62,7 @@ public class SearchHeaderV2View : MonoBehaviour
     public string SelectedMode => GetDropdownValue(modeDropdown, "semantic");
     public string SelectedSource => GetDropdownValue(sourceDropdown, "all");
     public string SelectedFilter => GetDropdownValue(filterDropdown, "all");
+    public int SelectedLimit => GetLimitValue();
 
     private void Awake()
     {
@@ -62,6 +77,20 @@ public class SearchHeaderV2View : MonoBehaviour
     public void BuildIfNeeded()
     {
         ApplyDefaultWindowRect();
+
+        if (searchInput != null || transform.Find("WindowContent") != null)
+        {
+            if (!HasCurrentLayout())
+            {
+                RemoveGeneratedLayout();
+            }
+            else
+            {
+                CacheReferences();
+                EnsureWindowFeatures();
+                return;
+            }
+        }
 
         if (searchInput != null || transform.Find("WindowContent") != null)
         {
@@ -80,16 +109,53 @@ public class SearchHeaderV2View : MonoBehaviour
         ConfigureVertical(content, padding, spacing);
         RectTransform titleBar = CreateBlock(content, "TitleBar", titleBarColor, 42f);
         CreateText(titleBar, "TitleText", "ThoughtMap Search", 18, FontStyles.Bold, textPrimary);
-        RectTransform controls = CreateContainer(content, "ContentArea", false);
-        ConfigureHorizontal(controls, padding, spacing);
-        modeDropdown = CreateDropdown(controls, "ModeDropdown", modeOptions, 120f);
-        sourceDropdown = CreateDropdown(controls, "SourceDropdown", sourceOptions, 130f);
-        filterDropdown = CreateDropdown(controls, "FilterDropdown", filterOptions, 150f);
-        searchInput = CreateInput(controls, "SearchInput", defaultQuery, 280f);
-        searchButton = CreateButton(controls, "SearchButton", "Search", new Vector2(110f, 42f));
+
+        RectTransform topRow = CreateContainer(content, "SearchTopRow", false);
+        ConfigureHorizontal(topRow, padding, spacing);
+        AddLayout(topRow.gameObject, 0f, 66f, false);
+
+        RectTransform modeField = CreateLabeledField(topRow, "ModeField", "Mode", modeWidth, false);
+        modeDropdown = CreateDropdown(modeField, "ModeDropdown", modeOptions, 0f);
+
+        RectTransform sourceField = CreateLabeledField(topRow, "SourceField", "Source", sourceWidth, false);
+        sourceDropdown = CreateDropdown(sourceField, "SourceDropdown", sourceOptions, 0f);
+
+        RectTransform filterField = CreateLabeledField(topRow, "FilterField", "Filter", filterWidth, false);
+        filterDropdown = CreateDropdown(filterField, "FilterDropdown", filterOptions, 0f);
+
+        RectTransform spacer = CreateContainer(topRow, "TopRowSpacer", false);
+        AddLayout(spacer.gameObject, 0f, 64f, false);
+
+        RectTransform limitField = CreateLabeledField(topRow, "LimitField", "Limit", limitWidth, false);
+        limitInput = CreateInput(limitField, "LimitInput", Mathf.Max(1, defaultLimit).ToString(), 0f);
+        if (limitInput != null)
+        {
+            limitInput.contentType = TMP_InputField.ContentType.IntegerNumber;
+        }
+
+        RectTransform actionField = CreateLabeledField(topRow, "ActionField", " ", searchButtonWidth, false);
+        searchButton = CreateButton(actionField, "SearchButton", "Search", new Vector2(0f, 42f));
         searchButton.onClick.AddListener(HandleSearchClicked);
-        RectTransform action = CreateBlock(content, "ActionArea", titleBarColor, 34f);
-        CreateText(action, "HintText", "Search mode, source, and filter are frontend controls for the FastAPI search endpoint.", 12, FontStyles.Normal, textSecondary);
+
+        RectTransform keywordRow = CreateContainer(content, "KeywordRow", false);
+        ConfigureHorizontal(keywordRow, padding, spacing);
+        AddLayout(keywordRow.gameObject, 0f, 74f, false);
+        RectTransform keywordField = CreateLabeledField(keywordRow, "KeywordField", "Search Keyword", keywordMinWidth, true);
+        searchInput = CreateInput(keywordField, "SearchInput", defaultQuery, 0f);
+
+        if (showFileDropArea)
+        {
+            RectTransform fileDrop = CreateBlock(content, "FileDropArea", titleBarColor, 58f);
+            Outline fileOutline = fileDrop.GetComponent<Outline>();
+            if (fileOutline == null) fileOutline = fileDrop.gameObject.AddComponent<Outline>();
+            fileOutline.effectColor = new Color(cyan.r, cyan.g, cyan.b, 0.75f);
+            fileOutline.effectDistance = new Vector2(1.5f, -1.5f);
+            Button fileButton = fileDrop.gameObject.AddComponent<Button>();
+            fileButton.onClick.AddListener(HandleFileDropClicked);
+            fileDropText = CreateText(fileDrop, "FileDropText", fileDropMessage + "\nFile input: placeholder", 13, FontStyles.Normal, textSecondary);
+            fileDropText.alignment = TextAlignmentOptions.Center;
+        }
+
         EnsureWindowFeatures();
     }
 
@@ -100,13 +166,14 @@ public class SearchHeaderV2View : MonoBehaviour
         if (modeDropdown != null) modeDropdown.interactable = value;
         if (sourceDropdown != null) sourceDropdown.interactable = value;
         if (filterDropdown != null) filterDropdown.interactable = value;
+        if (limitInput != null) limitInput.interactable = value;
     }
 
     private TMP_InputField CreateInput(Transform parent, string name, string value, float width)
     {
         GameObject root = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(TMP_InputField));
         root.transform.SetParent(parent, false);
-        AddLayout(root, width, 42f, true);
+        AddLayout(root, width, 42f, width > 0f);
         Image image = root.GetComponent<Image>();
         image.color = controlColor;
         Outline outline = root.AddComponent<Outline>();
@@ -129,7 +196,7 @@ public class SearchHeaderV2View : MonoBehaviour
     {
         GameObject root = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(TMP_Dropdown));
         root.transform.SetParent(parent, false);
-        AddLayout(root, width, 42f, true);
+        AddLayout(root, width, 42f, width > 0f);
         Image image = root.GetComponent<Image>();
         image.color = controlColor;
         Outline outline = root.AddComponent<Outline>();
@@ -202,7 +269,7 @@ public class SearchHeaderV2View : MonoBehaviour
     {
         GameObject root = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button), typeof(NeonHoverGlow));
         root.transform.SetParent(parent, false);
-        AddLayout(root, size.x, size.y, true);
+        AddLayout(root, size.x, size.y, size.x > 0f);
         Image image = root.GetComponent<Image>();
         image.color = controlColor;
         TMP_Text text = CreateText(root.transform, "Label", label, 15, FontStyles.Normal, textPrimary);
@@ -223,6 +290,24 @@ public class SearchHeaderV2View : MonoBehaviour
         AddLayout(rect.gameObject, 0f, height, false);
         ConfigureVertical(rect, 10, 4);
         return rect;
+    }
+
+    private RectTransform CreateLabeledField(RectTransform parent, string name, string label, float width, bool flexibleWidth)
+    {
+        RectTransform field = CreateContainer(parent, name, false);
+        AddLayout(field.gameObject, width, 64f, !flexibleWidth);
+        LayoutElement layout = field.GetComponent<LayoutElement>();
+        if (layout != null)
+        {
+            layout.minWidth = flexibleWidth ? width : layout.minWidth;
+            layout.flexibleWidth = flexibleWidth ? 1f : 0f;
+        }
+
+        ConfigureVertical(field, 0, 4);
+        TMP_Text labelText = CreateText(field, "Label", label, 12, FontStyles.Normal, textSecondary);
+        labelText.alignment = TextAlignmentOptions.Left;
+        AddLayout(labelText.gameObject, 0f, 18f, false);
+        return field;
     }
 
     private RectTransform CreateContainer(Transform parent, string name, bool stretch)
@@ -302,12 +387,28 @@ public class SearchHeaderV2View : MonoBehaviour
         SearchRequested?.Invoke();
     }
 
+    private void HandleFileDropClicked()
+    {
+        Debug.Log("[SearchHeaderV2] File Drop Area clicked. File selection is a future extension point.", this);
+        SetText(fileDropText, fileDropMessage + "\nFile input: placeholder only");
+    }
+
     private string GetDropdownValue(TMP_Dropdown dropdown, string fallback)
     {
         if (dropdown == null || dropdown.options == null || dropdown.options.Count == 0) return fallback;
         int index = Mathf.Clamp(dropdown.value, 0, dropdown.options.Count - 1);
         string value = dropdown.options[index].text;
         return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim().ToLowerInvariant();
+    }
+
+    private int GetLimitValue()
+    {
+        if (limitInput == null || string.IsNullOrWhiteSpace(limitInput.text))
+        {
+            return Mathf.Max(1, defaultLimit);
+        }
+
+        return int.TryParse(limitInput.text, out int value) ? Mathf.Clamp(value, 1, 100) : Mathf.Max(1, defaultLimit);
     }
 
     private void ApplyFont(TMP_Text text)
@@ -318,17 +419,70 @@ public class SearchHeaderV2View : MonoBehaviour
 
     private void CacheReferences()
     {
-        Transform root = transform.Find("WindowContent/ContentArea");
-        if (root == null) return;
-        modeDropdown = root.Find("ModeDropdown") == null ? null : root.Find("ModeDropdown").GetComponent<TMP_Dropdown>();
-        sourceDropdown = root.Find("SourceDropdown") == null ? null : root.Find("SourceDropdown").GetComponent<TMP_Dropdown>();
-        filterDropdown = root.Find("FilterDropdown") == null ? null : root.Find("FilterDropdown").GetComponent<TMP_Dropdown>();
-        searchInput = root.Find("SearchInput") == null ? null : root.Find("SearchInput").GetComponent<TMP_InputField>();
-        searchButton = root.Find("SearchButton") == null ? null : root.Find("SearchButton").GetComponent<Button>();
+        modeDropdown = FindComponentByName<TMP_Dropdown>("ModeDropdown");
+        sourceDropdown = FindComponentByName<TMP_Dropdown>("SourceDropdown");
+        filterDropdown = FindComponentByName<TMP_Dropdown>("FilterDropdown");
+        searchInput = FindComponentByName<TMP_InputField>("SearchInput");
+        limitInput = FindComponentByName<TMP_InputField>("LimitInput");
+        fileDropText = FindComponentByName<TMP_Text>("FileDropText");
+        searchButton = FindComponentByName<Button>("SearchButton");
         if (searchButton != null)
         {
             searchButton.onClick.RemoveListener(HandleSearchClicked);
             searchButton.onClick.AddListener(HandleSearchClicked);
+        }
+    }
+
+    private T FindComponentByName<T>(string objectName) where T : Component
+    {
+        T[] components = GetComponentsInChildren<T>(true);
+        foreach (T component in components)
+        {
+            if (component != null && component.name == objectName)
+            {
+                return component;
+            }
+        }
+
+        return null;
+    }
+
+    private bool HasCurrentLayout()
+    {
+        Transform content = transform.Find("WindowContent");
+        return content != null && content.Find("SearchTopRow") != null && content.Find("KeywordRow") != null;
+    }
+
+    private void RemoveGeneratedLayout()
+    {
+        searchInput = null;
+        limitInput = null;
+        modeDropdown = null;
+        sourceDropdown = null;
+        filterDropdown = null;
+        searchButton = null;
+        fileDropText = null;
+
+        DestroyChildIfExists("WindowContent");
+        DestroyChildIfExists("ResizeHandle");
+    }
+
+    private void DestroyChildIfExists(string childName)
+    {
+        Transform child = transform.Find(childName);
+        if (child == null)
+        {
+            return;
+        }
+
+        if (Application.isPlaying)
+        {
+            child.SetParent(null, false);
+            Destroy(child.gameObject);
+        }
+        else
+        {
+            DestroyImmediate(child.gameObject);
         }
     }
 
@@ -346,6 +500,7 @@ public class SearchHeaderV2View : MonoBehaviour
 
         if (!enableDragging)
         {
+            EnsureResizeHandle();
             return;
         }
 
@@ -361,6 +516,44 @@ public class SearchHeaderV2View : MonoBehaviour
             drag = titleBar.gameObject.AddComponent<ThoughtMapDraggableWindow>();
         }
         drag.Configure(transform as RectTransform, false);
+        EnsureResizeHandle();
+    }
+
+    private void EnsureResizeHandle()
+    {
+        if (!enableResizing)
+        {
+            return;
+        }
+
+        RectTransform root = transform as RectTransform;
+        if (root == null)
+        {
+            return;
+        }
+
+        RectTransform handle = transform.Find("ResizeHandle") as RectTransform;
+        if (handle == null)
+        {
+            GameObject handleObject = new GameObject("ResizeHandle", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            handle = handleObject.GetComponent<RectTransform>();
+            handle.SetParent(transform, false);
+            handle.anchorMin = new Vector2(1f, 0f);
+            handle.anchorMax = new Vector2(1f, 0f);
+            handle.pivot = new Vector2(1f, 0f);
+            handle.anchoredPosition = new Vector2(-8f, 8f);
+            handle.sizeDelta = new Vector2(28f, 28f);
+            Image image = handleObject.GetComponent<Image>();
+            image.color = new Color(cyan.r, cyan.g, cyan.b, 0.35f);
+        }
+
+        ThoughtMapResizableWindow resize = handle.GetComponent<ThoughtMapResizableWindow>();
+        if (resize == null)
+        {
+            resize = handle.gameObject.AddComponent<ThoughtMapResizableWindow>();
+        }
+
+        resize.Configure(root, minWindowSize);
     }
 
     private void ApplyDefaultWindowRect()
@@ -373,5 +566,13 @@ public class SearchHeaderV2View : MonoBehaviour
         rect.pivot = new Vector2(0.5f, 0.5f);
         rect.anchoredPosition = defaultPosition;
         rect.sizeDelta = defaultSize;
+    }
+
+    private void SetText(TMP_Text target, string value)
+    {
+        if (target != null)
+        {
+            target.text = value;
+        }
     }
 }

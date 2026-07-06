@@ -49,8 +49,23 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
 
     [Header("Window Interaction")]
     [SerializeField] private bool enableDragging = true;
+    [Tooltip("Deprecated compatibility field. Detail blocks no longer move independently; the DetailPanelV2 root is the only movable window.")]
+    [SerializeField] private bool enableDetailBlockDragging = false;
     [SerializeField] private bool enableWindowMotion = true;
+    [SerializeField] private bool enableResizing = true;
+    [Tooltip("Deprecated compatibility field. Detail blocks no longer resize independently; the DetailPanelV2 root owns resizing.")]
+    [SerializeField] private bool enableDetailBlockResizing = false;
+    [SerializeField] private Vector2 minWindowSize = new Vector2(520f, 520f);
+    [SerializeField] private Vector2 minHeaderBlockSize = new Vector2(420f, 120f);
+    [SerializeField] private Vector2 minProfileBlockSize = new Vector2(460f, 300f);
+    [SerializeField] private Vector2 minSourceLinkBlockSize = new Vector2(360f, 70f);
+    [SerializeField] private Vector2 minQueryProfileBlockSize = new Vector2(460f, 260f);
+    [Tooltip("Compatibility switch for older scenes. Radar charts are always rendered as flat 2D; this only triggers legacy sanitize calls.")]
     [SerializeField] private bool enableRadar3DMotion = true;
+
+    [Header("Diagnostics")]
+    [SerializeField] private bool debugParameterFlow = false;
+    [SerializeField] private bool debugBlockInteraction = false;
 
     private RectTransform contentRoot;
     private TMP_Text titleText;
@@ -76,12 +91,19 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
 
     private void Awake()
     {
+        SanitizeDeprecatedInteractionFlags();
+
         if (buildOnAwake)
         {
             BuildIfNeeded();
         }
 
         Clear();
+    }
+
+    private void OnValidate()
+    {
+        SanitizeDeprecatedInteractionFlags();
     }
 
     public void BuildIfNeeded()
@@ -101,15 +123,15 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         {
             panelImage = gameObject.AddComponent<Image>();
         }
-        panelImage.color = panelColor;
+        panelImage.color = new Color(panelColor.r, panelColor.g, panelColor.b, 0.10f);
 
         Outline outline = GetComponent<Outline>();
         if (outline == null)
         {
             outline = gameObject.AddComponent<Outline>();
         }
-        outline.effectColor = cyan;
-        outline.effectDistance = new Vector2(1.2f, -1.2f);
+        outline.effectColor = new Color(cyan.r, cyan.g, cyan.b, 0.20f);
+        outline.effectDistance = new Vector2(0.6f, -0.6f);
 
         if (GetComponent<CanvasGroup>() == null)
         {
@@ -133,7 +155,6 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         ConfigureVertical(profile, blockPadding, 16);
         TMP_Text profileHeading = CreateText(profile, "ProfileHeadingText", "Selected Document Profile", Mathf.Max(18, titleFontSize - 2), FontStyles.Bold, textPrimary);
         profileHeading.color = textPrimary;
-        EnableDragHandle(profileHeading.gameObject, profile, true);
         RectTransform profileRow = CreateContainer(profile, "ProfileRow", false);
         AddPreferredSize(profileRow.gameObject, 0f, Mathf.Max(120f, profileHeight - 90f), false);
         ConfigureHorizontal(profileRow, blockPadding, blockSpacing);
@@ -165,12 +186,11 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         RectTransform action = CreateBlock(contentRoot, "ActionBlock");
         AddPreferredSize(action.gameObject, 0f, actionHeight, false);
         ConfigureHorizontal(action, blockPadding, blockSpacing);
-        EnableDragHandle(action.gameObject, action, true);
         urlText = CreateText(action, "UrlText", string.Empty, Mathf.Max(13, bodyFontSize), FontStyles.Normal, textSecondary);
         AddPreferredSize(urlText.gameObject, 180, actionHeight - blockPadding, true);
         openLinkButton = CreateButton(action, "OpenLinkButton", "Open Link", openButtonSize);
         openLinkButton.onClick.AddListener(HandleOpenLinkClicked);
-        saveButton = CreateButton(action, "SaveButton", "☆ Save to My Library", saveButtonSize);
+        saveButton = CreateButton(action, "SaveButton", "\u2606 Save to My Library", saveButtonSize);
         saveButton.onClick.AddListener(HandleSaveClicked);
         saveStatusText = CreateText(action, "SaveStatusText", string.Empty, Mathf.Max(12, bodyFontSize - 1), FontStyles.Normal, textSecondary);
         AddPreferredSize(saveStatusText.gameObject, 150, actionHeight - blockPadding, true);
@@ -211,8 +231,9 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         currentResult = result;
         PlayWindowShow(gameObject);
         int parameterCount = result.parameters == null ? 0 : result.parameters.Length;
-        Debug.Log($"[ThoughtMapDetailPanelV2] ShowResult doc_id={result.doc_id} parameter count={parameterCount}", this);
+        LogParameterFlow($"ShowResult doc_id={result.doc_id} parameter count={parameterCount}");
         EnsureDynamicReferences();
+        EnsureWindowFeatures();
         PlayWindowShow((transform.Find("DetailContent/ResultProfileBlock") as RectTransform)?.gameObject);
         PlayWindowShow((transform.Find("DetailContent/ActionBlock") as RectTransform)?.gameObject);
         currentUrl = string.IsNullOrWhiteSpace(result.url) ? string.Empty : result.url.Trim();
@@ -237,6 +258,8 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         {
             Debug.LogWarning("[ThoughtMapDetailPanelV2] ResultRadarChart reference is missing. Parameters were shown as text only.", this);
         }
+
+        LogDetailWindowState("ShowResult");
     }
 
     public void ShowQueryParameters(string queryText, ThoughtMapParameterScore[] queryParameters)
@@ -244,9 +267,10 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         BuildIfNeeded();
         PlayWindowShow(gameObject);
         EnsureDynamicReferences();
+        EnsureWindowFeatures();
         PlayWindowShow((transform.Find("DetailContent/QueryProfileBlock") as RectTransform)?.gameObject);
         int parameterCount = queryParameters == null ? 0 : queryParameters.Length;
-        Debug.Log($"[ThoughtMapDetailPanelV2] ShowQueryParameters query={queryText} parameter count={parameterCount}", this);
+        LogParameterFlow($"ShowQueryParameters query={queryText} parameter count={parameterCount}");
         ApplyQueryParameterScores(queryParameters);
         if (queryRadarChartView != null)
         {
@@ -258,6 +282,8 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         {
             Debug.LogWarning("[ThoughtMapDetailPanelV2] QueryRadarChart reference is missing. Query parameters were shown as text only.", this);
         }
+
+        LogDetailWindowState("ShowQueryParameters");
     }
 
     public void SetSaving()
@@ -370,7 +396,7 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
     private void ApplyParameterScores(ThoughtMapParameterScore[] scores)
     {
         int parameterCount = scores == null ? 0 : scores.Length;
-        Debug.Log($"[ThoughtMapDetailPanelV2] ApplyParameterScores count={parameterCount} parameterText={(parameterText == null ? "null" : parameterText.name)} radar={(radarChartView == null ? "null" : radarChartView.name)}", this);
+        LogParameterFlow($"ApplyParameterScores count={parameterCount} parameterText={(parameterText == null ? "null" : parameterText.name)} radar={(radarChartView == null ? "null" : radarChartView.name)}");
 
         if (parameterText == null)
         {
@@ -391,7 +417,7 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
     private void ApplyQueryParameterScores(ThoughtMapParameterScore[] scores)
     {
         int parameterCount = scores == null ? 0 : scores.Length;
-        Debug.Log($"[ThoughtMapDetailPanelV2] ApplyQueryParameterScores count={parameterCount} queryParameterText={(queryParameterText == null ? "null" : queryParameterText.name)} queryRadar={(queryRadarChartView == null ? "null" : queryRadarChartView.name)}", this);
+        LogParameterFlow($"ApplyQueryParameterScores count={parameterCount} queryParameterText={(queryParameterText == null ? "null" : queryParameterText.name)} queryRadar={(queryRadarChartView == null ? "null" : queryRadarChartView.name)}");
 
         if (queryParameterText == null)
         {
@@ -439,7 +465,6 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         ConfigureVertical(queryProfile, blockPadding, 16);
         TMP_Text queryHeading = CreateText(queryProfile, "QueryProfileHeadingText", "Search Query Profile", Mathf.Max(18, titleFontSize - 2), FontStyles.Bold, textPrimary);
         queryHeading.color = textPrimary;
-        EnableDragHandle(queryHeading.gameObject, queryProfile, true);
 
         RectTransform queryRow = CreateContainer(queryProfile, "QueryProfileRow", false);
         AddPreferredSize(queryRow.gameObject, 0f, Mathf.Max(120f, queryProfileHeight - 90f), false);
@@ -517,63 +542,306 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
 
     private void EnsureWindowFeatures()
     {
+        SanitizeDeprecatedInteractionFlags();
+        ApplyRootFrameStyle();
+        RepairDetailContentHierarchy();
         EnsureMotion(gameObject, true);
 
-        if (!enableDragging)
-        {
-            return;
-        }
-
         RectTransform rootRect = transform as RectTransform;
-        RectTransform headerBlock = transform.Find("DetailContent/HeaderBlock") as RectTransform;
-        if (headerBlock != null)
+        EnsureRootDragTarget(rootRect);
+        EnsureRootResizeHandle(rootRect);
+        LogDetailWindowState("EnsureWindowFeatures");
+    }
+
+    private void ApplyRootFrameStyle()
+    {
+        Image panelImage = GetComponent<Image>();
+        if (panelImage != null)
         {
-            EnableDragHandle(headerBlock.gameObject, rootRect, false);
+            panelImage.color = new Color(panelColor.r, panelColor.g, panelColor.b, 0.10f);
+            panelImage.raycastTarget = true;
         }
 
-        RectTransform resultProfile = transform.Find("DetailContent/ResultProfileBlock") as RectTransform;
-        if (resultProfile != null)
+        Outline outline = GetComponent<Outline>();
+        if (outline != null)
         {
-            TMP_Text heading = FindText("ProfileHeadingText");
-            EnableDragHandle(heading == null ? resultProfile.gameObject : heading.gameObject, resultProfile, true);
-            EnsureMotion(resultProfile.gameObject, false);
-        }
-
-        RectTransform queryProfile = transform.Find("DetailContent/QueryProfileBlock") as RectTransform;
-        if (queryProfile != null)
-        {
-            TMP_Text heading = FindText("QueryProfileHeadingText");
-            EnableDragHandle(heading == null ? queryProfile.gameObject : heading.gameObject, queryProfile, true);
-            EnsureMotion(queryProfile.gameObject, false);
-        }
-
-        RectTransform actionBlock = transform.Find("DetailContent/ActionBlock") as RectTransform;
-        if (actionBlock != null)
-        {
-            EnableDragHandle(actionBlock.gameObject, actionBlock, true);
-            EnsureMotion(actionBlock.gameObject, false);
+            outline.effectColor = new Color(cyan.r, cyan.g, cyan.b, 0.20f);
+            outline.effectDistance = new Vector2(0.6f, -0.6f);
         }
     }
 
-    private void EnableDragHandle(GameObject handleObject, RectTransform target, bool detachFromLayoutOnDrag)
+    private void RepairDetailContentHierarchy()
     {
-        if (!enableDragging || handleObject == null || target == null)
+        RectTransform detailContent = transform.Find("DetailContent") as RectTransform;
+        if (detailContent == null)
         {
             return;
         }
 
-        Graphic graphic = handleObject.GetComponent<Graphic>();
-        if (graphic != null)
+        StretchToParent(detailContent);
+
+        ThoughtMapDraggableWindow[] staleDrags = detailContent.GetComponentsInChildren<ThoughtMapDraggableWindow>(true);
+        foreach (ThoughtMapDraggableWindow staleDrag in staleDrags)
         {
-            graphic.raycastTarget = true;
+            RemoveComponentIfExists<ThoughtMapDraggableWindow>(staleDrag.gameObject);
         }
 
-        ThoughtMapDraggableWindow drag = handleObject.GetComponent<ThoughtMapDraggableWindow>();
+        ThoughtMapResizableWindow[] staleResizers = detailContent.GetComponentsInChildren<ThoughtMapResizableWindow>(true);
+        foreach (ThoughtMapResizableWindow staleResize in staleResizers)
+        {
+            RemoveComponentIfExists<ThoughtMapResizableWindow>(staleResize.gameObject);
+        }
+
+        foreach (RectTransform block in GetDetailBlocks())
+        {
+            if (block == null)
+            {
+                continue;
+            }
+
+            LayoutElement layout = block.GetComponent<LayoutElement>();
+            if (layout != null)
+            {
+                layout.ignoreLayout = false;
+            }
+
+            block.localRotation = Quaternion.identity;
+            block.localScale = Vector3.one;
+            ConfigureBlockAsLayoutOnly(block);
+            RemoveBlockResizeHandle(block);
+            RemoveComponentIfExists<ThoughtMapDraggableWindow>(block.gameObject);
+            RemoveComponentIfExists<ThoughtMapResizableWindow>(block.gameObject);
+            RemoveComponentIfExists<ThoughtMapWindowMotion>(block.gameObject);
+        }
+
+        RestoreDetailBlockOrder();
+    }
+
+    private void SanitizeDeprecatedInteractionFlags()
+    {
+        enableDetailBlockDragging = false;
+        enableDetailBlockResizing = false;
+    }
+
+    private void ConfigureBlockAsLayoutOnly(RectTransform block)
+    {
+        if (block == null)
+        {
+            return;
+        }
+
+        LayoutElement layout = block.GetComponent<LayoutElement>();
+        if (layout != null)
+        {
+            layout.ignoreLayout = false;
+        }
+
+        Graphic[] graphics = block.GetComponentsInChildren<Graphic>(true);
+        foreach (Graphic graphic in graphics)
+        {
+            if (graphic == null)
+            {
+                continue;
+            }
+
+            Button button = graphic.GetComponent<Button>();
+            if (button != null)
+            {
+                graphic.raycastTarget = true;
+                continue;
+            }
+
+            graphic.raycastTarget = false;
+        }
+    }
+
+    private RectTransform[] GetDetailBlocks()
+    {
+        return new[]
+        {
+            transform.Find("DetailContent/HeaderBlock") as RectTransform,
+            transform.Find("DetailContent/ResultProfileBlock") as RectTransform,
+            transform.Find("DetailContent/FooterBlock") as RectTransform,
+            transform.Find("DetailContent/ActionBlock") as RectTransform,
+            transform.Find("DetailContent/QueryProfileBlock") as RectTransform
+        };
+    }
+
+    private void RestoreDetailBlockOrder()
+    {
+        SetDetailBlockSibling("HeaderBlock", 0);
+        SetDetailBlockSibling("ResultProfileBlock", 1);
+        SetDetailBlockSibling("FooterBlock", 2);
+        SetDetailBlockSibling("ActionBlock", 3);
+        SetDetailBlockSibling("QueryProfileBlock", 4);
+    }
+
+    private void SetDetailBlockSibling(string blockName, int index)
+    {
+        Transform block = transform.Find($"DetailContent/{blockName}");
+        if (block != null)
+        {
+            block.SetSiblingIndex(index);
+        }
+    }
+
+    private void RemoveBlockResizeHandle(RectTransform block)
+    {
+        if (block == null)
+        {
+            return;
+        }
+
+        Transform handle = block.Find("ResizeHandle");
+        if (handle != null)
+        {
+            DestroyRuntimeObject(handle.gameObject);
+        }
+    }
+
+    private void StretchToParent(RectTransform rect)
+    {
+        if (rect == null)
+        {
+            return;
+        }
+
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        rect.localScale = Vector3.one;
+        rect.localRotation = Quaternion.identity;
+    }
+
+    private void RemoveComponentIfExists<T>(GameObject target) where T : Component
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        T component = target.GetComponent<T>();
+        if (component != null)
+        {
+            DestroyRuntimeObject(component);
+        }
+    }
+
+    private void DestroyRuntimeObject(UnityEngine.Object target)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        if (Application.isPlaying)
+        {
+            Destroy(target);
+        }
+        else
+        {
+            DestroyImmediate(target);
+        }
+    }
+
+    private void EnsureRootDragTarget(RectTransform root)
+    {
+        if (!enableDragging || root == null)
+        {
+            return;
+        }
+
+        Image panelImage = root.GetComponent<Image>();
+        if (panelImage == null)
+        {
+            panelImage = root.gameObject.AddComponent<Image>();
+            panelImage.color = new Color(panelColor.r, panelColor.g, panelColor.b, 0.10f);
+        }
+
+        panelImage.raycastTarget = true;
+
+        ThoughtMapDraggableWindow drag = root.GetComponent<ThoughtMapDraggableWindow>();
         if (drag == null)
         {
-            drag = handleObject.AddComponent<ThoughtMapDraggableWindow>();
+            drag = root.gameObject.AddComponent<ThoughtMapDraggableWindow>();
         }
-        drag.Configure(target, detachFromLayoutOnDrag);
+
+        drag.Configure(root, false, false);
+        LogBlockInteraction($"Prepared root-only drag target={root.name}");
+    }
+
+    private void EnsureRootResizeHandle(RectTransform root)
+    {
+        if (!enableResizing || root == null)
+        {
+            return;
+        }
+
+        RectTransform handle = transform.Find("ResizeHandle") as RectTransform;
+        if (handle == null)
+        {
+            GameObject handleObject = new GameObject("ResizeHandle", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            handle = handleObject.GetComponent<RectTransform>();
+            handle.SetParent(transform, false);
+            handle.anchorMin = new Vector2(1f, 0f);
+            handle.anchorMax = new Vector2(1f, 0f);
+            handle.pivot = new Vector2(1f, 0f);
+            handle.anchoredPosition = new Vector2(-8f, 8f);
+            handle.sizeDelta = new Vector2(28f, 28f);
+            Image image = handleObject.GetComponent<Image>();
+            image.color = new Color(cyan.r, cyan.g, cyan.b, 0.35f);
+            image.raycastTarget = true;
+            Outline outline = handleObject.AddComponent<Outline>();
+            outline.effectColor = new Color(cyan.r, cyan.g, cyan.b, 0.85f);
+            outline.effectDistance = new Vector2(1f, -1f);
+            LayoutElement layout = handleObject.AddComponent<LayoutElement>();
+            layout.ignoreLayout = true;
+        }
+
+        handle.SetAsLastSibling();
+
+        ThoughtMapResizableWindow resize = handle.GetComponent<ThoughtMapResizableWindow>();
+        if (resize == null)
+        {
+            resize = handle.gameObject.AddComponent<ThoughtMapResizableWindow>();
+        }
+
+        resize.Configure(root, minWindowSize);
+        LogBlockInteraction($"Prepared root resize handle={handle.name} target={root.name}");
+    }
+
+    private void LogDetailWindowState(string reason)
+    {
+        if (!debugBlockInteraction)
+        {
+            return;
+        }
+
+        RectTransform detailContent = transform.Find("DetailContent") as RectTransform;
+        int illegalDragCount = detailContent == null ? 0 : detailContent.GetComponentsInChildren<ThoughtMapDraggableWindow>(true).Length;
+        int illegalResizeCount = detailContent == null ? 0 : detailContent.GetComponentsInChildren<ThoughtMapResizableWindow>(true).Length;
+        bool hasRootDrag = GetComponent<ThoughtMapDraggableWindow>() != null;
+        bool hasRootResize = (transform.Find("ResizeHandle") as RectTransform)?.GetComponent<ThoughtMapResizableWindow>() != null;
+        LayoutElement rootLayout = GetComponent<LayoutElement>();
+        string rootLayoutState = rootLayout == null ? "none" : rootLayout.ignoreLayout.ToString();
+
+        Debug.Log(
+            $"[ThoughtMapDetailPanelV2] WindowState reason={reason} rootDrag={hasRootDrag} rootResize={hasRootResize} rootIgnoreLayout={rootLayoutState} illegalBlockDrag={illegalDragCount} illegalBlockResize={illegalResizeCount}",
+            this
+        );
+
+        foreach (RectTransform block in GetDetailBlocks())
+        {
+            if (block == null)
+            {
+                continue;
+            }
+
+            LayoutElement layout = block.GetComponent<LayoutElement>();
+            string ignoreLayout = layout == null ? "none" : layout.ignoreLayout.ToString();
+            Debug.Log($"[ThoughtMapDetailPanelV2] BlockState name={block.name} ignoreLayout={ignoreLayout}", block);
+        }
     }
 
     private ThoughtMapWindowMotion EnsureMotion(GameObject target, bool playNow)
@@ -834,6 +1102,22 @@ public class ThoughtMapDetailPanelV2View : MonoBehaviour
         if (target != null)
         {
             target.text = value;
+        }
+    }
+
+    private void LogParameterFlow(string message)
+    {
+        if (debugParameterFlow)
+        {
+            Debug.Log($"[ThoughtMapDetailPanelV2] {message}", this);
+        }
+    }
+
+    private void LogBlockInteraction(string message)
+    {
+        if (debugBlockInteraction)
+        {
+            Debug.Log($"[ThoughtMapDetailPanelV2][BlockInteraction] {message}", this);
         }
     }
 }

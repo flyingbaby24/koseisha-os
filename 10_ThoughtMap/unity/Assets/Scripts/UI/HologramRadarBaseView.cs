@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+// Decorative background only. This Graphic draws the hologram base behind a radar chart.
+// It does not know about parameter scores, labels, search results, or API data.
 public class HologramRadarBaseView : MaskableGraphic
 {
     [SerializeField] private bool enableBaseRings = true;

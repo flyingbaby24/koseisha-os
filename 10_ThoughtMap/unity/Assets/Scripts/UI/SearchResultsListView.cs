@@ -1,6 +1,8 @@
 using System;
 using UnityEngine;
 
+// Legacy V1 result list kept for existing scenes and fallback wiring.
+// New work should target ResultListV2View.
 public class SearchResultsListView : MonoBehaviour
 {
     [SerializeField] private Transform resultsContent;

@@ -28,6 +28,11 @@ public class ResultListV2View : MonoBehaviour
     [Header("Window Interaction")]
     [SerializeField] private bool enableDragging = true;
     [SerializeField] private bool enableWindowMotion = true;
+    [SerializeField] private bool enableResizing = true;
+    [SerializeField] private Vector2 minWindowSize = new Vector2(360f, 320f);
+
+    [Header("Diagnostics")]
+    [SerializeField] private bool debugResultFlow = false;
 
     private RectTransform contentRoot;
     private RectTransform itemContent;
@@ -94,14 +99,14 @@ public class ResultListV2View : MonoBehaviour
     public void SetResults(ThoughtMapSearchResult[] results)
     {
         int resultCount = results == null ? 0 : results.Length;
-        Debug.Log($"[ResultListV2] SetResults entry count={resultCount}", this);
+        LogResultFlow($"SetResults entry count={resultCount}");
         if (results != null)
         {
             for (int i = 0; i < results.Length; i++)
             {
                 ThoughtMapSearchResult result = results[i];
                 int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
-                Debug.Log($"[ResultListV2] SetResults item index={i} doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
+                LogResultFlow($"SetResults item index={i} doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}");
             }
         }
 
@@ -113,7 +118,7 @@ public class ResultListV2View : MonoBehaviour
         BuildIfNeeded();
         PlayWindowShow();
         int resultCount = results == null ? 0 : results.Length;
-        Debug.Log($"[ResultListV2] SetResults count={resultCount}", this);
+        LogResultFlow($"ShowResults count={resultCount}");
         if (results == null || itemContent == null)
         {
             HideExistingItems(0);
@@ -124,17 +129,17 @@ public class ResultListV2View : MonoBehaviour
             SetText(statusText, "No results");
             return;
         }
-        Debug.Log($"[ResultListV2] ShowResults entering item generation loop count={results.Length}", this);
+        LogResultFlow($"ShowResults entering item generation loop count={results.Length}");
         for (int i = 0; i < results.Length; i++)
         {
             ThoughtMapSearchResult result = results[i];
             int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
-            Debug.Log($"[ResultListV2] SetResults item index={i} doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
+            LogResultFlow($"ShowResults item index={i} doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}");
             ResultItemV2View item = GetOrCreateItem(i);
             item.SetFontAsset(ResolveFont());
             AddLayout(item.gameObject, 0f, itemHeight, false, true);
             int beforeBindParameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
-            Debug.Log($"[ResultListV2] Before ResultItemV2.SetResult index={i} doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={beforeBindParameterCount}", this);
+            LogResultFlow($"Before ResultItemV2.SetResult index={i} doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={beforeBindParameterCount}");
             item.SetResult(result, selectedResult => HandleSelected(item, selectedResult));
             NeonUIFade fade = item.GetComponent<NeonUIFade>();
             if (fade == null) fade = item.gameObject.AddComponent<NeonUIFade>();
@@ -179,13 +184,13 @@ public class ResultListV2View : MonoBehaviour
             if (existingItem != null)
             {
                 existingItem.gameObject.SetActive(true);
-                Debug.Log($"[ResultListV2] Reusing existing ResultItemV2 index={index} name={existingItem.name}", this);
+                LogResultFlow($"Reusing existing ResultItemV2 index={index} name={existingItem.name}");
                 return existingItem;
             }
         }
 
         ResultItemV2View createdItem = CreateItem();
-        Debug.Log($"[ResultListV2] Created ResultItemV2 index={index} name={createdItem.name}", this);
+        LogResultFlow($"Created ResultItemV2 index={index} name={createdItem.name}");
         return createdItem;
     }
 
@@ -217,7 +222,7 @@ public class ResultListV2View : MonoBehaviour
         selectedItem = item;
         selectedItem?.SetSelected(true);
         int parameterCount = result == null || result.parameters == null ? 0 : result.parameters.Length;
-        Debug.Log($"[ResultListV2] ResultSelected doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}", this);
+        LogResultFlow($"ResultSelected doc_id={(result == null ? "(null)" : result.doc_id)} parameter count={parameterCount}");
         ResultSelected?.Invoke(result);
     }
 
@@ -340,6 +345,7 @@ public class ResultListV2View : MonoBehaviour
 
         if (!enableDragging)
         {
+            EnsureResizeHandle();
             return;
         }
 
@@ -355,6 +361,44 @@ public class ResultListV2View : MonoBehaviour
             drag = titleBar.gameObject.AddComponent<ThoughtMapDraggableWindow>();
         }
         drag.Configure(transform as RectTransform, false);
+        EnsureResizeHandle();
+    }
+
+    private void EnsureResizeHandle()
+    {
+        if (!enableResizing)
+        {
+            return;
+        }
+
+        RectTransform root = transform as RectTransform;
+        if (root == null)
+        {
+            return;
+        }
+
+        RectTransform handle = transform.Find("ResizeHandle") as RectTransform;
+        if (handle == null)
+        {
+            GameObject handleObject = new GameObject("ResizeHandle", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            handle = handleObject.GetComponent<RectTransform>();
+            handle.SetParent(transform, false);
+            handle.anchorMin = new Vector2(1f, 0f);
+            handle.anchorMax = new Vector2(1f, 0f);
+            handle.pivot = new Vector2(1f, 0f);
+            handle.anchoredPosition = new Vector2(-8f, 8f);
+            handle.sizeDelta = new Vector2(28f, 28f);
+            Image image = handleObject.GetComponent<Image>();
+            image.color = new Color(cyan.r, cyan.g, cyan.b, 0.35f);
+        }
+
+        ThoughtMapResizableWindow resize = handle.GetComponent<ThoughtMapResizableWindow>();
+        if (resize == null)
+        {
+            resize = handle.gameObject.AddComponent<ThoughtMapResizableWindow>();
+        }
+
+        resize.Configure(root, minWindowSize);
     }
 
     private void PlayWindowShow()
@@ -374,6 +418,14 @@ public class ResultListV2View : MonoBehaviour
     private void SetText(TMP_Text text, string value)
     {
         if (text != null) text.text = value;
+    }
+
+    private void LogResultFlow(string message)
+    {
+        if (debugResultFlow)
+        {
+            Debug.Log($"[ResultListV2] {message}", this);
+        }
     }
 
     private void ApplyDefaultWindowRect()
