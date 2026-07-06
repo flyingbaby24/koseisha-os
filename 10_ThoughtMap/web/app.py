@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from pathlib import Path
 import hashlib
 import re
@@ -63,13 +64,20 @@ def require_thought_composition():
     from thought_composition import make_filter_scores, make_parameter_scores
 
     return make_filter_scores, make_parameter_scores
+=======
+import streamlit as st
 
+APP_TITLE = "ThoughtMap"
+>>>>>>> 47c2ea85f4138e95a2cd1adbbd12bf1eaac2475b
 
-st.set_page_config(
-    page_title="ThoughtMap Web v0.2",
-    layout="wide"
-)
+def main() -> None:
+    st.set_page_config(page_title=APP_TITLE, layout="wide")
+    st.title(APP_TITLE)
+    st.caption("ThoughtMap Streamlit frontend")
 
+    st.page_link("pages/02_Search.py", label="Search", icon="🔎")
+
+<<<<<<< HEAD
 st.title("ThoughtMap Web v0.2")
 st.caption("Upload texts, visualize thought clusters, search by meaning, and apply JSON thought filters.")
 
@@ -1200,3 +1208,12 @@ with tab6:
             file_name=f"{safe_title}_thought_composition_profile.csv",
             mime="text/csv"
         )
+=======
+    st.info(
+        "Use the Search page for FastAPI / shared backend mode. "
+        "This entrypoint avoids loading heavy ML dependencies."
+    )
+
+if __name__ == "__main__":
+    main()
+>>>>>>> 47c2ea85f4138e95a2cd1adbbd12bf1eaac2475b

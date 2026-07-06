@@ -1,7 +1,9 @@
 streamlit
+fastapi
+uvicorn
 pandas
 numpy
 matplotlib
+requests
 sentence-transformers
-scikit-learn
-umap-learn
+
