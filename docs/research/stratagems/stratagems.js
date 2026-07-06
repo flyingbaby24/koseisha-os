@@ -1924,100 +1924,380 @@ APIやプラットフォームも、
   "references": []
 },
   {
-    id: 25,
-    name: "偸梁換柱",
-    reading: "とうりょうかんちゅう",
-    english: "Replace the beams and pillars",
-    category: "Substitution",
-    bias: "構造変化への気づきにくさ",
-    behavioral: "Change blindness / substitution effect",
-    summary: "柱や梁のような重要構造を、気づかれないうちに入れ替える。",
-    example: "規約改定、UI変更で主導権を移す",
-    interpretation: `
+  "id": 25,
+  "name": "偸梁換柱",
+  "reading": "とうりょうかんちゅう",
+  "english": "Replace the beams and pillars",
+  "category": "Background / Stable Infrastructure",
+
+  "bias": "変化盲、背景化、安定性への依存",
+
+  "behavioral": "Change blindness / background processing / predictive processing",
+
+  "summary": "変わらないと思われている基盤を背景化させ、その構造を書き換える。",
+
+  "example": "利用規約変更、サブスク料金改定、UIデザイン変更、API仕様変更、SNSアルゴリズム更新、法制度改正、社内ルール変更",
+
+  "interpretation": `
+偸梁換柱は「すり替える計略」ではない。
+
+本質は、人間が変わらない基盤を監視しないことを利用することにある。
+
+人は毎日、
+建物、
+電気、
+水道、
+通信、
+OS、
+APIなどを確認して生きてはいない。
+
+それらが安定しているという前提があるからこそ、
+認知資源を本来の目的へ集中できる。
+
+その結果、
+変わらないと思われている構造は背景となり、
+監視対象から外れる。
+
+偸梁換柱とは、
+柱を交換する兵法ではない。
+
+背景となった基盤そのものを書き換える計略なのである。
 `,
-    principle: `
+
+  "principle": `
+安定とは安全ではない。
+
+認知資源を節約するため、
+人は変化しない対象を背景として処理する。
+
+注意は変化したものへ向き、
+背景となった基盤は監視されなくなる。
+
+だからこそ、
+最も重要な土台ほど、
+静かに置き換えることが可能になる。
+
+偸梁換柱とは、
+背景となった安定構造を利用する兵法なのである。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  "breakdown": [
+    "相手が前提として信頼している基盤を把握する",
+    "その基盤が背景化していることを確認する",
+    "監視されない構造を書き換える",
+    "相手は従来の認知モデルを維持する",
+    "変更後の構造が新しい前提として定着する"
+  ],
+
+  "noteTitle": "偸梁換柱は「すり替える計略」ではない──人は変わらない基盤を監視しない",
+
+  "noteUrl": "https://note.com/flying_baby/n/n8503e3f9ef6c",
+
+  "relatedStratagems": [12,19,21,24],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Change blindness",
+    "Background processing",
+    "Predictive processing",
+    "Habituation"
+  ],
+
+  "relatedConcepts": [
+    "背景化",
+    "変化盲",
+    "認知資源",
+    "安定性",
+    "インフラ",
+    "認知モデル",
+    "前提条件"
+  ],
+
+  "relatedNotes": [],
+
+  "references": []
   },
   {
-    id: 26,
-    name: "指桑罵槐",
-    reading: "しそうばかい",
-    english: "Point at the mulberry, curse the locust",
-    category: "Indirect Signaling",
-    bias: "間接批判の読み取り、社会的圧力",
-    behavioral: "Signaling / social norm enforcement",
-    summary: "直接言わず、別対象を叱ることで本命に圧力をかける。",
-    example: "名指しせず牽制、組織内メッセージ",
-    interpretation: `
+  "id": 26,
+  "name": "指桑罵槐",
+  "reading": "しそうばかい",
+  "english": "Point at the mulberry, curse the locust",
+  "category": "Social Norm / Group Pressure",
+
+  "bias": "集団規範、社会的排除、同調圧力",
+
+  "behavioral": "Norm enforcement / social conformity / ostracism avoidance",
+
+  "summary": "集団規範を想起させ、排除リスクを認知させることで行動を修正させる。",
+
+  "example": "SNSで『普通はこうする』という投稿、名指ししない批判、組織内の全体向け注意、『みんな守っている』というルールの強調、炎上による社会的制裁、暗黙のマナーによる牽制",
+
+  "interpretation": `
+指桑罵槐は「遠回しに批判する計略」ではない。
+
+本質は、人間が集団規範から外れることを強く恐れる認知の性質を利用することにある。
+
+人は一対一で批判されるよりも、
+「普通ならそうする」
+「みんなそうしている」
+という表現に強く反応する。
+
+その言葉の背後に、
+社会全体の評価を読み取るからである。
+
+指桑罵槐とは、
+遠回しに批判する兵法ではない。
+
+集団規範を想起させ、
+排除される可能性を認知させることで、
+相手が自発的に行動を修正する計略なのである。
 `,
-    principle: `
+
+  "principle": `
+人間は共同体の中で生きることで生存してきた。
+
+そのため、
+集団から排除される可能性は、
+生存リスクとして強く認知される。
+
+個人の意見であっても、
+「社会では普通」
+「みんなそうしている」
+という形で提示されると、
+脳はそれを社会規範として処理し始める。
+
+重要なのは、
+実際に全員がそう考えている必要はないことである。
+
+集団規範を想起させるだけで、
+排除リスクは十分に機能する。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  "breakdown": [
+    "集団規範を想起させる表現を提示する",
+    "個人の意見を社会全体の評価として認識させる",
+    "集団から外れる可能性を想起させる",
+    "排除リスクを認知させる",
+    "相手が自発的に行動を修正する"
+  ],
+
+  "noteTitle": "指桑罵槐は「遠回しに批判する計略」ではない──集団規範を利用し、排除の圧力を生み出す計略である",
+
+  "noteUrl": "https://note.com/flying_baby/n/nb69b2930c03b",
+
+  "relatedStratagems": [3,10,18,23],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Social conformity",
+    "Norm enforcement",
+    "Ostracism avoidance",
+    "Social proof"
+  ],
+
+  "relatedConcepts": [
+    "集団規範",
+    "同調圧力",
+    "社会的排除",
+    "共同体",
+    "社会規範",
+    "常識",
+    "空気"
+  ],
+
+  "relatedNotes": [],
+
+  "references": []
   },
   {
-    id: 27,
-    name: "仮痴不癲",
-    reading: "かちふてん",
-    english: "Feign foolishness without going mad",
-    category: "Impression",
-    bias: "第一印象効果、ステレオタイプ、能力過小評価",
-    behavioral: "Stereotyping / first impression effect",
-    summary: "愚者のふりをして、相手の見下しや油断を引き出す。",
-    example: "弱そうに見せて油断させる、初心者を装う",
-    interpretation: `
+  "id": 27,
+  "name": "仮痴不癲",
+  "reading": "かちふてん",
+  "english": "Feign foolishness without going mad",
+  "category": "Ability Estimation / Cognitive Shortcut",
+
+  "bias": "第一印象効果、ステレオタイプ、能力推定、集団評価",
+
+  "behavioral": "Thin-slice judgment / stereotyping / halo effect / social proof",
+
+  "summary": "能力そのものではなく、能力推定に使われる認知のショートカットを操作する。",
+
+  "example": "初心者を装う営業、弱気に振る舞う交渉、SNSでの肩書き演出、フォロワー数による信頼形成、有名企業出身というブランド、学歴や資格による能力推定、推薦コメント",
+
+  "interpretation": `
+仮痴不癲は「愚かなふりをする計略」ではない。
+
+本質は、人間が能力推定を認知のショートカットへ委ねることを利用することにある。
+
+人は他人の能力を直接測ることはできない。
+
+本来なら、
+長期間観察し、
+多くの状況を比較し、
+実績を確認しなければ能力は分からない。
+
+しかし、
+それには膨大な認知資源が必要になる。
+
+そのため人は、
+第一印象、
+肩書き、
+服装、
+話し方、
+周囲の評価などを能力の代理指標として利用する。
+
+仮痴不癲とは、
+愚かなふりをする兵法ではない。
+
+能力推定そのものを認知のショートカットへ委ねさせる計略なのである。
 `,
-    principle: `
+
+  "principle": `
+能力は直接観察しなければ分からない。
+
+しかし、
+認知資源には限界があるため、
+人は能力そのものではなく、
+能力らしく見える情報を利用して判断する。
+
+さらに、
+集団評価は能力推定を代行する認知システムとして働く。
+
+そのため、
+能力ではなく、
+能力をどう認知させるかを操作することで、
+相手の評価そのものを変えることができる。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  "breakdown": [
+    "能力を直接評価しにくい状況を作る",
+    "第一印象や肩書きなど代理指標を提示する",
+    "集団評価や外部評価を利用する",
+    "能力推定を認知のショートカットへ委ねさせる",
+    "相手が能力を過小評価または過大評価する"
+  ],
+
+  "noteTitle": "仮痴不癲は「愚かなふりをする計略」ではない──能力推定を認知のショートカットへ委ねさせる計略である",
+
+  "noteUrl": "https://note.com/flying_baby/",
+
+  "relatedStratagems": [3,10,14,18,26],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Halo effect",
+    "Thin-slice judgment",
+    "Stereotyping",
+    "Social proof",
+    "Authority bias"
+  ],
+
+  "relatedConcepts": [
+    "能力推定",
+    "第一印象",
+    "認知のショートカット",
+    "代理指標",
+    "集団評価",
+    "ステレオタイプ",
+    "肩書き"
+  ],
+
+  "relatedNotes": [],
+
+  "references": []
   },
   {
-    id: 28,
-    name: "上屋抽梯",
-    reading: "じょうおくちゅうてい",
-    english: "Remove the ladder after the enemy climbs up",
-    category: "Commitment",
-    bias: "コミット後の撤退困難、損切り不能",
-    behavioral: "Sunk cost fallacy / escalation of commitment",
-    summary: "相手を一度乗せた後、退路を断って選択を固定する。",
-    example: "導入後に条件変更、撤退コストを上げる",
-    interpretation: `
+  "id": 28,
+  "name": "上屋抽梯",
+  "reading": "じょうおくちゅうてい",
+  "english": "Remove the ladder after ascending the roof",
+  "category": "Commitment / Exit Cost",
+
+  "bias": "サンクコスト、コミットメント・エスカレーション、損失回避",
+
+  "behavioral": "Sunk cost fallacy / escalation of commitment / loss aversion",
+
+  "summary": "コミット後の認知を利用し、撤退コストを認知させることで継続を選ばせる。",
+
+  "example": "無料トライアル後の有料移行、データ移行コストの高いSaaS、チーム導入済みシステム、サブスクリプション、オンラインゲームの育成データ、資格学習、ポイント制度や会員ランク",
+
+  "interpretation": `
+上屋抽梯は「逃げ道を断つ計略」ではない。
+
+本質は、人間が一度コミットすると、
+撤退による損失を強く意識する認知の性質を利用することにある。
+
+人は行動する前と、
+行動した後では意思決定の基準が変わる。
+
+始める前は、
+「やるか、やらないか」
+を比較している。
+
+しかし、
+時間、お金、労力、人間関係などを投資すると、
+判断基準は
+「ここまでの投資を失うか、続けるか」
+へ変化する。
+
+上屋抽梯とは、
+逃げ道を断つ兵法ではない。
+
+コミット後の認知を利用し、
+撤退を困難にする計略なのである。
 `,
-    principle: `
+
+  "principle": `
+撤退コストは物理的な障害ではない。
+
+人が失うものを大きく認知することで生まれる。
+
+実際に退出できるかどうかではなく、
+「ここでやめるともったいない」
+という認知が選択を固定する。
+
+関門捉賊が入口を設計する兵法なら、
+上屋抽梯は出口を設計する兵法なのである。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  "breakdown": [
+    "相手に最初のコミットを行わせる",
+    "時間・労力・資金などの投資を積み重ねさせる",
+    "撤退による損失を強く認知させる",
+    "継続する方が合理的だと認識させる",
+    "選択を固定し撤退を困難にする"
+  ],
+
+  "noteTitle": "上屋抽梯は「逃げ道を断つ計略」ではない──コミット後の認知を利用し、撤退を困難にする計略である",
+
+  "noteUrl": "https://note.com/flying_baby/n/nf4bb20b3981b",
+
+  "relatedStratagems": [22,24,30],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Sunk cost fallacy",
+    "Escalation of commitment",
+    "Loss aversion",
+    "Status quo bias"
+  ],
+
+  "relatedConcepts": [
+    "コミットメント",
+    "撤退コスト",
+    "サンクコスト",
+    "ロックイン",
+    "継続バイアス",
+    "意思決定"
+  ],
+
+  "relatedNotes": [],
+
+  "references": []
   },
   {
     id: 29,
