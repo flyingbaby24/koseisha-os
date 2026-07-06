@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
 from search_utils import cosine
 
@@ -20,7 +20,7 @@ class ParameterFilterService:
 
     def __init__(
         self,
-        model: SentenceTransformer,
+        model: Any,
         filters_dir: str | Path | None = None,
     ) -> None:
         self.model = model

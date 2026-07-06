@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import re
 from functools import lru_cache
+from typing import Any
 
 import pandas as pd
-from sentence_transformers import SentenceTransformer
 
 from search_utils import format_similarity, normalize_text, work_similarity_by_vector
 
 from .config import ApiSettings, get_settings
-from .filter_service import ParameterFilterService
 from .repositories import SearchIndexRepository, create_search_index_repository
-from .schemas import SearchResponse, SearchResult
+from .schemas import ParameterScore, SearchResponse, SearchResult
 
 
 SEARCH_MODES = {"semantic", "keyword", "hybrid"}
@@ -44,18 +43,28 @@ class ThoughtMapSearchService:
     ) -> None:
         self.repository = repository
         self.model_name = model_name
-        self._model: SentenceTransformer | None = None
-        self._filter_service: ParameterFilterService | None = None
+        self._model: Any | None = None
+        self._filter_service: Any | None = None
 
     @property
-    def model(self) -> SentenceTransformer:
+    def model(self) -> Any:
         if self._model is None:
+            try:
+                from sentence_transformers import SentenceTransformer
+            except Exception as exc:
+                raise RuntimeError(
+                    "Semantic text search requires sentence-transformers. "
+                    "Install it for local embedding search, or use keyword/search flows "
+                    "that rely on pre-generated embeddings in public deployments."
+                ) from exc
             self._model = SentenceTransformer(self.model_name)
         return self._model
 
     @property
-    def filter_service(self) -> ParameterFilterService:
+    def filter_service(self) -> Any:
         if self._filter_service is None:
+            from .filter_service import ParameterFilterService
+
             self._filter_service = ParameterFilterService(self.model)
         return self._filter_service
 
@@ -70,7 +79,7 @@ class ThoughtMapSearchService:
         query = str(query or "").strip()
         filter_name = self._effective_filter_name(filter_name)
         results = self.search(query, top=top, mode=mode, source=source, filter_name=filter_name)
-        query_parameters = self.filter_service.score_text(query, filter_name) if filter_name else None
+        query_parameters = self._score_query_parameters(query, filter_name) if filter_name else None
         return SearchResponse(results=results, query_parameters=query_parameters)
 
     def search(
@@ -221,7 +230,7 @@ class ThoughtMapSearchService:
             doc_id = str(row.get("doc_id", "") or "")
             parameters = None
             if filter_name:
-                parameters = self.filter_service.score_embedding(
+                parameters = self._score_embedding_parameters(
                     embedding_by_doc_id.get(doc_id),
                     filter_name,
                 )
@@ -238,6 +247,26 @@ class ThoughtMapSearchService:
                 )
             )
         return output
+
+    def _score_query_parameters(
+        self,
+        query: str,
+        filter_name: str,
+    ) -> list[ParameterScore] | None:
+        try:
+            return self.filter_service.score_text(query, filter_name)
+        except RuntimeError:
+            return None
+
+    def _score_embedding_parameters(
+        self,
+        embedding_vec: object,
+        filter_name: str,
+    ) -> list[ParameterScore] | None:
+        try:
+            return self.filter_service.score_embedding(embedding_vec, filter_name)
+        except RuntimeError:
+            return None
 
     def _resolve_url(self, row: pd.Series) -> str | None:
         for column in ("url", "source_url", "link"):

@@ -1,4 +1,5 @@
 from pathlib import Path
+import hashlib
 import re
 import json
 import zipfile
@@ -8,15 +9,60 @@ import io
 import numpy as np
 import pandas as pd
 import streamlit as st
-import matplotlib.pyplot as plt
-plt.rcParams["font.family"] = "Meiryo"
-plt.rcParams["axes.unicode_minus"] = False
-from sentence_transformers import SentenceTransformer
-from sklearn.cluster import KMeans
-from sklearn.metrics.pairwise import cosine_similarity
-from umap import UMAP
 
-from thought_composition import make_filter_scores, make_parameter_scores
+
+def get_matplotlib_pyplot():
+    import matplotlib.pyplot as plt
+
+    plt.rcParams["font.family"] = "Meiryo"
+    plt.rcParams["axes.unicode_minus"] = False
+    return plt
+
+
+def require_sentence_transformer():
+    try:
+        from sentence_transformers import SentenceTransformer
+    except Exception as exc:
+        raise RuntimeError(
+            "SentenceTransformer is required only for the local Thought Composition app. "
+            "The FastAPI shared-backend search page does not need it. "
+            f"Import failed: {exc}"
+        ) from exc
+    return SentenceTransformer
+
+
+def require_umap():
+    try:
+        from umap import UMAP
+    except Exception as exc:
+        raise RuntimeError(
+            "umap-learn is required only for the local Thought Composition app. "
+            f"Import failed: {exc}"
+        ) from exc
+    return UMAP
+
+
+def require_kmeans():
+    try:
+        from sklearn.cluster import KMeans
+    except Exception as exc:
+        raise RuntimeError(
+            "scikit-learn is required only for the local Thought Composition app. "
+            f"Import failed: {exc}"
+        ) from exc
+    return KMeans
+
+
+def require_cosine_similarity():
+    from sklearn.metrics.pairwise import cosine_similarity
+
+    return cosine_similarity
+
+
+def require_thought_composition():
+    from thought_composition import make_filter_scores, make_parameter_scores
+
+    return make_filter_scores, make_parameter_scores
 
 
 st.set_page_config(
@@ -30,6 +76,8 @@ st.caption("Upload texts, visualize thought clusters, search by meaning, and app
 MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 BASE_DIR = Path(__file__).resolve().parent
 FILTER_DIR = BASE_DIR / "filters"
+USER_DATA_DIR = BASE_DIR / "user_data"
+USER_ID_LENGTH = 16
 
 DEFAULT_FILTERS = {
     "basic_thought": {
@@ -65,6 +113,65 @@ DEFAULT_FILTERS = {
 }
 
 
+def normalize_registered_email(email: str) -> str:
+    return str(email or "").strip().lower()
+
+
+def make_user_id_from_email(email: str) -> str:
+    normalized = normalize_registered_email(email)
+    if not normalized:
+        return ""
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:USER_ID_LENGTH]
+
+
+def user_embedding_dir(user_id: str) -> Path:
+    safe_user_id = re.sub(r"[^a-f0-9]", "", str(user_id or "").lower())[:USER_ID_LENGTH]
+    if not safe_user_id:
+        raise ValueError("A registered email address is required before saving user embeddings.")
+    return USER_DATA_DIR / safe_user_id
+
+
+def build_embedding_export_frame(
+    df: pd.DataFrame,
+    embeddings,
+    docs: list[dict],
+    labels: dict,
+) -> pd.DataFrame:
+    docs = docs or []
+    text_by_index = {
+        i: str(doc.get("text", "") or "")
+        for i, doc in enumerate(docs)
+        if isinstance(doc, dict)
+    }
+
+    frame = pd.DataFrame({
+        "doc_id": df["doc_id"] if "doc_id" in df.columns else [f"doc_{i:06d}" for i in range(len(df))],
+        "title": df["title"],
+        "source": df["source"],
+        "cluster": df["cluster"],
+        "cluster_label": [
+            labels.get(str(cluster), f"Cluster {cluster}")
+            for cluster in df["cluster"]
+        ],
+        "x": df["x"],
+        "y": df["y"],
+        "text": [text_by_index.get(i, "") for i in range(len(df))],
+        "embedding": [
+            json.dumps(emb.tolist(), ensure_ascii=False)
+            for emb in embeddings
+        ],
+    })
+    return frame
+
+
+def save_user_embedding_csv(user_id: str, embedding_df: pd.DataFrame) -> Path:
+    target_dir = user_embedding_dir(user_id)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target_path = target_dir / "thoughtmap_embeddings.csv"
+    embedding_df.to_csv(target_path, index=False, encoding="utf-8-sig")
+    return target_path
+
+
 def ensure_default_filters():
     FILTER_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -80,6 +187,7 @@ def ensure_default_filters():
 
 @st.cache_resource
 def load_model():
+    SentenceTransformer = require_sentence_transformer()
     return SentenceTransformer(MODEL_NAME)
 
 
@@ -199,6 +307,9 @@ def auto_label_clusters(df, filter_score_df):
 
 
 def analyze(docs, cluster_count: int, n_neighbors: int, min_dist: float, categories):
+    UMAP = require_umap()
+    KMeans = require_kmeans()
+    make_filter_scores, _make_parameter_scores = require_thought_composition()
     model = load_model()
     titles = [d["title"] for d in docs]
     texts = [d["text"] for d in docs]
@@ -234,6 +345,7 @@ def analyze(docs, cluster_count: int, n_neighbors: int, min_dist: float, categor
 
 
 def plot_map(df, labels):
+    plt = get_matplotlib_pyplot()
     fig, ax = plt.subplots(figsize=(12, 8))
     ax.scatter(df["x"], df["y"], s=30, alpha=0.35)
 
@@ -254,6 +366,7 @@ def plot_map(df, labels):
 
 
 def plot_profile(df, labels):
+    plt = get_matplotlib_pyplot()
     counts = df["cluster"].value_counts().sort_index()
     names = [labels.get(str(cluster_id), f"Cluster {cluster_id}") for cluster_id in counts.index]
 
@@ -272,6 +385,7 @@ def plot_profile(df, labels):
 
 
 def plot_pie(df, labels):
+    plt = get_matplotlib_pyplot()
     counts = df["cluster"].value_counts().sort_index()
     names = [labels.get(str(cluster_id), f"Cluster {cluster_id}") for cluster_id in counts.index]
 
@@ -283,6 +397,7 @@ def plot_pie(df, labels):
 
 
 def plot_filter_profile(filter_score_df):
+    plt = get_matplotlib_pyplot()
     summary = filter_score_df.mean().sort_values(ascending=False)
     fig, ax = plt.subplots(figsize=(12, 5))
     bars = ax.bar(summary.index, summary.values)
@@ -299,6 +414,7 @@ def plot_filter_profile(filter_score_df):
 
 
 def plot_single_filter_scores(score_series):
+    plt = get_matplotlib_pyplot()
     score_series = score_series.sort_values(ascending=False)
     fig, ax = plt.subplots(figsize=(12, 5))
     ax.bar(score_series.index, score_series.values)
@@ -408,6 +524,7 @@ def rank_color(rank):
     }
     return colors.get(rank, "#6b7280")
 def plot_status_bar(status_df, title=None):
+    plt = get_matplotlib_pyplot()
 
     ordered = status_df.iloc[::-1].copy()
 
@@ -465,6 +582,7 @@ def plot_status_bar(status_df, title=None):
 
     return fig
 def plot_status_radar(status_df):
+    plt = get_matplotlib_pyplot()
     labels = status_df["parameter"].astype(str).tolist()
     values = status_df["share_%"].tolist()
     y_limit = get_composition_axis_limit(values)
@@ -545,6 +663,18 @@ st.sidebar.header("Input")
 uploaded_files = st.sidebar.file_uploader("Upload .txt / .md / .zip", type=["txt", "md", "zip"], accept_multiple_files=True)
 pasted_text = st.sidebar.text_area("Or paste text", height=180)
 
+st.sidebar.header("Public User Storage")
+registered_email = st.sidebar.text_input(
+    "Registered email",
+    value="",
+    help="Used only to create a stable private folder hash. The email itself is not used as a folder name.",
+)
+user_id = make_user_id_from_email(registered_email)
+if user_id:
+    st.sidebar.caption(f"user_id: `{user_id}`")
+else:
+    st.sidebar.caption("Enter an email to enable saving thoughtmap_embeddings.csv after Analyze.")
+
 split_mode_label = st.sidebar.selectbox(
     "Paste split mode",
     ["One document", "Split by delimiter ---", "Split by headings", "Split by blank blocks"]
@@ -611,6 +741,7 @@ if run:
         )
 
         model = load_model()
+        make_filter_scores, _make_parameter_scores = require_thought_composition()
 
         titles = [d["title"] for d in docs]
         texts = [d["text"] for d in docs]
@@ -832,6 +963,7 @@ with tab3:
     top_n = st.slider("Top N", 3, 30, 10)
 
     if query:
+        cosine_similarity = require_cosine_similarity()
         model = load_model()
         query_embedding = model.encode([query])
         scores = cosine_similarity(query_embedding, embeddings)[0]
@@ -885,38 +1017,12 @@ with tab6:
     # Embeddings CSV
     # -------------------------
 
-    embedding_df = pd.DataFrame({
-        "doc_id": [
-            f"doc_{i:06d}"
-            for i in range(len(df))
-        ],
-
-        "title": df["title"],
-
-        "source": df["source"],
-
-        "cluster": df["cluster"],
-
-        "cluster_label": [
-            labels.get(
-                str(cluster),
-                f"Cluster {cluster}"
-            )
-            for cluster in df["cluster"]
-        ],
-
-        "x": df["x"],
-
-        "y": df["y"],
-
-        "embedding": [
-            json.dumps(
-                emb.tolist(),
-                ensure_ascii=False
-            )
-            for emb in embeddings
-            ]
-    })
+    embedding_df = build_embedding_export_frame(
+        df=df,
+        embeddings=embeddings,
+        docs=docs,
+        labels=labels,
+    )
     embedding_csv = embedding_df.to_csv(
         index=False,
         encoding="utf-8-sig"
@@ -928,6 +1034,13 @@ with tab6:
         file_name="thoughtmap_embeddings.csv",
         mime="text/csv"
     )
+
+    if user_id:
+        if st.button("Save embeddings to my user folder"):
+            saved_path = save_user_embedding_csv(user_id, embedding_df)
+            st.success(f"Saved: {saved_path}")
+    else:
+        st.info("Enter a registered email in the sidebar to save this CSV under user_data/{user_id}.")
 
     # -------------------------
     # Cluster CSV
@@ -978,6 +1091,7 @@ with tab6:
         )
 
         try:
+            _make_filter_scores, make_parameter_scores = require_thought_composition()
             parameter_score_df = make_parameter_scores(df, filter_score_df)
         except ValueError:
             parameter_score_df = None
