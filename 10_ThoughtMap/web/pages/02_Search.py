@@ -36,7 +36,7 @@ DEFAULT_DB_DIR = BASE_DIR / "data" / "thoughtmap_db" / "official"
 FALLBACK_DB_DIR = BASE_DIR / "master"
 USER_DATA_DIR = BASE_DIR / "web" / "user_data"
 USER_ID_LENGTH = 16
-DEFAULT_API_BASE_URL = "DEFAULT_API_BASE_URL = "https://koseisha-os.onrender.com"
+DEFAULT_API_BASE_URL = "https://koseisha-os.onrender.com"
 SEARCH_MODES = ["semantic", "keyword", "hybrid"]
 DEFAULT_FILTERS = ["general", "basic_thought", "basic_literature", "jinn_os"]
 
