@@ -1,6 +1,6 @@
 fastapi
 uvicorn[standard]
-sentence-transformers
 pandas
 numpy
 scikit-learn
+python-dotenv
