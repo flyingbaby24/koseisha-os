@@ -856,7 +856,7 @@ def call_search(api_base_url: str, q: str, top: int, mode: str, source: str, fil
 
 with st.sidebar:
     st.header("FastAPI")
-    api_base_url = st.text_input("API Base URL", value="http://127.0.0.1:8000")
+    api_base_url = st.text_input("API Base URL", value="https://koseisha-os.onrender.com")
     top = st.slider("Top results", 1, 50, 10)
     mode = st.selectbox("Search mode", ["semantic", "keyword", "hybrid"])
     source = st.text_input("Source filter", value="all")
