@@ -5,6 +5,7 @@ import json
 import zipfile
 import tempfile
 import io
+import urllib.request
 
 import numpy as np
 import pandas as pd
@@ -1001,10 +1002,6 @@ with tab5:
 
 with tab6:
 
-    # -------------------------
-    # Embeddings CSV
-    # -------------------------
-
     embedding_df = build_embedding_export_frame(
         df=df,
         embeddings=embeddings,
@@ -1038,25 +1035,29 @@ with tab6:
         "Save embeddings to Personal Library",
         key="save_embeddings_button",
     ):
-
         if not save_email.strip():
             st.error("Please enter your registered e-mail.")
-
         else:
-            save_user_id = make_user_id_from_email(save_email)
+            payload = {
+                "email": save_email.strip(),
+                "rows": embedding_df.to_dict(orient="records"),
+            }
 
-            saved_path = save_user_embedding_csv(
-                save_user_id,
-                embedding_df,
+            request = urllib.request.Request(
+                "https://koseisha-os.onrender.com/users/by-email/save-embeddings",
+                data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
             )
 
-            st.success("Saved to your Personal Library.")
+            try:
+                with urllib.request.urlopen(request, timeout=120) as response:
+                    result = json.loads(response.read().decode("utf-8"))
 
+                st.success(f"Saved {result.get('count', 0)} works to Personal Library.")
 
-
-    # -------------------------
-    # Cluster CSV
-    # -------------------------
+            except Exception as exc:
+                st.error(f"Save failed: {exc}")
 
     csv_bytes = df.to_csv(
         index=False,
@@ -1069,10 +1070,6 @@ with tab6:
         file_name="thoughtmap_clusters.csv",
         mime="text/csv"
     )
-
-    # -------------------------
-    # Cluster Labels
-    # -------------------------
 
     label_bytes = json.dumps(
         labels,
@@ -1087,12 +1084,7 @@ with tab6:
         mime="application/json"
     )
 
-    # -------------------------
-    # Filter Scores
-    # -------------------------
-
     if filter_score_df is not None:
-
         filter_bytes = filter_score_df.to_csv(
             index=False,
             encoding="utf-8-sig"
