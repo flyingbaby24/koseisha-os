@@ -42,24 +42,42 @@ if st.button("Search FastAPI", type="primary"):
         elapsed = time.time() - start
         results = data.get("results", [])
 
-        st.success(f"{len(results)} result(s) / {elapsed:.2f}s")
+        st.session_state["last_data"] = data
+        st.session_state["last_results"] = results
+        st.session_state["last_url"] = url
+        st.session_state["last_elapsed"] = elapsed
 
-        if results:
-            rows = []
-            for item in results:
-                rows.append({
-                    "doc_id": item.get("doc_id", ""),
-                    "title": item.get("title", ""),
-                    "author": item.get("author", ""),
-                    "source": item.get("source", ""),
-                    "similarity": item.get("similarity", item.get("score", "")),
-                    "url": item.get("url", ""),
-                })
+    except Exception as exc:
+        st.error(str(exc))
 
-            df = pd.DataFrame(rows)
+data = st.session_state.get("last_data")
+results = st.session_state.get("last_results", [])
+url = st.session_state.get("last_url", "")
+elapsed = st.session_state.get("last_elapsed", 0)
 
+if data is not None:
+    st.success(f"{len(results)} result(s) / {elapsed:.2f}s")
+
+    if results:
+        rows = []
+        for i, item in enumerate(results):
+            rows.append({
+                "index": i,
+                "doc_id": item.get("doc_id", ""),
+                "title": item.get("title", ""),
+                "author": item.get("author", ""),
+                "source": item.get("source", ""),
+                "similarity": item.get("similarity", item.get("score", "")),
+                "url": item.get("url", ""),
+            })
+
+        df = pd.DataFrame(rows)
+
+        left, right = st.columns([3, 2])
+
+        with left:
             st.subheader("Similar works")
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(df, use_container_width=True, hide_index=True)
 
             st.subheader("Similar authors")
             author_df = (
@@ -71,20 +89,62 @@ if st.button("Search FastAPI", type="primary"):
                 )
                 .sort_values(["best_similarity", "works"], ascending=False)
             )
-            st.dataframe(author_df, use_container_width=True)
+            st.dataframe(author_df, use_container_width=True, hide_index=True)
+
+        with right:
+            st.subheader("Selected work detail")
+
+            options = [
+                f"{row['index'] + 1}. {row['title']} / {row['author']} / {row['similarity']}"
+                for _, row in df.iterrows()
+            ]
+
+            selected_label = st.selectbox("Select result", options)
+            selected_index = options.index(selected_label)
+            selected = results[selected_index]
+
+            st.markdown(f"### {selected.get('title', 'Untitled')}")
+            st.write(f"Author: {selected.get('author', '') or 'Unknown'}")
+            st.write(f"Source: `{selected.get('source', '')}`")
+            st.write(f"doc_id: `{selected.get('doc_id', '')}`")
+            st.metric("Similarity", selected.get("similarity", selected.get("score", 0)))
+
+            if selected.get("url"):
+                st.markdown(f"[Open source]({selected.get('url')})")
+
+            st.subheader("Selected Parameters")
+            params = selected.get("parameters", [])
+            if params:
+                param_rows = []
+                for p in params:
+                    param_rows.append({
+                        "parameter": p.get("key", ""),
+                        "value": p.get("value", 0),
+                    })
+                param_df = pd.DataFrame(param_rows)
+                st.dataframe(param_df, use_container_width=True, hide_index=True)
+                st.bar_chart(param_df.set_index("parameter"))
+            else:
+                st.info("No selected parameters.")
 
             st.subheader("Query Parameters")
-            st.json(data.get("query_parameters", []))
+            query_params = data.get("query_parameters", [])
+            if query_params:
+                q_rows = []
+                for p in query_params:
+                    q_rows.append({
+                        "parameter": p.get("key", ""),
+                        "value": p.get("value", 0),
+                    })
+                qdf = pd.DataFrame(q_rows)
+                st.dataframe(qdf, use_container_width=True, hide_index=True)
+                st.bar_chart(qdf.set_index("parameter"))
+            else:
+                st.info("No query parameters.")
 
-            st.subheader("Top Result Parameters")
-            st.json(results[0].get("parameters", []))
+    else:
+        st.info("No results.")
 
-        else:
-            st.info("No results.")
-
-        with st.expander("Debug"):
-            st.write(url)
-            st.json(data)
-
-    except Exception as exc:
-        st.error(str(exc))
+    with st.expander("Debug"):
+        st.write(url)
+        st.json(data)
