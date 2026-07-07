@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 from typing import Literal
+import base64
 import hashlib
-from pathlib import Path
+import io
+import json
+import os
+import urllib.error
+import urllib.parse
+import urllib.request
 
 import pandas as pd
 from pydantic import BaseModel
@@ -33,23 +39,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+GITHUB_REPO = os.getenv("GITHUB_REPO", "flyingbaby24/koseisha-os")
+GITHUB_BRANCH = os.getenv("GITHUB_BRANCH", "main")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
+
 
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "backend": settings.backend}
 
 
-# Search modes:
-# keyword:
-#   q is used as a keyword against title / author / doc_id / source.
-#
-# embedding:
-#   target_doc_id is used to fetch an existing embedding.
-#   No sentence-transformers runtime encoding is performed.
-#
-# hybrid:
-#   q narrows candidates by keyword.
-#   target_doc_id provides the embedding vector for similarity ranking.
 @app.get("/search", response_model=SearchResponse, response_model_exclude_none=True)
 def search(
     q: str = Query("", description="Keyword query. Required for keyword mode. Optional for hybrid."),
@@ -88,20 +87,98 @@ def make_user_id_from_email(email: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16]
 
 
+def github_headers() -> dict[str, str]:
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+    if GITHUB_TOKEN:
+        headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+
+    return headers
+
+
+def github_user_csv_path(user_id: str) -> str:
+    return (
+        "10_ThoughtMap/data/thoughtmap_db/users/"
+        f"{user_id}/thoughtmap_embeddings.csv"
+    )
+
+
+def github_contents_url(path: str) -> str:
+    return f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path}"
+
+
+def read_github_file(path: str) -> tuple[str, str]:
+    url = github_contents_url(path) + "?" + urllib.parse.urlencode(
+        {"ref": GITHUB_BRANCH}
+    )
+
+    request = urllib.request.Request(
+        url,
+        headers=github_headers(),
+        method="GET",
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response:
+            data = json.loads(response.read().decode("utf-8"))
+
+        content = base64.b64decode(data["content"]).decode("utf-8-sig")
+        sha = data.get("sha", "")
+        return content, sha
+
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            return "", ""
+        raise
+
+
+def write_github_file(path: str, text: str, message: str) -> dict:
+    _old_text, sha = read_github_file(path)
+
+    payload = {
+        "message": message,
+        "content": base64.b64encode(text.encode("utf-8-sig")).decode("ascii"),
+        "branch": GITHUB_BRANCH,
+    }
+
+    if sha:
+        payload["sha"] = sha
+
+    request = urllib.request.Request(
+        github_contents_url(path),
+        data=json.dumps(payload).encode("utf-8"),
+        headers=github_headers(),
+        method="PUT",
+    )
+
+    with urllib.request.urlopen(request, timeout=120) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
 @app.get("/users/by-email/saved")
 def list_saved_by_email(email: str = Query(..., min_length=3)) -> dict:
     user_id = make_user_id_from_email(email)
+    path = github_user_csv_path(user_id)
 
-    base_dir = Path(__file__).resolve().parents[1]
-    csv_path = base_dir / "user_data" / user_id / "thoughtmap_embeddings.csv"
+    try:
+        text, _sha = read_github_file(path)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"failed to read GitHub library: {exc}",
+        ) from exc
 
-    if not csv_path.exists():
+    if not text:
         return {
             "user_id": user_id,
             "works": [],
         }
 
-    df = pd.read_csv(csv_path, dtype=str).fillna("")
+    df = pd.read_csv(io.StringIO(text), dtype=str).fillna("")
 
     works = []
     for _, row in df.iterrows():
@@ -128,7 +205,6 @@ class SaveEmbeddingsByEmailRequest(BaseModel):
 def save_embeddings_by_email(
     request: SaveEmbeddingsByEmailRequest,
 ) -> dict:
-
     user_id = make_user_id_from_email(request.email)
 
     if not user_id:
@@ -137,11 +213,11 @@ def save_embeddings_by_email(
     if not request.rows:
         raise HTTPException(status_code=400, detail="rows are required.")
 
-    base_dir = Path(__file__).resolve().parents[1]
-    user_dir = base_dir / "user_data" / user_id
-    user_dir.mkdir(parents=True, exist_ok=True)
-
-    csv_path = user_dir / "thoughtmap_embeddings.csv"
+    if not GITHUB_TOKEN:
+        raise HTTPException(
+            status_code=500,
+            detail="GITHUB_TOKEN is not configured.",
+        )
 
     df = pd.DataFrame(request.rows)
 
@@ -154,12 +230,27 @@ def save_embeddings_by_email(
             detail=f"missing columns: {sorted(missing)}",
         )
 
-    df.to_csv(csv_path, index=False, encoding="utf-8-sig")
+    path = github_user_csv_path(user_id)
+    csv_text = df.to_csv(index=False)
+
+    try:
+        result = write_github_file(
+            path=path,
+            text=csv_text,
+            message=f"Update ThoughtMap personal library {user_id}",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"failed to save GitHub library: {exc}",
+        ) from exc
 
     return {
         "status": "saved",
         "user_id": user_id,
         "count": len(df),
+        "path": path,
+        "commit": result.get("commit", {}).get("sha", ""),
     }
 
 
