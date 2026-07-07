@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 from typing import Literal
+import hashlib
+from pathlib import Path
+
+import pandas as pd
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -75,6 +79,43 @@ def search(
         user_email=user_email,
     )
 
+
+def make_user_id_from_email(email: str) -> str:
+    normalized = str(email or "").strip().lower()
+    if not normalized:
+        return ""
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16]
+
+
+@app.get("/users/by-email/saved")
+def list_saved_by_email(email: str = Query(..., min_length=3)) -> dict:
+    user_id = make_user_id_from_email(email)
+
+    base_dir = Path(__file__).resolve().parents[1]
+    csv_path = base_dir / "user_data" / user_id / "thoughtmap_embeddings.csv"
+
+    if not csv_path.exists():
+        return {
+            "user_id": user_id,
+            "works": [],
+        }
+
+    df = pd.read_csv(csv_path, dtype=str).fillna("")
+
+    works = []
+    for _, row in df.iterrows():
+        works.append({
+            "doc_id": row.get("doc_id", ""),
+            "title": row.get("title", ""),
+            "author": row.get("author", ""),
+            "source": row.get("source", ""),
+            "category": row.get("category", ""),
+        })
+
+    return {
+        "user_id": user_id,
+        "works": works,
+    }
 
 @app.post("/users/default/save", response_model=SaveDocumentResponse, response_model_exclude_none=True)
 def save_default_document(request: SaveDocumentRequest) -> SaveDocumentResponse:
