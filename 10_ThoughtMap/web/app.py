@@ -5,6 +5,7 @@ import json
 import zipfile
 import tempfile
 import io
+import urllib.request
 
 import numpy as np
 import pandas as pd
@@ -663,18 +664,6 @@ st.sidebar.header("Input")
 uploaded_files = st.sidebar.file_uploader("Upload .txt / .md / .zip", type=["txt", "md", "zip"], accept_multiple_files=True)
 pasted_text = st.sidebar.text_area("Or paste text", height=180)
 
-st.sidebar.header("Public User Storage")
-registered_email = st.sidebar.text_input(
-    "Registered email",
-    value="",
-    help="Used only to create a stable private folder hash. The email itself is not used as a folder name.",
-)
-user_id = make_user_id_from_email(registered_email)
-if user_id:
-    st.sidebar.caption(f"user_id: `{user_id}`")
-else:
-    st.sidebar.caption("Enter an email to enable saving thoughtmap_embeddings.csv after Analyze.")
-
 split_mode_label = st.sidebar.selectbox(
     "Paste split mode",
     ["One document", "Split by delimiter ---", "Split by headings", "Split by blank blocks"]
@@ -1013,16 +1002,13 @@ with tab5:
 
 with tab6:
 
-        # -------------------------
-    # Embeddings CSV
-    # -------------------------
-
     embedding_df = build_embedding_export_frame(
         df=df,
         embeddings=embeddings,
         docs=docs,
         labels=labels,
     )
+
     embedding_csv = embedding_df.to_csv(
         index=False,
         encoding="utf-8-sig"
@@ -1035,16 +1021,44 @@ with tab6:
         mime="text/csv"
     )
 
-    if user_id:
-        if st.button("Save embeddings to my user folder"):
-            saved_path = save_user_embedding_csv(user_id, embedding_df)
-            st.success(f"Saved: {saved_path}")
-    else:
-        st.info("Enter a registered email in the sidebar to save this CSV under user_data/{user_id}.")
+    st.markdown("---")
+    st.subheader("Save to Personal Library")
 
-    # -------------------------
-    # Cluster CSV
-    # -------------------------
+    save_email = st.text_input(
+        "Registered e-mail",
+        placeholder="example@example.com",
+        help="Only required when saving to your personal library.",
+        key="save_email_export",
+    )
+
+    if st.button(
+        "Save embeddings to Personal Library",
+        key="save_embeddings_button",
+    ):
+        if not save_email.strip():
+            st.error("Please enter your registered e-mail.")
+        else:
+            payload = {
+                "email": save_email.strip(),
+                "rows": embedding_df.to_dict(orient="records"),
+            }
+
+            request = urllib.request.Request(
+                "https://koseisha-os.onrender.com/users/by-email/save-embeddings",
+                data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+
+            try:
+                with urllib.request.urlopen(request, timeout=120) as response:
+                    result = json.loads(response.read().decode("utf-8"))
+
+                st.success(f"Saved {result.get('count', 0)} works to Personal Library.")
+
+            except Exception as exc:
+                st.error(f"Save failed: {exc}")
+
     csv_bytes = df.to_csv(
         index=False,
         encoding="utf-8-sig"
@@ -1057,9 +1071,6 @@ with tab6:
         mime="text/csv"
     )
 
-    # -------------------------
-    # Cluster Labels
-    # -------------------------
     label_bytes = json.dumps(
         labels,
         ensure_ascii=False,
@@ -1073,11 +1084,7 @@ with tab6:
         mime="application/json"
     )
 
-    # -------------------------
-    # Filter Scores
-    # -------------------------
     if filter_score_df is not None:
-
         filter_bytes = filter_score_df.to_csv(
             index=False,
             encoding="utf-8-sig"
@@ -1087,116 +1094,5 @@ with tab6:
             "Download filter scores CSV",
             filter_bytes,
             file_name="thoughtmap_filter_scores.csv",
-            mime="text/csv"
-        )
-
-        try:
-            _make_filter_scores, make_parameter_scores = require_thought_composition()
-            parameter_score_df = make_parameter_scores(df, filter_score_df)
-        except ValueError:
-            parameter_score_df = None
-
-        if parameter_score_df is not None:
-            parameter_score_bytes = parameter_score_df.to_csv(
-                index=False,
-                encoding="utf-8-sig"
-            ).encode("utf-8-sig")
-
-            st.download_button(
-                "Download parameter scores CSV",
-                parameter_score_bytes,
-                file_name="parameter_scores.csv",
-                mime="text/csv"
-            )
-
-    # -------------------------
-    # Selected Filters
-    # -------------------------
-    category_bytes = json.dumps(
-        categories,
-        ensure_ascii=False,
-        indent=2
-    ).encode("utf-8")
-
-    st.download_button(
-        "Download selected filters JSON",
-        category_bytes,
-        file_name="selected_filters.json",
-        mime="application/json"
-    )
-
-    # ==========================================================
-    # Thought Composition Export
-    # ==========================================================
-    if filter_score_df is not None:
-
-        status_df = make_status_profile(filter_score_df)
-
-        st.markdown("---")
-        st.subheader("Thought Composition Export")
-
-        # -------------------------
-        # Composition PNG
-        # -------------------------
-        document_title = (
-            docs[0]["title"]
-            if len(docs) == 1
-            else f"{len(docs)} Documents"
-        )
-
-        fig = plot_status_bar(
-            status_df,
-            title=document_title
-        )
-
-        png_buffer = io.BytesIO()
-
-        fig.savefig(
-            png_buffer,
-            format="png",
-            dpi=300,
-            bbox_inches="tight"
-        )
-
-        png_buffer.seek(0)
-
-        safe_title = (
-            docs[0]["title"]
-            .replace(" ", "_")
-            .replace("/", "_")
-            .replace("\\", "_")
-            if len(docs) == 1
-            else "multi_document"
-        )
-
-        st.download_button(
-            "Download Composition Chart PNG",
-            png_buffer,
-            file_name=f"{safe_title}_thought_composition.png",
-            mime="image/png"
-        )
-
-        # -------------------------
-        # Composition Profile CSV
-        # -------------------------
-        profile_df = pd.DataFrame([
-            {
-                "profile_class": infer_profile_class(status_df)[0],
-                **{
-                    row["parameter"]: row["share_%"]
-                    for _, row in status_df.iterrows()
-                }
-            }
-        ])
-
-        profile_csv = profile_df.to_csv(
-            index=False,
-            encoding="utf-8-sig"
-        ).encode("utf-8-sig")
-
-        st.download_button(
-            "Download Composition Profile CSV",
-            profile_csv,
-            file_name=f"{safe_title}_thought_composition_profile.csv",
             mime="text/csv"
         )

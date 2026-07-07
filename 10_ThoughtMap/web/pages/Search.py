@@ -24,6 +24,17 @@ def call_api(params: dict) -> tuple[dict, float, str]:
     return data, time.time() - start, url
 
 
+def load_personal_works(email: str) -> list[dict]:
+    url = API_BASE_URL + "/users/by-email/saved?" + urllib.parse.urlencode(
+        {"email": email.strip()}
+    )
+
+    with urllib.request.urlopen(url, timeout=30) as response:
+        data = json.loads(response.read().decode("utf-8"))
+
+    return data.get("works", [])
+
+
 def result_frame(results: list[dict]) -> pd.DataFrame:
     rows = []
     for i, item in enumerate(results):
@@ -67,24 +78,19 @@ def author_frame(df: pd.DataFrame) -> pd.DataFrame:
 with st.sidebar:
     search_mode = st.radio(
         "Search type",
-        [
-            "Keyword search",
-            "Embedding similarity",
-            "Hybrid",
-        ],
+        ["Keyword search", "Embedding similarity", "Hybrid"],
         index=0,
     )
 
     top = st.slider("Top results", 1, 50, 10)
-
     source = st.text_input("Source filter", value="all")
     category = st.text_input("Category filter", value="all")
     filter_name = st.selectbox("Parameter filter", ["general"])
 
 
 q = ""
-target_doc_id = ""
 email = ""
+target_doc_id = ""
 
 if search_mode == "Keyword search":
     q = st.text_input(
@@ -95,23 +101,44 @@ if search_mode == "Keyword search":
 
 elif search_mode == "Embedding similarity":
     st.info(
-        "Embedding similarity は、既存のembeddingをtargetにして公式DBのembeddingと比較する検索です。"
-    )
-
-    target_doc_id = st.text_input(
-        "Target doc_id",
-        placeholder="例: user_suno:doc_000400 / gutendex:doc_000631",
-        help="既存DB内のdoc_idをtarget embeddingとして使います。",
+        "Personal Libraryに保存済みの作品を選択して、公式DBとembedding類似検索します。"
     )
 
     email = st.text_input(
         "Registered e-mail",
-        placeholder="Personal Searchを使う場合のみ入力",
+        placeholder="example@example.com",
+        key="embedding_email",
     )
+
+    if email.strip():
+        try:
+            works = load_personal_works(email)
+
+            if not works:
+                st.warning("No saved works were found for this e-mail.")
+            else:
+                options = [
+                    f"{w.get('title', 'Untitled')} / {w.get('source', '')} / {w.get('doc_id', '')}"
+                    for w in works
+                ]
+
+                selected_label = st.selectbox(
+                    "Select target work",
+                    options,
+                    key="target_work",
+                )
+
+                selected = works[options.index(selected_label)]
+                target_doc_id = selected.get("doc_id", "")
+
+                st.success(f"Selected: {selected.get('title', 'Untitled')}")
+
+        except Exception as exc:
+            st.error(f"Failed to load Personal Library: {exc}")
 
 else:
     st.info(
-        "Hybrid は keywordで候補を絞り、target embeddingとの近さで並べます。"
+        "Hybrid は keywordで候補を絞り、Personal Libraryの作品embeddingで類似順に並べます。"
     )
 
     q = st.text_input(
@@ -120,15 +147,37 @@ else:
         placeholder="例: Plato / Jinn Project / love / war",
     )
 
-    target_doc_id = st.text_input(
-        "Target doc_id",
-        placeholder="例: user_suno:doc_000400",
-    )
-
     email = st.text_input(
         "Registered e-mail",
-        placeholder="Personal Searchを使う場合のみ入力",
+        placeholder="example@example.com",
+        key="hybrid_email",
     )
+
+    if email.strip():
+        try:
+            works = load_personal_works(email)
+
+            if not works:
+                st.warning("No saved works were found for this e-mail.")
+            else:
+                options = [
+                    f"{w.get('title', 'Untitled')} / {w.get('source', '')} / {w.get('doc_id', '')}"
+                    for w in works
+                ]
+
+                selected_label = st.selectbox(
+                    "Select target work",
+                    options,
+                    key="hybrid_target_work",
+                )
+
+                selected = works[options.index(selected_label)]
+                target_doc_id = selected.get("doc_id", "")
+
+                st.success(f"Selected: {selected.get('title', 'Untitled')}")
+
+        except Exception as exc:
+            st.error(f"Failed to load Personal Library: {exc}")
 
 
 if st.button("Search FastAPI", type="primary"):
@@ -152,38 +201,41 @@ if st.button("Search FastAPI", type="primary"):
         params["q"] = q.strip()
 
     elif search_mode == "Embedding similarity":
-        if not target_doc_id.strip():
-            st.error("Please enter target doc_id.")
+        if not email.strip():
+            st.error("Please enter your registered e-mail.")
+            st.stop()
+
+        if not target_doc_id:
+            st.error("Please select a work from your Personal Library.")
             st.stop()
 
         params["mode"] = "embedding"
-        params["target_doc_id"] = target_doc_id.strip()
-
-        if email.strip():
-            params["user_email"] = email.strip()
+        params["target_doc_id"] = target_doc_id
+        params["user_email"] = email.strip()
 
     else:
-        if not target_doc_id.strip():
-            st.error("Please enter target doc_id.")
+        if not email.strip():
+            st.error("Please enter your registered e-mail.")
+            st.stop()
+
+        if not target_doc_id:
+            st.error("Please select a work from your Personal Library.")
             st.stop()
 
         params["mode"] = "hybrid"
-        params["target_doc_id"] = target_doc_id.strip()
+        params["target_doc_id"] = target_doc_id
+        params["user_email"] = email.strip()
 
         if q.strip():
             params["q"] = q.strip()
 
-        if email.strip():
-            params["user_email"] = email.strip()
-
     try:
         data, elapsed, url = call_api(params)
-        results = data.get("results", [])
 
         st.session_state["last_data"] = data
-        st.session_state["last_results"] = results
-        st.session_state["last_elapsed"] = elapsed
+        st.session_state["last_results"] = data.get("results", [])
         st.session_state["last_url"] = url
+        st.session_state["last_elapsed"] = elapsed
         st.session_state["last_mode"] = search_mode
 
     except Exception as exc:
@@ -258,15 +310,15 @@ if data is not None:
                 st.markdown(f"[Open source]({selected.get('url')})")
 
             st.subheader("Parameters")
-            params = selected.get("parameters", [])
+            result_params = selected.get("parameters", [])
 
-            if params:
+            if result_params:
                 pdf = pd.DataFrame([
                     {
                         "parameter": p.get("key", ""),
                         "value": p.get("value", 0),
                     }
-                    for p in params
+                    for p in result_params
                 ])
                 pdf["value"] = pd.to_numeric(pdf["value"], errors="coerce").fillna(0)
                 st.dataframe(pdf, use_container_width=True, hide_index=True)
