@@ -2300,77 +2300,178 @@ APIなどを確認して生きてはいない。
   "references": []
   },
   {
-    id: 29,
-    name: "樹上開花",
-    reading: "じゅじょうかいか",
-    english: "Make flowers bloom on a tree",
-    category: "Signal Amplification",
-    bias: "見せかけの規模、装飾による過大評価",
-    behavioral: "Signaling / halo effect",
-    summary: "実体以上に華やかに見せ、相手の評価を増幅させる。",
-    example: "実態以上に大きく見せるPR、展示会演出",
-    interpretation: `
-`,
-    principle: `
-`,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+  "id": 29,
+  "name": "樹上開花",
+  "reading": "じゅじょうかいか",
+  "english": "Decorate the tree with blossoms",
+  "category": "Evaluation / Signaling",
+
+  "bias": "シグナリング、ハロー効果、代理指標への依存",
+
+  "behavioral": "Signaling theory / Halo effect / Proxy evaluation",
+
+  "summary": "評価システムが採用する代理シグナルを操作し、実体以上の評価を獲得する。",
+
+  "example": "ブランドデザイン、高級ホテルの内装、Apple製品のパッケージ、展示会ブース、SNSのフォロワー数、WebサイトやUIデザイン、学歴や肩書き",
+
+  "interpretation": "樹上開花は「実体を飾る計略」ではない。\n\n本質は、人間が実体そのものではなく、評価システムが採用するシグナルによって対象を評価することにある。\n\n人は対象を完全に理解してから判断しているわけではない。\n\n身なり、ブランド、肩書き、フォロワー数、デザインなど、能力そのものではない情報を利用し、実体を推測している。\n\nつまり評価は、\n実体 → 評価\nではなく、\nシグナル → 実体の推測 → 評価\nという流れで形成される。\n\n樹上開花とは、評価システムが採用している代理指標を操作し、実体以上の評価を獲得する計略なのである。",
+
+  "principle": "人間はすべてを直接評価することはできない。\n\n限られた認知資源の中で、評価しやすい特徴を代理指標として利用する。\n\nブランド、デザイン、肩書き、フォロワー数、話し方、服装などは実体ではない。\n\nしかし、それらは実体を推測するシグナルとして機能し、評価の入り口となる。\n\n評価システムが採用するシグナルを設計することで、実体そのものより先に評価を変えることができる。",
+
+  "breakdown": [
+    "評価システムが採用する代理指標を把握する",
+    "評価に利用されるシグナルを設計する",
+    "相手に実体を推測させる",
+    "実体以上の評価を形成する",
+    "評価の変化が実体への期待を強化する"
+  ],
+
+  "noteTitle": "樹上開花は「実体を飾る計略」ではない──評価システムが採用するシグナルを操作する計略である",
+
+  "noteUrl": "https://note.com/flying_baby/n/n19639fa94482",
+
+  "relatedStratagems": [7,10,14,21,30],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Signaling theory",
+    "Halo effect",
+    "Proxy evaluation",
+    "Attribute substitution"
+  ],
+
+  "relatedConcepts": [
+    "シグナリング",
+    "代理指標",
+    "評価システム",
+    "ブランド",
+    "第一印象",
+    "ルッキズム",
+    "UIデザイン",
+    "社会的シグナル"
+  ],
+
+  "relatedNotes": [],
+
+  "references": []
   },
   {
-    id: 30,
-    name: "反客為主",
-    reading: "はんかくいしゅ",
-    english: "Turn from guest into host",
-    category: "Control",
-    bias: "既成事実化、主導権移転への鈍感さ",
-    behavioral: "Endowment effect / default effect",
-    summary: "客の立場から入り込み、いつの間にか主導権を握る。",
-    example: "外部委託先が主導権を握る、プラットフォーム依存",
-    interpretation: `
-`,
-    principle: `
-`,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+  "id": 30,
+  "name": "反客為主",
+  "reading": "はんかくいしゅ",
+  "english": "Turn from guest into host",
+
+  "category": "Dependency / Negotiation Power",
+
+  "bias": "依存関係、交渉力、ロックイン",
+
+  "behavioral": "Dependency theory / Lock-in effect / Power asymmetry",
+
+  "summary": "依存関係を形成し、その依存から生まれる交渉力によって潜在的な主導権を顕在化させる。",
+
+  "example": "巨大顧客への売上依存、App Store・Google Playへの依存、クラウドサービスへの依存、APIへの依存、外部委託先への依存、SNSプラットフォームへの依存",
+
+  "interpretation": "反客為主は「客が主人になる計略」ではない。\n\n本質は、依存関係から生まれる交渉力を利用することにある。\n\n主導権は突然移動するものではない。\n\n人は相手へ依存した瞬間から、その相手の要求を無視しにくくなる。\n\n売上、技術、情報、集客など、依存対象が大きいほど、その相手は立場に関係なく意思決定へ影響を及ぼす。\n\nつまり、反客為主とは客が主人へ変化する兵法ではない。\n\n依存関係を形成し、その依存によって潜在的に存在していた主導権を顕在化させる計略なのである。",
+
+  "principle": "力は肩書きや立場から生まれるのではない。\n\n人は重要な資源を相手へ依存すると、その資源を失うコストを避けるため、相手の要望を受け入れやすくなる。\n\n依存される側は、命令しなくても意思決定へ影響を与えられる。\n\n主導権とは権限ではなく、依存関係が生み出す交渉力なのである。",
+
+  "breakdown": [
+    "相手が依存する価値を提供する",
+    "依存関係を継続的に形成する",
+    "相手の代替コストを高める",
+    "依存による交渉力を獲得する",
+    "潜在的な主導権を顕在化させる"
+  ],
+
+  "noteTitle": "反客為主は「客が主人になる計略」ではない──依存関係を利用して主導権を顕在化させる計略である",
+
+  "noteUrl": "https://note.com/flying_baby/n/nba46c6578022",
+
+  "relatedStratagems": [3,18,23,24],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Dependency theory",
+    "Lock-in effect",
+    "Power asymmetry",
+    "Switching cost"
+  ],
+
+  "relatedConcepts": [
+    "依存関係",
+    "交渉力",
+    "主導権",
+    "ロックイン",
+    "プラットフォーム",
+    "API",
+    "スイッチングコスト",
+    "ベンダーロックイン"
+  ],
+
+  "relatedNotes": [],
+
+  "references": []
   },
   {
-    id: 31,
-    name: "美人計",
-    reading: "びじんけい",
-    english: "Use beauty as a trap",
-    category: "Desire",
-    bias: "魅力バイアス、感情による判断歪み",
-    behavioral: "Affect heuristic / attractiveness bias",
-    summary: "魅力や欲望によって判断力を鈍らせる。",
-    example: "広告モデル、恋愛詐欺、感情訴求",
-    interpretation: `
-`,
-    principle: `
-`,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
-  },
+  "id": 31,
+  "name": "美人計",
+  "reading": "びじんけい",
+  "english": "The Beauty Trap",
+
+  "category": "Reward / Motivation",
+
+  "bias": "報酬予測、欲望、インセンティブ、価値判断",
+
+  "behavioral": "Reward prediction / Incentive salience / Temporal discounting",
+
+  "summary": "人間の報酬系を刺激し、欲望によって判断の重み付けを変える。",
+
+  "example": "恋愛詐欺、高額投資の甘い勧誘、インフルエンサー広告、「限定」「今だけ」の販売手法、ガチャ演出、ブランド戦略、SNSの承認獲得",
+
+  "interpretation": "美人計は「美女を使う計略」ではない。\n\n本質は、人間の報酬系を刺激し、判断の重み付けを変えることにある。\n\n人は常に合理的な判断をしているわけではない。\n\n魅力や期待、利益などの報酬を感じると、その報酬に対する期待が他の判断材料よりも強く評価される。\n\nつまり、判断能力が失われるのではない。\n\n報酬への期待によって、意思決定の優先順位そのものが変化するのである。\n\n美人計とは、美女を利用する兵法ではない。\n\n相手が最も価値を感じる報酬を提示し、欲望によって判断の重みを変える計略なのである。",
+
+  "principle": "欲望とは理性の反対ではない。\n\n人間は複数の価値を同時に評価し、それぞれへ重みを付けながら意思決定している。\n\n恋愛、金銭、承認、権力、名誉、所属、好奇心など、人によって重要視する報酬は異なる。\n\nさらに状況によっても、その重みは変化する。\n\n報酬系を刺激することは、判断を消すことではなく、意思決定の評価関数そのものを書き換えることなのである。",
+
+  "breakdown": [
+    "相手が最も価値を感じる報酬を把握する",
+    "報酬への期待を形成する",
+    "報酬の重みを他の判断材料より高める",
+    "判断基準の優先順位を変化させる",
+    "望む意思決定を自然に選択させる"
+  ],
+
+  "noteTitle": "美人計は「美女を使う計略」ではない──人間の報酬系を刺激し、判断の重みを変える計略である",
+
+  "noteUrl": "https://note.com/flying_baby/n/n58e5a0431144",
+
+  "relatedStratagems": [3,10,16,17,29],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Reward prediction",
+    "Incentive salience",
+    "Temporal discounting",
+    "Motivated reasoning"
+  ],
+
+  "relatedConcepts": [
+    "報酬系",
+    "欲望",
+    "価値判断",
+    "意思決定",
+    "ドーパミン",
+    "インセンティブ",
+    "承認欲求",
+    "限定効果"
+  ],
+
+  "relatedNotes": [],
+
+  "references": []
+},
   {
     id: 32,
     name: "空城計",
