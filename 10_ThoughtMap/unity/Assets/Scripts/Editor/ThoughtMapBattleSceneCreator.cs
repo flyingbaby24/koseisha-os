@@ -10,6 +10,7 @@ public static class ThoughtMapBattleSceneCreator
 {
     private const string SceneFolder = "Assets/Scenes";
     private const string BattleScenePath = "Assets/Scenes/BattleScene.unity";
+    private const string BattlePrepScenePath = "Assets/Scenes/BattlePrepScene.unity";
 
     [MenuItem("Tools/Source of Thought/Create BattleScene")]
     public static void CreateBattleScene()
@@ -20,13 +21,31 @@ public static class ThoughtMapBattleSceneCreator
         scene.name = "BattleScene";
 
         CreateCamera();
-        Canvas canvas = CreateCanvas();
+        Canvas canvas = CreateCanvas("BattleCanvas");
         CreateEventSystem();
         CreateBattleRoot(canvas.transform);
 
         EditorSceneManager.SaveScene(scene, BattleScenePath);
         AssetDatabase.Refresh();
         Debug.Log($"[SourceOfThoughtBattleScene] Created {BattleScenePath}. Open it and press Play to show the standalone Battle screen.");
+    }
+
+    [MenuItem("Tools/Source of Thought/Create BattlePrepScene")]
+    public static void CreateBattlePrepScene()
+    {
+        EnsureSceneFolder();
+
+        Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        scene.name = "BattlePrepScene";
+
+        CreateCamera();
+        Canvas canvas = CreateCanvas("BattlePrepCanvas");
+        CreateEventSystem();
+        CreateBattlePrepRoot(canvas.transform);
+
+        EditorSceneManager.SaveScene(scene, BattlePrepScenePath);
+        AssetDatabase.Refresh();
+        Debug.Log($"[SourceOfThoughtBattleScene] Created {BattlePrepScenePath}. Open it and press Play to show the Battle Prep screen.");
     }
 
     [MenuItem("Tools/Source of Thought/Clean Battle UI From Current Search Scene")]
@@ -76,9 +95,9 @@ public static class ThoughtMapBattleSceneCreator
         return camera;
     }
 
-    private static Canvas CreateCanvas()
+    private static Canvas CreateCanvas(string canvasName)
     {
-        GameObject canvasObject = new GameObject("BattleCanvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        GameObject canvasObject = new GameObject(canvasName, typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         Canvas canvas = canvasObject.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
 
@@ -92,7 +111,7 @@ public static class ThoughtMapBattleSceneCreator
 
     private static void CreateEventSystem()
     {
-        if (Object.FindFirstObjectByType<EventSystem>() != null)
+        if (Object.FindObjectOfType<EventSystem>() != null)
         {
             return;
         }
@@ -128,7 +147,41 @@ public static class ThoughtMapBattleSceneCreator
         SetObject(panelObject, "controller", controller);
         SetBool(panelObject, "buildOnAwake", true);
         SetBool(panelObject, "showOnStart", true);
-        SetVector2(panelObject, "defaultSize", new Vector2(1040f, 860f));
+        SetVector2(panelObject, "defaultSize", new Vector2(1680f, 1000f));
+        SetVector2(panelObject, "defaultPosition", Vector2.zero);
+        panelObject.ApplyModifiedPropertiesWithoutUndo();
+
+        EditorUtility.SetDirty(root);
+    }
+
+    private static void CreateBattlePrepRoot(Transform parent)
+    {
+        GameObject root = new GameObject(
+            "SourceOfThoughtBattlePrep",
+            typeof(RectTransform),
+            typeof(ThoughtMapBattlePrepController),
+            typeof(ThoughtMapBattlePrepPanelView)
+        );
+        RectTransform rect = root.GetComponent<RectTransform>();
+        rect.SetParent(parent, false);
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        ThoughtMapBattlePrepController controller = root.GetComponent<ThoughtMapBattlePrepController>();
+        ThoughtMapBattlePrepPanelView panel = root.GetComponent<ThoughtMapBattlePrepPanelView>();
+
+        SerializedObject controllerObject = new SerializedObject(controller);
+        SetString(controllerObject, "streamingAssetsCsvPath", "cards.csv");
+        SetString(controllerObject, "deckFileName", "deck.json");
+        SetString(controllerObject, "battleSceneName", "BattleScene");
+        controllerObject.ApplyModifiedPropertiesWithoutUndo();
+
+        SerializedObject panelObject = new SerializedObject(panel);
+        SetObject(panelObject, "controller", controller);
+        SetBool(panelObject, "buildOnAwake", true);
+        SetVector2(panelObject, "defaultSize", new Vector2(1180f, 900f));
         SetVector2(panelObject, "defaultPosition", Vector2.zero);
         panelObject.ApplyModifiedPropertiesWithoutUndo();
 

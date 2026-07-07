@@ -57,8 +57,11 @@ Added scripts:
 - `Assets/Scripts/Battle/ThoughtMapEmbeddingSimilarityProvider.cs`: placeholder adjacent-card similarity provider based on parameter vectors.
 - `Assets/Scripts/Battle/ThoughtMapHateCalculator.cs`: target selection by hate score.
 - `Assets/Scripts/Battle/ThoughtMapBattleSimulator.cs`: 5vs5 auto-battle loop and log generation.
-- `Assets/Scripts/Battle/ThoughtMapBattleMvpController.cs`: scene-facing component that loads cards, deploys units, draws an optional 5x5 grid, and writes the battle log.
-- `Assets/Scripts/Battle/ThoughtMapBattleMvpPanelView.cs`: minimal runtime UI panel with Start Battle, player/enemy deck summaries, grid, battle log, result, and missing-CSV warning.
+- `Assets/Scripts/Battle/ThoughtMapBattleMvpController.cs`: scene-facing component that loads cards, deploys units, renders card views, renders the 5x5 grid, and writes the battle log.
+- `Assets/Scripts/Battle/ThoughtMapBattleMvpPanelView.cs`: runtime Battle UI panel with Start Battle, player/enemy card rows, board grid, dedicated summary panel, Battle Log ScrollView, result, and missing-CSV warning.
+- `Assets/Scripts/Battle/ThoughtMapBattleCardView.cs`: one visual card view for deck rows.
+- `Assets/Scripts/Battle/ThoughtMapBattleGridCellView.cs`: one visual grid cell view for the 5x5 board.
+- `Assets/Scripts/Battle/ThoughtMapBattleSummaryView.cs`: dedicated result summary panel.
 
 ### Expected cards.csv columns
 
@@ -132,6 +135,68 @@ Assets/Scenes/BattleScene.unity
 8. Press Play in `BattleScene`.
 9. Press `Start Battle`.
 
+### BattlePrepScene setup
+
+Battle Prep is separate from both Search/Collect and Battle execution.
+
+Create it from Unity Editor:
+
+```text
+Tools > Source of Thought > Create BattlePrepScene
+```
+
+Open:
+
+```text
+Assets/Scenes/BattlePrepScene.unity
+```
+
+The scene creates:
+
+- `BattlePrepCanvas`
+- `SourceOfThoughtBattlePrep`
+- `ThoughtMapBattlePrepController`
+- `ThoughtMapBattlePrepPanelView`
+
+The MVP Battle Prep panel includes:
+
+- Saved Works List
+- Generate Cards button
+- Card Preview
+- Deck Slots 10
+- Deploy Slots 5
+- 5x5 Placement Preview
+- Save Deck button
+- Start Battle button
+- Status / Warning Text
+
+MVP data source:
+
+- Assign `cards.csv` as a TextAsset, or
+- Place `cards.csv` at `Assets/StreamingAssets/cards.csv`
+
+`Generate Cards` reads cards from CSV and fills preview/deck/deploy/placement automatically.
+
+`Save Deck` writes:
+
+```text
+Application.persistentDataPath/deck.json
+```
+
+The JSON contains:
+
+- `deckCardIds`
+- `deployedCardIds`
+- `gridPositions`
+
+`Start Battle` saves `deck.json`, then opens `BattleScene`.
+
+Do not add Search UI prefabs to Battle Prep:
+
+- no `SearchHeaderV2`
+- no `ResultListV2`
+- no `ThoughtMapDetailPanelV2`
+
 ### Remove Battle UI from ThoughtMapMain
 
 `ThoughtMapMain` is the Search/Collect scene. It must not contain Battle UI.
@@ -171,12 +236,22 @@ The panel creates:
 
 - Battle screen parent panel
 - Start Battle button
-- Player Deck text area
-- Enemy Deck text area
-- 5x5 grid area
+- Player Deck card row
+- Enemy Deck card row
+- 5x5 grid cell area
 - Battle Result text
-- Battle Log text
+- Battle Summary panel
+- Battle Log ScrollView
 - Missing `cards.csv` warning text
+
+Deck cards are no longer rendered by concatenating every card into one text field. The controller creates one `ThoughtMapBattleCardView` per displayed card. The board creates one `ThoughtMapBattleGridCellView` per cell. Battle Log is the only place that shows long turn-by-turn text.
+
+Optional prefab hooks:
+
+- `ThoughtMapBattleMvpController.Card View Prefab`
+- `ThoughtMapBattleMvpController.Grid Cell View Prefab`
+
+If these are empty, the controller creates runtime fallback card/cell views. For a more polished Battle UI, create prefab assets with `ThoughtMapBattleCardView` and `ThoughtMapBattleGridCellView`, then assign them to the controller.
 
 If `cards.csv` is not assigned and is not found in `Assets/StreamingAssets/cards.csv`, the Start Battle button will not crash the scene. It shows a warning in the panel and writes a warning to the Console.
 
@@ -191,8 +266,27 @@ The older optional manual UI fields on `ThoughtMapBattleMvpController` still wor
 - `BattleScene` contains only the Battle-specific Canvas and Battle components.
 - `SearchHeaderV2`, `ResultListV2`, and `ThoughtMapDetailPanelV2` are not present in `BattleScene`.
 - Play mode in `BattleScene` shows only the `Source of Thought` Battle screen.
-- Pressing `Start Battle` with a valid `cards.csv` fills Player Deck, Enemy Deck, Battle Grid, Battle Result, and Battle Log.
+- Pressing `Start Battle` with a valid `cards.csv` fills Player Deck cards, Enemy Deck cards, Battle Grid cells, Battle Summary, Battle Result, and Battle Log.
 - Pressing `Start Battle` without `cards.csv` shows the warning text and does not throw an exception.
+
+### BattleScene placement controls
+
+`BattleScene` supports minimal placement editing directly in the battle screen:
+
+1. Open `BattleScene` and press Play.
+2. Click a Player Deck card to select it.
+3. Click a lower Player-side grid cell to place the selected card.
+4. Click an already placed Player grid cell to remove that placement.
+5. Enemy cards remain fixed for the MVP.
+6. Press `Start Battle` to lock placement and run the auto-battle.
+7. Press `Reset / Reposition` after battle to unlock placement and rebuild the default setup.
+
+Visual feedback:
+
+- Selected Player Deck card uses a brighter cyan card background.
+- Player placement cells highlight while a card is selected.
+- Player and Enemy grid cells use different colors.
+- Long battle text stays inside the Battle Log ScrollView and auto-scrolls to the newest log.
 
 ### Optional title/menu scene
 
@@ -209,7 +303,7 @@ Avoid using the old same-scene overlay approach for Battle. `ThoughtMapScreenMod
 
 This keeps Search and Battle from being displayed at the same time and prevents Battle UI from inheriting old Search scene layout state.
 
-This MVP is deliberately log-first. It proves that cards can be loaded, deployed, placed on a grid, and resolved through an auto-battle loop before any polished battle UI or skill generation is added.
+This MVP is now game-view-first: cards are drawn as cards, the board is drawn as a board, and only the Battle Log is long-form text. It still keeps the simulation simple so card loading, deployment, placement, and auto-battle resolution remain easy to verify before skill generation is added.
 
 Legacy V1 scripts and Neon recovery helpers remain in the project for existing scenes, but new work should target the V2 prefabs.
 

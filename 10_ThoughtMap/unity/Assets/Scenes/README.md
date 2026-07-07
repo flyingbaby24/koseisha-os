@@ -27,6 +27,37 @@ Keep Source of Thought screens separated by responsibility:
 
 Shared data across scenes is limited to saved-folder data, embeddings, and work metadata.
 
+## BattlePrepScene
+
+Create the standalone battle-preparation scene from Unity Editor:
+
+```text
+Tools > Source of Thought > Create BattlePrepScene
+```
+
+The generated scene should contain:
+
+- `Main Camera`
+- `BattlePrepCanvas`
+- `EventSystem`
+- `SourceOfThoughtBattlePrep`
+
+`SourceOfThoughtBattlePrep` contains:
+
+- `ThoughtMapBattlePrepController`
+- `ThoughtMapBattlePrepPanelView`
+
+MVP behavior:
+
+- `Generate Cards` reads `Assets/StreamingAssets/cards.csv` or an assigned TextAsset.
+- `Deck Slots 10` are auto-filled from the first ten cards.
+- `Deploy Slots 5` are auto-filled from the first five deck cards.
+- `5x5 Placement Preview` uses fixed MVP placement.
+- `Save Deck` writes `deck.json` to `Application.persistentDataPath`.
+- `Start Battle` saves `deck.json`, then loads `BattleScene`.
+
+Do not add `SearchHeaderV2`, `ResultListV2`, or `ThoughtMapDetailPanelV2` to `BattlePrepScene`.
+
 ## BattleScene
 
 Create the standalone battle scene from Unity Editor:
@@ -41,6 +72,22 @@ The generated scene should contain only the Battle UI:
 - `BattleCanvas`
 - `EventSystem`
 - `SourceOfThoughtBattle`
+
+Battle UI is built from game-style view components:
+
+- Player and Enemy deck cards use `ThoughtMapBattleCardView`.
+- The 5x5 board uses `ThoughtMapBattleGridCellView`.
+- Battle Log is the only scrolling text log.
+- Battle Summary uses `ThoughtMapBattleSummaryView`.
+- `ThoughtMapBattleMvpController` can use assigned card/cell prefabs, or create fallback runtime views if no prefabs are assigned.
+
+BattleScene MVP controls:
+
+- Click a Player Deck card to select it.
+- Click a lower Player-side grid cell to place the selected card.
+- Click an already placed Player cell to remove that placement.
+- Press `Start Battle` to lock placement and run the simulation.
+- Press `Reset / Reposition` to unlock and rebuild the default placement after a battle.
 
 Do not add `SearchHeaderV2`, `ResultListV2`, or `ThoughtMapDetailPanelV2` to `BattleScene`.
 

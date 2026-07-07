@@ -332,13 +332,28 @@ public class ThoughtMapRuntimeController : MonoBehaviour
             return detailPanelV2;
         }
 
-        ThoughtMapDetailPanelV2View[] panels = FindObjectsByType<ThoughtMapDetailPanelV2View>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        ThoughtMapDetailPanelV2View[] panels = Resources.FindObjectsOfTypeAll<ThoughtMapDetailPanelV2View>();
         if (panels == null || panels.Length == 0)
         {
             return null;
         }
 
-        detailPanelV2 = panels[0];
+        foreach (ThoughtMapDetailPanelV2View panel in panels)
+        {
+            if (panel == null || panel.gameObject == null || !panel.gameObject.scene.IsValid())
+            {
+                continue;
+            }
+
+            detailPanelV2 = panel;
+            break;
+        }
+
+        if (detailPanelV2 == null)
+        {
+            return null;
+        }
+
         LogRuntime($"Resolved ThoughtMapDetailPanelV2 automatically instance={detailPanelV2.GetInstanceID()}.");
         SubscribeDetailPanelV2();
         return detailPanelV2;

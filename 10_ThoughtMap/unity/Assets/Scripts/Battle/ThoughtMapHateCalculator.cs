@@ -32,7 +32,7 @@ public class ThoughtMapHateCalculator
     public float CalculateHate(ThoughtMapBattleUnit attacker, ThoughtMapBattleUnit target, int round)
     {
         ThoughtMapGridBonus bonus = ThoughtMapGridBonusCalculator.GetBonus(target.position, target.team);
-        float lowHpPressure = 1f - ((float)target.hp / (target.card == null ? 1 : target.card.MaxHp));
+        float lowHpPressure = 1f - ((float)target.hp / UnityEngine.Mathf.Max(1, target.maxHp));
         float distancePressure = 1f / (1f + attacker.position.ManhattanDistance(target.position));
         float threat = (target.card.statPhysicalAttack + target.card.statSkillAttack + target.card.statSpeed) / 300f;
         float seededNoise = ((target.card.raritySeed + target.card.skillSeed + round * 31) % 17) / 100f;

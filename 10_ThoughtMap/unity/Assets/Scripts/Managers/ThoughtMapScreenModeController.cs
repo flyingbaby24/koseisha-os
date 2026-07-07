@@ -158,15 +158,15 @@ public class ThoughtMapScreenModeController : MonoBehaviour
         if (searchUiRoots == null || searchUiRoots.Length == 0)
         {
             List<GameObject> searchRoots = new List<GameObject>();
-            AddRoot(searchRoots, FindFirstObjectByType<SearchHeaderV2View>(FindObjectsInactive.Include));
-            AddRoot(searchRoots, FindFirstObjectByType<ResultListV2View>(FindObjectsInactive.Include));
-            AddRoot(searchRoots, FindFirstObjectByType<ThoughtMapDetailPanelV2View>(FindObjectsInactive.Include));
+            AddRoot(searchRoots, FindSceneObject<SearchHeaderV2View>());
+            AddRoot(searchRoots, FindSceneObject<ResultListV2View>());
+            AddRoot(searchRoots, FindSceneObject<ThoughtMapDetailPanelV2View>());
             searchUiRoots = searchRoots.ToArray();
         }
 
         if (battlePanelView == null)
         {
-            battlePanelView = FindFirstObjectByType<ThoughtMapBattleMvpPanelView>(FindObjectsInactive.Include);
+            battlePanelView = FindSceneObject<ThoughtMapBattleMvpPanelView>();
         }
 
         if ((battleUiRoots == null || battleUiRoots.Length == 0) && battlePanelView != null)
@@ -186,6 +186,27 @@ public class ThoughtMapScreenModeController : MonoBehaviour
         {
             roots.Add(component.gameObject);
         }
+    }
+
+    private T FindSceneObject<T>() where T : Component
+    {
+        T[] components = Resources.FindObjectsOfTypeAll<T>();
+        foreach (T component in components)
+        {
+            if (component == null || component.gameObject == null)
+            {
+                continue;
+            }
+
+            if (!component.gameObject.scene.IsValid())
+            {
+                continue;
+            }
+
+            return component;
+        }
+
+        return null;
     }
 
     private void SetMenuVisible(bool visible)

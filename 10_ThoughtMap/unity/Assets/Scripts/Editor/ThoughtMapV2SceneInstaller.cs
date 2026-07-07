@@ -15,7 +15,7 @@ public static class ThoughtMapV2SceneInstaller
     [MenuItem("Tools/ThoughtMap/Install V2 Prefabs In Current Scene")]
     public static void InstallV2PrefabsInCurrentScene()
     {
-        Canvas canvas = Object.FindFirstObjectByType<Canvas>();
+        Canvas canvas = Object.FindObjectOfType<Canvas>();
         if (canvas == null)
         {
             Debug.LogError("[ThoughtMapV2SceneInstaller] No Canvas found in the current scene.");
@@ -89,7 +89,7 @@ public static class ThoughtMapV2SceneInstaller
 
     private static ThoughtMapRuntimeController EnsureRuntimeController(Transform parent)
     {
-        ThoughtMapRuntimeController existing = Object.FindFirstObjectByType<ThoughtMapRuntimeController>();
+        ThoughtMapRuntimeController existing = Object.FindObjectOfType<ThoughtMapRuntimeController>();
         if (existing != null)
         {
             existing.gameObject.SetActive(true);
@@ -111,7 +111,7 @@ public static class ThoughtMapV2SceneInstaller
         if (controller == null) return;
 
         SerializedObject controllerObject = new SerializedObject(controller);
-        SetObject(controllerObject, "apiClient", Object.FindFirstObjectByType<ThoughtMapApiClient>());
+        SetObject(controllerObject, "apiClient", Object.FindObjectOfType<ThoughtMapApiClient>());
         SetObject(controllerObject, "searchHeaderV2", searchHeader);
         SetObject(controllerObject, "resultListV2", resultList);
         SetObject(controllerObject, "detailPanelV2", detailPanel);
@@ -136,10 +136,10 @@ public static class ThoughtMapV2SceneInstaller
 
     private static TMP_Dropdown FindDropdownByName(string name)
     {
-        TMP_Dropdown[] dropdowns = Object.FindObjectsByType<TMP_Dropdown>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        TMP_Dropdown[] dropdowns = Resources.FindObjectsOfTypeAll<TMP_Dropdown>();
         foreach (TMP_Dropdown dropdown in dropdowns)
         {
-            if (dropdown != null && dropdown.name == name)
+            if (dropdown != null && !EditorUtility.IsPersistent(dropdown) && dropdown.name == name)
             {
                 return dropdown;
             }
@@ -208,7 +208,7 @@ public static class ThoughtMapV2SceneInstaller
 
     private static void DisableLegacyManager()
     {
-        ThoughtMapSearchManager legacyManager = Object.FindFirstObjectByType<ThoughtMapSearchManager>();
+        ThoughtMapSearchManager legacyManager = Object.FindObjectOfType<ThoughtMapSearchManager>();
         if (legacyManager != null)
         {
             legacyManager.enabled = false;

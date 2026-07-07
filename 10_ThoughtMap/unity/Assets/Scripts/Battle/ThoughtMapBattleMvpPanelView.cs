@@ -9,18 +9,22 @@ public class ThoughtMapBattleMvpPanelView : MonoBehaviour
 
     [Header("Runtime UI")]
     [SerializeField] private bool buildOnAwake = true;
-    [SerializeField] private bool showOnStart = true;
+    [SerializeField] private bool showOnStart = false;
     [SerializeField] private RectTransform panelRoot;
-    [SerializeField] private Vector2 defaultSize = new Vector2(860f, 720f);
+    [SerializeField] private Vector2 defaultSize = new Vector2(1680f, 1000f);
     [SerializeField] private Vector2 defaultPosition = new Vector2(0f, 0f);
 
     [Header("Generated References")]
     [SerializeField] private Button startBattleButton;
+    [SerializeField] private Button resetPlacementButton;
     [SerializeField] private Button toggleVisibilityButton;
-    [SerializeField] private TMP_Text playerDeckText;
-    [SerializeField] private TMP_Text enemyDeckText;
+    [SerializeField] private RectTransform playerDeckRoot;
+    [SerializeField] private RectTransform enemyDeckRoot;
     [SerializeField] private TMP_Text battleLogText;
+    [SerializeField] private ScrollRect battleLogScrollRect;
     [SerializeField] private TMP_Text battleResultText;
+    [SerializeField] private ThoughtMapBattleSummaryView battleSummaryView;
+    [SerializeField] private TMP_Text turnText;
     [SerializeField] private TMP_Text warningText;
     [SerializeField] private RectTransform gridRoot;
 
@@ -52,7 +56,7 @@ public class ThoughtMapBattleMvpPanelView : MonoBehaviour
         Image panelImage = EnsureImage(panelRoot.gameObject, new Color(0.02f, 0.08f, 0.12f, 0.94f));
         panelImage.raycastTarget = true;
 
-        VerticalLayoutGroup rootLayout = EnsureVerticalLayout(panelRoot.gameObject, 14f, 18, 18, 18, 18);
+        VerticalLayoutGroup rootLayout = EnsureVerticalLayout(panelRoot.gameObject, 10f, 16, 16, 14, 14);
         rootLayout.childForceExpandWidth = true;
         rootLayout.childForceExpandHeight = false;
         rootLayout.childControlWidth = true;
@@ -60,7 +64,7 @@ public class ThoughtMapBattleMvpPanelView : MonoBehaviour
 
         CreateTitle(panelRoot, "Source of Thought - Battle MVP");
 
-        RectTransform controls = CreateBlock(panelRoot, "Controls", 58f);
+        RectTransform controls = CreateBlock(panelRoot, "HeaderPanel", 54f);
         HorizontalLayoutGroup controlsLayout = EnsureHorizontalLayout(controls.gameObject, 12f, 0, 0, 0, 0);
         controlsLayout.childForceExpandWidth = false;
         controlsLayout.childControlWidth = true;
@@ -69,31 +73,53 @@ public class ThoughtMapBattleMvpPanelView : MonoBehaviour
         startBattleButton = CreateButton(controls, "Start Battle", new Vector2(180f, 44f));
         startBattleButton.onClick.AddListener(OnStartBattleClicked);
 
+        resetPlacementButton = CreateButton(controls, "Reset / Reposition", new Vector2(210f, 44f));
+        resetPlacementButton.onClick.AddListener(OnResetPlacementClicked);
+
         toggleVisibilityButton = CreateButton(controls, "Hide Battle UI", new Vector2(180f, 44f));
         toggleVisibilityButton.onClick.AddListener(ToggleVisible);
 
+        turnText = CreateText(controls, "TurnText", "Turn 0", 20, new Color(0.78f, 1f, 1f, 1f));
+        turnText.alignment = TextAlignmentOptions.Right;
+        AddPreferredSize(turnText.gameObject, 180f, 44f);
+
         warningText = CreateText(panelRoot, "WarningText", "", 16, new Color(1f, 0.75f, 0.18f, 1f));
+        AddPreferredHeight(warningText.gameObject, 24f);
         warningText.gameObject.SetActive(false);
 
-        RectTransform decks = CreateBlock(panelRoot, "DeckColumns", 190f);
+        RectTransform decks = CreateBlock(panelRoot, "DeckPanels", 150f);
         HorizontalLayoutGroup decksLayout = EnsureHorizontalLayout(decks.gameObject, 12f, 0, 0, 0, 0);
         decksLayout.childForceExpandWidth = true;
         decksLayout.childControlWidth = true;
         decksLayout.childControlHeight = true;
 
-        playerDeckText = CreateDeckText(decks, "Player Deck");
-        enemyDeckText = CreateDeckText(decks, "Enemy Deck");
+        playerDeckRoot = CreateDeckPanel(decks, "Player Deck");
+        enemyDeckRoot = CreateDeckPanel(decks, "Enemy Deck");
 
-        gridRoot = CreateBlock(panelRoot, "BattleGrid", 190f);
+        RectTransform gridPanel = CreateBlock(panelRoot, "BattleGridPanel", 250f);
+        EnsureVerticalLayout(gridPanel.gameObject, 8f, 8, 8, 8, 8);
+        CreateHeading(gridPanel, "Battle Grid");
+        gridRoot = CreateContainer(gridPanel, "BattleGrid");
+        AddPreferredHeight(gridRoot.gameObject, 208f);
+        GridLayoutGroup gridLayout = gridRoot.gameObject.AddComponent<GridLayoutGroup>();
+        gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        gridLayout.constraintCount = 5;
+        gridLayout.cellSize = new Vector2(128f, 36f);
+        gridLayout.spacing = new Vector2(6f, 6f);
+        gridLayout.childAlignment = TextAnchor.MiddleCenter;
 
         battleResultText = CreateText(panelRoot, "BattleResultText", "Battle not started.", 18, new Color(0.64f, 0.94f, 1f, 1f));
-        AddPreferredHeight(battleResultText.gameObject, 42f);
+        AddPreferredHeight(battleResultText.gameObject, 34f);
 
-        RectTransform logBlock = CreateBlock(panelRoot, "BattleLogBlock", 190f);
-        battleLogText = CreateText(logBlock, "BattleLogText", "Press Start Battle to run the 5v5 MVP simulation.", 15, Color.white);
-        battleLogText.alignment = TextAlignmentOptions.TopLeft;
-        battleLogText.enableWordWrapping = true;
-        Stretch(battleLogText.rectTransform);
+        RectTransform summaryBlock = CreateBlock(panelRoot, "SummaryPanel", 104f);
+        battleSummaryView = summaryBlock.gameObject.AddComponent<ThoughtMapBattleSummaryView>();
+        battleSummaryView.BuildIfNeeded();
+        battleSummaryView.ShowPending();
+
+        RectTransform logBlock = CreateBlock(panelRoot, "BattleLogPanel", 190f);
+        EnsureVerticalLayout(logBlock.gameObject, 8f, 8, 8, 8, 8);
+        CreateHeading(logBlock, "Battle Log");
+        battleLogText = CreateBattleLogScrollView(logBlock);
 
         BindController();
     }
@@ -132,6 +158,17 @@ public class ThoughtMapBattleMvpPanelView : MonoBehaviour
         controller.Run();
     }
 
+    private void OnResetPlacementClicked()
+    {
+        if (controller == null)
+        {
+            return;
+        }
+
+        BindController();
+        controller.ResetPlacementMode();
+    }
+
     private void BindController()
     {
         if (controller == null)
@@ -140,10 +177,13 @@ public class ThoughtMapBattleMvpPanelView : MonoBehaviour
         }
 
         controller.SetUiTargets(
-            playerDeckText,
-            enemyDeckText,
+            playerDeckRoot,
+            enemyDeckRoot,
             battleLogText,
+            battleLogScrollRect,
             battleResultText,
+            battleSummaryView,
+            turnText,
             warningText,
             gridRoot
         );
@@ -175,13 +215,66 @@ public class ThoughtMapBattleMvpPanelView : MonoBehaviour
         AddPreferredHeight(text.gameObject, 38f);
     }
 
-    private TMP_Text CreateDeckText(RectTransform parent, string label)
+    private RectTransform CreateDeckPanel(RectTransform parent, string label)
     {
-        RectTransform block = CreateBlock(parent, label.Replace(" ", "") + "Block", 170f);
-        TMP_Text text = CreateText(block, label + "Text", label + "\nNo cards deployed yet.", 14, Color.white);
+        RectTransform block = CreateBlock(parent, label.Replace(" ", "") + "Panel", 0f);
+        VerticalLayoutGroup layout = EnsureVerticalLayout(block.gameObject, 8f, 8, 8, 8, 8);
+        layout.childForceExpandWidth = true;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+
+        CreateHeading(block, label);
+        RectTransform content = CreateContainer(block, label.Replace(" ", "") + "Cards");
+        AddPreferredHeight(content.gameObject, 96f);
+        HorizontalLayoutGroup row = EnsureHorizontalLayout(content.gameObject, 8f, 0, 0, 0, 0);
+        row.childForceExpandWidth = false;
+        row.childControlWidth = true;
+        row.childControlHeight = true;
+        row.childAlignment = TextAnchor.MiddleCenter;
+        return content;
+    }
+
+    private TMP_Text CreateBattleLogScrollView(RectTransform parent)
+    {
+        GameObject scrollObject = new GameObject("BattleLogScrollView", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(ScrollRect));
+        RectTransform scrollRect = scrollObject.GetComponent<RectTransform>();
+        scrollRect.SetParent(parent, false);
+        AddPreferredHeight(scrollObject, 154f);
+        Image scrollImage = scrollObject.GetComponent<Image>();
+        scrollImage.color = new Color(0.01f, 0.07f, 0.10f, 0.92f);
+
+        GameObject viewportObject = new GameObject("Viewport", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Mask));
+        RectTransform viewport = viewportObject.GetComponent<RectTransform>();
+        viewport.SetParent(scrollRect, false);
+        Stretch(viewport);
+        Image viewportImage = viewportObject.GetComponent<Image>();
+        viewportImage.color = new Color(0f, 0f, 0f, 0.08f);
+        viewportObject.GetComponent<Mask>().showMaskGraphic = false;
+
+        GameObject contentObject = new GameObject("Content", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI), typeof(ContentSizeFitter));
+        RectTransform content = contentObject.GetComponent<RectTransform>();
+        content.SetParent(viewport, false);
+        content.anchorMin = new Vector2(0f, 1f);
+        content.anchorMax = new Vector2(1f, 1f);
+        content.pivot = new Vector2(0.5f, 1f);
+        content.offsetMin = new Vector2(10f, 0f);
+        content.offsetMax = new Vector2(-10f, 0f);
+
+        TMP_Text text = contentObject.GetComponent<TMP_Text>();
+        text.text = "Press Start Battle to run the 5v5 MVP simulation.";
+        text.fontSize = 14;
+        text.color = Color.white;
         text.alignment = TextAlignmentOptions.TopLeft;
         text.enableWordWrapping = true;
-        Stretch(text.rectTransform);
+        ContentSizeFitter fitter = contentObject.GetComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        ScrollRect scroll = scrollObject.GetComponent<ScrollRect>();
+        battleLogScrollRect = scroll;
+        scroll.viewport = viewport;
+        scroll.content = content;
+        scroll.horizontal = false;
+        scroll.vertical = true;
         return text;
     }
 
@@ -193,8 +286,27 @@ public class ThoughtMapBattleMvpPanelView : MonoBehaviour
         Image image = blockObject.GetComponent<Image>();
         image.color = new Color(0.0f, 0.18f, 0.26f, 0.72f);
         image.raycastTarget = false;
-        AddPreferredHeight(blockObject, preferredHeight);
+        if (preferredHeight > 0f)
+        {
+            AddPreferredHeight(blockObject, preferredHeight);
+        }
         return rect;
+    }
+
+    private RectTransform CreateContainer(RectTransform parent, string name)
+    {
+        GameObject containerObject = new GameObject(name, typeof(RectTransform));
+        RectTransform rect = containerObject.GetComponent<RectTransform>();
+        rect.SetParent(parent, false);
+        return rect;
+    }
+
+    private TMP_Text CreateHeading(RectTransform parent, string value)
+    {
+        TMP_Text text = CreateText(parent, value.Replace(" ", "") + "Heading", value, 16, new Color(0.72f, 0.96f, 1f, 1f));
+        text.fontStyle = FontStyles.Bold;
+        AddPreferredHeight(text.gameObject, 24f);
+        return text;
     }
 
     private Button CreateButton(RectTransform parent, string label, Vector2 size)

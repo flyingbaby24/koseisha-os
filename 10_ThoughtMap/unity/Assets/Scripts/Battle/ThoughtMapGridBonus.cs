@@ -2,12 +2,14 @@ public struct ThoughtMapGridBonus
 {
     public float attackMultiplier;
     public float defenseMultiplier;
+    public float hpMultiplier;
     public float hateMultiplier;
 
-    public ThoughtMapGridBonus(float attackMultiplier, float defenseMultiplier, float hateMultiplier)
+    public ThoughtMapGridBonus(float attackMultiplier, float defenseMultiplier, float hpMultiplier, float hateMultiplier)
     {
         this.attackMultiplier = attackMultiplier;
         this.defenseMultiplier = defenseMultiplier;
+        this.hpMultiplier = hpMultiplier;
         this.hateMultiplier = hateMultiplier;
     }
 }
@@ -22,15 +24,17 @@ public static class ThoughtMapGridBonusCalculator
 
         float attack = position.y == forwardY ? 1.10f : 1.0f;
         float defense = position.y == backY ? 1.12f : 1.0f;
+        float hp = position.y == forwardY ? 0.95f : 1.0f;
         float hate = position.y == forwardY ? 1.25f : 0.9f;
 
         if (position.x == 2 && position.y == 2)
         {
             attack *= 1.05f;
             defense *= 1.05f;
+            hp *= 1.03f;
             hate *= 1.08f;
         }
 
-        return new ThoughtMapGridBonus(attack, defense, hate);
+        return new ThoughtMapGridBonus(attack, defense, hp, hate);
     }
 }
