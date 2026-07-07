@@ -1,6 +1,38 @@
 # ThoughtMap Unity Setup
 
-This guide explains how to wire the current Unity scene to the FastAPI ThoughtMap backend and the V2 prefab-based Unity UI.
+This guide explains how to wire the current Unity scenes to the FastAPI ThoughtMap backend, the V2 prefab-based Search UI, and the standalone Battle MVP.
+
+## Fixed Scene Boundaries
+
+Source of Thought uses four separate screen roles. Keep these boundaries fixed as the project grows:
+
+1. `Input/Register Scene`
+   - Input the user's own works.
+   - Generate embeddings.
+   - Save generated data to the user's own storage folder.
+   - Submit a DB registration request.
+2. `Search/Collect Scene`
+   - Search by embedding or by data from the user's own storage folder.
+   - Download search results.
+   - Save selected search results to the user's own storage folder.
+   - This is not a card-selection screen.
+3. `Battle Prep Scene`
+   - Select works from the user's saved folder.
+   - Generate cards and skills.
+   - Configure placement and skill allocation.
+   - Save card composition, skill composition, and placement.
+4. `Battle Scene`
+   - Execute battle.
+   - Display the battle result.
+
+Boundary rules:
+
+- Do not integrate Battle features into the `Search/Collect Scene`.
+- Game flow starts at `Battle Prep Scene`; `Search/Collect Scene` only collects and saves works.
+- Shared data between Search and Battle is limited to saved-folder data, embeddings, and work metadata.
+- `ThoughtMapMain` currently represents the Search/Collect UI baseline.
+- `BattleScene` is battle execution only.
+- `Battle Prep Scene` is a future separate scene, not a panel inside Search.
 
 The current Unity baseline is V2-first:
 
@@ -67,7 +99,7 @@ These optional columns drive the temporary adjacent-card similarity coefficient.
 - Hate target selection considers current hate, low HP, distance, threat, and grid role.
 - Adjacent-card similarity is a temporary multiplier slot for future embedding synergy.
 
-### Unity setup
+### Standalone BattleScene setup
 
 1. Generate `cards.csv` from the existing ThoughtMap card pipeline.
 2. In Unity, import `cards.csv` as a `TextAsset`, or place it at:
@@ -76,16 +108,64 @@ These optional columns drive the temporary adjacent-card similarity coefficient.
 Assets/StreamingAssets/cards.csv
 ```
 
-3. Create an empty GameObject, for example `ThoughtMapBattleMVP`.
-4. Add `ThoughtMapBattleMvpController`.
-5. Assign either:
-   - `Cards Csv Asset`, or
-   - leave it empty and keep `Streaming Assets Csv Path = cards.csv`.
-6. Keep `Run On Start` off for manual MVP testing.
-7. Add `ThoughtMapBattleMvpPanelView` to the same GameObject.
-8. Assign the `Controller` field to the `ThoughtMapBattleMvpController` on the same GameObject.
-9. Leave `Build On Awake` enabled to create the simple Battle panel at runtime.
-10. Press Play, then press `Start Battle` in the Battle panel.
+3. In Unity, run:
+
+```text
+Tools > Source of Thought > Create BattleScene
+```
+
+4. Open:
+
+```text
+Assets/Scenes/BattleScene.unity
+```
+
+5. Confirm the scene contains:
+   - `Main Camera`
+   - `BattleCanvas`
+   - `EventSystem`
+   - `SourceOfThoughtBattle`
+6. Confirm `SourceOfThoughtBattle` has:
+   - `ThoughtMapBattleMvpController`
+   - `ThoughtMapBattleMvpPanelView`
+7. Assign `Cards Csv Asset` if you imported `cards.csv` as a TextAsset, or leave it empty and keep `Streaming Assets Csv Path = cards.csv`.
+8. Press Play in `BattleScene`.
+9. Press `Start Battle`.
+
+### Remove Battle UI from ThoughtMapMain
+
+`ThoughtMapMain` is the Search/Collect scene. It must not contain Battle UI.
+
+Open `ThoughtMapMain`, then run:
+
+```text
+Tools > Source of Thought > Clean Battle UI From Current Search Scene
+```
+
+This removes Battle-only objects from the active non-Battle scene, including:
+
+- `SourceOfThoughtBattle`
+- `ThoughtMapBattleMVP`
+- objects with `ThoughtMapBattleMvpController`
+- objects with `ThoughtMapBattleMvpPanelView`
+- the old same-scene `ThoughtMapScreenModeController`
+
+The cleanup menu is guarded so it will not remove the standalone Battle UI while `BattleScene` is active.
+
+After cleanup, `ThoughtMapMain` should contain Search UI only:
+
+- `SearchHeaderV2`
+- `ResultListV2`
+- `ThoughtMapDetailPanelV2`
+- API/search managers needed by Search
+
+It should not show:
+
+- `Start Battle`
+- `Hide Battle UI`
+- `Battle MVP`
+- `SourceOfThoughtBattle`
+- `ThoughtMapBattleMVP`
 
 The panel creates:
 
@@ -100,17 +180,34 @@ The panel creates:
 
 If `cards.csv` is not assigned and is not found in `Assets/StreamingAssets/cards.csv`, the Start Battle button will not crash the scene. It shows a warning in the panel and writes a warning to the Console.
 
-The Battle UI is independent from the existing ThoughtMap search UI. To hide/show it from another button, wire that button to `ThoughtMapBattleMvpPanelView.ToggleVisible()`.
+`BattleScene` is intentionally independent from `ThoughtMapMain` and the Search UI. Do not place `SearchHeaderV2`, `ResultListV2`, or `ThoughtMapDetailPanelV2` in `BattleScene`.
 
 The older optional manual UI fields on `ThoughtMapBattleMvpController` still work. `ThoughtMapBattleMvpPanelView` simply binds its generated TMP fields to the controller by calling `SetUiTargets(...)`.
 
 ### Battle MVP checks
 
 - Unity compiles after adding the Battle scripts.
-- `Run On Start` is off unless you intentionally want auto-run.
-- Play mode shows the Battle panel without changing the search UI.
+- `ThoughtMapMain` / Search UI remains unchanged.
+- `BattleScene` contains only the Battle-specific Canvas and Battle components.
+- `SearchHeaderV2`, `ResultListV2`, and `ThoughtMapDetailPanelV2` are not present in `BattleScene`.
+- Play mode in `BattleScene` shows only the `Source of Thought` Battle screen.
 - Pressing `Start Battle` with a valid `cards.csv` fills Player Deck, Enemy Deck, Battle Grid, Battle Result, and Battle Log.
 - Pressing `Start Battle` without `cards.csv` shows the warning text and does not throw an exception.
+
+### Optional title/menu scene
+
+The public game title is `Source of Thought`. `ThoughtMap` remains the internal project name for scripts, API types, folders, and debugging.
+
+The current recommended MVP flow is to open `BattleScene` directly for Battle testing and keep `ThoughtMapMain` for Search/Collect testing. If you later want a separate launcher scene, create a new `TitleScene` that loads one of the four fixed scene roles:
+
+- `InputRegisterScene` for Input/Register
+- `ThoughtMapMain` or `SearchCollectScene` for Search/Collect
+- `BattlePrepScene` for deck/card/skill preparation
+- `BattleScene` for battle execution
+
+Avoid using the old same-scene overlay approach for Battle. `ThoughtMapScreenModeController` can remain in the project as a compatibility helper, but the Battle MVP should use the standalone `BattleScene` path.
+
+This keeps Search and Battle from being displayed at the same time and prevents Battle UI from inheriting old Search scene layout state.
 
 This MVP is deliberately log-first. It proves that cards can be loaded, deployed, placed on a grid, and resolved through an auto-battle loop before any polished battle UI or skill generation is added.
 
