@@ -13,15 +13,35 @@ API_BASE_URL = "https://koseisha-os.onrender.com"
 st.title("ThoughtMap Similarity Search")
 st.caption("FastAPI /search client")
 
+
 with st.sidebar:
+    search_backend = st.radio(
+        "Search backend",
+        ["Official DB", "Personal Search"],
+        index=0,
+    )
+
     top = st.slider("Top results", 1, 50, 10)
     mode = st.selectbox("Search mode", ["keyword", "hybrid", "semantic"], index=0)
     source = st.text_input("Source filter", value="all")
     filter_name = st.selectbox("Parameter filter", ["general"])
 
+
 q = st.text_input("Search query", value="Plato")
 
+email = ""
+if search_backend == "Personal Search":
+    email = st.text_input(
+        "Registered e-mail",
+        placeholder="example@example.com",
+    )
+
+
 if st.button("Search FastAPI", type="primary"):
+    if search_backend == "Personal Search" and not email:
+        st.error("Please enter your registered e-mail.")
+        st.stop()
+
     params = {
         "q": q,
         "top": top,
@@ -31,6 +51,9 @@ if st.button("Search FastAPI", type="primary"):
 
     if source and source != "all":
         params["source"] = source
+
+    if search_backend == "Personal Search":
+        params["user_email"] = email
 
     url = API_BASE_URL + "/search?" + urllib.parse.urlencode(params)
 
@@ -49,6 +72,7 @@ if st.button("Search FastAPI", type="primary"):
 
     except Exception as exc:
         st.error(str(exc))
+
 
 data = st.session_state.get("last_data")
 results = st.session_state.get("last_results", [])
@@ -79,6 +103,13 @@ if data is not None:
             st.subheader("Similar works")
             st.dataframe(df, use_container_width=True, hide_index=True)
 
+            st.download_button(
+                "Download similar works CSV",
+                df.to_csv(index=False).encode("utf-8-sig"),
+                file_name="thoughtmap_search_results.csv",
+                mime="text/csv",
+            )
+
             st.subheader("Similar authors")
             author_df = (
                 df[df["author"] != ""]
@@ -89,7 +120,15 @@ if data is not None:
                 )
                 .sort_values(["best_similarity", "works"], ascending=False)
             )
+
             st.dataframe(author_df, use_container_width=True, hide_index=True)
+
+            st.download_button(
+                "Download similar authors CSV",
+                author_df.to_csv(index=False).encode("utf-8-sig"),
+                file_name="thoughtmap_similar_authors.csv",
+                mime="text/csv",
+            )
 
         with right:
             st.subheader("Selected work detail")
