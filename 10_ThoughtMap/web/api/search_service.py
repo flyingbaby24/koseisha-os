@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+import hashlib
 import re
 from functools import lru_cache
+from pathlib import Path
 
 import pandas as pd
 
-from search_utils import format_similarity, normalize_text, work_similarity_by_vector
+from search_utils import (
+    format_similarity,
+    normalize_text,
+    parse_embedding,
+    work_similarity_by_vector,
+)
 
 from .config import ApiSettings, get_settings
 from .repositories import SearchIndexRepository, create_search_index_repository
@@ -77,6 +84,7 @@ class ThoughtMapSearchService:
         source = str(source or "").strip()
         category = str(category or "").strip()
         target_doc_id = str(target_doc_id or "").strip()
+        user_email = str(user_email or "").strip()
 
         if mode not in SEARCH_MODES:
             raise ValueError(f"Unsupported search mode: {mode}")
@@ -96,12 +104,23 @@ class ThoughtMapSearchService:
         elif mode == "embedding":
             if not target_doc_id:
                 raise ValueError("target_doc_id is required for embedding mode.")
-            results = self._embedding_search(index, target_doc_id, top)
+            results = self._embedding_search(
+                index=index,
+                target_doc_id=target_doc_id,
+                top=top,
+                user_email=user_email,
+            )
 
         else:
             if not target_doc_id:
                 raise ValueError("target_doc_id is required for hybrid mode.")
-            results = self._hybrid_embedding_search(index, query, target_doc_id, top)
+            results = self._hybrid_embedding_search(
+                index=index,
+                query=query,
+                target_doc_id=target_doc_id,
+                top=top,
+                user_email=user_email,
+            )
 
         return self._to_search_results(results)
 
@@ -125,18 +144,24 @@ class ThoughtMapSearchService:
         ).head(top).reset_index(drop=True)
         return format_similarity(results)
 
-    def _embedding_search(self, index: pd.DataFrame, target_doc_id: str, top: int) -> pd.DataFrame:
-        target = self._find_target_row(index, target_doc_id)
-        target_vec = target.get("_embedding_vec")
-
-        if target_vec is None:
-            raise ValueError(f"Target document has no embedding: {target_doc_id}")
+    def _embedding_search(
+        self,
+        index: pd.DataFrame,
+        target_doc_id: str,
+        top: int,
+        user_email: str = "",
+    ) -> pd.DataFrame:
+        target_vec, exclude_doc_id = self._resolve_target_embedding(
+            index=index,
+            target_doc_id=target_doc_id,
+            user_email=user_email,
+        )
 
         results = work_similarity_by_vector(
             index,
             target_vec=target_vec,
             top=top,
-            exclude_doc_id=str(target.get("doc_id", "")),
+            exclude_doc_id=exclude_doc_id,
             include_self=False,
         )
 
@@ -148,12 +173,13 @@ class ThoughtMapSearchService:
         query: str,
         target_doc_id: str,
         top: int,
+        user_email: str = "",
     ) -> pd.DataFrame:
-        target = self._find_target_row(index, target_doc_id)
-        target_vec = target.get("_embedding_vec")
-
-        if target_vec is None:
-            raise ValueError(f"Target document has no embedding: {target_doc_id}")
+        target_vec, exclude_doc_id = self._resolve_target_embedding(
+            index=index,
+            target_doc_id=target_doc_id,
+            user_email=user_email,
+        )
 
         candidates = index.copy()
 
@@ -171,7 +197,7 @@ class ThoughtMapSearchService:
             candidates,
             target_vec=target_vec,
             top=max(top, len(candidates)),
-            exclude_doc_id=str(target.get("doc_id", "")),
+            exclude_doc_id=exclude_doc_id,
             include_self=False,
         )
 
@@ -193,6 +219,82 @@ class ThoughtMapSearchService:
             results = results.head(top).reset_index(drop=True)
 
         return results
+
+    def _resolve_target_embedding(
+        self,
+        index: pd.DataFrame,
+        target_doc_id: str,
+        user_email: str = "",
+    ) -> tuple[object, str]:
+        if user_email:
+            target = self._find_user_target_row(user_email, target_doc_id)
+            target_vec = target.get("_embedding_vec")
+            exclude_doc_id = str(target.get("doc_id", "") or target_doc_id)
+        else:
+            target = self._find_target_row(index, target_doc_id)
+            target_vec = target.get("_embedding_vec")
+            exclude_doc_id = str(target.get("doc_id", "") or target_doc_id)
+
+        if target_vec is None:
+            raise ValueError(f"Target document has no embedding: {target_doc_id}")
+
+        return target_vec, exclude_doc_id
+
+    def _user_embedding_path(self, user_email: str) -> Path:
+        normalized = str(user_email or "").strip().lower()
+        if not normalized:
+            raise ValueError("user_email is required for personal embedding search.")
+
+        user_id = hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16]
+        base_dir = Path(__file__).resolve().parents[1]
+        return base_dir / "user_data" / user_id / "thoughtmap_embeddings.csv"
+
+    def _load_user_embeddings(self, user_email: str) -> pd.DataFrame:
+        csv_path = self._user_embedding_path(user_email)
+
+        if not csv_path.exists():
+            raise ValueError(f"Personal embedding DB not found: {csv_path}")
+
+        df = pd.read_csv(csv_path, dtype=str).fillna("")
+
+        if "embedding" not in df.columns:
+            raise ValueError("Personal embedding CSV must contain an embedding column.")
+
+        if "doc_id" not in df.columns:
+            df["doc_id"] = [f"user_doc_{i:06d}" for i in range(len(df))]
+
+        for col in ["title", "author", "source", "category", "subcategory", "source_url", "url"]:
+            if col not in df.columns:
+                df[col] = ""
+
+        df["_embedding_vec"] = df["embedding"].map(parse_embedding)
+        df = df[df["_embedding_vec"].notna()].copy()
+
+        if df.empty:
+            raise ValueError("Personal embedding CSV has no valid embedding rows.")
+
+        return df.reset_index(drop=True)
+
+    def _find_user_target_row(self, user_email: str, target_doc_id: str) -> pd.Series:
+        user_df = self._load_user_embeddings(user_email)
+        target_key = normalize_text(target_doc_id)
+
+        exact = user_df[user_df["doc_id"].map(normalize_text) == target_key]
+        if not exact.empty:
+            return exact.iloc[0]
+
+        title_match = user_df[user_df["title"].map(normalize_text) == target_key]
+        if not title_match.empty:
+            return title_match.iloc[0]
+
+        partial = user_df[
+            user_df["doc_id"].map(normalize_text).str.contains(re.escape(target_key), na=False)
+            | user_df["title"].map(normalize_text).str.contains(re.escape(target_key), na=False)
+        ]
+        if not partial.empty:
+            return partial.iloc[0]
+
+        raise ValueError(f"Target work not found in personal embeddings: {target_doc_id}")
 
     def _find_target_row(self, index: pd.DataFrame, target_doc_id: str) -> pd.Series:
         if "doc_id" not in index.columns:
