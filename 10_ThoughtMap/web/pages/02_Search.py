@@ -11,17 +11,20 @@ st.set_page_config(page_title="ThoughtMap Search", layout="wide")
 API_BASE_URL = "https://koseisha-os.onrender.com"
 
 st.title("ThoughtMap Similarity Search")
-st.caption("Official / Personal search client for ThoughtMap FastAPI")
+st.caption("Keyword search or embedding-to-embedding similarity search.")
 
 
-def call_api(url: str) -> tuple[dict, float]:
+def call_api(params: dict) -> tuple[dict, float, str]:
+    url = API_BASE_URL + "/search?" + urllib.parse.urlencode(params)
     start = time.time()
+
     with urllib.request.urlopen(url, timeout=60) as response:
         data = json.loads(response.read().decode("utf-8"))
-    return data, time.time() - start
+
+    return data, time.time() - start, url
 
 
-def make_result_frame(results: list[dict]) -> pd.DataFrame:
+def result_frame(results: list[dict]) -> pd.DataFrame:
     rows = []
     for i, item in enumerate(results):
         rows.append({
@@ -37,39 +40,22 @@ def make_result_frame(results: list[dict]) -> pd.DataFrame:
     df = pd.DataFrame(rows)
 
     if not df.empty:
-        df["similarity"] = pd.to_numeric(df["similarity"], errors="coerce").fillna(0.0)
+        df["similarity"] = pd.to_numeric(df["similarity"], errors="coerce").fillna(0)
 
     return df
 
 
-def make_param_frame(parameters: list[dict]) -> pd.DataFrame:
-    rows = []
-    for p in parameters or []:
-        rows.append({
-            "parameter": p.get("key", ""),
-            "value": p.get("value", 0),
-        })
-
-    df = pd.DataFrame(rows)
-
-    if not df.empty:
-        df["value"] = pd.to_numeric(df["value"], errors="coerce").fillna(0.0)
-
-    return df
-
-
-def make_author_frame(df: pd.DataFrame) -> pd.DataFrame:
-    if df.empty or "author" not in df.columns:
+def author_frame(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
         return pd.DataFrame()
 
-    author_df = df[df["author"].astype(str).str.strip() != ""].copy()
+    out = df[df["author"].astype(str).str.strip() != ""].copy()
 
-    if author_df.empty:
+    if out.empty:
         return pd.DataFrame()
 
     return (
-        author_df
-        .groupby("author", as_index=False)
+        out.groupby("author", as_index=False)
         .agg(
             works=("doc_id", "count"),
             best_similarity=("similarity", "max"),
@@ -79,48 +65,75 @@ def make_author_frame(df: pd.DataFrame) -> pd.DataFrame:
 
 
 with st.sidebar:
-    search_backend = st.radio(
-        "Search backend",
-        ["Official DB", "Personal Search"],
+    search_mode = st.radio(
+        "Search type",
+        [
+            "Keyword search",
+            "Embedding similarity",
+            "Hybrid",
+        ],
         index=0,
     )
 
     top = st.slider("Top results", 1, 50, 10)
 
-    mode = st.selectbox(
-        "Search mode",
-        ["keyword", "hybrid", "semantic"],
-        index=0,
-    )
-
     source = st.text_input("Source filter", value="all")
-
-    category = st.text_input(
-        "Category filter",
-        value="all",
-        help="例: gutendex / lyric / literature / philosophy / all",
-    )
-
+    category = st.text_input("Category filter", value="all")
     filter_name = st.selectbox("Parameter filter", ["general"])
 
-q = st.text_input("Search query", value="Plato")
 
+q = ""
+target_doc_id = ""
 email = ""
-if search_backend == "Personal Search":
-    email = st.text_input(
-        "Registered e-mail",
-        placeholder="example@example.com",
+
+if search_mode == "Keyword search":
+    q = st.text_input(
+        "Keyword",
+        value="Plato",
+        help="author / title / doc_id / source を検索します。",
     )
 
-if st.button("Search FastAPI", type="primary"):
-    if search_backend == "Personal Search" and not email.strip():
-        st.error("Please enter your registered e-mail.")
-        st.stop()
+elif search_mode == "Embedding similarity":
+    st.info(
+        "Embedding similarity は、既存のembeddingをtargetにして公式DBのembeddingと比較する検索です。"
+    )
 
+    target_doc_id = st.text_input(
+        "Target doc_id",
+        placeholder="例: user_suno:doc_000400 / gutendex:doc_000631",
+        help="既存DB内のdoc_idをtarget embeddingとして使います。",
+    )
+
+    email = st.text_input(
+        "Registered e-mail",
+        placeholder="Personal Searchを使う場合のみ入力",
+    )
+
+else:
+    st.info(
+        "Hybrid は keywordで候補を絞り、target embeddingとの近さで並べます。"
+    )
+
+    q = st.text_input(
+        "Keyword filter",
+        value="",
+        placeholder="例: Plato / Jinn Project / love / war",
+    )
+
+    target_doc_id = st.text_input(
+        "Target doc_id",
+        placeholder="例: user_suno:doc_000400",
+    )
+
+    email = st.text_input(
+        "Registered e-mail",
+        placeholder="Personal Searchを使う場合のみ入力",
+    )
+
+
+if st.button("Search FastAPI", type="primary"):
     params = {
-        "q": q,
         "top": top,
-        "mode": mode,
         "filter": filter_name,
     }
 
@@ -130,35 +143,67 @@ if st.button("Search FastAPI", type="primary"):
     if category and category != "all":
         params["category"] = category
 
-    if search_backend == "Personal Search":
-        params["user_email"] = email.strip()
+    if search_mode == "Keyword search":
+        if not q.strip():
+            st.error("Please enter a keyword.")
+            st.stop()
 
-    url = API_BASE_URL + "/search?" + urllib.parse.urlencode(params)
+        params["mode"] = "keyword"
+        params["q"] = q.strip()
+
+    elif search_mode == "Embedding similarity":
+        if not target_doc_id.strip():
+            st.error("Please enter target doc_id.")
+            st.stop()
+
+        params["mode"] = "embedding"
+        params["target_doc_id"] = target_doc_id.strip()
+
+        if email.strip():
+            params["user_email"] = email.strip()
+
+    else:
+        if not target_doc_id.strip():
+            st.error("Please enter target doc_id.")
+            st.stop()
+
+        params["mode"] = "hybrid"
+        params["target_doc_id"] = target_doc_id.strip()
+
+        if q.strip():
+            params["q"] = q.strip()
+
+        if email.strip():
+            params["user_email"] = email.strip()
 
     try:
-        data, elapsed = call_api(url)
+        data, elapsed, url = call_api(params)
         results = data.get("results", [])
 
         st.session_state["last_data"] = data
         st.session_state["last_results"] = results
-        st.session_state["last_url"] = url
         st.session_state["last_elapsed"] = elapsed
-        st.session_state["last_backend"] = search_backend
+        st.session_state["last_url"] = url
+        st.session_state["last_mode"] = search_mode
 
     except Exception as exc:
         st.error(str(exc))
 
+
 data = st.session_state.get("last_data")
 results = st.session_state.get("last_results", [])
-url = st.session_state.get("last_url", "")
 elapsed = st.session_state.get("last_elapsed", 0)
-last_backend = st.session_state.get("last_backend", "")
+url = st.session_state.get("last_url", "")
+last_mode = st.session_state.get("last_mode", "")
 
 if data is not None:
-    st.success(f"{last_backend}: {len(results)} result(s) / {elapsed:.2f}s")
+    st.success(f"{last_mode}: {len(results)} result(s) / {elapsed:.2f}s")
 
-    if results:
-        df = make_result_frame(results)
+    if not results:
+        st.info("No results.")
+
+    else:
+        df = result_frame(results)
 
         left, right = st.columns([3, 2])
 
@@ -174,16 +219,16 @@ if data is not None:
             )
 
             st.subheader("Similar authors")
-            author_df = make_author_frame(df)
+            adf = author_frame(df)
 
-            if author_df.empty:
+            if adf.empty:
                 st.info("No author summary.")
             else:
-                st.dataframe(author_df, use_container_width=True, hide_index=True)
+                st.dataframe(adf, use_container_width=True, hide_index=True)
 
                 st.download_button(
                     "Download similar authors CSV",
-                    author_df.to_csv(index=False).encode("utf-8-sig"),
+                    adf.to_csv(index=False).encode("utf-8-sig"),
                     file_name="thoughtmap_similar_authors.csv",
                     mime="text/csv",
                 )
@@ -204,31 +249,30 @@ if data is not None:
             st.write(f"Author: {selected.get('author', '') or 'Unknown'}")
             st.write(f"Source: `{selected.get('source', '')}`")
             st.write(f"doc_id: `{selected.get('doc_id', '')}`")
-            st.metric("Similarity", f"{float(selected.get('similarity', selected.get('score', 0))):.4f}")
+            st.metric(
+                "Similarity",
+                f"{float(selected.get('similarity', selected.get('score', 0))):.4f}",
+            )
 
             if selected.get("url"):
                 st.markdown(f"[Open source]({selected.get('url')})")
 
-            st.subheader("Selected Parameters")
-            param_df = make_param_frame(selected.get("parameters", []))
+            st.subheader("Parameters")
+            params = selected.get("parameters", [])
 
-            if param_df.empty:
-                st.info("No selected parameters.")
+            if params:
+                pdf = pd.DataFrame([
+                    {
+                        "parameter": p.get("key", ""),
+                        "value": p.get("value", 0),
+                    }
+                    for p in params
+                ])
+                pdf["value"] = pd.to_numeric(pdf["value"], errors="coerce").fillna(0)
+                st.dataframe(pdf, use_container_width=True, hide_index=True)
+                st.bar_chart(pdf.set_index("parameter"))
             else:
-                st.dataframe(param_df, use_container_width=True, hide_index=True)
-                st.bar_chart(param_df.set_index("parameter"))
-
-            st.subheader("Query Parameters")
-            qdf = make_param_frame(data.get("query_parameters", []))
-
-            if qdf.empty:
-                st.info("No query parameters.")
-            else:
-                st.dataframe(qdf, use_container_width=True, hide_index=True)
-                st.bar_chart(qdf.set_index("parameter"))
-
-    else:
-        st.info("No results.")
+                st.info("No parameters.")
 
     with st.expander("Debug"):
         st.write(url)
