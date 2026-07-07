@@ -5,6 +5,7 @@ import hashlib
 from pathlib import Path
 
 import pandas as pd
+from pydantic import BaseModel
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -116,6 +117,51 @@ def list_saved_by_email(email: str = Query(..., min_length=3)) -> dict:
         "user_id": user_id,
         "works": works,
     }
+
+
+class SaveEmbeddingsByEmailRequest(BaseModel):
+    email: str
+    rows: list[dict]
+
+
+@app.post("/users/by-email/save-embeddings")
+def save_embeddings_by_email(
+    request: SaveEmbeddingsByEmailRequest,
+) -> dict:
+
+    user_id = make_user_id_from_email(request.email)
+
+    if not user_id:
+        raise HTTPException(status_code=400, detail="email is required.")
+
+    if not request.rows:
+        raise HTTPException(status_code=400, detail="rows are required.")
+
+    base_dir = Path(__file__).resolve().parents[1]
+    user_dir = base_dir / "user_data" / user_id
+    user_dir.mkdir(parents=True, exist_ok=True)
+
+    csv_path = user_dir / "thoughtmap_embeddings.csv"
+
+    df = pd.DataFrame(request.rows)
+
+    required = {"doc_id", "title", "source", "embedding"}
+    missing = required - set(df.columns)
+
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"missing columns: {sorted(missing)}",
+        )
+
+    df.to_csv(csv_path, index=False, encoding="utf-8-sig")
+
+    return {
+        "status": "saved",
+        "user_id": user_id,
+        "count": len(df),
+    }
+
 
 @app.post("/users/default/save", response_model=SaveDocumentResponse, response_model_exclude_none=True)
 def save_default_document(request: SaveDocumentRequest) -> SaveDocumentResponse:
