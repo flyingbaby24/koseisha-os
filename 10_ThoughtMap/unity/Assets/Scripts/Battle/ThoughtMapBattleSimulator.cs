@@ -118,6 +118,20 @@ public class ThoughtMapBattleSimulator
         if (roll > hitChance)
         {
             target.hate += 0.25f;
+            report.events.Add(new ThoughtMapBattleEvent
+            {
+                round = round,
+                attackerId = attacker.battleId,
+                attackerTeam = attacker.team,
+                targetId = target.battleId,
+                targetTeam = target.team,
+                damage = 0,
+                targetHp = target.hp,
+                targetMaxHp = target.maxHp,
+                miss = true,
+                defeated = false,
+                method = useSkill ? "skill" : "attack",
+            });
             report.logLines.Add(
                 $"Turn {round}: {DescribeUnit(attacker)} -> {DescribeUnit(target)} | miss"
             );
@@ -153,6 +167,21 @@ public class ThoughtMapBattleSimulator
         {
             report.logLines.Add($"Turn {round}: defeated | {DescribeUnit(target)}");
         }
+
+        report.events.Add(new ThoughtMapBattleEvent
+        {
+            round = round,
+            attackerId = attacker.battleId,
+            attackerTeam = attacker.team,
+            targetId = target.battleId,
+            targetTeam = target.team,
+            damage = damage,
+            targetHp = target.hp,
+            targetMaxHp = target.maxHp,
+            miss = false,
+            defeated = !target.IsAlive,
+            method = method,
+        });
     }
 
     private ThoughtMapSupportBonus GetSupportBonus(ThoughtMapBattleUnit attacker, List<ThoughtMapBattleUnit> allies)

@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -9,8 +10,14 @@ using UnityEngine.UI;
 public static class ThoughtMapBattleSceneCreator
 {
     private const string SceneFolder = "Assets/Scenes";
+    private const string PrefabFolder = "Assets/Prefabs";
     private const string BattleScenePath = "Assets/Scenes/BattleScene.unity";
     private const string BattlePrepScenePath = "Assets/Scenes/BattlePrepScene.unity";
+    private const string ProductBattlePrepScenePath = "Assets/Scenes/ProductBattlePrepScene.unity";
+    private const string ProductBattleCardPrefabPath = "Assets/Prefabs/ProductBattleCardPrefab.prefab";
+    private const string ProductBattleGridCellPrefabPath = "Assets/Prefabs/ProductBattleGridCellPrefab.prefab";
+    private const string PlaceholderCardArtPath = "Assets/Sprites/placeholder_card_art.png";
+    private const string PlaceholderAttributeIconPath = "Assets/Sprites/placeholder_attribute_icon.png";
 
     [MenuItem("Tools/Source of Thought/Create BattleScene")]
     public static void CreateBattleScene()
@@ -23,11 +30,11 @@ public static class ThoughtMapBattleSceneCreator
         CreateCamera();
         Canvas canvas = CreateCanvas("BattleCanvas");
         CreateEventSystem();
-        CreateBattleRoot(canvas.transform);
+        CreateBattlePlaceholderRoot(canvas.transform);
 
         EditorSceneManager.SaveScene(scene, BattleScenePath);
         AssetDatabase.Refresh();
-        Debug.Log($"[SourceOfThoughtBattleScene] Created {BattleScenePath}. Open it and press Play to show the standalone Battle screen.");
+        Debug.Log($"[SourceOfThoughtBattleScene] Created {BattleScenePath}. This is a placeholder for the future production Battle scene.");
     }
 
     [MenuItem("Tools/Source of Thought/Create BattlePrepScene")]
@@ -41,11 +48,49 @@ public static class ThoughtMapBattleSceneCreator
         CreateCamera();
         Canvas canvas = CreateCanvas("BattlePrepCanvas");
         CreateEventSystem();
-        CreateBattlePrepRoot(canvas.transform);
+        CreateDebugBattlePrepRoot(canvas.transform);
 
         EditorSceneManager.SaveScene(scene, BattlePrepScenePath);
         AssetDatabase.Refresh();
-        Debug.Log($"[SourceOfThoughtBattleScene] Created {BattlePrepScenePath}. Open it and press Play to show the Battle Prep screen.");
+        Debug.Log($"[SourceOfThoughtBattleScene] Created {BattlePrepScenePath}. Open it and press Play to show the Debug Battle Prep screen.");
+    }
+
+    [MenuItem("Tools/Source of Thought/Create ProductBattlePrepScene")]
+    public static void CreateProductBattlePrepScene()
+    {
+        EnsureSceneFolder();
+        CreateProductBattlePrepPrefabs();
+
+        Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        scene.name = "ProductBattlePrepScene";
+
+        CreateCamera();
+        Canvas canvas = CreateCanvas("ProductBattlePrepCanvas");
+        CreateEventSystem();
+        CreateProductBattlePrepRoot(canvas.transform);
+
+        EditorSceneManager.SaveScene(scene, ProductBattlePrepScenePath);
+        AssetDatabase.Refresh();
+        Debug.Log($"[SourceOfThoughtBattleScene] Created {ProductBattlePrepScenePath}. Open it and press Play to show the Product Battle Prep mock UI.");
+    }
+
+    [MenuItem("Tools/Source of Thought/Create Product Battle Prep Prefabs")]
+    public static void CreateProductBattlePrepPrefabs()
+    {
+        EnsurePrefabFolder();
+
+        GameObject cardObject = new GameObject("ProductBattleCardPrefab", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(ProductBattleCardView));
+        cardObject.GetComponent<ProductBattleCardView>().BuildIfNeeded();
+        PrefabUtility.SaveAsPrefabAsset(cardObject, ProductBattleCardPrefabPath);
+        Object.DestroyImmediate(cardObject);
+
+        GameObject cellObject = new GameObject("ProductBattleGridCellPrefab", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(ProductBattleGridCellView));
+        cellObject.GetComponent<ProductBattleGridCellView>().BuildIfNeeded();
+        PrefabUtility.SaveAsPrefabAsset(cellObject, ProductBattleGridCellPrefabPath);
+        Object.DestroyImmediate(cellObject);
+
+        AssetDatabase.Refresh();
+        Debug.Log("[SourceOfThoughtBattleScene] Created Product Battle Prep prefabs.");
     }
 
     [MenuItem("Tools/Source of Thought/Clean Battle UI From Current Search Scene")]
@@ -80,6 +125,14 @@ public static class ThoughtMapBattleSceneCreator
         if (!AssetDatabase.IsValidFolder(SceneFolder))
         {
             AssetDatabase.CreateFolder("Assets", "Scenes");
+        }
+    }
+
+    private static void EnsurePrefabFolder()
+    {
+        if (!AssetDatabase.IsValidFolder(PrefabFolder))
+        {
+            AssetDatabase.CreateFolder("Assets", "Prefabs");
         }
     }
 
@@ -119,10 +172,36 @@ public static class ThoughtMapBattleSceneCreator
         new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
     }
 
-    private static void CreateBattleRoot(Transform parent)
+    private static void CreateBattlePlaceholderRoot(Transform parent)
+    {
+        GameObject root = new GameObject("SourceOfThoughtBattleScenePlaceholder", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        RectTransform rect = root.GetComponent<RectTransform>();
+        rect.SetParent(parent, false);
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        root.GetComponent<Image>().color = new Color(0.005f, 0.018f, 0.05f, 1f);
+
+        GameObject textObject = new GameObject("Title", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        RectTransform textRect = textObject.GetComponent<RectTransform>();
+        textRect.SetParent(rect, false);
+        textRect.anchorMin = new Vector2(0.5f, 0.5f);
+        textRect.anchorMax = new Vector2(0.5f, 0.5f);
+        textRect.pivot = new Vector2(0.5f, 0.5f);
+        textRect.sizeDelta = new Vector2(980f, 180f);
+        TMP_Text text = textObject.GetComponent<TMP_Text>();
+        text.text = "Source of Thought - Battle Scene\nFuture production battle display only.\nDeck editing and placement live in BattlePrepScene.";
+        text.fontSize = 28;
+        text.color = new Color(0.76f, 0.98f, 1f, 1f);
+        text.alignment = TextAlignmentOptions.Center;
+        EditorUtility.SetDirty(root);
+    }
+
+    private static void CreateDebugBattlePrepRoot(Transform parent)
     {
         GameObject root = new GameObject(
-            "SourceOfThoughtBattle",
+            "DebugBattlePrep",
             typeof(RectTransform),
             typeof(ThoughtMapBattleMvpController),
             typeof(ThoughtMapBattleMvpPanelView)
@@ -183,6 +262,36 @@ public static class ThoughtMapBattleSceneCreator
         SetBool(panelObject, "buildOnAwake", true);
         SetVector2(panelObject, "defaultSize", new Vector2(1180f, 900f));
         SetVector2(panelObject, "defaultPosition", Vector2.zero);
+        panelObject.ApplyModifiedPropertiesWithoutUndo();
+
+        EditorUtility.SetDirty(root);
+    }
+
+    private static void CreateProductBattlePrepRoot(Transform parent)
+    {
+        GameObject root = new GameObject(
+            "ProductBattlePrepPanel",
+            typeof(RectTransform),
+            typeof(ProductBattlePrepPanelView)
+        );
+        RectTransform rect = root.GetComponent<RectTransform>();
+        rect.SetParent(parent, false);
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.sizeDelta = new Vector2(1760f, 980f);
+        rect.anchoredPosition = Vector2.zero;
+
+        ProductBattlePrepPanelView panel = root.GetComponent<ProductBattlePrepPanelView>();
+        SerializedObject panelObject = new SerializedObject(panel);
+        SetObject(panelObject, "panelRoot", rect);
+        SetString(panelObject, "streamingAssetsCsvPath", "cards.csv");
+        SetString(panelObject, "battleSceneName", "BattleScene");
+        SetBool(panelObject, "buildOnAwake", true);
+        SetVector2(panelObject, "defaultSize", new Vector2(1760f, 980f));
+        SetVector2(panelObject, "defaultPosition", Vector2.zero);
+        SetObject(panelObject, "placeholderCardArt", AssetDatabase.LoadAssetAtPath<Sprite>(PlaceholderCardArtPath));
+        SetObject(panelObject, "placeholderAttributeIcon", AssetDatabase.LoadAssetAtPath<Sprite>(PlaceholderAttributeIconPath));
         panelObject.ApplyModifiedPropertiesWithoutUndo();
 
         EditorUtility.SetDirty(root);

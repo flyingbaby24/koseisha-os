@@ -40,21 +40,53 @@ The generated scene should contain:
 - `Main Camera`
 - `BattlePrepCanvas`
 - `EventSystem`
-- `SourceOfThoughtBattlePrep`
+- `DebugBattlePrep`
 
-`SourceOfThoughtBattlePrep` contains:
+`DebugBattlePrep` contains:
 
-- `ThoughtMapBattlePrepController`
-- `ThoughtMapBattlePrepPanelView`
+- `ThoughtMapBattleMvpController`
+- `ThoughtMapBattleMvpPanelView`
 
 MVP behavior:
 
-- `Generate Cards` reads `Assets/StreamingAssets/cards.csv` or an assigned TextAsset.
-- `Deck Slots 10` are auto-filled from the first ten cards.
-- `Deploy Slots 5` are auto-filled from the first five deck cards.
-- `5x5 Placement Preview` uses fixed MVP placement.
+- The scene is a debug/verification preparation screen.
+- `Simulate Battle` runs the current lightweight preview simulation.
+- `Reset / Reposition` remains available for placement/debug checks.
+- This scene is not the formal battle presentation scene.
+
+Do not add `SearchHeaderV2`, `ResultListV2`, or `ThoughtMapDetailPanelV2` to `BattlePrepScene`.
+
+## ProductBattlePrepScene
+
+Create the product-facing preparation mock from Unity Editor:
+
+```text
+Tools > Source of Thought > Create Product Battle Prep Prefabs
+Tools > Source of Thought > Create ProductBattlePrepScene
+```
+
+The generated scene should contain:
+
+- `Main Camera`
+- `ProductBattlePrepCanvas`
+- `EventSystem`
+- `ProductBattlePrepPanel`
+
+Product mock behavior:
+
+- `Load Cards` reads `Assets/StreamingAssets/cards.csv` or an assigned TextAsset.
+- The deck shows up to ten large card views.
+- The formation board accepts up to five deployed cards.
+- `Simulate Battle` is only a formation/preview check.
 - `Save Deck` writes `deck.json` to `Application.persistentDataPath`.
-- `Start Battle` saves `deck.json`, then loads `BattleScene`.
+- `Start Battle` saves `deck.json`, then loads the future `BattleScene`.
+
+Product mock assets:
+
+- `Assets/Prefabs/ProductBattleCardPrefab.prefab`
+- `Assets/Prefabs/ProductBattleGridCellPrefab.prefab`
+- `Assets/Sprites/placeholder_card_art.png`
+- `Assets/Sprites/placeholder_attribute_icon.png`
 
 Do not add `SearchHeaderV2`, `ResultListV2`, or `ThoughtMapDetailPanelV2` to `BattlePrepScene`.
 
@@ -71,23 +103,11 @@ The generated scene should contain only the Battle UI:
 - `Main Camera`
 - `BattleCanvas`
 - `EventSystem`
-- `SourceOfThoughtBattle`
+- a future battle presentation root
 
-Battle UI is built from game-style view components:
+`BattleScene` is reserved for future battle execution only. It should load saved `deck.json` and show the battle presentation/result. Do not add card selection, deck-building, placement editing, Reset/Reposition, or simulation debug logs to `BattleScene`.
 
-- Player and Enemy deck cards use `ThoughtMapBattleCardView`.
-- The 5x5 board uses `ThoughtMapBattleGridCellView`.
-- Battle Log is the only scrolling text log.
-- Battle Summary uses `ThoughtMapBattleSummaryView`.
-- `ThoughtMapBattleMvpController` can use assigned card/cell prefabs, or create fallback runtime views if no prefabs are assigned.
-
-BattleScene MVP controls:
-
-- Click a Player Deck card to select it.
-- Click a lower Player-side grid cell to place the selected card.
-- Click an already placed Player cell to remove that placement.
-- Press `Start Battle` to lock placement and run the simulation.
-- Press `Reset / Reposition` to unlock and rebuild the default placement after a battle.
+Current card selection, 5x5 placement, deck saving, and preview/simulation UI belongs in `BattlePrepScene` or `ProductBattlePrepScene`.
 
 Do not add `SearchHeaderV2`, `ResultListV2`, or `ThoughtMapDetailPanelV2` to `BattleScene`.
 

@@ -10,6 +10,7 @@ public class ThoughtMapBattleUnit
     public int damageDone;
     public int damageTaken;
     public string lastTargetKey = "";
+    public string battleId = "";
 
     public bool IsAlive => hp > 0;
 

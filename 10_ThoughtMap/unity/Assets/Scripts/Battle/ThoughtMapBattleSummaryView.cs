@@ -42,10 +42,12 @@ public class ThoughtMapBattleSummaryView : MonoBehaviour
         damageTakenText.text = "Damage Taken: -";
         survivedText.text = "Cards Survived: -";
         lostText.text = "Cards Lost: -";
+        gameObject.SetActive(false);
     }
 
     public void ShowReport(string resultLabel, ThoughtMapBattleReport report)
     {
+        gameObject.SetActive(true);
         BuildIfNeeded();
         if (report == null)
         {

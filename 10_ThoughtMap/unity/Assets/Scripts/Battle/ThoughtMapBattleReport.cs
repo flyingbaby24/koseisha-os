@@ -3,6 +3,7 @@ using System.Collections.Generic;
 public class ThoughtMapBattleReport
 {
     public readonly List<string> logLines = new List<string>();
+    public readonly List<ThoughtMapBattleEvent> events = new List<ThoughtMapBattleEvent>();
     public string winner = "Draw";
     public int rounds;
     public int playerDamageDone;

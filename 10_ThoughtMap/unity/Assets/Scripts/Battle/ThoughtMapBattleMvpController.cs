@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -66,9 +67,11 @@ public class ThoughtMapBattleMvpController : MonoBehaviour
     private List<ThoughtMapBattleCardData> enemyDeployedCards = new List<ThoughtMapBattleCardData>();
     private readonly Dictionary<int, ThoughtMapBattleCardData> playerPlacement = new Dictionary<int, ThoughtMapBattleCardData>();
     private readonly List<ThoughtMapBattleCardView> playerCardViews = new List<ThoughtMapBattleCardView>();
+    private readonly Dictionary<string, ThoughtMapBattleGridCellView> activeUnitCells = new Dictionary<string, ThoughtMapBattleGridCellView>();
     private int selectedPlayerDeckIndex = -1;
     private bool battleLocked;
     private bool prepared;
+    private Coroutine battleAnimationRoutine;
 
     private void Start()
     {
@@ -116,7 +119,11 @@ public class ThoughtMapBattleMvpController : MonoBehaviour
         WriteLog(report.ToMultilineLog());
         string resultLabel = $"{ToPlayerResult(report.winner)} / Rounds: {report.rounds}";
         WriteResult(resultLabel);
-        ShowSummary(resultLabel, report);
+        if (battleAnimationRoutine != null)
+        {
+            StopCoroutine(battleAnimationRoutine);
+        }
+        battleAnimationRoutine = StartCoroutine(PlayBattleEvents(report, resultLabel));
     }
 
     public void PrepareBattle()
@@ -367,7 +374,9 @@ public class ThoughtMapBattleMvpController : MonoBehaviour
             ThoughtMapGridPosition position = i < positions.Count
                 ? positions[i]
                 : new ThoughtMapGridPosition(i % 5, team == "Player" ? 0 : 4);
-            units.Add(new ThoughtMapBattleUnit(cards[i], team, position));
+            ThoughtMapBattleUnit unit = new ThoughtMapBattleUnit(cards[i], team, position);
+            unit.battleId = $"{(team == "Player" ? "P" : "E")}{i + 1}";
+            units.Add(unit);
         }
         return units;
     }
@@ -380,10 +389,15 @@ public class ThoughtMapBattleMvpController : MonoBehaviour
         }
 
         ClearChildren(root);
+        if (team == "Player")
+        {
+            playerCardViews.Clear();
+        }
         for (int index = 0; index < deployed.Count; index++)
         {
             ThoughtMapBattleCardView cardView = CreateCardView(root, $"{team}Card_{index + 1:00}");
-            cardView.Bind(deployed[index], index, team);
+            string id = $"{(team == "Player" ? "P" : "E")}{index + 1}";
+            cardView.Bind(deployed[index], index, team, id, team == "Player" && IsCardPlaced(deployed[index]));
             bool player = team == "Player";
             cardView.SetInteractable(player && !battleLocked);
             if (player)
@@ -409,6 +423,7 @@ public class ThoughtMapBattleMvpController : MonoBehaviour
         }
 
         EnsureGridCells();
+        activeUnitCells.Clear();
         int cellIndex = 0;
         foreach (ThoughtMapBattleGridCellView cell in gridCells)
         {
@@ -425,6 +440,10 @@ public class ThoughtMapBattleMvpController : MonoBehaviour
             }
 
             gridCells[index].BindUnit(unit);
+            if (!string.IsNullOrWhiteSpace(unit.battleId))
+            {
+                activeUnitCells[unit.battleId] = gridCells[index];
+            }
         }
 
         if (!battleLocked)
@@ -450,11 +469,13 @@ public class ThoughtMapBattleMvpController : MonoBehaviour
         if (layout == null)
         {
             layout = gridRoot.gameObject.AddComponent<GridLayoutGroup>();
-            layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            layout.constraintCount = 5;
-            layout.cellSize = new Vector2(120f, 78f);
-            layout.spacing = new Vector2(8f, 8f);
         }
+        layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        layout.constraintCount = 5;
+        layout.cellSize = new Vector2(140f, 56f);
+        layout.spacing = new Vector2(6f, 6f);
+        layout.padding = new RectOffset(0, 0, 0, 0);
+        layout.childAlignment = TextAnchor.MiddleCenter;
 
         for (int i = 0; i < 25; i++)
         {
@@ -473,9 +494,17 @@ public class ThoughtMapBattleMvpController : MonoBehaviour
         {
             int x = entry.Key % 5;
             int y = entry.Key / 5;
-            units.Add(new ThoughtMapBattleUnit(entry.Value, "Player", new ThoughtMapGridPosition(x, y)));
+            ThoughtMapBattleUnit unit = new ThoughtMapBattleUnit(entry.Value, "Player", new ThoughtMapGridPosition(x, y));
+            int deckIndex = playerDeckCards.IndexOf(entry.Value);
+            unit.battleId = $"P{(deckIndex >= 0 ? deckIndex + 1 : units.Count + 1)}";
+            units.Add(unit);
         }
         return units;
+    }
+
+    private bool IsCardPlaced(ThoughtMapBattleCardData card)
+    {
+        return card != null && playerPlacement.ContainsValue(card);
     }
 
     private void OnPlayerDeckCardClicked(ThoughtMapBattleCardView cardView)
@@ -500,7 +529,8 @@ public class ThoughtMapBattleMvpController : MonoBehaviour
         int cellIndex = ToCellIndex(cellView.X, cellView.Y);
         if (cellView.Unit != null && cellView.Unit.team == "Player")
         {
-            playerPlacement.Remove(cellIndex);
+        playerPlacement.Remove(cellIndex);
+            RenderDeckCards(playerDeckRoot, "Player", playerDeckCards);
             RenderGrid(BuildPlayerUnitsFromPlacement(), BuildUnits(enemyDeployedCards, "Enemy", enemyPositions));
             WriteInfo("Removed Player card from grid.");
             return;
@@ -532,7 +562,9 @@ public class ThoughtMapBattleMvpController : MonoBehaviour
         }
 
         playerPlacement[cellIndex] = selectedCard;
+        RenderDeckCards(playerDeckRoot, "Player", playerDeckCards);
         RenderGrid(BuildPlayerUnitsFromPlacement(), BuildUnits(enemyDeployedCards, "Enemy", enemyPositions));
+        UpdateSelectionVisuals();
         WriteInfo($"Placed {selectedCard.cardName} at ({cellView.X},{cellView.Y}).");
     }
 
@@ -578,6 +610,35 @@ public class ThoughtMapBattleMvpController : MonoBehaviour
                 cellView.SetPlacementHint(selectedPlayerDeckIndex >= 0 && IsPlayerPlacementCell(cellView.X, cellView.Y));
             }
         }
+    }
+
+    private IEnumerator PlayBattleEvents(ThoughtMapBattleReport report, string resultLabel)
+    {
+        if (report == null)
+        {
+            yield break;
+        }
+
+        foreach (ThoughtMapBattleEvent battleEvent in report.events)
+        {
+            SetTurn(battleEvent.round);
+            activeUnitCells.TryGetValue(battleEvent.targetId, out ThoughtMapBattleGridCellView targetCell);
+            if (activeUnitCells.TryGetValue(battleEvent.attackerId, out ThoughtMapBattleGridCellView attackerCell))
+            {
+                Vector3 targetPosition = targetCell == null ? attackerCell.transform.localPosition : targetCell.transform.localPosition;
+                yield return attackerCell.PlayAttackToward(targetPosition);
+            }
+
+            if (targetCell != null)
+            {
+                targetCell.UpdateHp(battleEvent.targetHp, battleEvent.targetMaxHp);
+                yield return targetCell.PlayHit(battleEvent.damage, battleEvent.defeated);
+            }
+
+            yield return new WaitForSeconds(0.08f);
+        }
+
+        ShowSummary(resultLabel, report);
     }
 
     private bool IsPlayerPlacementCell(int x, int y)

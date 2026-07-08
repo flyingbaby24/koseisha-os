@@ -1,6 +1,6 @@
 # ThoughtMap Unity Setup
 
-This guide explains how to wire the current Unity scenes to the FastAPI ThoughtMap backend, the V2 prefab-based Search UI, and the standalone Battle MVP.
+This guide explains how to wire the current Unity scenes to the FastAPI ThoughtMap backend, the V2 prefab-based Search UI, and the Source of Thought battle-preparation prototypes.
 
 ## Fixed Scene Boundaries
 
@@ -31,8 +31,45 @@ Boundary rules:
 - Game flow starts at `Battle Prep Scene`; `Search/Collect Scene` only collects and saves works.
 - Shared data between Search and Battle is limited to saved-folder data, embeddings, and work metadata.
 - `ThoughtMapMain` currently represents the Search/Collect UI baseline.
-- `BattleScene` is battle execution only.
-- `Battle Prep Scene` is a future separate scene, not a panel inside Search.
+- `BattlePrepScene` is the current debug/verification battle-preparation scene.
+- `ProductBattlePrepScene` is the product-facing battle-preparation mock scene.
+- `BattleScene` is reserved for future battle execution only.
+- Do not put card selection, deck editing, placement editing, Reset/Reposition, or simulation debug logs in `BattleScene`.
+
+## Battle Prep Responsibility Split
+
+The current battle-related UI is intentionally split into preparation/debug screens and the future production battle screen:
+
+- `DebugBattlePrep` / `BattlePrepScene`
+  - Keeps the existing verification UI.
+  - Supports card loading, deck inspection, 5x5 placement checks, grid-bonus checks, and simulation logs.
+  - Uses `Simulate Battle` / preview language. It is not the final combat presentation.
+- `ProductBattlePrepScene`
+  - Product-style preparation mock.
+  - Uses large card views, placeholder card art, attribute icon slots, a 5x5 formation board, and a collapsed debug panel.
+  - Saves `deck.json` for the future battle scene.
+  - `Start Battle` is a future scene transition button after saving the deck.
+- `BattleScene`
+  - Future combat-only scene.
+  - Loads saved `deck.json`.
+  - Shows battle presentation and result only.
+  - No card-selection UI, deck-building UI, or placement-editing UI.
+
+Run these editor helpers when needed:
+
+```text
+Tools > Source of Thought > Create BattlePrepScene
+Tools > Source of Thought > Create Product Battle Prep Prefabs
+Tools > Source of Thought > Create ProductBattlePrepScene
+Tools > Source of Thought > Create BattleScene
+```
+
+Product mock assets:
+
+- `Assets/Prefabs/ProductBattleCardPrefab.prefab`
+- `Assets/Prefabs/ProductBattleGridCellPrefab.prefab`
+- `Assets/Sprites/placeholder_card_art.png`
+- `Assets/Sprites/placeholder_attribute_icon.png`
 
 The current Unity baseline is V2-first:
 
@@ -102,42 +139,31 @@ These optional columns drive the temporary adjacent-card similarity coefficient.
 - Hate target selection considers current hate, low HP, distance, threat, and grid role.
 - Adjacent-card similarity is a temporary multiplier slot for future embedding synergy.
 
-### Standalone BattleScene setup
+### Future BattleScene setup
 
-1. Generate `cards.csv` from the existing ThoughtMap card pipeline.
-2. In Unity, import `cards.csv` as a `TextAsset`, or place it at:
+`BattleScene` is now reserved for the formal battle presentation scene. It should not contain card selection, deck editing, placement editing, Reset/Reposition controls, or simulation debug panels.
 
-```text
-Assets/StreamingAssets/cards.csv
-```
-
-3. In Unity, run:
+Create the placeholder scene from Unity Editor:
 
 ```text
 Tools > Source of Thought > Create BattleScene
 ```
 
-4. Open:
+Open:
 
 ```text
 Assets/Scenes/BattleScene.unity
 ```
 
-5. Confirm the scene contains:
-   - `Main Camera`
-   - `BattleCanvas`
-   - `EventSystem`
-   - `SourceOfThoughtBattle`
-6. Confirm `SourceOfThoughtBattle` has:
-   - `ThoughtMapBattleMvpController`
-   - `ThoughtMapBattleMvpPanelView`
-7. Assign `Cards Csv Asset` if you imported `cards.csv` as a TextAsset, or leave it empty and keep `Streaming Assets Csv Path = cards.csv`.
-8. Press Play in `BattleScene`.
-9. Press `Start Battle`.
+The current placeholder scene exists so `Start Battle` buttons have a future destination. The production battle display will later read:
 
-### BattlePrepScene setup
+```text
+Application.persistentDataPath/deck.json
+```
 
-Battle Prep is separate from both Search/Collect and Battle execution.
+### DebugBattlePrep / BattlePrepScene setup
+
+`BattlePrepScene` is the current verification scene. It is for card loading, deck checks, placement checks, and simulation preview. It is not the final battle scene.
 
 Create it from Unity Editor:
 
@@ -154,28 +180,77 @@ Assets/Scenes/BattlePrepScene.unity
 The scene creates:
 
 - `BattlePrepCanvas`
-- `SourceOfThoughtBattlePrep`
-- `ThoughtMapBattlePrepController`
-- `ThoughtMapBattlePrepPanelView`
+- `DebugBattlePrep`
+- `ThoughtMapBattleMvpController`
+- `ThoughtMapBattleMvpPanelView`
 
-The MVP Battle Prep panel includes:
+The debug Battle Prep panel includes:
 
-- Saved Works List
-- Generate Cards button
-- Card Preview
-- Deck Slots 10
-- Deploy Slots 5
-- 5x5 Placement Preview
-- Save Deck button
-- Start Battle button
-- Status / Warning Text
+- card CSV loading
+- player/enemy card rows
+- 5x5 placement/bonus verification
+- `Simulate Battle`
+- `Reset / Reposition`
+- debug battle log
+- missing-CSV warning text
 
 MVP data source:
 
 - Assign `cards.csv` as a TextAsset, or
 - Place `cards.csv` at `Assets/StreamingAssets/cards.csv`
 
-`Generate Cards` reads cards from CSV and fills preview/deck/deploy/placement automatically.
+`Simulate Battle` runs the current lightweight preview simulation inside `BattlePrepScene`.
+
+Do not add Search UI prefabs to Battle Prep:
+
+- no `SearchHeaderV2`
+- no `ResultListV2`
+- no `ThoughtMapDetailPanelV2`
+
+### ProductBattlePrepScene setup
+
+`ProductBattlePrepScene` is the new product-facing preparation mock. It keeps the preparation responsibility, but moves away from debug text-first UI.
+
+Create product prep prefabs and the scene from Unity Editor:
+
+```text
+Tools > Source of Thought > Create Product Battle Prep Prefabs
+Tools > Source of Thought > Create ProductBattlePrepScene
+```
+
+Open:
+
+```text
+Assets/Scenes/ProductBattlePrepScene.unity
+```
+
+The scene creates:
+
+- `ProductBattlePrepCanvas`
+- `ProductBattlePrepPanel`
+- `ProductBattlePrepPanelView`
+
+The product mock includes:
+
+- large card views with art frame
+- placeholder card art image
+- attribute icon slot
+- card name, primary attribute, HP, ATK, skill seed, rarity seed
+- deck slots for ten cards
+- 5x5 formation board for five deployed cards
+- collapsed debug/preview panel
+- `Simulate Battle` for preparation preview
+- `Save Deck` to write `deck.json`
+- `Start Battle` to save `deck.json` and open the future `BattleScene`
+
+Generated product mock assets:
+
+```text
+Assets/Prefabs/ProductBattleCardPrefab.prefab
+Assets/Prefabs/ProductBattleGridCellPrefab.prefab
+Assets/Sprites/placeholder_card_art.png
+Assets/Sprites/placeholder_attribute_icon.png
+```
 
 `Save Deck` writes:
 
@@ -189,13 +264,17 @@ The JSON contains:
 - `deployedCardIds`
 - `gridPositions`
 
-`Start Battle` saves `deck.json`, then opens `BattleScene`.
+Current product mock operation:
 
-Do not add Search UI prefabs to Battle Prep:
-
-- no `SearchHeaderV2`
-- no `ResultListV2`
-- no `ThoughtMapDetailPanelV2`
+1. Open `ProductBattlePrepScene`.
+2. Press Play.
+3. Click `Load Cards` if cards did not load automatically.
+4. Click a deck card.
+5. Click a player-side formation cell.
+6. Deploy up to five cards.
+7. Click `Simulate Battle` to preview the formation summary.
+8. Click `Save Deck` to write `deck.json`.
+9. Click `Start Battle` to move to the future battle scene.
 
 ### Remove Battle UI from ThoughtMapMain
 
@@ -231,62 +310,6 @@ It should not show:
 - `Battle MVP`
 - `SourceOfThoughtBattle`
 - `ThoughtMapBattleMVP`
-
-The panel creates:
-
-- Battle screen parent panel
-- Start Battle button
-- Player Deck card row
-- Enemy Deck card row
-- 5x5 grid cell area
-- Battle Result text
-- Battle Summary panel
-- Battle Log ScrollView
-- Missing `cards.csv` warning text
-
-Deck cards are no longer rendered by concatenating every card into one text field. The controller creates one `ThoughtMapBattleCardView` per displayed card. The board creates one `ThoughtMapBattleGridCellView` per cell. Battle Log is the only place that shows long turn-by-turn text.
-
-Optional prefab hooks:
-
-- `ThoughtMapBattleMvpController.Card View Prefab`
-- `ThoughtMapBattleMvpController.Grid Cell View Prefab`
-
-If these are empty, the controller creates runtime fallback card/cell views. For a more polished Battle UI, create prefab assets with `ThoughtMapBattleCardView` and `ThoughtMapBattleGridCellView`, then assign them to the controller.
-
-If `cards.csv` is not assigned and is not found in `Assets/StreamingAssets/cards.csv`, the Start Battle button will not crash the scene. It shows a warning in the panel and writes a warning to the Console.
-
-`BattleScene` is intentionally independent from `ThoughtMapMain` and the Search UI. Do not place `SearchHeaderV2`, `ResultListV2`, or `ThoughtMapDetailPanelV2` in `BattleScene`.
-
-The older optional manual UI fields on `ThoughtMapBattleMvpController` still work. `ThoughtMapBattleMvpPanelView` simply binds its generated TMP fields to the controller by calling `SetUiTargets(...)`.
-
-### Battle MVP checks
-
-- Unity compiles after adding the Battle scripts.
-- `ThoughtMapMain` / Search UI remains unchanged.
-- `BattleScene` contains only the Battle-specific Canvas and Battle components.
-- `SearchHeaderV2`, `ResultListV2`, and `ThoughtMapDetailPanelV2` are not present in `BattleScene`.
-- Play mode in `BattleScene` shows only the `Source of Thought` Battle screen.
-- Pressing `Start Battle` with a valid `cards.csv` fills Player Deck cards, Enemy Deck cards, Battle Grid cells, Battle Summary, Battle Result, and Battle Log.
-- Pressing `Start Battle` without `cards.csv` shows the warning text and does not throw an exception.
-
-### BattleScene placement controls
-
-`BattleScene` supports minimal placement editing directly in the battle screen:
-
-1. Open `BattleScene` and press Play.
-2. Click a Player Deck card to select it.
-3. Click a lower Player-side grid cell to place the selected card.
-4. Click an already placed Player grid cell to remove that placement.
-5. Enemy cards remain fixed for the MVP.
-6. Press `Start Battle` to lock placement and run the auto-battle.
-7. Press `Reset / Reposition` after battle to unlock placement and rebuild the default setup.
-
-Visual feedback:
-
-- Selected Player Deck card uses a brighter cyan card background.
-- Player placement cells highlight while a card is selected.
-- Player and Enemy grid cells use different colors.
-- Long battle text stays inside the Battle Log ScrollView and auto-scrolls to the newest log.
 
 ### Optional title/menu scene
 

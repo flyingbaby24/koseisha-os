@@ -6,6 +6,7 @@ using UnityEngine.UI;
 public class ThoughtMapBattleCardView : MonoBehaviour
 {
     [SerializeField] private TMP_Text slotText;
+    [SerializeField] private TMP_Text statusText;
     [SerializeField] private TMP_Text nameText;
     [SerializeField] private TMP_Text attributeText;
     [SerializeField] private TMP_Text hpText;
@@ -23,7 +24,7 @@ public class ThoughtMapBattleCardView : MonoBehaviour
     public void BuildIfNeeded()
     {
         RectTransform root = EnsureRectTransform(gameObject);
-        background = EnsureImage(gameObject, new Color(0.015f, 0.12f, 0.18f, 0.96f));
+        background = EnsureImage(gameObject, new Color(0.02f, 0.10f, 0.16f, 1f));
         button = EnsureButton(gameObject);
 
         VerticalLayoutGroup layout = gameObject.GetComponent<VerticalLayoutGroup>();
@@ -31,31 +32,39 @@ public class ThoughtMapBattleCardView : MonoBehaviour
         {
             layout = gameObject.AddComponent<VerticalLayoutGroup>();
         }
-        layout.padding = new RectOffset(8, 8, 8, 8);
-        layout.spacing = 3f;
+        layout.padding = new RectOffset(5, 5, 4, 4);
+        layout.spacing = 0f;
         layout.childControlWidth = true;
         layout.childControlHeight = true;
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = false;
 
-        slotText = slotText == null ? CreateText(root, "SlotText", 9, new Color(0.58f, 0.9f, 1f, 1f)) : slotText;
-        nameText = nameText == null ? CreateText(root, "NameText", 11, Color.white) : nameText;
-        attributeText = attributeText == null ? CreateText(root, "AttributeText", 9, new Color(0.76f, 1f, 0.88f, 1f)) : attributeText;
-        hpText = hpText == null ? CreateText(root, "HpText", 9, new Color(1f, 0.86f, 0.62f, 1f)) : hpText;
-        attackText = attackText == null ? CreateText(root, "AttackText", 9, new Color(1f, 0.68f, 0.68f, 1f)) : attackText;
+        slotText = slotText == null ? CreateText(root, "SlotText", 9, new Color(0.52f, 0.95f, 1f, 1f)) : slotText;
+        nameText = nameText == null ? CreateText(root, "NameText", 9, Color.white) : nameText;
+        attributeText = attributeText == null ? CreateText(root, "AttributeText", 8, new Color(0.72f, 1f, 0.86f, 1f)) : attributeText;
+        hpText = hpText == null ? CreateText(root, "HpText", 8, new Color(1f, 0.88f, 0.58f, 1f)) : hpText;
+        attackText = attackText == null ? CreateText(root, "AttackText", 8, new Color(1f, 0.66f, 0.66f, 1f)) : attackText;
+        statusText = statusText == null ? CreateText(root, "StatusText", 8, new Color(0.35f, 1f, 0.8f, 1f)) : statusText;
+        slotText.fontStyle = FontStyles.Bold;
+        nameText.fontStyle = FontStyles.Bold;
 
         LayoutElement element = gameObject.GetComponent<LayoutElement>();
         if (element == null)
         {
             element = gameObject.AddComponent<LayoutElement>();
         }
-        element.preferredWidth = 70f;
-        element.preferredHeight = 96f;
-        element.minWidth = 64f;
-        element.minHeight = 88f;
+        element.preferredWidth = 128f;
+        element.preferredHeight = 70f;
+        element.minWidth = 118f;
+        element.minHeight = 66f;
     }
 
     public void Bind(ThoughtMapBattleCardData card, int slotIndex, string team)
+    {
+        Bind(card, slotIndex, team, $"{team} {slotIndex + 1}", false);
+    }
+
+    public void Bind(ThoughtMapBattleCardData card, int slotIndex, string team, string displayId, bool placed)
     {
         BuildIfNeeded();
         boundCard = card;
@@ -63,19 +72,22 @@ public class ThoughtMapBattleCardView : MonoBehaviour
 
         if (card == null)
         {
-            slotText.text = $"{team} {slotIndex + 1}";
+            slotText.text = displayId;
             nameText.text = "Empty";
             attributeText.text = "-";
             hpText.text = "HP -";
             attackText.text = "ATK -";
+            statusText.text = "";
             return;
         }
 
-        slotText.text = $"{team} {slotIndex + 1}";
-        nameText.text = Short(card.cardName, 16);
-        attributeText.text = $"{card.primaryAttribute} / {card.secondaryAttribute}";
+        slotText.text = displayId;
+        nameText.text = Short(card.cardName, 18);
+        attributeText.text = Short(card.primaryAttribute, 12);
         hpText.text = $"HP {card.MaxHp}";
         attackText.text = $"ATK {Mathf.Max(card.statPhysicalAttack, card.statSkillAttack)}";
+        statusText.text = placed ? "Placed" : "Ready";
+        statusText.color = placed ? new Color(0.35f, 1f, 0.8f, 1f) : new Color(0.8f, 0.86f, 0.94f, 1f);
     }
 
     public void SetClickHandler(UnityAction<ThoughtMapBattleCardView> handler)
@@ -97,8 +109,8 @@ public class ThoughtMapBattleCardView : MonoBehaviour
     {
         BuildIfNeeded();
         background.color = selected
-            ? new Color(0.0f, 0.44f, 0.62f, 1f)
-            : new Color(0.015f, 0.12f, 0.18f, 0.96f);
+            ? new Color(0.0f, 0.46f, 0.64f, 1f)
+            : new Color(0.02f, 0.10f, 0.16f, 1f);
     }
 
     public void SetInteractable(bool interactable)
