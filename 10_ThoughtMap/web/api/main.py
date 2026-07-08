@@ -1,18 +1,8 @@
 from __future__ import annotations
 
 from typing import Literal
-import base64
-import hashlib
-import io
-import json
-import os
-import urllib.error
-import urllib.parse
-import urllib.request
 
-import pandas as pd
 from pydantic import BaseModel
-
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -25,6 +15,10 @@ from .schemas import (
     SearchResponse,
 )
 from .search_service import get_search_service
+from .user_embedding_sqlite import (
+    list_user_embeddings,
+    save_user_embeddings,
+)
 from .user_library_service import UserLibraryService
 
 
@@ -38,10 +32,6 @@ app.add_middleware(
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
-
-GITHUB_REPO = os.getenv("GITHUB_REPO", "flyingbaby24/koseisha-os")
-GITHUB_BRANCH = os.getenv("GITHUB_BRANCH", "main")
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 
 
 @app.get("/health")
@@ -80,120 +70,15 @@ def search(
     )
 
 
-def make_user_id_from_email(email: str) -> str:
-    normalized = str(email or "").strip().lower()
-    if not normalized:
-        return ""
-    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16]
-
-
-def github_headers() -> dict[str, str]:
-    headers = {
-        "Accept": "application/vnd.github+json",
-        "Content-Type": "application/json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
-
-    if GITHUB_TOKEN:
-        headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
-
-    return headers
-
-
-def github_user_csv_path(user_id: str) -> str:
-    return (
-        "10_ThoughtMap/data/thoughtmap_db/users/"
-        f"{user_id}/thoughtmap_embeddings.csv"
-    )
-
-
-def github_contents_url(path: str) -> str:
-    return f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path}"
-
-
-def read_github_file(path: str) -> tuple[str, str]:
-    url = github_contents_url(path) + "?" + urllib.parse.urlencode(
-        {"ref": GITHUB_BRANCH}
-    )
-
-    request = urllib.request.Request(
-        url,
-        headers=github_headers(),
-        method="GET",
-    )
-
-    try:
-        with urllib.request.urlopen(request, timeout=120) as response:
-            data = json.loads(response.read().decode("utf-8"))
-
-        content = base64.b64decode(data["content"]).decode("utf-8-sig")
-        sha = data.get("sha", "")
-        return content, sha
-
-    except urllib.error.HTTPError as exc:
-        if exc.code == 404:
-            return "", ""
-        raise
-
-
-def write_github_file(path: str, text: str, message: str) -> dict:
-    _old_text, sha = read_github_file(path)
-
-    payload = {
-        "message": message,
-        "content": base64.b64encode(text.encode("utf-8-sig")).decode("ascii"),
-        "branch": GITHUB_BRANCH,
-    }
-
-    if sha:
-        payload["sha"] = sha
-
-    request = urllib.request.Request(
-        github_contents_url(path),
-        data=json.dumps(payload).encode("utf-8"),
-        headers=github_headers(),
-        method="PUT",
-    )
-
-    with urllib.request.urlopen(request, timeout=120) as response:
-        return json.loads(response.read().decode("utf-8"))
-
-
 @app.get("/users/by-email/saved")
 def list_saved_by_email(email: str = Query(..., min_length=3)) -> dict:
-    user_id = make_user_id_from_email(email)
-    path = github_user_csv_path(user_id)
-
     try:
-        text, _sha = read_github_file(path)
+        return list_user_embeddings(email)
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"failed to read GitHub library: {exc}",
+            detail=f"failed to read user embeddings: {exc}",
         ) from exc
-
-    if not text:
-        return {
-            "user_id": user_id,
-            "works": [],
-        }
-
-    df = pd.read_csv(io.StringIO(text), dtype=str).fillna("")
-
-    works = []
-    for _, row in df.iterrows():
-        works.append({
-            "doc_id": row.get("doc_id", ""),
-            "title": row.get("title", ""),
-            "author": row.get("author", ""),
-            "source": row.get("source", ""),
-            "category": row.get("category", ""),
-        })
-
-    return {
-        "user_id": user_id,
-        "works": works,
-    }
 
 
 class SaveEmbeddingsByEmailRequest(BaseModel):
@@ -202,55 +87,23 @@ class SaveEmbeddingsByEmailRequest(BaseModel):
 
 
 @app.post("/users/by-email/save-embeddings")
-def save_embeddings_by_email(
-    request: SaveEmbeddingsByEmailRequest,
-) -> dict:
-    user_id = make_user_id_from_email(request.email)
-
-    if not user_id:
-        raise HTTPException(status_code=400, detail="email is required.")
-
-    if not request.rows:
-        raise HTTPException(status_code=400, detail="rows are required.")
-
-    if not GITHUB_TOKEN:
-        raise HTTPException(
-            status_code=500,
-            detail="GITHUB_TOKEN is not configured.",
-        )
-
-    df = pd.DataFrame(request.rows)
-
-    required = {"doc_id", "title", "source", "embedding"}
-    missing = required - set(df.columns)
-
-    if missing:
-        raise HTTPException(
-            status_code=400,
-            detail=f"missing columns: {sorted(missing)}",
-        )
-
-    path = github_user_csv_path(user_id)
-    csv_text = df.to_csv(index=False)
-
+def save_embeddings_by_email(request: SaveEmbeddingsByEmailRequest) -> dict:
     try:
-        result = write_github_file(
-            path=path,
-            text=csv_text,
-            message=f"Update ThoughtMap personal library {user_id}",
+        result = save_user_embeddings(
+            email=request.email,
+            rows=request.rows,
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"failed to save GitHub library: {exc}",
+            detail=f"failed to save user embeddings: {exc}",
         ) from exc
 
     return {
         "status": "saved",
-        "user_id": user_id,
-        "count": len(df),
-        "path": path,
-        "commit": result.get("commit", {}).get("sha", ""),
+        **result,
     }
 
 
