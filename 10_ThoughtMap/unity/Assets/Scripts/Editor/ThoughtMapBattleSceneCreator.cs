@@ -1,4 +1,5 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using TMPro;
@@ -129,23 +130,26 @@ public static class ThoughtMapBattleSceneCreator
     {
         GameObject root = UiObject("ProductBattleCardPrefab", typeof(Image), typeof(Button), typeof(ProductBattleCardView), typeof(LayoutElement));
         RectTransform rect = root.GetComponent<RectTransform>();
-        rect.sizeDelta = new Vector2(210f, 320f);
+        rect.sizeDelta = new Vector2(220f, 340f);
         root.GetComponent<Image>().color = new Color(0.025f, 0.035f, 0.045f, 0.98f);
         LayoutElement layout = root.GetComponent<LayoutElement>();
-        layout.preferredWidth = 210f;
-        layout.preferredHeight = 320f;
+        layout.preferredWidth = 220f;
+        layout.preferredHeight = 340f;
 
         Image selection = ChildImage(rect, "SelectionGlow", new Vector2(0f, 0f), new Vector2(1f, 1f), new Color(0.1f, 0.9f, 1f, 0.28f));
-        Image art = ChildImage(rect, "ArtImage", new Vector2(0.08f, 0.36f), new Vector2(0.92f, 0.88f), new Color(0.12f, 0.14f, 0.16f, 1f));
+        ChildImage(rect, "ArtFrame", new Vector2(0.02f, 0.08f), new Vector2(0.34f, 0.92f), new Color(0.72f, 0.52f, 0.24f, 0.70f));
+        Image art = ChildImage(rect, "ArtImage", new Vector2(0.035f, 0.105f), new Vector2(0.325f, 0.895f), new Color(0.08f, 0.10f, 0.12f, 1f));
         Image icon = ChildImage(rect, "AttributeIconImage", new Vector2(0.76f, 0.78f), new Vector2(0.94f, 0.94f), new Color(0.0f, 0.45f, 0.8f, 1f));
         TMP_Text unit = ChildText(rect, "UnitIdText", new Vector2(0.05f, 0.88f), new Vector2(0.28f, 0.98f), "P1", 18, TextAlignmentOptions.Left);
-        TMP_Text rarity = ChildText(rect, "RarityText", new Vector2(0.68f, 0.88f), new Vector2(0.94f, 0.98f), "★4", 18, TextAlignmentOptions.Right);
-        TMP_Text name = ChildText(rect, "NameText", new Vector2(0.08f, 0.25f), new Vector2(0.92f, 0.35f), "Card Name", 17, TextAlignmentOptions.Center);
-        TMP_Text attr = ChildText(rect, "AttributeText", new Vector2(0.08f, 0.18f), new Vector2(0.92f, 0.25f), "Attribute", 14, TextAlignmentOptions.Center);
-        TMP_Text hp = ChildText(rect, "HpText", new Vector2(0.08f, 0.10f), new Vector2(0.42f, 0.17f), "HP 120", 14, TextAlignmentOptions.Left);
-        TMP_Text atk = ChildText(rect, "AtkText", new Vector2(0.46f, 0.10f), new Vector2(0.92f, 0.17f), "ATK 85", 14, TextAlignmentOptions.Right);
-        TMP_Text skill = ChildText(rect, "SkillText", new Vector2(0.08f, 0.04f), new Vector2(0.58f, 0.10f), "Skill 01", 12, TextAlignmentOptions.Left);
-        TMP_Text status = ChildText(rect, "StatusText", new Vector2(0.60f, 0.04f), new Vector2(0.92f, 0.10f), "Ready", 12, TextAlignmentOptions.Right);
+        TMP_Text rarity = ChildText(rect, "RarityText", new Vector2(0.68f, 0.88f), new Vector2(0.94f, 0.98f), "R4", 18, TextAlignmentOptions.Right);
+        TMP_Text name = ChildText(rect, "NameText", new Vector2(0.08f, 0.29f), new Vector2(0.92f, 0.38f), "Card Name", 17, TextAlignmentOptions.Center);
+        TMP_Text attr = ChildText(rect, "AttributeText", new Vector2(0.08f, 0.235f), new Vector2(0.92f, 0.29f), "Attribute", 13, TextAlignmentOptions.Center);
+        TMP_Text hp = ChildText(rect, "HpText", new Vector2(0.08f, 0.16f), new Vector2(0.42f, 0.22f), "HP 120", 13, TextAlignmentOptions.Left);
+        TMP_Text atk = ChildText(rect, "AtkText", new Vector2(0.48f, 0.16f), new Vector2(0.92f, 0.22f), "ATK 85", 13, TextAlignmentOptions.Right);
+        TMP_Text def = ChildText(rect, "DefText", new Vector2(0.08f, 0.10f), new Vector2(0.42f, 0.155f), "DEF 70", 13, TextAlignmentOptions.Left);
+        TMP_Text en = ChildText(rect, "EnText", new Vector2(0.48f, 0.10f), new Vector2(0.92f, 0.155f), "EN 30", 13, TextAlignmentOptions.Right);
+        TMP_Text skill = ChildText(rect, "SkillText", new Vector2(0.08f, 0.045f), new Vector2(0.58f, 0.095f), "Skill 01", 12, TextAlignmentOptions.Left);
+        TMP_Text status = ChildText(rect, "StatusText", new Vector2(0.60f, 0.045f), new Vector2(0.92f, 0.095f), "Ready", 12, TextAlignmentOptions.Right);
 
         ProductBattleCardView view = root.GetComponent<ProductBattleCardView>();
         SerializedObject so = new SerializedObject(view);
@@ -158,6 +162,8 @@ public static class ThoughtMapBattleSceneCreator
         SetObject(so, "attributeText", attr);
         SetObject(so, "hpText", hp);
         SetObject(so, "atkText", atk);
+        SetObject(so, "defText", def);
+        SetObject(so, "enText", en);
         SetObject(so, "skillText", skill);
         SetObject(so, "rarityText", rarity);
         SetObject(so, "statusText", status);
@@ -176,16 +182,20 @@ public static class ThoughtMapBattleSceneCreator
         root.GetComponent<Image>().color = new Color(0.025f, 0.032f, 0.04f, 0.96f);
 
         Image cardFrame = ChildImage(rect, "CardFrameImage", new Vector2(0.12f, 0.18f), new Vector2(0.88f, 0.72f), new Color(0.07f, 0.09f, 0.11f, 0.9f));
+        Image art = ChildImage(rect, "ArtImage", new Vector2(0.18f, 0.26f), new Vector2(0.82f, 0.70f), new Color(0.10f, 0.11f, 0.13f, 1f));
+        Image icon = ChildImage(rect, "AttributeIconImage", new Vector2(0.68f, 0.58f), new Vector2(0.86f, 0.76f), new Color(0.0f, 0.45f, 0.8f, 1f));
         Image glow = ChildImage(rect, "PlacedGlowImage", new Vector2(0f, 0f), new Vector2(1f, 1f), new Color(0.1f, 0.85f, 1f, 0.2f));
         TMP_Text coordinate = ChildText(rect, "CoordinateText", new Vector2(0.04f, 0.76f), new Vector2(0.96f, 0.98f), "1,1", 11, TextAlignmentOptions.Left);
         TMP_Text unit = ChildText(rect, "UnitIdText", new Vector2(0.04f, 0.48f), new Vector2(0.96f, 0.70f), "P1", 16, TextAlignmentOptions.Center);
         TMP_Text name = ChildText(rect, "CardNameText", new Vector2(0.04f, 0.25f), new Vector2(0.96f, 0.46f), "Card", 12, TextAlignmentOptions.Center);
-        TMP_Text attr = ChildText(rect, "AttributeText", new Vector2(0.04f, 0.04f), new Vector2(0.96f, 0.22f), "Attr", 11, TextAlignmentOptions.Center);
+        TMP_Text attr = ChildText(rect, "AttributeText", new Vector2(0.08f, 0.235f), new Vector2(0.92f, 0.29f), "Attribute", 13, TextAlignmentOptions.Center);
 
         ProductBattleGridCellView view = root.GetComponent<ProductBattleGridCellView>();
         SerializedObject so = new SerializedObject(view);
         SetObject(so, "backgroundImage", root.GetComponent<Image>());
         SetObject(so, "cardFrameImage", cardFrame);
+        SetObject(so, "artImage", art);
+        SetObject(so, "attributeIconImage", icon);
         SetObject(so, "placedGlowImage", glow);
         SetObject(so, "coordinateText", coordinate);
         SetObject(so, "unitIdText", unit);
@@ -204,16 +214,18 @@ public static class ThoughtMapBattleSceneCreator
         RectTransform rect = root.GetComponent<RectTransform>();
         rect.sizeDelta = new Vector2(760f, 320f);
         root.GetComponent<Image>().color = new Color(0.02f, 0.03f, 0.045f, 0.96f);
-        Image art = ChildImage(rect, "ArtImage", new Vector2(0.02f, 0.08f), new Vector2(0.34f, 0.92f), new Color(0.08f, 0.10f, 0.12f, 1f));
+        ChildImage(rect, "ArtFrame", new Vector2(0.02f, 0.08f), new Vector2(0.38f, 0.92f), new Color(0.72f, 0.52f, 0.24f, 0.70f));
+        Image art = ChildImage(rect, "ArtImage", new Vector2(0.04f, 0.11f), new Vector2(0.36f, 0.89f), new Color(0.12f, 0.14f, 0.16f, 1f));
         Image icon = ChildImage(rect, "AttributeIconImage", new Vector2(0.36f, 0.70f), new Vector2(0.43f, 0.88f), new Color(0f, 0.45f, 0.8f, 1f));
         TMP_Text title = ChildText(rect, "TitleText", new Vector2(0.45f, 0.78f), new Vector2(0.96f, 0.94f), "Card Name", 24, TextAlignmentOptions.Left);
         TMP_Text desc = ChildText(rect, "DescriptionText", new Vector2(0.45f, 0.52f), new Vector2(0.96f, 0.76f), "Description", 14, TextAlignmentOptions.TopLeft);
         TMP_Text attr = ChildText(rect, "AttributeText", new Vector2(0.45f, 0.44f), new Vector2(0.96f, 0.52f), "Attribute", 15, TextAlignmentOptions.Left);
         TMP_Text hp = ChildText(rect, "HpText", new Vector2(0.45f, 0.34f), new Vector2(0.58f, 0.42f), "HP", 18, TextAlignmentOptions.Left);
         TMP_Text atk = ChildText(rect, "AtkText", new Vector2(0.60f, 0.34f), new Vector2(0.73f, 0.42f), "ATK", 18, TextAlignmentOptions.Left);
-        TMP_Text def = ChildText(rect, "DefenseText", new Vector2(0.75f, 0.34f), new Vector2(0.90f, 0.42f), "DEF", 18, TextAlignmentOptions.Left);
+        TMP_Text def = ChildText(rect, "DefenseText", new Vector2(0.75f, 0.34f), new Vector2(0.88f, 0.42f), "DEF", 18, TextAlignmentOptions.Left);
+        TMP_Text en = ChildText(rect, "EnText", new Vector2(0.89f, 0.34f), new Vector2(0.98f, 0.42f), "EN", 18, TextAlignmentOptions.Left);
         TMP_Text skill = ChildText(rect, "SkillText", new Vector2(0.45f, 0.18f), new Vector2(0.96f, 0.30f), "Skill", 15, TextAlignmentOptions.Left);
-        TMP_Text rarity = ChildText(rect, "RarityText", new Vector2(0.86f, 0.80f), new Vector2(0.96f, 0.94f), "★", 20, TextAlignmentOptions.Right);
+        TMP_Text rarity = ChildText(rect, "RarityText", new Vector2(0.68f, 0.88f), new Vector2(0.94f, 0.98f), "R4", 18, TextAlignmentOptions.Right);
 
         SerializedObject so = new SerializedObject(root.GetComponent<ProductBattleCardDetailPanelView>());
         SetObject(so, "artImage", art);
@@ -224,6 +236,7 @@ public static class ThoughtMapBattleSceneCreator
         SetObject(so, "hpText", hp);
         SetObject(so, "atkText", atk);
         SetObject(so, "defenseText", def);
+        SetObject(so, "enText", en);
         SetObject(so, "skillText", skill);
         SetObject(so, "rarityText", rarity);
         so.ApplyModifiedPropertiesWithoutUndo();
@@ -267,12 +280,13 @@ public static class ThoughtMapBattleSceneCreator
         RectTransform rect = root.GetComponent<RectTransform>();
         rect.sizeDelta = new Vector2(180f, 260f);
         root.GetComponent<Image>().color = new Color(0.025f, 0.035f, 0.045f, 0.98f);
-        Image art = ChildImage(rect, "ArtImage", new Vector2(0.08f, 0.36f), new Vector2(0.92f, 0.88f), new Color(0.08f, 0.1f, 0.12f, 1f));
+        ChildImage(rect, "ArtFrame", new Vector2(0.07f, 0.39f), new Vector2(0.93f, 0.88f), new Color(0.72f, 0.52f, 0.24f, 0.70f));
+        Image art = ChildImage(rect, "ArtImage", new Vector2(0.09f, 0.41f), new Vector2(0.91f, 0.86f), new Color(0.12f, 0.14f, 0.16f, 1f));
         Image icon = ChildImage(rect, "AttributeIconImage", new Vector2(0.76f, 0.78f), new Vector2(0.94f, 0.94f), new Color(0f, 0.45f, 0.8f, 1f));
         TMP_Text unit = ChildText(rect, "UnitIdText", new Vector2(0.05f, 0.88f), new Vector2(0.32f, 0.98f), "P1", 18, TextAlignmentOptions.Left);
         TMP_Text name = ChildText(rect, "CardNameText", new Vector2(0.08f, 0.22f), new Vector2(0.92f, 0.34f), "Card Name", 15, TextAlignmentOptions.Center);
-        TMP_Text hp = ChildText(rect, "HpText", new Vector2(0.08f, 0.12f), new Vector2(0.92f, 0.20f), "120/120", 13, TextAlignmentOptions.Center);
-        TMP_Text attr = ChildText(rect, "AttributeText", new Vector2(0.08f, 0.04f), new Vector2(0.92f, 0.11f), "Attribute", 12, TextAlignmentOptions.Center);
+        TMP_Text hp = ChildText(rect, "HpText", new Vector2(0.08f, 0.16f), new Vector2(0.42f, 0.22f), "HP 120", 13, TextAlignmentOptions.Left);
+        TMP_Text attr = ChildText(rect, "AttributeText", new Vector2(0.08f, 0.235f), new Vector2(0.92f, 0.29f), "Attribute", 13, TextAlignmentOptions.Center);
         Slider slider = CreateSlider(rect, "HpSlider", new Vector2(0.08f, 0.20f), new Vector2(0.92f, 0.24f));
 
         SerializedObject so = new SerializedObject(root.GetComponent<ProductBattleUnitCardView>());
@@ -355,12 +369,12 @@ public static class ThoughtMapBattleSceneCreator
         Button clearButton = CreateButton(panelRect, "ClearButton", "Clear", new Vector2(0.02f, 0.01f), new Vector2(0.10f, 0.07f));
         TMP_Text status = ChildText(panelRect, "StatusText", new Vector2(0.18f, 0.01f), new Vector2(0.70f, 0.07f), "Ready", 16, TextAlignmentOptions.Left);
 
-        RectTransform cardList = CreatePanel(panelRect, "CardListPanel", new Vector2(0.02f, 0.10f), new Vector2(0.24f, 0.90f), "Card List", out Transform cardListContent);
+        RectTransform cardList = CreateScrollablePanel(panelRect, "CardListPanel", new Vector2(0.02f, 0.10f), new Vector2(0.24f, 0.90f), "Card List", 2, new Vector2(176f, 272f), out Transform cardListContent);
         GameObject detailObject = PrefabUtility.InstantiatePrefab(detailPrefab.gameObject, panelRect) as GameObject;
         RectTransform detail = detailObject.GetComponent<RectTransform>();
         detail.name = "CardDetailPanel";
         Anchor(detail, new Vector2(0.26f, 0.66f), new Vector2(0.76f, 0.90f));
-        RectTransform deck = CreatePanel(panelRect, "DeckListPanel", new Vector2(0.78f, 0.42f), new Vector2(0.985f, 0.90f), "Deck 10", out Transform deckContent);
+        RectTransform deck = CreateScrollablePanel(panelRect, "DeckListPanel", new Vector2(0.78f, 0.42f), new Vector2(0.985f, 0.90f), "Deck 10", 2, new Vector2(176f, 272f), out Transform deckContent);
         RectTransform formation = CreatePanel(panelRect, "FormationGridPanel", new Vector2(0.26f, 0.10f), new Vector2(0.76f, 0.64f), "5x5 Formation", out Transform formationContent);
         GridLayoutGroup formationGrid = formationContent.gameObject.AddComponent<GridLayoutGroup>();
         formationGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
@@ -388,6 +402,12 @@ public static class ThoughtMapBattleSceneCreator
         SetObject(so, "startBattleButton", startButton);
         SetObject(so, "simulateButton", simulateButton);
         SetObject(so, "clearButton", clearButton);
+        Sprite[] cardSprites = LoadSpritesFromFolder(CardSpriteFolder);
+        Sprite[] iconSprites = LoadSpritesFromFolder(IconSpriteFolder);
+        SetObject(so, "defaultCardArt", FirstOrNull(cardSprites));
+        SetObject(so, "defaultAttributeIcon", FirstOrNull(iconSprites));
+        SetSpriteArray(so, "cardArtPool", cardSprites);
+        SetAttributeSpriteArray(so, "attributeSprites", iconSprites);
         so.ApplyModifiedPropertiesWithoutUndo();
 
         SavePrefab(canvas.gameObject, ProductBattlePrepCanvasPrefabPath);
@@ -422,6 +442,12 @@ public static class ThoughtMapBattleSceneCreator
         SetObject(so, "enemyBoardRoot", fieldInstance.Find("EnemyBoardRoot"));
         SetObject(so, "statusText", status);
         SetObject(so, "battleLogPanel", logObject.GetComponent<ProductBattleLogPanelView>());
+        Sprite[] cardSprites = LoadSpritesFromFolder(CardSpriteFolder);
+        Sprite[] iconSprites = LoadSpritesFromFolder(IconSpriteFolder);
+        SetObject(so, "defaultCardArt", FirstOrNull(cardSprites));
+        SetObject(so, "defaultAttributeIcon", FirstOrNull(iconSprites));
+        SetSpriteArray(so, "cardArtPool", cardSprites);
+        SetAttributeSpriteArray(so, "attributeSprites", iconSprites);
         so.ApplyModifiedPropertiesWithoutUndo();
 
         SavePrefab(canvas.gameObject, ProductBattleCanvasPrefabPath);
@@ -437,6 +463,44 @@ public static class ThoughtMapBattleSceneCreator
         GameObject contentObject = UiChild(rect, "Content", typeof(RectTransform));
         RectTransform contentRect = contentObject.GetComponent<RectTransform>();
         Anchor(contentRect, new Vector2(0.03f, 0.03f), new Vector2(0.97f, 0.90f));
+        content = contentRect;
+        return rect;
+    }
+
+    private static RectTransform CreateScrollablePanel(RectTransform parent, string name, Vector2 min, Vector2 max, string title, int columns, Vector2 cellSize, out Transform content)
+    {
+        GameObject panel = UiChild(parent, name, typeof(RectTransform), typeof(Image));
+        RectTransform rect = panel.GetComponent<RectTransform>();
+        Anchor(rect, min, max);
+        panel.GetComponent<Image>().color = new Color(0.015f, 0.025f, 0.035f, 0.94f);
+        ChildText(rect, "HeadingText", new Vector2(0.03f, 0.92f), new Vector2(0.98f, 0.99f), title, 18, TextAlignmentOptions.Left);
+
+        GameObject viewport = UiChild(rect, "Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
+        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
+        Anchor(viewportRect, new Vector2(0.03f, 0.03f), new Vector2(0.97f, 0.90f));
+        viewport.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.08f);
+        viewport.GetComponent<Mask>().showMaskGraphic = false;
+
+        GameObject contentObject = UiChild(viewportRect, "Content", typeof(RectTransform), typeof(GridLayoutGroup), typeof(ContentSizeFitter));
+        RectTransform contentRect = contentObject.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0.5f, 1f);
+        contentRect.offsetMin = Vector2.zero;
+        contentRect.offsetMax = Vector2.zero;
+        GridLayoutGroup grid = contentObject.GetComponent<GridLayoutGroup>();
+        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        grid.constraintCount = columns;
+        grid.cellSize = cellSize;
+        grid.spacing = new Vector2(12f, 12f);
+        grid.childAlignment = TextAnchor.UpperCenter;
+        contentObject.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        ScrollRect scroll = panel.AddComponent<ScrollRect>();
+        scroll.viewport = viewportRect;
+        scroll.content = contentRect;
+        scroll.horizontal = false;
+        scroll.vertical = true;
         content = contentRect;
         return rect;
     }
@@ -654,6 +718,73 @@ public static class ThoughtMapBattleSceneCreator
         if (property != null)
         {
             property.objectReferenceValue = value;
+        }
+    }
+
+    private static Sprite[] LoadSpritesFromFolder(string folderPath)
+    {
+        List<Sprite> sprites = new List<Sprite>();
+        if (!AssetDatabase.IsValidFolder(folderPath))
+        {
+            return sprites.ToArray();
+        }
+
+        string[] guids = AssetDatabase.FindAssets("t:Sprite", new[] { folderPath });
+        foreach (string guid in guids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (sprite != null)
+            {
+                sprites.Add(sprite);
+            }
+        }
+        return sprites.ToArray();
+    }
+
+    private static Sprite FirstOrNull(Sprite[] sprites)
+    {
+        return sprites != null && sprites.Length > 0 ? sprites[0] : null;
+    }
+
+    private static void SetSpriteArray(SerializedObject serializedObject, string propertyName, Sprite[] sprites)
+    {
+        SerializedProperty property = serializedObject.FindProperty(propertyName);
+        if (property == null || sprites == null)
+        {
+            return;
+        }
+
+        property.arraySize = sprites.Length;
+        for (int i = 0; i < sprites.Length; i++)
+        {
+            property.GetArrayElementAtIndex(i).objectReferenceValue = sprites[i];
+        }
+    }
+
+    private static void SetAttributeSpriteArray(SerializedObject serializedObject, string propertyName, Sprite[] sprites)
+    {
+        SerializedProperty property = serializedObject.FindProperty(propertyName);
+        if (property == null || sprites == null)
+        {
+            return;
+        }
+
+        property.arraySize = sprites.Length;
+        for (int i = 0; i < sprites.Length; i++)
+        {
+            SerializedProperty element = property.GetArrayElementAtIndex(i);
+            SerializedProperty attribute = element.FindPropertyRelative("attribute");
+            SerializedProperty sprite = element.FindPropertyRelative("sprite");
+            string label = sprites[i] == null ? "" : sprites[i].name;
+            if (attribute != null)
+            {
+                attribute.stringValue = label;
+            }
+            if (sprite != null)
+            {
+                sprite.objectReferenceValue = sprites[i];
+            }
         }
     }
 }

@@ -161,7 +161,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             if (placement.TryGetValue(index, out ThoughtMapBattleCardData card))
             {
                 int deckIndex = deckCards.IndexOf(card);
-                gridCells[index].BindCard(x, y, card, $"P{deckIndex + 1}");
+                gridCells[index].BindCard(x, y, card, $"P{deckIndex + 1}", ResolveCardArt(deckIndex), ResolveAttributeIcon(card));
             }
             else
             {

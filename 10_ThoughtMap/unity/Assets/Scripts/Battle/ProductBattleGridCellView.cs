@@ -8,6 +8,8 @@ public class ProductBattleGridCellView : MonoBehaviour
     [Header("Images")]
     [SerializeField] private Image backgroundImage;
     [SerializeField] private Image cardFrameImage;
+    [SerializeField] private Image artImage;
+    [SerializeField] private Image attributeIconImage;
     [SerializeField] private Image placedGlowImage;
 
     [Header("Texts")]
@@ -54,7 +56,9 @@ public class ProductBattleGridCellView : MonoBehaviour
         foreach (Image image in images)
         {
             string objectName = image.gameObject.name.ToLowerInvariant();
-            if (objectName.Contains("card")) cardFrameImage = image;
+            if (objectName.Contains("art")) artImage = image;
+            else if (objectName.Contains("attribute") || objectName.Contains("icon")) attributeIconImage = image;
+            else if (objectName.Contains("card")) cardFrameImage = image;
             else if (objectName.Contains("glow") || objectName.Contains("placed")) placedGlowImage = image;
             else if (image.gameObject == gameObject || objectName.Contains("background")) backgroundImage = image;
         }
@@ -78,9 +82,22 @@ public class ProductBattleGridCellView : MonoBehaviour
         {
             placedGlowImage.gameObject.SetActive(false);
         }
+        if (artImage != null)
+        {
+            artImage.enabled = false;
+        }
+        if (attributeIconImage != null)
+        {
+            attributeIconImage.enabled = false;
+        }
     }
 
     public void BindCard(int gridX, int gridY, ThoughtMapBattleCardData sourceCard, string unitId)
+    {
+        BindCard(gridX, gridY, sourceCard, unitId, null, null);
+    }
+
+    public void BindCard(int gridX, int gridY, ThoughtMapBattleCardData sourceCard, string unitId, Sprite artSprite, Sprite attributeSprite)
     {
         x = gridX;
         y = gridY;
@@ -92,6 +109,16 @@ public class ProductBattleGridCellView : MonoBehaviour
         if (placedGlowImage != null)
         {
             placedGlowImage.gameObject.SetActive(true);
+        }
+        if (artImage != null)
+        {
+            artImage.sprite = artSprite;
+            artImage.enabled = artSprite != null;
+        }
+        if (attributeIconImage != null)
+        {
+            attributeIconImage.sprite = attributeSprite;
+            attributeIconImage.enabled = attributeSprite != null;
         }
     }
 

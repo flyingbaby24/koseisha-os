@@ -17,6 +17,8 @@ public class ProductBattleCardView : MonoBehaviour
     [SerializeField] private TMP_Text attributeText;
     [SerializeField] private TMP_Text hpText;
     [SerializeField] private TMP_Text atkText;
+    [SerializeField] private TMP_Text defText;
+    [SerializeField] private TMP_Text enText;
     [SerializeField] private TMP_Text skillText;
     [SerializeField] private TMP_Text rarityText;
     [SerializeField] private TMP_Text statusText;
@@ -52,6 +54,8 @@ public class ProductBattleCardView : MonoBehaviour
             else if (objectName.Contains("attribute")) attributeText = text;
             else if (objectName.Contains("hp")) hpText = text;
             else if (objectName.Contains("atk") || objectName.Contains("attack")) atkText = text;
+            else if (objectName.Contains("def") || objectName.Contains("defense")) defText = text;
+            else if (objectName.Contains("en") || objectName.Contains("sp")) enText = text;
             else if (objectName.Contains("skill")) skillText = text;
             else if (objectName.Contains("rarity")) rarityText = text;
             else if (objectName.Contains("status")) statusText = text;
@@ -91,8 +95,10 @@ public class ProductBattleCardView : MonoBehaviour
         SetText(attributeText, sourceCard == null ? "-" : Short(sourceCard.primaryAttribute, 18));
         SetText(hpText, sourceCard == null ? "HP -" : $"HP {sourceCard.MaxHp}");
         SetText(atkText, sourceCard == null ? "ATK -" : $"ATK {Mathf.Max(sourceCard.statPhysicalAttack, sourceCard.statSkillAttack)}");
+        SetText(defText, sourceCard == null ? "DEF -" : $"DEF {Mathf.Max(sourceCard.statPhysicalDefense, sourceCard.statSkillDefense)}");
+        SetText(enText, sourceCard == null ? "EN -" : $"EN {sourceCard.MaxSp}");
         SetText(skillText, sourceCard == null ? "Skill -" : $"Skill {Mathf.Abs(sourceCard.skillSeed % 100):00}");
-        SetText(rarityText, sourceCard == null ? "-" : $"★{1 + Mathf.Abs(sourceCard.raritySeed % 5)}");
+        SetText(rarityText, sourceCard == null ? "-" : $"R{1 + Mathf.Abs(sourceCard.raritySeed % 5)}");
         SetText(statusText, placed ? "Placed" : "Ready");
 
         if (artImage != null)

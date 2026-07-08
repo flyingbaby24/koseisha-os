@@ -12,6 +12,7 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
     [SerializeField] private TMP_Text hpText;
     [SerializeField] private TMP_Text atkText;
     [SerializeField] private TMP_Text defenseText;
+    [SerializeField] private TMP_Text enText;
     [SerializeField] private TMP_Text skillText;
     [SerializeField] private TMP_Text rarityText;
 
@@ -23,6 +24,7 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         SetText(hpText, "");
         SetText(atkText, "");
         SetText(defenseText, "");
+        SetText(enText, "");
         SetText(skillText, "");
         SetText(rarityText, "");
         if (artImage != null) artImage.enabled = false;
@@ -43,8 +45,9 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         SetText(hpText, $"HP {card.MaxHp}");
         SetText(atkText, $"ATK {Mathf.Max(card.statPhysicalAttack, card.statSkillAttack)}");
         SetText(defenseText, $"DEF {Mathf.Max(card.statPhysicalDefense, card.statSkillDefense)}");
+        SetText(enText, $"EN {card.MaxSp}");
         SetText(skillText, $"Skill Seed {card.skillSeed}");
-        SetText(rarityText, $"★{1 + Mathf.Abs(card.raritySeed % 5)}");
+        SetText(rarityText, $"R{1 + Mathf.Abs(card.raritySeed % 5)}");
 
         if (artImage != null)
         {

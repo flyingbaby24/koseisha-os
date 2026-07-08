@@ -32,7 +32,7 @@ Boundary rules:
 - Shared data between Search and Battle is limited to saved-folder data, embeddings, and work metadata.
 - `ThoughtMapMain` currently represents the Search/Collect UI baseline.
 - `BattlePrepScene` is the current debug/verification battle-preparation scene.
-- `ProductBattlePrepScene` is the product-facing battle-preparation mock scene.
+- `BattlePrepScene` is the product-facing battle-preparation scene.
 - `BattleScene` is reserved for future battle execution only.
 - Do not put card selection, deck editing, placement editing, Reset/Reposition, or simulation debug logs in `BattleScene`.
 
@@ -44,32 +44,88 @@ The current battle-related UI is intentionally split into preparation/debug scre
   - Keeps the existing verification UI.
   - Supports card loading, deck inspection, 5x5 placement checks, grid-bonus checks, and simulation logs.
   - Uses `Simulate Battle` / preview language. It is not the final combat presentation.
-- `ProductBattlePrepScene`
+- `BattlePrepScene`
   - Product-style preparation mock.
+  - Uses editable Prefabs and Scene references, not runtime-generated layout.
   - Uses large card views, placeholder card art, attribute icon slots, a 5x5 formation board, and a collapsed debug panel.
   - Saves `deck.json` for the future battle scene.
   - `Start Battle` is a future scene transition button after saving the deck.
 - `BattleScene`
-  - Future combat-only scene.
+  - Formal combat-only scene.
   - Loads saved `deck.json`.
-  - Shows battle presentation and result only.
+  - Shows player/enemy cards on the battle board.
   - No card-selection UI, deck-building UI, or placement-editing UI.
 
 Run these editor helpers when needed:
 
 ```text
+Tools > Source of Thought > Create Product Battle UI Prefabs
 Tools > Source of Thought > Create BattlePrepScene
-Tools > Source of Thought > Create Product Battle Prep Prefabs
-Tools > Source of Thought > Create ProductBattlePrepScene
 Tools > Source of Thought > Create BattleScene
+Tools > Source of Thought > Create DebugBattlePrepScene
 ```
 
 Product mock assets:
 
 - `Assets/Prefabs/ProductBattleCardPrefab.prefab`
 - `Assets/Prefabs/ProductBattleGridCellPrefab.prefab`
+- `Assets/Prefabs/AttributeIconPrefab.prefab`
+- `Assets/Prefabs/SkillIconPrefab.prefab`
+- `Assets/Prefabs/CardDetailPanel.prefab`
+- `Assets/Prefabs/DeckListPanel.prefab`
+- `Assets/Prefabs/FormationGrid.prefab`
+- `Assets/Prefabs/BattleField.prefab`
+- `Assets/Prefabs/BattleUnitCard.prefab`
+- `Assets/Prefabs/BattleLogPanel.prefab`
+- `Assets/Prefabs/ProductBattlePrepCanvas.prefab`
+- `Assets/Prefabs/ProductBattleCanvas.prefab`
 - `Assets/Sprites/placeholder_card_art.png`
 - `Assets/Sprites/placeholder_attribute_icon.png`
+
+Image replacement folders:
+
+- `Assets/Sprites/Cards`
+- `Assets/Sprites/Icons`
+
+Put card art and attribute/skill icons in those folders, then assign them from the Inspector on `ProductBattlePrepPanelView` or `ProductBattleSceneView`.
+When `Tools > Source of Thought > Create Product Battle UI Prefabs` runs, it scans these folders for `Sprite` assets and fills:
+
+- `ProductBattlePrepPanelView.Card Art Pool`
+- `ProductBattlePrepPanelView.Attribute Sprites`
+- `ProductBattleSceneView.Card Art Pool`
+- `ProductBattleSceneView.Attribute Sprites`
+
+If images do not appear, select each PNG in Unity and set `Texture Type = Sprite (2D and UI)`.
+
+### Product UI Architecture Rule
+
+Product Battle UI should be editable in Unity Editor:
+
+- Prefabs and Scenes own layout, size, spacing, images, and visual hierarchy.
+- C# owns data loading, binding, click handling, `deck.json` save/load, and scene transition.
+- Do not rebuild product UI with a `BuildPanel()` style runtime layout method.
+- Runtime instantiation is allowed only for repeated data items such as card rows or board cells, using assigned Prefabs.
+- `ThoughtMapBattleMvpPanelView` remains DebugBattlePrep-only.
+
+### Product Card Display
+
+`ProductBattleCardPrefab` is the editable card template. It includes:
+
+- card illustration frame and `ArtImage`
+- `AttributeIconImage`
+- card name
+- primary attribute
+- HP
+- ATK
+- DEF
+- EN
+- Skill
+- Rarity
+- selected/placed status
+
+`ProductBattleGridCellPrefab` is the editable formation-cell template. Placed cells show a compact card frame with art, attribute icon, unit id, short card name, and attribute. Tune its size, spacing, and label positions directly in the prefab.
+
+`CardDetailPanel.prefab` shows the selected card with a larger illustration and parameter readout. Tune this prefab for the big inspection panel rather than changing C#.
 
 The current Unity baseline is V2-first:
 
@@ -207,21 +263,21 @@ Do not add Search UI prefabs to Battle Prep:
 - no `ResultListV2`
 - no `ThoughtMapDetailPanelV2`
 
-### ProductBattlePrepScene setup
+### Product BattlePrepScene setup
 
-`ProductBattlePrepScene` is the new product-facing preparation mock. It keeps the preparation responsibility, but moves away from debug text-first UI.
+`BattlePrepScene` is the product-facing preparation mock. It keeps the preparation responsibility, but moves away from debug text-first UI and runtime-only layout.
 
 Create product prep prefabs and the scene from Unity Editor:
 
 ```text
-Tools > Source of Thought > Create Product Battle Prep Prefabs
-Tools > Source of Thought > Create ProductBattlePrepScene
+Tools > Source of Thought > Create Product Battle UI Prefabs
+Tools > Source of Thought > Create BattlePrepScene
 ```
 
 Open:
 
 ```text
-Assets/Scenes/ProductBattlePrepScene.unity
+Assets/Scenes/BattlePrepScene.unity
 ```
 
 The scene creates:
@@ -248,6 +304,16 @@ Generated product mock assets:
 ```text
 Assets/Prefabs/ProductBattleCardPrefab.prefab
 Assets/Prefabs/ProductBattleGridCellPrefab.prefab
+Assets/Prefabs/AttributeIconPrefab.prefab
+Assets/Prefabs/SkillIconPrefab.prefab
+Assets/Prefabs/CardDetailPanel.prefab
+Assets/Prefabs/DeckListPanel.prefab
+Assets/Prefabs/FormationGrid.prefab
+Assets/Prefabs/BattleField.prefab
+Assets/Prefabs/BattleUnitCard.prefab
+Assets/Prefabs/BattleLogPanel.prefab
+Assets/Prefabs/ProductBattlePrepCanvas.prefab
+Assets/Prefabs/ProductBattleCanvas.prefab
 Assets/Sprites/placeholder_card_art.png
 Assets/Sprites/placeholder_attribute_icon.png
 ```
@@ -266,7 +332,7 @@ The JSON contains:
 
 Current product mock operation:
 
-1. Open `ProductBattlePrepScene`.
+1. Open `BattlePrepScene`.
 2. Press Play.
 3. Click `Load Cards` if cards did not load automatically.
 4. Click a deck card.
