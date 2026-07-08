@@ -5,12 +5,18 @@ using UnityEngine.UI;
 
 public class ProductBattleGridCellView : MonoBehaviour
 {
-    [SerializeField] private Image background;
-    [SerializeField] private Image cardFrame;
-    [SerializeField] private TMP_Text positionText;
+    [Header("Images")]
+    [SerializeField] private Image backgroundImage;
+    [SerializeField] private Image cardFrameImage;
+    [SerializeField] private Image placedGlowImage;
+
+    [Header("Texts")]
+    [SerializeField] private TMP_Text coordinateText;
     [SerializeField] private TMP_Text unitIdText;
     [SerializeField] private TMP_Text cardNameText;
     [SerializeField] private TMP_Text attributeText;
+
+    [Header("Interaction")]
     [SerializeField] private Button button;
 
     private int x;
@@ -22,70 +28,83 @@ public class ProductBattleGridCellView : MonoBehaviour
     public int Y => y;
     public ThoughtMapBattleCardData Card => card;
 
-    public void BuildIfNeeded()
+    private void Awake()
     {
-        RectTransform root = EnsureRectTransform(gameObject);
-        background = EnsureImage(gameObject, new Color(0.01f, 0.09f, 0.13f, 0.92f));
-        button = EnsureButton(gameObject);
-
-        VerticalLayoutGroup layout = gameObject.GetComponent<VerticalLayoutGroup>();
-        if (layout == null)
+        if (button != null)
         {
-            layout = gameObject.AddComponent<VerticalLayoutGroup>();
+            button.onClick.RemoveListener(HandleClicked);
+            button.onClick.AddListener(HandleClicked);
         }
-        layout.padding = new RectOffset(6, 6, 6, 6);
-        layout.spacing = 3f;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
+    }
 
-        positionText = positionText == null ? CreateText(root, "PositionText", 10, new Color(0.46f, 0.82f, 1f, 1f)) : positionText;
-        cardFrame = cardFrame == null ? CreateImage(root, "CardFrame", new Color(0.015f, 0.16f, 0.22f, 1f), 32f) : cardFrame;
-        unitIdText = unitIdText == null ? CreateText(root, "UnitIdText", 12, new Color(0.6f, 1f, 1f, 1f)) : unitIdText;
-        cardNameText = cardNameText == null ? CreateText(root, "CardNameText", 10, Color.white) : cardNameText;
-        attributeText = attributeText == null ? CreateText(root, "AttributeText", 9, new Color(0.74f, 1f, 0.84f, 1f)) : attributeText;
+    [ContextMenu("Auto Wire From Children")]
+    public void AutoWireFromChildren()
+    {
+        TMP_Text[] texts = GetComponentsInChildren<TMP_Text>(true);
+        foreach (TMP_Text text in texts)
+        {
+            string objectName = text.gameObject.name.ToLowerInvariant();
+            if (objectName.Contains("coordinate") || objectName.Contains("position")) coordinateText = text;
+            else if (objectName.Contains("unit") || objectName.Contains("id")) unitIdText = text;
+            else if (objectName.Contains("name")) cardNameText = text;
+            else if (objectName.Contains("attribute")) attributeText = text;
+        }
+
+        Image[] images = GetComponentsInChildren<Image>(true);
+        foreach (Image image in images)
+        {
+            string objectName = image.gameObject.name.ToLowerInvariant();
+            if (objectName.Contains("card")) cardFrameImage = image;
+            else if (objectName.Contains("glow") || objectName.Contains("placed")) placedGlowImage = image;
+            else if (image.gameObject == gameObject || objectName.Contains("background")) backgroundImage = image;
+        }
+
+        if (button == null)
+        {
+            button = GetComponentInChildren<Button>(true);
+        }
     }
 
     public void BindEmpty(int gridX, int gridY, bool available)
     {
-        BuildIfNeeded();
         x = gridX;
         y = gridY;
         card = null;
-        background.color = available
-            ? new Color(0.01f, 0.14f, 0.14f, 0.92f)
-            : new Color(0.01f, 0.07f, 0.10f, 0.92f);
-        positionText.text = $"{x},{y}";
-        unitIdText.text = "";
-        cardNameText.text = available ? "Deploy" : "";
-        attributeText.text = "";
-        cardFrame.color = available
-            ? new Color(0.0f, 0.24f, 0.28f, 1f)
-            : new Color(0.02f, 0.06f, 0.08f, 1f);
+        SetText(coordinateText, $"{x + 1},{y + 1}");
+        SetText(unitIdText, "");
+        SetText(cardNameText, available ? "Deploy" : "");
+        SetText(attributeText, "");
+        if (placedGlowImage != null)
+        {
+            placedGlowImage.gameObject.SetActive(false);
+        }
     }
 
     public void BindCard(int gridX, int gridY, ThoughtMapBattleCardData sourceCard, string unitId)
     {
-        BuildIfNeeded();
         x = gridX;
         y = gridY;
         card = sourceCard;
-        background.color = new Color(0.0f, 0.22f, 0.30f, 0.96f);
-        cardFrame.color = new Color(0.0f, 0.42f, 0.52f, 1f);
-        positionText.text = $"{x},{y}";
-        unitIdText.text = unitId;
-        cardNameText.text = Short(sourceCard == null ? "Empty" : sourceCard.cardName, 16);
-        attributeText.text = sourceCard == null ? "-" : Short(sourceCard.primaryAttribute, 12);
+        SetText(coordinateText, $"{x + 1},{y + 1}");
+        SetText(unitIdText, unitId);
+        SetText(cardNameText, Short(sourceCard == null ? "Empty" : sourceCard.cardName, 18));
+        SetText(attributeText, sourceCard == null ? "-" : Short(sourceCard.primaryAttribute, 14));
+        if (placedGlowImage != null)
+        {
+            placedGlowImage.gameObject.SetActive(true);
+        }
     }
 
     public void SetClickHandler(UnityAction<ProductBattleGridCellView> handler)
     {
-        BuildIfNeeded();
-        button.onClick.RemoveListener(HandleClicked);
         clickHandler = handler;
-        if (clickHandler != null)
+        if (button == null)
         {
+            button = GetComponent<Button>();
+        }
+        if (button != null)
+        {
+            button.onClick.RemoveListener(HandleClicked);
             button.onClick.AddListener(HandleClicked);
         }
     }
@@ -95,66 +114,12 @@ public class ProductBattleGridCellView : MonoBehaviour
         clickHandler?.Invoke(this);
     }
 
-    private Image CreateImage(RectTransform parent, string name, Color color, float height)
+    private void SetText(TMP_Text text, string value)
     {
-        GameObject imageObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        RectTransform rect = imageObject.GetComponent<RectTransform>();
-        rect.SetParent(parent, false);
-        Image image = imageObject.GetComponent<Image>();
-        image.color = color;
-        image.raycastTarget = false;
-        LayoutElement element = imageObject.AddComponent<LayoutElement>();
-        element.preferredHeight = height;
-        element.minHeight = height;
-        return image;
-    }
-
-    private TMP_Text CreateText(RectTransform parent, string name, int fontSize, Color color)
-    {
-        GameObject textObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-        RectTransform rect = textObject.GetComponent<RectTransform>();
-        rect.SetParent(parent, false);
-        TMP_Text text = textObject.GetComponent<TMP_Text>();
-        text.fontSize = fontSize;
-        text.color = color;
-        text.alignment = TextAlignmentOptions.Center;
-        text.enableWordWrapping = false;
-        text.overflowMode = TextOverflowModes.Ellipsis;
-        text.raycastTarget = false;
-        return text;
-    }
-
-    private Image EnsureImage(GameObject target, Color color)
-    {
-        Image image = target.GetComponent<Image>();
-        if (image == null)
+        if (text != null)
         {
-            image = target.AddComponent<Image>();
+            text.text = value;
         }
-        image.color = color;
-        image.raycastTarget = true;
-        return image;
-    }
-
-    private Button EnsureButton(GameObject target)
-    {
-        Button existingButton = target.GetComponent<Button>();
-        if (existingButton == null)
-        {
-            existingButton = target.AddComponent<Button>();
-        }
-        existingButton.targetGraphic = target.GetComponent<Graphic>();
-        return existingButton;
-    }
-
-    private RectTransform EnsureRectTransform(GameObject target)
-    {
-        RectTransform rect = target.GetComponent<RectTransform>();
-        if (rect == null)
-        {
-            rect = target.AddComponent<RectTransform>();
-        }
-        return rect;
     }
 
     private string Short(string value, int maxLength)
