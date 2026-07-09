@@ -969,6 +969,56 @@ def plot_status_bar(status_df, title=None):
     fig.tight_layout()
 
     return fig
+
+
+def plot_status_pie(status_df):
+    plt = get_matplotlib_pyplot()
+
+    positive = (
+        status_df[status_df["share_%"] > 0]
+        .sort_values("share_%", ascending=False)
+        .copy()
+    )
+
+    if positive.empty:
+        fig, ax = plt.subplots(figsize=(7, 4))
+        apply_cyber_chart_theme(fig, ax, grid=False)
+        ax.text(0.5, 0.5, "Pie chart needs at least one positive parameter.", ha="center", va="center", color=CYBER_TEXT)
+        ax.axis("off")
+        return fig
+
+    colors = [rank_color(rank) for rank in positive["rank"]]
+
+    fig, ax = plt.subplots(figsize=(7, 6))
+    apply_cyber_chart_theme(fig, ax, grid=False)
+    wedges, texts, autotexts = ax.pie(
+        positive["share_%"],
+        labels=positive["parameter"].astype(str),
+        colors=colors,
+        startangle=90,
+        counterclock=False,
+        autopct="%1.1f%%",
+        pctdistance=0.72,
+        labeldistance=1.08,
+        wedgeprops={
+            "edgecolor": CYBER_BG,
+            "linewidth": 1.2,
+            "alpha": 0.92,
+        },
+        textprops={"color": CYBER_TEXT, "fontsize": 9},
+    )
+
+    for text in texts:
+        text.set_color(CYBER_MUTED)
+    for text in autotexts:
+        text.set_color(CYBER_BG)
+        text.set_fontweight("bold")
+
+    ax.set_title("Thought Composition Pie", color=CYBER_TEXT, fontweight="bold")
+    fig.tight_layout()
+    return fig
+
+
 def plot_status_radar(status_df):
     plt = get_matplotlib_pyplot()
     labels = status_df["parameter"].astype(str).tolist()
@@ -1327,6 +1377,12 @@ with tab_status:
                     status_df,
                     title=document_title
                 ),
+                use_container_width=True
+            )
+
+            st.markdown("**Composition Pie**")
+            st.pyplot(
+                plot_status_pie(status_df),
                 use_container_width=True
             )
 
