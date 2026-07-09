@@ -1,5 +1,6 @@
 import html
 import json
+import math
 import time
 import urllib.error
 import urllib.parse
@@ -27,6 +28,23 @@ DEBUG_KEYS = [
     "last_debug_params",
     "last_debug_url",
 ]
+
+PARAMETER_KEYS = [
+    "parameters",
+    "parameter_scores",
+    "filter_scores",
+    "composition",
+    "thought_composition",
+    "scores",
+]
+
+CYBER_BG = "#050914"
+CYBER_PANEL = "#081123"
+CYBER_TEXT = "#e9f7ff"
+CYBER_MUTED = "#91a4c4"
+CYBER_GRID = "#245a73"
+CYBER_CYAN = "#38e8ff"
+CYBER_BLUE = "#6da8ff"
 
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
@@ -311,6 +329,129 @@ def author_frame(df: pd.DataFrame) -> pd.DataFrame:
         )
         .sort_values(["best_similarity", "works"], ascending=False)
     )
+
+
+def normalize_parameter_rows(item: dict) -> list[dict]:
+    for key in PARAMETER_KEYS:
+        if key not in item:
+            continue
+
+        rows = parse_parameter_value(item.get(key))
+        if rows:
+            return rows
+
+    return []
+
+
+def parse_parameter_value(value) -> list[dict]:
+    if value is None:
+        return []
+
+    if isinstance(value, float) and math.isnan(value):
+        return []
+
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return []
+        try:
+            value = json.loads(text)
+        except json.JSONDecodeError:
+            return []
+
+    if isinstance(value, dict):
+        if "key" in value and "value" in value:
+            row = make_parameter_row(value.get("key"), value.get("value"))
+            return [row] if row else []
+
+        for nested_key in PARAMETER_KEYS:
+            nested_rows = parse_parameter_value(value.get(nested_key))
+            if nested_rows:
+                return nested_rows
+
+        rows = []
+        for key, score in value.items():
+            row = make_parameter_row(key, score)
+            if row:
+                rows.append(row)
+        return rows
+
+    if isinstance(value, list):
+        rows = []
+        for entry in value:
+            if isinstance(entry, dict):
+                if "key" in entry and "value" in entry:
+                    row = make_parameter_row(entry.get("key"), entry.get("value"))
+                    if row:
+                        rows.append(row)
+                else:
+                    rows.extend(parse_parameter_value(entry))
+            elif isinstance(entry, (list, tuple)) and len(entry) >= 2:
+                row = make_parameter_row(entry[0], entry[1])
+                if row:
+                    rows.append(row)
+        return rows
+
+    return []
+
+
+def make_parameter_row(key, value) -> dict | None:
+    key_text = str(key or "").strip()
+    if not key_text:
+        return None
+
+    try:
+        numeric_value = float(value)
+    except (TypeError, ValueError):
+        return None
+
+    if math.isnan(numeric_value) or math.isinf(numeric_value):
+        return None
+
+    return {
+        "parameter": key_text,
+        "value": numeric_value,
+    }
+
+
+def plot_parameter_bar(param_df: pd.DataFrame):
+    import matplotlib.pyplot as plt
+
+    ordered = param_df.sort_values("value", ascending=True)
+    fig, ax = plt.subplots(figsize=(8, 4.8))
+    fig.patch.set_facecolor(CYBER_BG)
+    ax.set_facecolor(CYBER_PANEL)
+
+    bars = ax.barh(
+        ordered["parameter"].astype(str),
+        ordered["value"],
+        color=CYBER_CYAN,
+        edgecolor=CYBER_BLUE,
+        alpha=0.9,
+    )
+
+    max_value = float(ordered["value"].max()) if len(ordered) else 1.0
+    for bar in bars:
+        width = bar.get_width()
+        ax.text(
+            width + max(max_value, 1.0) * 0.015,
+            bar.get_y() + bar.get_height() / 2,
+            f"{width:.2f}",
+            ha="left",
+            va="center",
+            color=CYBER_TEXT,
+            fontsize=9,
+        )
+
+    ax.set_title("Parameter Profile", color=CYBER_TEXT, fontweight="bold")
+    ax.set_xlabel("Value", color=CYBER_MUTED)
+    ax.tick_params(colors=CYBER_MUTED)
+    ax.grid(axis="x", color=CYBER_GRID, alpha=0.38)
+    for spine in ax.spines.values():
+        spine.set_color(CYBER_GRID)
+        spine.set_alpha(0.65)
+    fig.tight_layout()
+    return fig
 
 
 def clear_last_search():
@@ -652,21 +793,25 @@ if data is not None and not last_error:
                 st.markdown(f"[Open source]({selected_result.get('url')})")
 
             st.subheader("Parameters")
-            result_params = selected_result.get("parameters", [])
+            result_params = normalize_parameter_rows(selected_result)
 
             if result_params:
-                pdf = pd.DataFrame([
-                    {
-                        "parameter": p.get("key", ""),
-                        "value": p.get("value", 0),
-                    }
-                    for p in result_params
-                ])
+                pdf = pd.DataFrame(result_params)
                 pdf["value"] = pd.to_numeric(pdf["value"], errors="coerce").fillna(0)
-                st.dataframe(pdf, use_container_width=True, hide_index=True)
-                st.bar_chart(pdf.set_index("parameter"))
+                param_section = st.container()
+                with param_section:
+                    st.dataframe(pdf, use_container_width=True, hide_index=True)
+                    st.pyplot(plot_parameter_bar(pdf), use_container_width=True)
             else:
                 st.info("No parameters.")
+                available_keys = [key for key in PARAMETER_KEYS if key in selected_result]
+                if available_keys:
+                    st.caption(f"Parameter-like keys exist but had no numeric values: {', '.join(available_keys)}")
+                else:
+                    st.caption("API response has no parameter-like keys for this result.")
+
+            with st.expander("Selected result raw JSON"):
+                st.json(selected_result)
 
 
 if st.session_state.get("last_debug_mode") or data is not None:
