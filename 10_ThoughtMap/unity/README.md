@@ -109,7 +109,7 @@ Product Battle UI should be editable in Unity Editor:
 
 ### Product Card Display
 
-`ProductBattleCardPrefab` is the editable card template. It includes:
+`ProductBattleCardPrefab` is the editable card template for card-like surfaces only. Use it for detail/formation/battle presentation, not for selection lists. It includes:
 
 - card illustration frame and `ArtImage`
 - `AttributeIconImage`
@@ -274,6 +274,145 @@ Tools > Source of Thought > Create Product Battle UI Prefabs
 Tools > Source of Thought > Create BattlePrepScene
 ```
 
+If an existing `CardListPanel` or `DeckListPanel` still has only a plain `Content` object, repair the ScrollView structure:
+
+```text
+Tools > Source of Thought > Repair Product Battle Prep ScrollViews
+```
+
+If only the top controls are missing, repair them directly:
+
+```text
+Tools > Source of Thought > Repair Product Battle Prep Controls
+```
+
+If `ProductBattlePrepPanelView` has empty sprite fields, repair sprite bindings:
+
+```text
+Tools > Source of Thought > Repair Product Battle Prep Sprites
+```
+
+This command:
+
+- creates placeholder PNG files if needed
+- imports images in `Assets/Sprites/Cards` as Sprites
+- imports images in `Assets/Sprites/Icons` as Sprites
+- fills `Default Card Art`
+- fills `Default Attribute Icon`
+- fills `Card Art Pool`
+- fills `Attribute Sprites`
+
+After running it, select `ProductBattlePrepPanelView` and confirm:
+
+```text
+Card Art Pool Size >= 1
+Attribute Sprites Size >= 1
+```
+
+`Repair Product Battle Prep ScrollViews` also refreshes these sprite bindings, so it is safe to use that as the all-in-one repair command for existing `BattlePrepScene` objects.
+It also creates and assigns `AddToDeckButton`.
+
+Correct hierarchy:
+
+```text
+CardListPanel / DeckListPanel
+  Viewport                  <-- Image + Mask
+    Content                 <-- GridLayoutGroup + ContentSizeFitter
+      ProductBattleCard(Clone)
+```
+
+Required bindings:
+
+- `CardListPanel`: `ScrollRect`
+- `DeckListPanel`: `ScrollRect`
+- `Viewport`: `Image` + `Mask`
+- `Content`: `VerticalLayoutGroup` + `ContentSizeFitter`
+- `ProductBattlePrepPanelView.Card List Content`: `CardListPanel/Viewport/Content`
+- `ProductBattlePrepPanelView.Deck List Content`: `DeckListPanel/Viewport/Content`
+- `ProductBattlePrepPanelView.Add To Deck Button`: `AddToDeckButton`
+
+If `Content` only has `RectTransform` and `CanvasRenderer`, CSV loading can still say `Loaded 30 cards`, but the layout will not expand into a scrollable row list.
+
+If `ProductBattlePrepPanelView` reports that `Card List Content` or `Deck List Content` is missing, run:
+
+```text
+Tools > Source of Thought > Repair Product Battle Prep ScrollViews
+```
+
+The repair command rebuilds/normalizes:
+
+- `CardListPanel/Viewport/Content`
+- `DeckListPanel/Viewport/Content`
+- `HeadingText` as a fixed child outside the `Viewport`
+- `ScrollRect.viewport`
+- `ScrollRect.content`
+- `Viewport` `Image + Mask`
+- `Content` `VerticalLayoutGroup + ContentSizeFitter`
+- `ProductBattlePrepPanelView.cardListContent`
+- `ProductBattlePrepPanelView.deckListContent`
+
+Required hierarchy:
+
+```text
+CardListPanel or DeckListPanel
+  HeadingText
+  Viewport
+    Content
+      ProductBattleCardListRowView(Clone)
+```
+
+The `Viewport` must cover only the area below `HeadingText`. `Content` must be a child of `Viewport`, with:
+
+```text
+anchorMin = (0, 1)
+anchorMax = (1, 1)
+pivot = (0.5, 1)
+```
+
+`RenderCardLibrary()` and `RenderDeck()` preserve `ScrollRect.verticalNormalizedPosition` when they regenerate rows, so selecting a row should not snap the list back to the top.
+
+Card List / Deck 10 list rule:
+
+- `Card List` uses lightweight `ProductBattleCardListRowView` rows.
+- `Deck 10` also uses lightweight `ProductBattleCardListRowView` rows.
+- One row shows only card id/slot, card name, primary attribute, and state.
+- Do not use `ProductBattleCardPrefab` inside `Card List` or `Deck 10`.
+- The row root is the only clickable object. Child TMP text and child images have `Raycast Target` disabled.
+- `Card List` click updates `CardDetailPanel` only.
+- `Deck 10` click updates `CardDetailPanel` and selects the card for Formation Grid placement.
+- Formation Grid can still use compact card-style visuals.
+
+Runtime layout diagnostics:
+
+1. Press Play in `BattlePrepScene`.
+2. Select `ProductBattlePrepPanelView`.
+3. Run `Log Runtime Layout Diagnostics` from the component context menu.
+4. Confirm:
+   - `VerticalLayout` is present for Card List and Deck 10.
+   - `Grid cellSize=missing` for Card List and Deck 10.
+   - Every generated row reports a height around `38`.
+   - `raycastTargetGraphics=1`.
+   - Scroll viewport/content and Mask are not `missing`.
+
+If selection is unstable, inspect the generated row named in the diagnostic log rather than the large card prefab.
+
+### Product BattlePrep deck building flow
+
+The product preparation scene uses this interaction model:
+
+1. Click a card in `Card List` to preview it in `CardDetailPanel`.
+2. Click `Add to Deck` to append the selected Card List card to `Deck 10`.
+3. Click a card in `Deck 10` to select it for placement.
+4. Click an available player-side cell in the 5x5 Formation Grid to place it.
+
+Rules:
+
+- `Card List` selection is for preview and adding only.
+- `Deck 10` selection is for Formation Grid placement.
+- Deck size is capped by `deckLimit`, normally 10.
+- Formation placement is capped by `deployLimit`, normally 5.
+- `Deck 10` should use a ScrollRect-backed grid so all selected deck cards can be viewed.
+
 Open:
 
 ```text
@@ -292,6 +431,7 @@ The product mock includes:
 - placeholder card art image
 - attribute icon slot
 - card name, primary attribute, HP, ATK, skill seed, rarity seed
+- Card List selection and `Add to Deck`
 - deck slots for ten cards
 - 5x5 formation board for five deployed cards
 - collapsed debug/preview panel

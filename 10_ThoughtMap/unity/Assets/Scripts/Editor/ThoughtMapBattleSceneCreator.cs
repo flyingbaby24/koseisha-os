@@ -1,5 +1,6 @@
 ﻿#if UNITY_EDITOR
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using TMPro;
@@ -10,6 +11,10 @@ using UnityEngine.UI;
 
 public static class ThoughtMapBattleSceneCreator
 {
+    private static readonly Vector2 ProductCardSize = new Vector2(176f, 272f);
+    private static readonly Vector2 ProductCardGridSpacing = new Vector2(14f, 14f);
+    private const float ProductListRowSpacing = 4f;
+
     private const string SceneFolder = "Assets/Scenes";
     private const string PrefabFolder = "Assets/Prefabs";
     private const string SpriteFolder = "Assets/Sprites";
@@ -36,6 +41,7 @@ public static class ThoughtMapBattleSceneCreator
     public static void CreateProductBattleUiPrefabs()
     {
         EnsureFolders();
+        EnsurePlaceholderSpriteAssets();
         ProductBattleCardView cardPrefab = CreateCardViewPrefab();
         ProductBattleGridCellView cellPrefab = CreateGridCellPrefab();
         CreateSimpleImagePrefab("AttributeIconPrefab", AttributeIconPrefabPath, new Color(0.0f, 0.45f, 0.8f, 1f), new Vector2(48f, 48f));
@@ -50,6 +56,133 @@ public static class ThoughtMapBattleSceneCreator
         CreateProductBattleCanvasPrefab(unitCard, logPanel);
         AssetDatabase.Refresh();
         Debug.Log("[SourceOfThoughtBattleScene] Product Battle UI prefabs created. They are editable assets, not runtime-only UI.");
+    }
+
+    [MenuItem("Tools/Source of Thought/Repair Product Battle Prep ScrollViews")]
+    public static void RepairProductBattlePrepScrollViews()
+    {
+        EnsureFolders();
+        EnsurePlaceholderSpriteAssets();
+        Sprite[] cardSprites = LoadSpritesFromFolder(CardSpriteFolder);
+        Sprite[] iconSprites = LoadSpritesFromFolder(IconSpriteFolder);
+        int repaired = 0;
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.IsValid())
+        {
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                ProductBattlePrepPanelView[] views = root.GetComponentsInChildren<ProductBattlePrepPanelView>(true);
+                foreach (ProductBattlePrepPanelView view in views)
+                {
+                    RepairProductBattlePrepPanel(view);
+                    RepairProductBattlePrepControls(view);
+                    RepairProductBattlePrepSpriteBindings(view, cardSprites, iconSprites);
+                    repaired++;
+                }
+            }
+        }
+
+        foreach (GameObject selected in Selection.gameObjects)
+        {
+            ProductBattlePrepPanelView[] views = selected.GetComponentsInChildren<ProductBattlePrepPanelView>(true);
+            foreach (ProductBattlePrepPanelView view in views)
+            {
+                RepairProductBattlePrepPanel(view);
+                RepairProductBattlePrepControls(view);
+                RepairProductBattlePrepSpriteBindings(view, cardSprites, iconSprites);
+                repaired++;
+            }
+        }
+
+        if (repaired > 0)
+        {
+            EditorSceneManager.MarkSceneDirty(scene);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+
+        Debug.Log($"[SourceOfThoughtBattleScene] Repaired {repaired} Product Battle Prep scroll view binding(s).");
+    }
+
+    [MenuItem("Tools/Source of Thought/Repair Product Battle Prep Controls")]
+    public static void RepairProductBattlePrepControlsMenu()
+    {
+        int repaired = 0;
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.IsValid())
+        {
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                ProductBattlePrepPanelView[] views = root.GetComponentsInChildren<ProductBattlePrepPanelView>(true);
+                foreach (ProductBattlePrepPanelView view in views)
+                {
+                    RepairProductBattlePrepControls(view);
+                    repaired++;
+                }
+            }
+        }
+
+        foreach (GameObject selected in Selection.gameObjects)
+        {
+            ProductBattlePrepPanelView[] views = selected.GetComponentsInChildren<ProductBattlePrepPanelView>(true);
+            foreach (ProductBattlePrepPanelView view in views)
+            {
+                RepairProductBattlePrepControls(view);
+                repaired++;
+            }
+        }
+
+        if (repaired > 0)
+        {
+            EditorSceneManager.MarkSceneDirty(scene);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+
+        Debug.Log($"[SourceOfThoughtBattleScene] Repaired Product Battle Prep controls on {repaired} component(s).");
+    }
+
+    [MenuItem("Tools/Source of Thought/Repair Product Battle Prep Sprites")]
+    public static void RepairProductBattlePrepSprites()
+    {
+        EnsureFolders();
+        EnsurePlaceholderSpriteAssets();
+        Sprite[] cardSprites = LoadSpritesFromFolder(CardSpriteFolder);
+        Sprite[] iconSprites = LoadSpritesFromFolder(IconSpriteFolder);
+
+        int repaired = 0;
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.IsValid())
+        {
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                ProductBattlePrepPanelView[] views = root.GetComponentsInChildren<ProductBattlePrepPanelView>(true);
+                foreach (ProductBattlePrepPanelView view in views)
+                {
+                    RepairProductBattlePrepSpriteBindings(view, cardSprites, iconSprites);
+                    repaired++;
+                }
+            }
+        }
+
+        foreach (GameObject selected in Selection.gameObjects)
+        {
+            ProductBattlePrepPanelView[] views = selected.GetComponentsInChildren<ProductBattlePrepPanelView>(true);
+            foreach (ProductBattlePrepPanelView view in views)
+            {
+                RepairProductBattlePrepSpriteBindings(view, cardSprites, iconSprites);
+                repaired++;
+            }
+        }
+
+        if (repaired > 0)
+        {
+            EditorSceneManager.MarkSceneDirty(scene);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+
+        Debug.Log($"[SourceOfThoughtBattleScene] Repaired sprite bindings on {repaired} ProductBattlePrepPanelView component(s). Card Art Pool Size={cardSprites.Length}, Attribute Sprites Size={iconSprites.Length}.");
     }
 
     [MenuItem("Tools/Source of Thought/Create BattlePrepScene")]
@@ -130,11 +263,17 @@ public static class ThoughtMapBattleSceneCreator
     {
         GameObject root = UiObject("ProductBattleCardPrefab", typeof(Image), typeof(Button), typeof(ProductBattleCardView), typeof(LayoutElement));
         RectTransform rect = root.GetComponent<RectTransform>();
-        rect.sizeDelta = new Vector2(220f, 340f);
-        root.GetComponent<Image>().color = new Color(0.025f, 0.035f, 0.045f, 0.98f);
+        rect.sizeDelta = ProductCardSize;
+        Image rootImage = root.GetComponent<Image>();
+        rootImage.color = new Color(0.025f, 0.035f, 0.045f, 0.98f);
+        rootImage.raycastTarget = true;
         LayoutElement layout = root.GetComponent<LayoutElement>();
-        layout.preferredWidth = 220f;
-        layout.preferredHeight = 340f;
+        layout.preferredWidth = ProductCardSize.x;
+        layout.preferredHeight = ProductCardSize.y;
+        layout.minWidth = ProductCardSize.x;
+        layout.minHeight = ProductCardSize.y;
+        layout.flexibleWidth = 0f;
+        layout.flexibleHeight = 0f;
 
         Image selection = ChildImage(rect, "SelectionGlow", new Vector2(0f, 0f), new Vector2(1f, 1f), new Color(0.1f, 0.9f, 1f, 0.28f));
         ChildImage(rect, "ArtFrame", new Vector2(0.02f, 0.08f), new Vector2(0.34f, 0.92f), new Color(0.72f, 0.52f, 0.24f, 0.70f));
@@ -249,8 +388,7 @@ public static class ThoughtMapBattleSceneCreator
     {
         GameObject root = UiObject("DeckListPanel", typeof(Image));
         root.GetComponent<Image>().color = new Color(0.015f, 0.025f, 0.035f, 0.95f);
-        RectTransform content = CreateScrollContent(root.GetComponent<RectTransform>(), "Content", 2, new Vector2(210f, 320f));
-        content.gameObject.name = "CardContent";
+        RectTransform content = CreateScrollContent(root.GetComponent<RectTransform>(), "Content", 2, ProductCardSize);
         SavePrefab(root, DeckListPanelPrefabPath);
     }
 
@@ -362,19 +500,20 @@ public static class ThoughtMapBattleSceneCreator
         panel.GetComponent<Image>().color = new Color(0.005f, 0.012f, 0.02f, 0.98f);
 
         TMP_Text title = ChildText(panelRect, "TitleText", new Vector2(0.02f, 0.92f), new Vector2(0.38f, 0.99f), "Source of Thought - Battle Prep", 30, TextAlignmentOptions.Left);
-        Button loadButton = CreateButton(panelRect, "LoadCardsButton", "Load Cards", new Vector2(0.58f, 0.93f), new Vector2(0.68f, 0.985f));
-        Button saveButton = CreateButton(panelRect, "SaveDeckButton", "Save", new Vector2(0.70f, 0.93f), new Vector2(0.78f, 0.985f));
-        Button simulateButton = CreateButton(panelRect, "SimulateButton", "Simulate Battle", new Vector2(0.80f, 0.93f), new Vector2(0.90f, 0.985f));
-        Button startButton = CreateButton(panelRect, "StartBattleButton", "Start Battle", new Vector2(0.91f, 0.93f), new Vector2(0.985f, 0.985f));
+        Button loadButton = CreateButton(panelRect, "LoadCardsButton", "Load Cards", new Vector2(0.54f, 0.93f), new Vector2(0.63f, 0.985f));
+        Button addToDeckButton = CreateButton(panelRect, "AddToDeckButton", "Add to Deck", new Vector2(0.64f, 0.93f), new Vector2(0.735f, 0.985f));
+        Button saveButton = CreateButton(panelRect, "SaveDeckButton", "Save", new Vector2(0.745f, 0.93f), new Vector2(0.815f, 0.985f));
+        Button simulateButton = CreateButton(panelRect, "SimulateButton", "Simulate", new Vector2(0.825f, 0.93f), new Vector2(0.905f, 0.985f));
+        Button startButton = CreateButton(panelRect, "StartBattleButton", "Start", new Vector2(0.915f, 0.93f), new Vector2(0.985f, 0.985f));
         Button clearButton = CreateButton(panelRect, "ClearButton", "Clear", new Vector2(0.02f, 0.01f), new Vector2(0.10f, 0.07f));
         TMP_Text status = ChildText(panelRect, "StatusText", new Vector2(0.18f, 0.01f), new Vector2(0.70f, 0.07f), "Ready", 16, TextAlignmentOptions.Left);
 
-        RectTransform cardList = CreateScrollablePanel(panelRect, "CardListPanel", new Vector2(0.02f, 0.10f), new Vector2(0.24f, 0.90f), "Card List", 2, new Vector2(176f, 272f), out Transform cardListContent);
+        RectTransform cardList = CreateLightweightListPanel(panelRect, "CardListPanel", new Vector2(0.02f, 0.10f), new Vector2(0.24f, 0.90f), "Card List", out Transform cardListContent);
         GameObject detailObject = PrefabUtility.InstantiatePrefab(detailPrefab.gameObject, panelRect) as GameObject;
         RectTransform detail = detailObject.GetComponent<RectTransform>();
         detail.name = "CardDetailPanel";
         Anchor(detail, new Vector2(0.26f, 0.66f), new Vector2(0.76f, 0.90f));
-        RectTransform deck = CreateScrollablePanel(panelRect, "DeckListPanel", new Vector2(0.78f, 0.42f), new Vector2(0.985f, 0.90f), "Deck 10", 2, new Vector2(176f, 272f), out Transform deckContent);
+        RectTransform deck = CreateLightweightListPanel(panelRect, "DeckListPanel", new Vector2(0.78f, 0.42f), new Vector2(0.985f, 0.90f), "Deck 10", out Transform deckContent);
         RectTransform formation = CreatePanel(panelRect, "FormationGridPanel", new Vector2(0.26f, 0.10f), new Vector2(0.76f, 0.64f), "5x5 Formation", out Transform formationContent);
         GridLayoutGroup formationGrid = formationContent.gameObject.AddComponent<GridLayoutGroup>();
         formationGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
@@ -389,7 +528,6 @@ public static class ThoughtMapBattleSceneCreator
 
         ProductBattlePrepPanelView view = panel.GetComponent<ProductBattlePrepPanelView>();
         SerializedObject so = new SerializedObject(view);
-        SetObject(so, "cardViewPrefab", cardPrefab);
         SetObject(so, "gridCellPrefab", cellPrefab);
         SetObject(so, "cardListContent", cardListContent);
         SetObject(so, "deckListContent", deckContent);
@@ -398,6 +536,7 @@ public static class ThoughtMapBattleSceneCreator
         SetObject(so, "debugLogPanel", logObject.GetComponent<ProductBattleLogPanelView>());
         SetObject(so, "statusText", status);
         SetObject(so, "loadCardsButton", loadButton);
+        SetObject(so, "addToDeckButton", addToDeckButton);
         SetObject(so, "saveDeckButton", saveButton);
         SetObject(so, "startBattleButton", startButton);
         SetObject(so, "simulateButton", simulateButton);
@@ -474,59 +613,419 @@ public static class ThoughtMapBattleSceneCreator
         Anchor(rect, min, max);
         panel.GetComponent<Image>().color = new Color(0.015f, 0.025f, 0.035f, 0.94f);
         ChildText(rect, "HeadingText", new Vector2(0.03f, 0.92f), new Vector2(0.98f, 0.99f), title, 18, TextAlignmentOptions.Left);
+        RectTransform contentRect = EnsureScrollablePanelStructure(rect, columns, cellSize);
+        content = contentRect;
+        return rect;
+    }
 
-        GameObject viewport = UiChild(rect, "Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
-        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
-        Anchor(viewportRect, new Vector2(0.03f, 0.03f), new Vector2(0.97f, 0.90f));
-        viewport.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.08f);
-        viewport.GetComponent<Mask>().showMaskGraphic = false;
-
-        GameObject contentObject = UiChild(viewportRect, "Content", typeof(RectTransform), typeof(GridLayoutGroup), typeof(ContentSizeFitter));
-        RectTransform contentRect = contentObject.GetComponent<RectTransform>();
-        contentRect.anchorMin = new Vector2(0f, 1f);
-        contentRect.anchorMax = new Vector2(1f, 1f);
-        contentRect.pivot = new Vector2(0.5f, 1f);
-        contentRect.offsetMin = Vector2.zero;
-        contentRect.offsetMax = Vector2.zero;
-        GridLayoutGroup grid = contentObject.GetComponent<GridLayoutGroup>();
-        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        grid.constraintCount = columns;
-        grid.cellSize = cellSize;
-        grid.spacing = new Vector2(12f, 12f);
-        grid.childAlignment = TextAnchor.UpperCenter;
-        contentObject.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-        ScrollRect scroll = panel.AddComponent<ScrollRect>();
-        scroll.viewport = viewportRect;
-        scroll.content = contentRect;
-        scroll.horizontal = false;
-        scroll.vertical = true;
+    private static RectTransform CreateLightweightListPanel(RectTransform parent, string name, Vector2 min, Vector2 max, string title, out Transform content)
+    {
+        GameObject panel = UiChild(parent, name, typeof(RectTransform), typeof(Image));
+        RectTransform rect = panel.GetComponent<RectTransform>();
+        Anchor(rect, min, max);
+        panel.GetComponent<Image>().color = new Color(0.015f, 0.025f, 0.035f, 0.94f);
+        ChildText(rect, "HeadingText", new Vector2(0.03f, 0.92f), new Vector2(0.98f, 0.99f), title, 18, TextAlignmentOptions.Left);
+        RectTransform contentRect = EnsureLightweightListPanelStructure(rect);
         content = contentRect;
         return rect;
     }
 
     private static RectTransform CreateScrollContent(RectTransform parent, string name, int columns, Vector2 cellSize)
     {
-        GameObject viewport = UiChild(parent, "Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
-        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
-        Anchor(viewportRect, Vector2.zero, Vector2.one);
-        viewport.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.08f);
-        viewport.GetComponent<Mask>().showMaskGraphic = false;
-        GameObject content = UiChild(viewportRect, name, typeof(RectTransform), typeof(GridLayoutGroup), typeof(ContentSizeFitter));
-        RectTransform contentRect = content.GetComponent<RectTransform>();
+        RectTransform contentRect = EnsureScrollablePanelStructure(parent, columns, cellSize);
+        contentRect.gameObject.name = name;
+        return contentRect;
+    }
+
+    private static bool RepairProductBattlePrepPanel(ProductBattlePrepPanelView view)
+    {
+        if (view == null)
+        {
+            return false;
+        }
+
+        RectTransform cardListPanel = FindDescendant(view.transform, "CardListPanel") as RectTransform;
+        RectTransform deckListPanel = FindDescendant(view.transform, "DeckListPanel") as RectTransform;
+        if (cardListPanel == null && deckListPanel == null)
+        {
+            Debug.LogWarning($"[SourceOfThoughtBattleScene] No CardListPanel or DeckListPanel found under {view.name}.");
+            return false;
+        }
+
+        Undo.RecordObject(view, "Repair Product Battle Prep ScrollViews");
+        RectTransform cardContent = cardListPanel == null ? null : EnsureLightweightListPanelStructure(cardListPanel);
+        RectTransform deckContent = deckListPanel == null ? null : EnsureLightweightListPanelStructure(deckListPanel);
+
+        SerializedObject so = new SerializedObject(view);
+        if (cardContent != null)
+        {
+            SetObject(so, "cardListContent", cardContent);
+            EditorUtility.SetDirty(cardContent.gameObject);
+        }
+        if (deckContent != null)
+        {
+            SetObject(so, "deckListContent", deckContent);
+            EditorUtility.SetDirty(deckContent.gameObject);
+        }
+        so.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(view);
+        Debug.Log($"[SourceOfThoughtBattleScene] ScrollView repaired for {view.name}: cardContent={cardContent?.name ?? "missing"}, deckContent={deckContent?.name ?? "missing"}.");
+        return true;
+    }
+
+    private static void RepairProductBattlePrepControls(ProductBattlePrepPanelView view)
+    {
+        if (view == null)
+        {
+            return;
+        }
+
+        RectTransform root = view.transform as RectTransform;
+        if (root == null)
+        {
+            Debug.LogWarning($"[SourceOfThoughtBattleScene] ProductBattlePrepPanelView root is not a RectTransform: {view.name}.");
+            return;
+        }
+
+        Undo.RecordObject(view, "Repair Product Battle Prep Controls");
+        Button addToDeckButton = EnsurePrepButton(root, "AddToDeckButton", "Add to Deck", new Vector2(0.64f, 0.93f), new Vector2(0.735f, 0.985f));
+        NormalizeProductCardViews(root);
+        SerializedObject so = new SerializedObject(view);
+        SetObject(so, "addToDeckButton", addToDeckButton);
+        so.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(view);
+        Debug.Log($"[SourceOfThoughtBattleScene] AddToDeckButton repaired for {view.name}: {(addToDeckButton == null ? "missing" : addToDeckButton.name)}.");
+    }
+
+    private static void NormalizeProductCardViews(RectTransform root)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        ProductBattleCardView[] cardViews = root.GetComponentsInChildren<ProductBattleCardView>(true);
+        foreach (ProductBattleCardView cardView in cardViews)
+        {
+            RectTransform rect = cardView.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.sizeDelta = ProductCardSize;
+                EditorUtility.SetDirty(rect);
+            }
+
+            LayoutElement layout = cardView.GetComponent<LayoutElement>();
+            if (layout == null)
+            {
+                layout = Undo.AddComponent<LayoutElement>(cardView.gameObject);
+            }
+            layout.preferredWidth = ProductCardSize.x;
+            layout.preferredHeight = ProductCardSize.y;
+            layout.minWidth = ProductCardSize.x;
+            layout.minHeight = ProductCardSize.y;
+            layout.flexibleWidth = 0f;
+            layout.flexibleHeight = 0f;
+
+            Image[] images = cardView.GetComponentsInChildren<Image>(true);
+            foreach (Image image in images)
+            {
+                bool isRootImage = image.gameObject == cardView.gameObject;
+                bool isFrame = image.gameObject.name.ToLowerInvariant().Contains("frame");
+                image.raycastTarget = isRootImage || isFrame;
+            }
+
+            EditorUtility.SetDirty(cardView);
+        }
+    }
+
+    private static Button EnsurePrepButton(RectTransform parent, string name, string label, Vector2 min, Vector2 max)
+    {
+        if (parent == null)
+        {
+            return null;
+        }
+
+        Transform existing = FindDirectChild(parent, name);
+        RectTransform rect;
+        GameObject buttonObject;
+        if (existing != null)
+        {
+            buttonObject = existing.gameObject;
+            rect = buttonObject.GetComponent<RectTransform>();
+        }
+        else
+        {
+            buttonObject = UiChild(parent, name, typeof(RectTransform), typeof(Image), typeof(Button));
+            rect = buttonObject.GetComponent<RectTransform>();
+            Undo.RegisterCreatedObjectUndo(buttonObject, "Create Add To Deck Button");
+        }
+
+        buttonObject.name = name;
+        buttonObject.SetActive(true);
+        Anchor(rect, min, max);
+        rect.SetAsLastSibling();
+
+        Image image = buttonObject.GetComponent<Image>();
+        if (image == null)
+        {
+            image = Undo.AddComponent<Image>(buttonObject);
+        }
+        image.color = new Color(0.06f, 0.08f, 0.09f, 0.98f);
+        image.raycastTarget = true;
+
+        Button button = buttonObject.GetComponent<Button>();
+        if (button == null)
+        {
+            button = Undo.AddComponent<Button>(buttonObject);
+        }
+
+        TMP_Text labelText = buttonObject.GetComponentInChildren<TMP_Text>(true);
+        if (labelText == null)
+        {
+            labelText = ChildText(rect, "Label", Vector2.zero, Vector2.one, label, 15, TextAlignmentOptions.Center);
+        }
+        labelText.text = label;
+        labelText.gameObject.SetActive(true);
+
+        EditorUtility.SetDirty(button.gameObject);
+        return button;
+    }
+
+    private static void RepairProductBattlePrepSpriteBindings(ProductBattlePrepPanelView view, Sprite[] cardSprites, Sprite[] iconSprites)
+    {
+        if (view == null)
+        {
+            return;
+        }
+
+        Undo.RecordObject(view, "Repair Product Battle Prep Sprites");
+        SerializedObject so = new SerializedObject(view);
+        SetObject(so, "defaultCardArt", FirstOrNull(cardSprites));
+        SetObject(so, "defaultAttributeIcon", FirstOrNull(iconSprites));
+        SetSpriteArray(so, "cardArtPool", cardSprites);
+        SetAttributeSpriteArray(so, "attributeSprites", iconSprites);
+        so.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(view);
+    }
+
+    private static RectTransform EnsureScrollablePanelStructure(RectTransform panel, int columns, Vector2 cellSize)
+    {
+        Image panelImage = panel.GetComponent<Image>();
+        if (panelImage == null)
+        {
+            panelImage = Undo.AddComponent<Image>(panel.gameObject);
+            panelImage.color = new Color(0.015f, 0.025f, 0.035f, 0.94f);
+        }
+
+        RectTransform viewportRect = FindDirectChild(panel, "Viewport") as RectTransform;
+        if (viewportRect == null)
+        {
+            GameObject viewport = UiChild(panel, "Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
+            viewportRect = viewport.GetComponent<RectTransform>();
+        }
+        Anchor(viewportRect, new Vector2(0.03f, 0.03f), new Vector2(0.97f, 0.90f));
+        viewportRect.SetSiblingIndex(Mathf.Min(1, panel.childCount - 1));
+
+        Image viewportImage = viewportRect.GetComponent<Image>();
+        if (viewportImage == null)
+        {
+            viewportImage = Undo.AddComponent<Image>(viewportRect.gameObject);
+        }
+        viewportImage.color = new Color(0f, 0f, 0f, 0.08f);
+        viewportImage.raycastTarget = true;
+
+        Mask mask = viewportRect.GetComponent<Mask>();
+        if (mask == null)
+        {
+            mask = Undo.AddComponent<Mask>(viewportRect.gameObject);
+        }
+        mask.showMaskGraphic = false;
+
+        RectTransform contentRect = FindDirectChild(viewportRect, "Content") as RectTransform;
+        if (contentRect == null)
+        {
+            contentRect = FindDirectChild(viewportRect, "CardContent") as RectTransform;
+        }
+        if (contentRect == null)
+        {
+            contentRect = FindDirectChild(panel, "Content") as RectTransform;
+            if (contentRect == null)
+            {
+                contentRect = FindDirectChild(panel, "CardContent") as RectTransform;
+            }
+            if (contentRect != null)
+            {
+                Undo.SetTransformParent(contentRect, viewportRect, "Move Content Under Viewport");
+                contentRect.SetParent(viewportRect, false);
+            }
+        }
+        if (contentRect == null)
+        {
+            GameObject content = UiChild(viewportRect, "Content", typeof(RectTransform));
+            contentRect = content.GetComponent<RectTransform>();
+        }
+        contentRect.gameObject.name = "Content";
         contentRect.anchorMin = new Vector2(0f, 1f);
         contentRect.anchorMax = new Vector2(1f, 1f);
         contentRect.pivot = new Vector2(0.5f, 1f);
-        GridLayoutGroup grid = content.GetComponent<GridLayoutGroup>();
+        contentRect.anchoredPosition = Vector2.zero;
+        contentRect.sizeDelta = Vector2.zero;
+        contentRect.offsetMin = Vector2.zero;
+        contentRect.offsetMax = Vector2.zero;
+
+        GridLayoutGroup grid = contentRect.GetComponent<GridLayoutGroup>();
+        if (grid == null)
+        {
+            grid = Undo.AddComponent<GridLayoutGroup>(contentRect.gameObject);
+        }
         grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         grid.constraintCount = columns;
         grid.cellSize = cellSize;
-        grid.spacing = new Vector2(10f, 10f);
-        content.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        ScrollRect scroll = parent.gameObject.AddComponent<ScrollRect>();
+        grid.spacing = ProductCardGridSpacing;
+        grid.padding = new RectOffset(8, 8, 8, 8);
+        grid.childAlignment = TextAnchor.UpperCenter;
+
+        ContentSizeFitter fitter = contentRect.GetComponent<ContentSizeFitter>();
+        if (fitter == null)
+        {
+            fitter = Undo.AddComponent<ContentSizeFitter>(contentRect.gameObject);
+        }
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        ScrollRect scroll = panel.GetComponent<ScrollRect>();
+        if (scroll == null)
+        {
+            scroll = Undo.AddComponent<ScrollRect>(panel.gameObject);
+        }
         scroll.viewport = viewportRect;
         scroll.content = contentRect;
         scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.inertia = true;
+
+        EditorUtility.SetDirty(panel.gameObject);
+        EditorUtility.SetDirty(viewportRect.gameObject);
+        EditorUtility.SetDirty(contentRect.gameObject);
+        return contentRect;
+    }
+
+    private static RectTransform EnsureLightweightListPanelStructure(RectTransform panel)
+    {
+        if (panel == null)
+        {
+            return null;
+        }
+
+        Image panelImage = panel.GetComponent<Image>();
+        if (panelImage == null)
+        {
+            panelImage = Undo.AddComponent<Image>(panel.gameObject);
+        }
+        panelImage.color = new Color(0.015f, 0.025f, 0.035f, 0.94f);
+
+        RectTransform viewportRect = FindDirectChild(panel, "Viewport") as RectTransform;
+        if (viewportRect == null)
+        {
+            GameObject viewport = UiChild(panel, "Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
+            viewportRect = viewport.GetComponent<RectTransform>();
+            Undo.RegisterCreatedObjectUndo(viewport, "Create Product Battle Prep Viewport");
+        }
+        Anchor(viewportRect, new Vector2(0.03f, 0.03f), new Vector2(0.97f, 0.90f));
+        viewportRect.SetSiblingIndex(Mathf.Min(1, panel.childCount - 1));
+
+        Image viewportImage = viewportRect.GetComponent<Image>();
+        if (viewportImage == null)
+        {
+            viewportImage = Undo.AddComponent<Image>(viewportRect.gameObject);
+        }
+        viewportImage.color = new Color(0f, 0f, 0f, 0.08f);
+        viewportImage.raycastTarget = true;
+
+        Mask mask = viewportRect.GetComponent<Mask>();
+        if (mask == null)
+        {
+            mask = Undo.AddComponent<Mask>(viewportRect.gameObject);
+        }
+        mask.showMaskGraphic = false;
+
+        RectTransform contentRect = FindDirectChild(viewportRect, "Content") as RectTransform;
+        if (contentRect == null)
+        {
+            contentRect = FindDirectChild(viewportRect, "CardContent") as RectTransform;
+        }
+        if (contentRect == null)
+        {
+            contentRect = FindDirectChild(panel, "Content") as RectTransform;
+            if (contentRect == null)
+            {
+                contentRect = FindDirectChild(panel, "CardContent") as RectTransform;
+            }
+            if (contentRect != null)
+            {
+                Undo.SetTransformParent(contentRect, viewportRect, "Move Content Under Viewport");
+                contentRect.SetParent(viewportRect, false);
+            }
+        }
+        if (contentRect == null)
+        {
+            GameObject content = UiChild(viewportRect, "Content", typeof(RectTransform));
+            contentRect = content.GetComponent<RectTransform>();
+            Undo.RegisterCreatedObjectUndo(content, "Create Product Battle Prep Content");
+        }
+
+        contentRect.gameObject.name = "Content";
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0.5f, 1f);
+        contentRect.anchoredPosition = Vector2.zero;
+        contentRect.sizeDelta = Vector2.zero;
+        contentRect.offsetMin = Vector2.zero;
+        contentRect.offsetMax = Vector2.zero;
+
+        GridLayoutGroup grid = contentRect.GetComponent<GridLayoutGroup>();
+        if (grid != null)
+        {
+            Undo.DestroyObjectImmediate(grid);
+        }
+
+        VerticalLayoutGroup vertical = contentRect.GetComponent<VerticalLayoutGroup>();
+        if (vertical == null)
+        {
+            vertical = Undo.AddComponent<VerticalLayoutGroup>(contentRect.gameObject);
+        }
+        vertical.padding = new RectOffset(6, 6, 6, 6);
+        vertical.spacing = ProductListRowSpacing;
+        vertical.childAlignment = TextAnchor.UpperCenter;
+        vertical.childControlWidth = true;
+        vertical.childControlHeight = true;
+        vertical.childForceExpandWidth = true;
+        vertical.childForceExpandHeight = false;
+
+        ContentSizeFitter fitter = contentRect.GetComponent<ContentSizeFitter>();
+        if (fitter == null)
+        {
+            fitter = Undo.AddComponent<ContentSizeFitter>(contentRect.gameObject);
+        }
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        ScrollRect scroll = panel.GetComponent<ScrollRect>();
+        if (scroll == null)
+        {
+            scroll = Undo.AddComponent<ScrollRect>(panel.gameObject);
+        }
+        scroll.viewport = viewportRect;
+        scroll.content = contentRect;
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.inertia = true;
+
+        EditorUtility.SetDirty(panel.gameObject);
+        EditorUtility.SetDirty(viewportRect.gameObject);
+        EditorUtility.SetDirty(contentRect.gameObject);
         return contentRect;
     }
 
@@ -601,6 +1100,49 @@ public static class ThoughtMapBattleSceneCreator
         return child;
     }
 
+    private static Transform FindDirectChild(Transform parent, string childName)
+    {
+        if (parent == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            if (child.name == childName)
+            {
+                return child;
+            }
+        }
+
+        return null;
+    }
+
+    private static Transform FindDescendant(Transform parent, string descendantName)
+    {
+        if (parent == null)
+        {
+            return null;
+        }
+
+        if (parent.name == descendantName)
+        {
+            return parent;
+        }
+
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform found = FindDescendant(parent.GetChild(i), descendantName);
+            if (found != null)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
     private static void Anchor(RectTransform rect, Vector2 min, Vector2 max)
     {
         rect.anchorMin = min;
@@ -660,6 +1202,78 @@ public static class ThoughtMapBattleSceneCreator
         EnsureFolder("Assets", "Sprites");
         EnsureFolder("Assets/Sprites", "Cards");
         EnsureFolder("Assets/Sprites", "Icons");
+    }
+
+    private static void EnsurePlaceholderSpriteAssets()
+    {
+        EnsurePlaceholderPngAsset("Assets/Sprites/Cards/placeholder_card_art.png", new Color(0.08f, 0.16f, 0.24f, 1f), new Color(0.75f, 0.55f, 0.25f, 1f));
+        EnsurePlaceholderPngAsset("Assets/Sprites/Icons/placeholder_attribute_icon.png", new Color(0.02f, 0.22f, 0.34f, 1f), new Color(0.1f, 0.85f, 1f, 1f));
+        EnsureSpritesImportedFromFolder(CardSpriteFolder);
+        EnsureSpritesImportedFromFolder(IconSpriteFolder);
+        AssetDatabase.Refresh();
+    }
+
+    private static void EnsurePlaceholderPngAsset(string assetPath, Color background, Color foreground)
+    {
+        if (!File.Exists(assetPath))
+        {
+            Texture2D texture = new Texture2D(128, 128, TextureFormat.RGBA32, false);
+            for (int y = 0; y < texture.height; y++)
+            {
+                for (int x = 0; x < texture.width; x++)
+                {
+                    bool border = x < 6 || y < 6 || x >= texture.width - 6 || y >= texture.height - 6;
+                    bool diagonal = Mathf.Abs(x - y) < 3 || Mathf.Abs((texture.width - x) - y) < 3;
+                    texture.SetPixel(x, y, border || diagonal ? foreground : background);
+                }
+            }
+            texture.Apply();
+            File.WriteAllBytes(assetPath, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
+        }
+
+        EnsureSpriteImportSettings(assetPath);
+    }
+
+    private static void EnsureSpritesImportedFromFolder(string folderPath)
+    {
+        if (!AssetDatabase.IsValidFolder(folderPath))
+        {
+            return;
+        }
+
+        string[] guids = AssetDatabase.FindAssets("t:Texture2D", new[] { folderPath });
+        foreach (string guid in guids)
+        {
+            EnsureSpriteImportSettings(AssetDatabase.GUIDToAssetPath(guid));
+        }
+    }
+
+    private static void EnsureSpriteImportSettings(string assetPath)
+    {
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer == null)
+        {
+            return;
+        }
+
+        bool changed = false;
+        if (importer.textureType != TextureImporterType.Sprite)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            changed = true;
+        }
+        if (importer.spriteImportMode != SpriteImportMode.Single)
+        {
+            importer.spriteImportMode = SpriteImportMode.Single;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            importer.SaveAndReimport();
+        }
     }
 
     private static void EnsureFolder(string parent, string child)
@@ -729,6 +1343,7 @@ public static class ThoughtMapBattleSceneCreator
             return sprites.ToArray();
         }
 
+        EnsureSpritesImportedFromFolder(folderPath);
         string[] guids = AssetDatabase.FindAssets("t:Sprite", new[] { folderPath });
         foreach (string guid in guids)
         {

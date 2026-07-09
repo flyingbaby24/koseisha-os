@@ -5,6 +5,8 @@ using UnityEngine.UI;
 
 public class ProductBattleCardView : MonoBehaviour
 {
+    private static readonly Vector2 DefaultCardSize = new Vector2(176f, 272f);
+
     [Header("Images")]
     [SerializeField] private Image frameImage;
     [SerializeField] private Image artImage;
@@ -35,6 +37,8 @@ public class ProductBattleCardView : MonoBehaviour
 
     private void Awake()
     {
+        NormalizeForGrid(DefaultCardSize);
+        ConfigureRaycasts();
         if (button != null)
         {
             button.onClick.RemoveListener(HandleClicked);
@@ -117,6 +121,54 @@ public class ProductBattleCardView : MonoBehaviour
         {
             selectionImage.gameObject.SetActive(selected);
         }
+
+        ConfigureRaycasts();
+    }
+
+    public void NormalizeForGrid(Vector2 size)
+    {
+        RectTransform rect = GetComponent<RectTransform>();
+        if (rect != null)
+        {
+            rect.sizeDelta = size;
+        }
+
+        Graphic rootGraphic = GetComponent<Graphic>();
+        if (rootGraphic == null)
+        {
+            Image rootImage = gameObject.AddComponent<Image>();
+            rootImage.color = new Color(1f, 1f, 1f, 0f);
+            rootGraphic = rootImage;
+        }
+        rootGraphic.raycastTarget = true;
+
+        RectMask2D clipMask = GetComponent<RectMask2D>();
+        if (clipMask == null)
+        {
+            gameObject.AddComponent<RectMask2D>();
+        }
+
+        LayoutElement layout = GetComponent<LayoutElement>();
+        if (layout == null)
+        {
+            layout = gameObject.AddComponent<LayoutElement>();
+        }
+        layout.minWidth = size.x;
+        layout.minHeight = size.y;
+        layout.preferredWidth = size.x;
+        layout.preferredHeight = size.y;
+        layout.flexibleWidth = 0f;
+        layout.flexibleHeight = 0f;
+
+        if (button == null)
+        {
+            button = GetComponent<Button>();
+        }
+        if (button == null)
+        {
+            button = gameObject.AddComponent<Button>();
+        }
+        button.targetGraphic = rootGraphic;
     }
 
     public void SetClickHandler(UnityAction<ProductBattleCardView> handler)
@@ -136,6 +188,15 @@ public class ProductBattleCardView : MonoBehaviour
     private void HandleClicked()
     {
         clickHandler?.Invoke(this);
+    }
+
+    private void ConfigureRaycasts()
+    {
+        Graphic[] graphics = GetComponentsInChildren<Graphic>(true);
+        foreach (Graphic graphic in graphics)
+        {
+            graphic.raycastTarget = graphic.gameObject == gameObject;
+        }
     }
 
     private void SetText(TMP_Text text, string value)
