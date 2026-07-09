@@ -2471,54 +2471,197 @@ APIなどを確認して生きてはいない。
   "relatedNotes": [],
 
   "references": []
-},
-  {
-    id: 32,
-    name: "空城計",
-    reading: "くうじょうけい",
-    english: "Empty fort strategy",
-    category: "Uncertainty",
-    bias: "情報不足時の物語補完、過剰推論",
-    behavioral: "Ambiguity aversion / predictive inference",
-    summary: "情報の空白を作り、相手自身に物語を補完させる。",
-    example: "沈黙による深読み、OSSの堂々公開、投資家の推測",
-    interpretation: `
-`,
-    principle: `
-`,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
   },
   {
-    id: 33,
-    name: "反間計",
-    reading: "はんかんけい",
-    english: "Use enemy spies against them",
-    category: "Trust / Doubt",
-    bias: "疑心暗鬼、信頼ネットワークの破壊",
-    behavioral: "Trust erosion / information asymmetry",
-    summary: "情報と疑念を使い、相手組織の信頼構造を壊す。",
-    example: "内部不信、リーク情報、競合撹乱",
-    interpretation: `
+  "id": 32,
+  "name": "空城計",
+  "reading": "くうじょうけい",
+  "english": "The Empty Fort Strategy",
+
+  "category": "Inference / Uncertainty",
+
+  "bias": "不確実性、推論、曖昧性回避、損失回避",
+
+  "behavioral": "Predictive processing / uncertainty reduction / ambiguity aversion",
+
+  "summary": "情報の空白を利用し、相手自身に推論させることで判断を迷わせる。",
+
+  "example": "交渉で即答しない、企業が次の戦略を伏せる、ゲームで意図的に動かない、AIが一部情報を伏せる、沈黙による駆け引き",
+
+  "interpretation": `
+空城計は「ハッタリの計略」ではない。
+
+本質は、人間が情報の空白を放置できず、
+自ら推論を始めることにある。
+
+人は未知をそのまま維持することが苦手である。
+
+情報が不足すると、
+経験・知識・恐怖・期待を利用し、
+空白を埋める物語を自ら構築する。
+
+空城計とは、
+敵を騙す兵法ではない。
+
+情報の空白そのものを利用し、
+相手自身に推論させる計略なのである。
 `,
-    principle: `
+
+  "principle": `
+脳は未来を予測するために存在する。
+
+そのため、
+情報が欠けると、
+何が起きているのかを推論し、
+最も妥当だと思われる物語を補完する。
+
+可能性が複数存在すると、
+認知資源はその比較へ使われ、
+判断は遅れやすくなる。
+
+不確実性は、
+相手の認知活動そのものを増加させるのである。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  "breakdown": [
+    "情報を意図的に欠落させる",
+    "相手に情報不足を認識させる",
+    "相手自身が複数の可能性を推論する",
+    "不確実性によって判断が遅れる",
+    "その間に時間・行動・選択の自由を確保する"
+  ],
+
+  "noteTitle": "空城計は「ハッタリの計略」ではない──人は情報が欠けると、自ら物語を作り始める",
+
+  "noteUrl": "https://note.com/flying_baby/n/n7c0c92d99d35",
+
+  "relatedStratagems": [
+    8,
+    13,
+    16,
+    20,
+    33
+  ],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Predictive processing",
+    "Ambiguity aversion",
+    "Need for cognitive closure",
+    "Loss aversion"
+  ],
+
+  "relatedConcepts": [
+    "推論",
+    "予測",
+    "情報の空白",
+    "不確実性",
+    "認知資源",
+    "物語生成",
+    "意思決定"
+  ],
+
+  "relatedNotes": [],
+
+  "references": []
+  },
+  {
+  "id": 33,
+  "name": "反間計",
+  "reading": "はんかんけい",
+  "english": "Counter-Espionage / Reverse Use of Trusted Channels",
+
+  "category": "Trust / Information Channel",
+
+  "bias": "信頼ヒューリスティック、情報源バイアス、権威への依存",
+
+  "behavioral": "Trust heuristic / Source credibility / Cognitive offloading",
+
+  "summary": "信頼された情報経路を逆利用し、誤った認知を形成させる。",
+
+  "example": "偽ニュース、なりすましメール、SNSのデマ、内部リーク、AIによる偽画像・偽音声、乗っ取られた公式アカウント",
+
+  "interpretation": `
+反間計は「間者を使う計略」ではない。
+
+本質は、人間が信頼を認知のショートカットとして利用することにある。
+
+人は毎回すべての情報を検証して判断しているわけではない。
+
+認知コストを節約するため、
+「この人が言うなら正しい」
+「この媒体なら信用できる」
+という信頼された情報経路を利用して判断している。
+
+反間計とは、
+敵の間者を利用する兵法ではない。
+
+相手が信頼している情報経路そのものを逆利用し、
+誤った認知を形成させる計略なのである。
+`,
+
+  "principle": `
+信頼とは道徳ではない。
+
+認知資源を節約するため、
+人は情報そのものよりも、
+誰が伝えたかを判断材料として利用する。
+
+信頼された情報源ほど検証コストは低下し、
+内容も受け入れられやすくなる。
+
+そのため、
+情報経路が汚染されると、
+人は誤った認知を形成しやすくなる。
+`,
+
+  "breakdown": [
+    "相手が信頼している情報経路を把握する",
+    "その情報経路へ介入する",
+    "信頼を維持したまま誤情報を流す",
+    "相手は検証せず認知を形成する",
+    "判断・意思決定が歪む",
+    "組織や人間関係の信頼が崩壊する"
+  ],
+
+  "noteTitle": "反間計は「間者を使う計略」ではない──人は信頼を認知のショートカットとして利用する",
+
+  "noteUrl": "https://note.com/flying_baby/n/n8601783986cb",
+
+  "relatedStratagems": [
+    10,
+    14,
+    18,
+    21,
+    24,
+    31
+  ],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Trust heuristic",
+    "Source credibility",
+    "Authority bias",
+    "Cognitive offloading",
+    "Truth-default theory"
+  ],
+
+  "relatedConcepts": [
+    "信頼",
+    "認知のショートカット",
+    "情報源",
+    "情報経路",
+    "認知資源",
+    "情報操作",
+    "偽情報",
+    "離間"
+  ],
+
+  "relatedNotes": [],
+
+  "references": []
   },
   {
     id: 34,

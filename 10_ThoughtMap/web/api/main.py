@@ -58,16 +58,19 @@ def search(
     if mode in {"embedding", "hybrid"} and not target_doc_id.strip():
         raise HTTPException(status_code=400, detail="target_doc_id is required for embedding/hybrid mode.")
 
-    return service.search_response(
-        q=q,
-        top=top,
-        mode=mode,
-        source=source,
-        category=category,
-        filter_name=filter,
-        target_doc_id=target_doc_id,
-        user_email=user_email,
-    )
+    try:
+        return service.search_response(
+            q=q,
+            top=top,
+            mode=mode,
+            source=source,
+            category=category,
+            filter_name=filter,
+            target_doc_id=target_doc_id,
+            user_email=user_email,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/users/by-email/saved")
