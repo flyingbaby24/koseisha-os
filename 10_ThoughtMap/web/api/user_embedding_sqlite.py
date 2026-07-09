@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def make_user_id_from_email(email: str) -> str:
@@ -17,7 +21,7 @@ def make_user_id_from_email(email: str) -> str:
 
 def default_sqlite_path() -> Path:
     return (
-        Path(__file__).resolve().parents[2]
+        PROJECT_ROOT
         / "data"
         / "thoughtmap_db"
         / "official"
@@ -25,8 +29,26 @@ def default_sqlite_path() -> Path:
     )
 
 
+def resolve_sqlite_path(db_dir: str | Path | None = None) -> Path:
+    raw_value = str(db_dir or os.getenv("THOUGHTMAP_DB_DIR", "")).strip()
+
+    if not raw_value:
+        return default_sqlite_path()
+
+    path = Path(raw_value)
+
+    if not path.is_absolute():
+        path = PROJECT_ROOT / path
+
+    if path.suffix:
+        return path
+
+    return path / "thoughtmap.sqlite"
+
+
 def connect_db(db_path: Path | None = None) -> sqlite3.Connection:
-    path = db_path or default_sqlite_path()
+    path = Path(db_path) if db_path is not None else resolve_sqlite_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(path)
     con.row_factory = sqlite3.Row
     return con
