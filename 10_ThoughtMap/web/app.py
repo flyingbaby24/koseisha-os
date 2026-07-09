@@ -1,5 +1,6 @@
 from pathlib import Path
 import hashlib
+import html
 import re
 import json
 import zipfile
@@ -71,8 +72,339 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("ThoughtMap Web v0.2")
-st.caption("Upload texts, visualize thought clusters, search by meaning, and apply JSON thought filters.")
+
+def inject_custom_css():
+    st.markdown(
+        """
+        <style>
+        :root {
+            --tm-bg: #050914;
+            --tm-panel: rgba(10, 18, 38, 0.78);
+            --tm-panel-strong: rgba(14, 26, 56, 0.94);
+            --tm-border: rgba(99, 242, 255, 0.26);
+            --tm-cyan: #38e8ff;
+            --tm-blue: #6da8ff;
+            --tm-violet: #9a7cff;
+            --tm-pink: #ff4fd8;
+            --tm-green: #5dffb3;
+            --tm-text: #e9f7ff;
+            --tm-muted: #91a4c4;
+        }
+
+        .stApp {
+            background:
+                radial-gradient(circle at 12% 8%, rgba(56, 232, 255, 0.18), transparent 28%),
+                radial-gradient(circle at 86% 0%, rgba(154, 124, 255, 0.16), transparent 26%),
+                linear-gradient(135deg, #040712 0%, #081123 48%, #090718 100%);
+            color: var(--tm-text);
+        }
+
+        .stApp::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(99, 242, 255, 0.055) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99, 242, 255, 0.045) 1px, transparent 1px);
+            background-size: 42px 42px;
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.12));
+        }
+
+        .block-container {
+            padding-top: 1.6rem;
+            padding-bottom: 3rem;
+            max-width: 1440px;
+        }
+
+        [data-testid="stSidebar"] {
+            background:
+                linear-gradient(180deg, rgba(5, 10, 24, 0.98), rgba(10, 18, 38, 0.95)),
+                linear-gradient(90deg, rgba(56,232,255,0.13), transparent);
+            border-right: 1px solid var(--tm-border);
+        }
+
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2,
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 {
+            color: var(--tm-cyan);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        [data-testid="stSidebar"] .stButton > button {
+            width: 100%;
+            border: 1px solid rgba(56, 232, 255, 0.72);
+            background: linear-gradient(90deg, #09a8ff, #8f5dff);
+            color: white;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            box-shadow: 0 0 24px rgba(56, 232, 255, 0.28);
+        }
+
+        .tm-hero {
+            position: relative;
+            overflow: hidden;
+            padding: 2.1rem 2.2rem;
+            border: 1px solid var(--tm-border);
+            border-radius: 18px;
+            background:
+                linear-gradient(135deg, rgba(12, 23, 52, 0.96), rgba(8, 12, 30, 0.86)),
+                radial-gradient(circle at 88% 24%, rgba(56,232,255,0.24), transparent 20%);
+            box-shadow: 0 18px 60px rgba(0,0,0,0.34), inset 0 0 50px rgba(56,232,255,0.055);
+            margin-bottom: 1.15rem;
+        }
+
+        .tm-hero::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, transparent 0%, rgba(56,232,255,0.10) 45%, transparent 58%);
+            transform: translateX(-35%);
+        }
+
+        .tm-kicker {
+            color: var(--tm-green);
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            margin-bottom: 0.4rem;
+        }
+
+        .tm-hero h1 {
+            position: relative;
+            margin: 0;
+            color: var(--tm-text);
+            font-size: clamp(2.1rem, 5vw, 4.4rem);
+            line-height: 1;
+            letter-spacing: 0;
+            text-shadow: 0 0 32px rgba(56,232,255,0.42);
+            z-index: 1;
+        }
+
+        .tm-hero p {
+            position: relative;
+            max-width: 820px;
+            color: #bcd3f4;
+            margin: 0.85rem 0 0;
+            font-size: 1.04rem;
+            z-index: 1;
+        }
+
+        .tm-hero-strip {
+            position: relative;
+            display: flex;
+            gap: 0.65rem;
+            flex-wrap: wrap;
+            margin-top: 1.25rem;
+            z-index: 1;
+        }
+
+        .tm-chip {
+            border: 1px solid rgba(56, 232, 255, 0.36);
+            color: #dffbff;
+            background: rgba(56, 232, 255, 0.08);
+            border-radius: 999px;
+            padding: 0.35rem 0.72rem;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .tm-section-title {
+            color: var(--tm-text);
+            font-weight: 850;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin: 1.1rem 0 0.7rem;
+        }
+
+        .tm-overview-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.9rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .tm-card, .tm-stat-card, .tm-search-shell, .tm-doc-shell, .tm-status-frame {
+            border: 1px solid var(--tm-border);
+            border-radius: 14px;
+            background: linear-gradient(180deg, rgba(12, 23, 52, 0.92), rgba(7, 12, 28, 0.86));
+            box-shadow: 0 14px 44px rgba(0,0,0,0.28), inset 0 0 28px rgba(56,232,255,0.04);
+        }
+
+        .tm-stat-card {
+            padding: 1rem;
+            min-height: 118px;
+        }
+
+        .tm-stat-label {
+            color: var(--tm-muted);
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 0.45rem;
+        }
+
+        .tm-stat-value {
+            color: var(--tm-text);
+            font-size: 1.85rem;
+            line-height: 1.1;
+            font-weight: 850;
+            overflow-wrap: anywhere;
+        }
+
+        .tm-stat-note {
+            color: var(--tm-cyan);
+            margin-top: 0.45rem;
+            font-size: 0.78rem;
+        }
+
+        .tm-status-frame {
+            padding: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .tm-status-title {
+            color: var(--tm-green);
+            font-size: 0.78rem;
+            font-weight: 850;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        .tm-status-class {
+            color: var(--tm-text);
+            font-size: clamp(1.8rem, 4vw, 3.2rem);
+            font-weight: 900;
+            line-height: 1.05;
+            text-shadow: 0 0 28px rgba(93,255,179,0.22);
+        }
+
+        .tm-status-desc {
+            color: #b7c8e8;
+            margin-top: 0.45rem;
+        }
+
+        .tm-rank-card {
+            padding: 0.85rem;
+            border-radius: 12px;
+            border: 1px solid rgba(154,124,255,0.28);
+            background: rgba(154,124,255,0.09);
+            margin-bottom: 0.65rem;
+        }
+
+        .tm-rank-name {
+            color: var(--tm-muted);
+            font-size: 0.78rem;
+            overflow-wrap: anywhere;
+        }
+
+        .tm-rank-value {
+            color: var(--tm-text);
+            font-size: 1.55rem;
+            font-weight: 850;
+        }
+
+        .tm-search-shell, .tm-doc-shell {
+            padding: 1rem 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .tm-result-card {
+            padding: 0.95rem 1rem;
+            border: 1px solid rgba(56,232,255,0.22);
+            border-radius: 12px;
+            background: rgba(7, 12, 28, 0.78);
+            margin: 0.7rem 0;
+        }
+
+        .tm-result-title {
+            color: var(--tm-text);
+            font-weight: 850;
+            font-size: 1rem;
+            overflow-wrap: anywhere;
+        }
+
+        .tm-result-meta {
+            color: var(--tm-cyan);
+            font-size: 0.78rem;
+            font-weight: 750;
+            margin: 0.28rem 0;
+        }
+
+        .tm-result-preview {
+            color: #b9c7df;
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+
+        div[data-testid="stTabs"] button {
+            border-radius: 999px;
+            color: #bcd3f4;
+            font-weight: 750;
+        }
+
+        div[data-testid="stTabs"] button[aria-selected="true"] {
+            color: var(--tm-text);
+            background: linear-gradient(90deg, rgba(56,232,255,0.2), rgba(154,124,255,0.18));
+            border: 1px solid rgba(56,232,255,0.34);
+        }
+
+        [data-testid="stMetric"] {
+            border: 1px solid rgba(56,232,255,0.18);
+            border-radius: 12px;
+            padding: 0.8rem;
+            background: rgba(7, 12, 28, 0.58);
+        }
+
+        .stDataFrame, [data-testid="stTable"] {
+            border: 1px solid rgba(56,232,255,0.16);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        textarea, input, .stTextInput input {
+            border-color: rgba(56,232,255,0.34) !important;
+        }
+
+        @media (max-width: 900px) {
+            .tm-overview-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .tm-hero {
+                padding: 1.45rem;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .tm-overview-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+inject_custom_css()
+
+st.markdown(
+    """
+    <section class="tm-hero">
+        <div class="tm-kicker">Semantic Intelligence Console</div>
+        <h1>ThoughtMap Web v0.2</h1>
+        <p>Upload texts, visualize thought clusters, search by meaning, and apply JSON thought filters through a cybernetic analysis cockpit.</p>
+        <div class="tm-hero-strip">
+            <span class="tm-chip">AI Embedding</span>
+            <span class="tm-chip">Thought Continent</span>
+            <span class="tm-chip">Composition HUD</span>
+            <span class="tm-chip">Semantic Search</span>
+        </div>
+    </section>
+    """,
+    unsafe_allow_html=True
+)
 
 MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 BASE_DIR = Path(__file__).resolve().parent
@@ -659,7 +991,10 @@ def infer_profile_class(status_df):
     return profile_class, description
 
 
-st.sidebar.header("Input")
+st.sidebar.markdown("### Control Deck")
+st.sidebar.caption("Load text, tune the analysis field, then launch the scan.")
+
+st.sidebar.markdown("#### 01 Input")
 
 uploaded_files = st.sidebar.file_uploader("Upload .txt / .md / .zip", type=["txt", "md", "zip"], accept_multiple_files=True)
 pasted_text = st.sidebar.text_area("Or paste text", height=180)
@@ -676,12 +1011,12 @@ split_mode_map = {
     "Split by blank blocks": "blank_blocks"
 }
 
-st.sidebar.header("Analysis Settings")
+st.sidebar.markdown("#### 02 Analysis")
 cluster_count = st.sidebar.slider("Cluster count", min_value=2, max_value=20, value=8)
 n_neighbors = st.sidebar.slider("UMAP n_neighbors", min_value=3, max_value=50, value=10)
 min_dist = st.sidebar.slider("UMAP min_dist", min_value=0.0, max_value=0.9, value=0.2, step=0.05)
 
-st.sidebar.header("Thought Filters")
+st.sidebar.markdown("#### 03 Thought Filters")
 filter_sets = load_filter_sets()
 
 if filter_sets:
@@ -697,7 +1032,8 @@ else:
     st.sidebar.info("No JSON filters found.")
 
 categories = merge_selected_filters(filter_sets, selected_filter_names)
-run = st.sidebar.button("Analyze")
+st.sidebar.markdown("---")
+run = st.sidebar.button("Analyze", type="primary")
 
 if run:
     docs = []
@@ -798,15 +1134,36 @@ labels = st.session_state["labels"]
 filter_score_df = st.session_state.get("filter_score_df")
 categories = st.session_state.get("categories", {})
 
-st.subheader("Overview")
+st.markdown('<div class="tm-section-title">Overview</div>', unsafe_allow_html=True)
+st.markdown(
+    f"""
+    <div class="tm-overview-grid">
+        <div class="tm-stat-card">
+            <div class="tm-stat-label">Documents</div>
+            <div class="tm-stat-value">{len(df)}</div>
+            <div class="tm-stat-note">Loaded text units</div>
+        </div>
+        <div class="tm-stat-card">
+            <div class="tm-stat-label">Clusters</div>
+            <div class="tm-stat-value">{df["cluster"].nunique()}</div>
+            <div class="tm-stat-note">Detected thought zones</div>
+        </div>
+        <div class="tm-stat-card">
+            <div class="tm-stat-label">Filters</div>
+            <div class="tm-stat-value">{len(categories)}</div>
+            <div class="tm-stat-note">Active lenses</div>
+        </div>
+        <div class="tm-stat-card">
+            <div class="tm-stat-label">Model</div>
+            <div class="tm-stat-value" style="font-size:1rem;line-height:1.35;">{MODEL_NAME}</div>
+            <div class="tm-stat-note">Embedding engine</div>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Documents", len(df))
-col2.metric("Clusters", df["cluster"].nunique())
-col3.metric("Filters", len(categories))
-col4.metric("Model", MODEL_NAME)
-
-tab1, tab2, tab_status, tab3, tab4, tab5, tab6 = st.tabs(["Thought Continent", "Profile", "Composition", "Search", "Documents", "Filters", "Export"])
+tab1, tab2, tab_status, tab3, tab4, tab5, tab6 = st.tabs(["Map", "Profile", "Composition", "Search", "Documents", "Filters", "Export"])
 
 with tab1:
 
@@ -830,7 +1187,7 @@ with tab2:
     st.dataframe(df["cluster"].value_counts().sort_index().rename("count"), use_container_width=True)
 
 with tab_status:
-    st.subheader("Thought Composition")
+    st.markdown('<div class="tm-section-title">Composition Status</div>', unsafe_allow_html=True)
 
     if filter_score_df is None:
         st.info("No filters selected or no filters loaded.")
@@ -838,52 +1195,41 @@ with tab_status:
     else:
         status_df = make_status_profile(filter_score_df)
         profile_class, profile_description = infer_profile_class(status_df)
+        document_title = (
+            docs[0]["title"]
+            if len(docs) == 1
+            else f"{len(docs)} Documents"
+        )
 
-        # =====================================================
-        # Document Information
-        # =====================================================
-        if len(docs) == 1:
+        top3 = (
+            status_df
+            .sort_values("share_%", ascending=False)
+            .head(3)
+        )
 
-            st.markdown(
-                f"## 📄 {docs[0]['title']}"
-            )
+        top_chips = "".join(
+            f"<span class='tm-chip'>{html.escape(str(row['parameter']))} {row['share_%']:.1f}% / Rank {html.escape(str(row['rank']))}</span>"
+            for _, row in top3.iterrows()
+        )
 
-            top3 = (
-                status_df
-                .sort_values("share_%", ascending=False)
-                .head(3)
-            )
+        st.markdown(
+            f"""
+            <div class="tm-status-frame">
+                <div class="tm-status-title">Player Profile / Thought Composition</div>
+                <div class="tm-status-class">{html.escape(str(profile_class))}</div>
+                <div class="tm-status-desc">{html.escape(profile_description)}</div>
+                <div class="tm-hero-strip">
+                    <span class="tm-chip">Source: {html.escape(document_title)}</span>
+                    {top_chips}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-            st.caption(
-                " | ".join(
-                    f"{row['parameter']} {row['share_%']:.1f}%"
-                    for _, row in top3.iterrows()
-                )
-            )
-
-        else:
-
-            st.markdown(
-                f"## 📚 {len(docs)} Documents"
-            )
-
-        col_s1, col_s2 = st.columns([1, 2])
+        col_s1, col_s2 = st.columns([0.9, 2.1], gap="large")
 
         with col_s1:
-
-            if len(docs) == 1:
-                st.caption(
-                    f"Source: {docs[0]['title']}"
-                )
-
-            st.metric(
-                "Primary class",
-                profile_class
-            )
-
-            st.caption(
-                profile_description
-            )
 
             top_groups = get_top_composition_groups(
                 status_df
@@ -891,24 +1237,20 @@ with tab_status:
 
             if top_groups:
 
-                st.write(
-                    "Top composition groups"
-                )
+                st.markdown("**Top Slots**")
 
-                card_cols = st.columns(
-                    min(3, len(top_groups))
-                )
-
-                for card_col, (label, share) in zip(
-                    card_cols,
-                    top_groups
-                ):
-                    card_col.metric(
-                        label,
-                        f"{share:.1f}%"
+                for label, share in top_groups:
+                    st.markdown(
+                        f"""
+                        <div class="tm-rank-card">
+                            <div class="tm-rank-name">{html.escape(str(label))}</div>
+                            <div class="tm-rank-value">{share:.1f}%</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
                     )
 
-            st.write("Composition table")
+            st.markdown("**Status Matrix**")
 
             table_df = status_df.copy()
 
@@ -919,13 +1261,6 @@ with tab_status:
             )
 
         with col_s2:
-
-            document_title = (
-                docs[0]["title"]
-                if len(docs) == 1
-                else f"{len(docs)} Documents"
-            )
-
             st.pyplot(
                 plot_status_bar(
                     status_df,
@@ -934,10 +1269,12 @@ with tab_status:
                 use_container_width=True
             )
 
-        st.pyplot(
-            plot_status_radar(status_df),
-            use_container_width=True
-        )
+        with st.container():
+            st.markdown("**Radar Field**")
+            st.pyplot(
+                plot_status_radar(status_df),
+                use_container_width=True
+            )
 
         st.caption(
             "Composition shares add up to 100%. "
@@ -948,8 +1285,24 @@ with tab_status:
 
 
 with tab3:
-    query = st.text_input("Search by idea / theme", placeholder="例: 因果, subjectivity, capitalism criticism")
-    top_n = st.slider("Top N", 3, 30, 10)
+    st.markdown(
+        """
+        <div class="tm-search-shell">
+            <div class="tm-status-title">Semantic Search Gateway</div>
+            <div class="tm-status-desc">Search across the uploaded corpus by meaning, theme, and conceptual gravity.</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    search_col, limit_col = st.columns([3, 1])
+    with search_col:
+        query = st.text_input(
+            "Search by idea / theme",
+            placeholder="Example: causality, subjectivity, capitalism criticism"
+        )
+    with limit_col:
+        top_n = st.slider("Top N", 3, 30, 10)
 
     if query:
         cosine_similarity = require_cosine_similarity()
@@ -976,13 +1329,83 @@ with tab3:
 
             results.append(row)
 
-        st.dataframe(pd.DataFrame(results), use_container_width=True)
+        st.markdown(f"**Search results for:** `{query}`")
+
+        for row in results:
+            extra_filter = ""
+            if "top_filter" in row:
+                extra_filter = (
+                    f" | top filter {html.escape(str(row['top_filter']))}"
+                    f" ({row['top_filter_score']:.3f})"
+                )
+
+            st.markdown(
+                f"""
+                <div class="tm-result-card">
+                    <div class="tm-result-title">#{row['rank']} {html.escape(str(row['title']))}</div>
+                    <div class="tm-result-meta">
+                        similarity {row['similarity']:.3f} | cluster {row['cluster']} / {html.escape(str(row['cluster_label']))}{extra_filter}
+                    </div>
+                    <div class="tm-result-preview">{html.escape(str(row['preview']))}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        with st.expander("Raw result table"):
+            st.dataframe(pd.DataFrame(results), use_container_width=True)
 
 with tab4:
-    st.dataframe(df, use_container_width=True)
-    selected = st.selectbox("Read document", df["title"].tolist())
+    st.markdown(
+        """
+        <div class="tm-doc-shell">
+            <div class="tm-status-title">Document Browser</div>
+            <div class="tm-status-desc">Select a document, inspect its metadata, and read the full text in a wider viewer.</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    browser_col, reader_col = st.columns([0.9, 2.1], gap="large")
+
+    with browser_col:
+        selected = st.selectbox("Read document", df["title"].tolist())
+
     idx = df.index[df["title"] == selected][0]
-    st.text_area("Text", docs[idx]["text"], height=350)
+    selected_cluster = int(df.loc[idx, "cluster"])
+    selected_label = labels.get(str(selected_cluster), f"Cluster {selected_cluster}")
+
+    with browser_col:
+        st.markdown(
+            f"""
+            <div class="tm-rank-card">
+                <div class="tm-rank-name">Cluster</div>
+                <div class="tm-rank-value">{selected_cluster}</div>
+            </div>
+            <div class="tm-rank-card">
+                <div class="tm-rank-name">Label</div>
+                <div class="tm-rank-value" style="font-size:1.1rem;">{html.escape(str(selected_label))}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        if "top_filter" in df.columns:
+            st.markdown(
+                f"""
+                <div class="tm-rank-card">
+                    <div class="tm-rank-name">Top Filter</div>
+                    <div class="tm-rank-value" style="font-size:1.1rem;">{html.escape(str(df.loc[idx, "top_filter"]))}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+    with reader_col:
+        st.text_area("Text", docs[idx]["text"], height=520)
+
+    with st.expander("Document index"):
+        st.dataframe(df, use_container_width=True)
 
 with tab5:
     st.subheader("Thought Filters")
