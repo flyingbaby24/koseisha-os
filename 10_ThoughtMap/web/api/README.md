@@ -115,6 +115,27 @@ When `THOUGHTMAP_DB_DIR` points to a directory, the SQLite repository uses
 `thoughtmap.sqlite` inside that directory. You can also pass a direct `.sqlite`
 file path.
 
+Personal Library saves use the same SQLite path resolution. Set
+`THOUGHTMAP_DB_DIR` to the same directory or `.sqlite` file for `/search`,
+`/users/by-email/save-embeddings`, and `/users/by-email/saved`.
+
+For Render, attach a persistent disk and point `THOUGHTMAP_DB_DIR` at a path
+under the disk mount. Example:
+
+```text
+THOUGHTMAP_BACKEND=sqlite
+THOUGHTMAP_DB_DIR=/var/data/thoughtmap_db/official
+```
+
+With this example, both official search data and Personal Library data use:
+
+```text
+/var/data/thoughtmap_db/official/thoughtmap.sqlite
+```
+
+The SQLite file must exist at that path, or be created from the official CSVs
+before the service handles writes.
+
 ## User Saved Library MVP
 
 The API can save selected search results into the local default user library:
