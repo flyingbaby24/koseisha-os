@@ -677,10 +677,39 @@ def analyze(docs, cluster_count: int, n_neighbors: int, min_dist: float, categor
     return df, embeddings, filter_score_df, labels
 
 
+CYBER_BG = "#050914"
+CYBER_PANEL = "#081123"
+CYBER_TEXT = "#e9f7ff"
+CYBER_MUTED = "#91a4c4"
+CYBER_GRID = "#245a73"
+CYBER_CYAN = "#38e8ff"
+CYBER_BLUE = "#6da8ff"
+CYBER_VIOLET = "#9a7cff"
+CYBER_GREEN = "#5dffb3"
+
+
+def apply_cyber_chart_theme(fig, ax, grid=True):
+    fig.patch.set_facecolor(CYBER_BG)
+    ax.set_facecolor(CYBER_PANEL)
+
+    ax.title.set_color(CYBER_TEXT)
+    ax.xaxis.label.set_color(CYBER_MUTED)
+    ax.yaxis.label.set_color(CYBER_MUTED)
+    ax.tick_params(colors=CYBER_MUTED)
+
+    for spine in ax.spines.values():
+        spine.set_color(CYBER_GRID)
+        spine.set_alpha(0.65)
+
+    if grid:
+        ax.grid(color=CYBER_GRID, alpha=0.24, linewidth=0.8)
+
+
 def plot_map(df, labels):
     plt = get_matplotlib_pyplot()
     fig, ax = plt.subplots(figsize=(12, 8))
-    ax.scatter(df["x"], df["y"], s=30, alpha=0.35)
+    apply_cyber_chart_theme(fig, ax)
+    ax.scatter(df["x"], df["y"], s=34, alpha=0.48, color=CYBER_BLUE, edgecolors=CYBER_CYAN, linewidths=0.4)
 
     for cluster_id in sorted(df["cluster"].unique()):
         cdf = df[df["cluster"] == cluster_id]
@@ -688,8 +717,8 @@ def plot_map(df, labels):
         center_y = cdf["y"].mean()
         label = labels.get(str(cluster_id), f"Cluster {cluster_id}")
         count = len(cdf)
-        ax.scatter(center_x, center_y, s=700, alpha=0.85)
-        ax.text(center_x, center_y, f"{label}\n{count}", ha="center", va="center", fontsize=9)
+        ax.scatter(center_x, center_y, s=760, alpha=0.9, color=CYBER_VIOLET, edgecolors=CYBER_CYAN, linewidths=1.4)
+        ax.text(center_x, center_y, f"{label}\n{count}", ha="center", va="center", fontsize=9, color=CYBER_TEXT, fontweight="bold")
 
     ax.set_title("Thought Continent")
     ax.set_xlabel("Axis 1")
@@ -704,15 +733,16 @@ def plot_profile(df, labels):
     names = [labels.get(str(cluster_id), f"Cluster {cluster_id}") for cluster_id in counts.index]
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    bars = ax.bar(names, counts.values)
+    apply_cyber_chart_theme(fig, ax)
+    bars = ax.barh(names[::-1], counts.values[::-1], color=CYBER_CYAN, edgecolor=CYBER_BLUE, alpha=0.88)
 
     for bar in bars:
-        height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width() / 2, height, str(int(height)), ha="center", va="bottom")
+        width = bar.get_width()
+        ax.text(width + max(counts.values) * 0.02, bar.get_y() + bar.get_height() / 2, str(int(width)), ha="left", va="center", color=CYBER_TEXT)
 
     ax.set_title("Thought Profile")
-    ax.set_ylabel("Number of Documents")
-    ax.tick_params(axis="x", rotation=30)
+    ax.set_xlabel("Number of Documents")
+    ax.grid(axis="x", color=CYBER_GRID, alpha=0.38)
     fig.tight_layout()
     return fig
 
@@ -723,7 +753,19 @@ def plot_pie(df, labels):
     names = [labels.get(str(cluster_id), f"Cluster {cluster_id}") for cluster_id in counts.index]
 
     fig, ax = plt.subplots(figsize=(7, 7))
-    ax.pie(counts.values, labels=names, autopct="%1.0f%%")
+    apply_cyber_chart_theme(fig, ax, grid=False)
+    colors = [CYBER_CYAN, CYBER_BLUE, CYBER_VIOLET, CYBER_GREEN, "#ff4fd8", "#f97316", "#eab308", "#22c55e"]
+    wedges, texts, autotexts = ax.pie(
+        counts.values,
+        labels=names,
+        autopct="%1.0f%%",
+        colors=colors[:len(counts)],
+        textprops={"color": CYBER_TEXT},
+        wedgeprops={"edgecolor": CYBER_BG, "linewidth": 1.2},
+    )
+    for text in autotexts:
+        text.set_color(CYBER_BG)
+        text.set_fontweight("bold")
     ax.set_title("Thought Distribution")
     fig.tight_layout()
     return fig
@@ -733,15 +775,18 @@ def plot_filter_profile(filter_score_df):
     plt = get_matplotlib_pyplot()
     summary = filter_score_df.mean().sort_values(ascending=False)
     fig, ax = plt.subplots(figsize=(12, 5))
-    bars = ax.bar(summary.index, summary.values)
+    apply_cyber_chart_theme(fig, ax)
+    ordered = summary.iloc[::-1]
+    bars = ax.barh(ordered.index, ordered.values, color=CYBER_CYAN, edgecolor=CYBER_BLUE, alpha=0.9)
 
+    x_max = float(summary.max()) if len(summary) else 1.0
     for bar in bars:
-        height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width() / 2, height, f"{height:.2f}", ha="center", va="bottom", fontsize=8)
+        width = bar.get_width()
+        ax.text(width + x_max * 0.015, bar.get_y() + bar.get_height() / 2, f"{width:.2f}", ha="left", va="center", fontsize=8, color=CYBER_TEXT)
 
     ax.set_title("Average Thought Filter Profile")
-    ax.set_ylabel("Normalized score")
-    ax.tick_params(axis="x", rotation=35)
+    ax.set_xlabel("Normalized score")
+    ax.grid(axis="x", color=CYBER_GRID, alpha=0.38)
     fig.tight_layout()
     return fig
 
@@ -750,10 +795,16 @@ def plot_single_filter_scores(score_series):
     plt = get_matplotlib_pyplot()
     score_series = score_series.sort_values(ascending=False)
     fig, ax = plt.subplots(figsize=(12, 5))
-    ax.bar(score_series.index, score_series.values)
+    apply_cyber_chart_theme(fig, ax)
+    ordered = score_series.iloc[::-1]
+    bars = ax.barh(ordered.index, ordered.values, color=CYBER_VIOLET, edgecolor=CYBER_CYAN, alpha=0.9)
+    x_max = float(score_series.max()) if len(score_series) else 1.0
+    for bar in bars:
+        width = bar.get_width()
+        ax.text(width + x_max * 0.015, bar.get_y() + bar.get_height() / 2, f"{width:.2f}", ha="left", va="center", fontsize=8, color=CYBER_TEXT)
     ax.set_title("Document Thought Filter Scores")
-    ax.set_ylabel("Normalized score")
-    ax.tick_params(axis="x", rotation=35)
+    ax.set_xlabel("Normalized score")
+    ax.grid(axis="x", color=CYBER_GRID, alpha=0.38)
     fig.tight_layout()
     return fig
 
@@ -868,6 +919,7 @@ def plot_status_bar(status_df, title=None):
     )
 
     fig, ax = plt.subplots(figsize=(11, 6))
+    apply_cyber_chart_theme(fig, ax)
 
     bars = ax.barh(
         ordered["parameter"].astype(str),
@@ -887,7 +939,9 @@ def plot_status_bar(status_df, title=None):
             bar.get_y() + bar.get_height() / 2,
             f"{score:.1f}%   {rank}",
             va="center",
-            fontsize=10
+            fontsize=10,
+            color=CYBER_TEXT,
+            fontweight="bold"
         )
 
     ax.set_xlim(0, x_limit)
@@ -908,7 +962,8 @@ def plot_status_bar(status_df, title=None):
 
     ax.grid(
         axis="x",
-        alpha=0.25
+        color=CYBER_GRID,
+        alpha=0.38
     )
 
     fig.tight_layout()
@@ -922,7 +977,8 @@ def plot_status_radar(status_df):
 
     if len(labels) < 3:
         fig, ax = plt.subplots(figsize=(8, 4))
-        ax.text(0.5, 0.5, "Radar chart needs at least 3 parameters.", ha="center", va="center")
+        apply_cyber_chart_theme(fig, ax, grid=False)
+        ax.text(0.5, 0.5, "Radar chart needs at least 3 parameters.", ha="center", va="center", color=CYBER_TEXT)
         ax.axis("off")
         return fig
 
@@ -931,20 +987,25 @@ def plot_status_radar(status_df):
     angles_closed = angles + angles[:1]
 
     fig = plt.figure(figsize=(7, 7))
+    fig.patch.set_facecolor(CYBER_BG)
     ax = fig.add_subplot(111, polar=True)
+    ax.set_facecolor(CYBER_PANEL)
 
-    ax.plot(angles_closed, values_closed, linewidth=2)
-    ax.fill(angles_closed, values_closed, alpha=0.25)
+    ax.plot(angles_closed, values_closed, linewidth=2.4, color=CYBER_CYAN)
+    ax.fill(angles_closed, values_closed, alpha=0.24, color=CYBER_VIOLET)
 
     ax.set_xticks(angles)
-    ax.set_xticklabels(labels)
+    ax.set_xticklabels(labels, color=CYBER_TEXT)
     ax.set_ylim(0, y_limit)
 
     tick_step = 5 if y_limit <= 30 else 10
     ticks = list(range(0, y_limit + 1, tick_step))
     ax.set_yticks(ticks)
-    ax.set_yticklabels([f"{t}%" for t in ticks])
-    ax.set_title("Thought Composition Radar", pad=20)
+    ax.set_yticklabels([f"{t}%" for t in ticks], color=CYBER_MUTED)
+    ax.tick_params(colors=CYBER_MUTED)
+    ax.grid(color=CYBER_GRID, alpha=0.45)
+    ax.spines["polar"].set_color(CYBER_GRID)
+    ax.set_title("Thought Composition Radar", pad=20, color=CYBER_TEXT, fontweight="bold")
 
     fig.tight_layout()
     return fig
