@@ -45,6 +45,8 @@ CYBER_MUTED = "#91a4c4"
 CYBER_GRID = "#245a73"
 CYBER_CYAN = "#38e8ff"
 CYBER_BLUE = "#6da8ff"
+CYBER_VIOLET = "#9a7cff"
+CYBER_GREEN = "#5dffb3"
 
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
@@ -242,6 +244,26 @@ def inject_custom_css():
             line-height: 1.55;
         }
 
+        .tm-rank-card {
+            padding: 0.85rem;
+            border-radius: 12px;
+            border: 1px solid rgba(154,124,255,0.28);
+            background: rgba(154,124,255,0.09);
+            margin-bottom: 0.65rem;
+        }
+
+        .tm-rank-name {
+            color: var(--tm-muted);
+            font-size: 0.78rem;
+            overflow-wrap: anywhere;
+        }
+
+        .tm-rank-value {
+            color: var(--tm-text);
+            font-size: 1.55rem;
+            font-weight: 850;
+        }
+
         .stDataFrame, [data-testid="stTable"] {
             border: 1px solid rgba(56,232,255,0.16);
             border-radius: 12px;
@@ -414,42 +436,207 @@ def make_parameter_row(key, value) -> dict | None:
     }
 
 
-def plot_parameter_bar(param_df: pd.DataFrame):
+def rank_label(value: float) -> str:
+    if value >= 18:
+        return "S"
+    if value >= 14:
+        return "A"
+    if value >= 10:
+        return "B"
+    if value >= 6:
+        return "C"
+    if value >= 3:
+        return "D"
+    return "E"
+
+
+def rank_color(rank: str) -> str:
+    colors = {
+        "S": "#8b5cf6",
+        "A": "#f97316",
+        "B": "#eab308",
+        "C": "#22c55e",
+        "D": "#3b82f6",
+        "E": "#6b7280",
+    }
+    return colors.get(rank, "#6b7280")
+
+
+def make_status_profile_from_parameters(parameter_rows: list[dict]) -> pd.DataFrame:
+    param_df = pd.DataFrame(parameter_rows)
+    if param_df.empty:
+        return pd.DataFrame(columns=["parameter", "share_%", "rank", "raw_score"])
+
+    param_df["value"] = pd.to_numeric(param_df["value"], errors="coerce").fillna(0)
+    param_df = param_df[param_df["parameter"].astype(str).str.strip() != ""].copy()
+    if param_df.empty:
+        return pd.DataFrame(columns=["parameter", "share_%", "rank", "raw_score"])
+
+    total = float(param_df["value"].sum())
+    if total > 0:
+        shares = param_df["value"] / total * 100
+    else:
+        shares = param_df["value"] * 0
+
+    status_df = pd.DataFrame({
+        "parameter": param_df["parameter"].astype(str).values,
+        "share_%": shares.round(1).values,
+        "rank": [rank_label(v) for v in shares.values],
+        "raw_score": param_df["value"].round(4).values,
+    })
+
+    return status_df.reset_index(drop=True)
+
+
+def get_composition_axis_limit(values) -> int:
+    values = list(values)
+    max_value = max(values) if values else 0
+    if max_value <= 0:
+        return 20
+
+    limit = math.ceil((max_value * 1.25) / 5) * 5
+    return int(max(15, min(100, limit)))
+
+
+def get_top_composition_groups(status_df: pd.DataFrame) -> list[tuple[str, float]]:
+    top = status_df.sort_values("share_%", ascending=False).head(6)
+    rows = top.to_dict("records")
+
+    groups = []
+    for i in range(0, len(rows), 2):
+        chunk = rows[i:i + 2]
+        if not chunk:
+            continue
+        label = " / ".join(str(row["parameter"]) for row in chunk)
+        share = sum(float(row["share_%"]) for row in chunk)
+        groups.append((label, share))
+
+    return groups
+
+
+def plot_status_bar(status_df: pd.DataFrame, title: str | None = None):
     import matplotlib.pyplot as plt
 
-    ordered = param_df.sort_values("value", ascending=True)
-    fig, ax = plt.subplots(figsize=(8, 4.8))
+    ordered = status_df.iloc[::-1].copy()
+    colors = [rank_color(rank) for rank in ordered["rank"]]
+    x_limit = get_composition_axis_limit(ordered["share_%"].values)
+
+    fig, ax = plt.subplots(figsize=(11, 6))
     fig.patch.set_facecolor(CYBER_BG)
     ax.set_facecolor(CYBER_PANEL)
 
     bars = ax.barh(
         ordered["parameter"].astype(str),
-        ordered["value"],
-        color=CYBER_CYAN,
-        edgecolor=CYBER_BLUE,
-        alpha=0.9,
+        ordered["share_%"],
+        color=colors,
     )
 
-    max_value = float(ordered["value"].max()) if len(ordered) else 1.0
-    for bar in bars:
+    for bar, rank, score in zip(bars, ordered["rank"], ordered["share_%"]):
         width = bar.get_width()
         ax.text(
-            width + max(max_value, 1.0) * 0.015,
+            width + (x_limit * 0.015),
             bar.get_y() + bar.get_height() / 2,
-            f"{width:.2f}",
-            ha="left",
+            f"{score:.1f}%   {rank}",
             va="center",
+            fontsize=10,
             color=CYBER_TEXT,
-            fontsize=9,
+            fontweight="bold",
         )
 
-    ax.set_title("Parameter Profile", color=CYBER_TEXT, fontweight="bold")
-    ax.set_xlabel("Value", color=CYBER_MUTED)
+    ax.set_xlim(0, x_limit)
+    chart_title = f"{title} - Thought Composition" if title else "Thought Composition"
+    ax.set_title(chart_title, fontsize=16, pad=15, fontweight="bold", color=CYBER_TEXT)
+    ax.set_xlabel("Thought share (%)", color=CYBER_MUTED)
     ax.tick_params(colors=CYBER_MUTED)
     ax.grid(axis="x", color=CYBER_GRID, alpha=0.38)
     for spine in ax.spines.values():
         spine.set_color(CYBER_GRID)
         spine.set_alpha(0.65)
+    fig.tight_layout()
+    return fig
+
+
+def plot_status_pie(status_df: pd.DataFrame):
+    import matplotlib.pyplot as plt
+
+    positive = status_df[status_df["share_%"] > 0].sort_values("share_%", ascending=False).copy()
+    if positive.empty:
+        return None
+
+    colors = [rank_color(rank) for rank in positive["rank"]]
+
+    fig, ax = plt.subplots(figsize=(7, 6))
+    fig.patch.set_facecolor(CYBER_BG)
+    ax.set_facecolor(CYBER_PANEL)
+    wedges, texts, autotexts = ax.pie(
+        positive["share_%"],
+        labels=positive["parameter"].astype(str),
+        colors=colors,
+        startangle=90,
+        counterclock=False,
+        autopct="%1.1f%%",
+        pctdistance=0.72,
+        labeldistance=1.08,
+        wedgeprops={
+            "edgecolor": CYBER_BG,
+            "linewidth": 1.2,
+            "alpha": 0.92,
+        },
+        textprops={"color": CYBER_TEXT, "fontsize": 9},
+    )
+
+    for text in texts:
+        text.set_color(CYBER_MUTED)
+    for text in autotexts:
+        text.set_color(CYBER_BG)
+        text.set_fontweight("bold")
+
+    ax.set_title("Thought Composition Pie", color=CYBER_TEXT, fontweight="bold")
+    ax.axis("equal")
+    fig.tight_layout()
+    return fig
+
+
+def plot_status_radar(status_df: pd.DataFrame):
+    import matplotlib.pyplot as plt
+
+    labels = status_df["parameter"].astype(str).tolist()
+    values = status_df["share_%"].tolist()
+    y_limit = get_composition_axis_limit(values)
+
+    if len(labels) < 3:
+        fig, ax = plt.subplots(figsize=(8, 4))
+        fig.patch.set_facecolor(CYBER_BG)
+        ax.set_facecolor(CYBER_PANEL)
+        ax.text(0.5, 0.5, "Radar chart needs at least 3 parameters.", ha="center", va="center", color=CYBER_TEXT)
+        ax.axis("off")
+        return fig
+
+    angles = [2 * math.pi * i / len(labels) for i in range(len(labels))]
+    values_closed = values + values[:1]
+    angles_closed = angles + angles[:1]
+
+    fig = plt.figure(figsize=(7, 7))
+    fig.patch.set_facecolor(CYBER_BG)
+    ax = fig.add_subplot(111, polar=True)
+    ax.set_facecolor(CYBER_PANEL)
+
+    ax.plot(angles_closed, values_closed, linewidth=2.4, color=CYBER_CYAN)
+    ax.fill(angles_closed, values_closed, alpha=0.24, color=CYBER_VIOLET)
+
+    ax.set_xticks(angles)
+    ax.set_xticklabels(labels, color=CYBER_TEXT)
+    ax.set_ylim(0, y_limit)
+
+    tick_step = 5 if y_limit <= 30 else 10
+    ticks = list(range(0, y_limit + 1, tick_step))
+    ax.set_yticks(ticks)
+    ax.set_yticklabels([f"{tick}%" for tick in ticks], color=CYBER_MUTED)
+    ax.tick_params(colors=CYBER_MUTED)
+    ax.grid(color=CYBER_GRID, alpha=0.45)
+    ax.spines["polar"].set_color(CYBER_GRID)
+    ax.set_title("Thought Composition Radar", pad=20, color=CYBER_TEXT, fontweight="bold")
+
     fig.tight_layout()
     return fig
 
@@ -793,15 +980,46 @@ if data is not None and not last_error:
                 st.markdown(f"[Open source]({selected_result.get('url')})")
 
             st.subheader("Parameters")
-            result_params = normalize_parameter_rows(selected_result)
+            result_params = parse_parameter_value(selected_result.get("parameters"))
+            if not result_params:
+                result_params = normalize_parameter_rows(selected_result)
 
             if result_params:
-                pdf = pd.DataFrame(result_params)
-                pdf["value"] = pd.to_numeric(pdf["value"], errors="coerce").fillna(0)
-                param_section = st.container()
-                with param_section:
-                    st.dataframe(pdf, use_container_width=True, hide_index=True)
-                    st.pyplot(plot_parameter_bar(pdf), use_container_width=True)
+                status_df = make_status_profile_from_parameters(result_params)
+
+                st.markdown("**Top Slots**")
+                for label, share in get_top_composition_groups(status_df):
+                    st.markdown(
+                        f"""
+                        <div class="tm-rank-card">
+                            <div class="tm-rank-name">{html.escape(str(label))}</div>
+                            <div class="tm-rank-value">{share:.1f}%</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                st.markdown("**Status Matrix**")
+                st.dataframe(status_df, use_container_width=True, hide_index=True)
+
+                st.markdown("**Bar Chart**")
+                st.pyplot(
+                    plot_status_bar(
+                        status_df,
+                        title=str(selected_result.get("title", "Selected Work")),
+                    ),
+                    use_container_width=True,
+                )
+
+                st.markdown("**Composition Pie**")
+                pie_fig = plot_status_pie(status_df)
+                if pie_fig is not None:
+                    st.pyplot(pie_fig, use_container_width=True)
+                else:
+                    st.caption("Pie chart needs at least one parameter share above 0.")
+
+                st.markdown("**Radar Field**")
+                st.pyplot(plot_status_radar(status_df), use_container_width=True)
             else:
                 st.info("No parameters.")
                 available_keys = [key for key in PARAMETER_KEYS if key in selected_result]
