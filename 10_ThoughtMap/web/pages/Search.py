@@ -45,6 +45,8 @@ CYBER_MUTED = "#91a4c4"
 CYBER_GRID = "#245a73"
 CYBER_CYAN = "#38e8ff"
 CYBER_BLUE = "#6da8ff"
+CYBER_VIOLET = "#9a7cff"
+CYBER_GREEN = "#5dffb3"
 
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
@@ -454,6 +456,62 @@ def plot_parameter_bar(param_df: pd.DataFrame):
     return fig
 
 
+def plot_parameter_pie(param_df: pd.DataFrame):
+    import matplotlib.pyplot as plt
+
+    positive = param_df[param_df["value"] > 0].sort_values("value", ascending=False)
+    if positive.empty:
+        return None
+
+    fig, ax = plt.subplots(figsize=(7, 5.2))
+    fig.patch.set_facecolor(CYBER_BG)
+    ax.set_facecolor(CYBER_PANEL)
+
+    colors = [
+        CYBER_CYAN,
+        CYBER_BLUE,
+        CYBER_VIOLET,
+        CYBER_GREEN,
+        "#ff4d6d",
+        "#ffd166",
+        "#22d3ee",
+        "#c084fc",
+        "#34d399",
+        "#f97316",
+    ]
+
+    wedges, texts, autotexts = ax.pie(
+        positive["value"],
+        labels=positive["parameter"].astype(str),
+        colors=colors[: len(positive)],
+        startangle=90,
+        counterclock=False,
+        autopct="%1.1f%%",
+        pctdistance=0.72,
+        labeldistance=1.08,
+        wedgeprops={
+            "linewidth": 1.2,
+            "edgecolor": CYBER_BG,
+            "alpha": 0.92,
+        },
+        textprops={
+            "color": CYBER_TEXT,
+            "fontsize": 9,
+        },
+    )
+
+    for text in texts:
+        text.set_color(CYBER_MUTED)
+    for text in autotexts:
+        text.set_color(CYBER_BG)
+        text.set_fontweight("bold")
+
+    ax.set_title("Parameter Composition", color=CYBER_TEXT, fontweight="bold")
+    ax.axis("equal")
+    fig.tight_layout()
+    return fig
+
+
 def clear_last_search():
     for key in LAST_SEARCH_KEYS:
         st.session_state.pop(key, None)
@@ -802,6 +860,11 @@ if data is not None and not last_error:
                 with param_section:
                     st.dataframe(pdf, use_container_width=True, hide_index=True)
                     st.pyplot(plot_parameter_bar(pdf), use_container_width=True)
+                    pie_fig = plot_parameter_pie(pdf)
+                    if pie_fig is not None:
+                        st.pyplot(pie_fig, use_container_width=True)
+                    else:
+                        st.caption("Pie chart needs at least one parameter value above 0.")
             else:
                 st.info("No parameters.")
                 available_keys = [key for key in PARAMETER_KEYS if key in selected_result]
