@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import math
 import re
 from functools import lru_cache
 
@@ -19,6 +21,15 @@ from .user_embedding_sqlite import load_user_embedding_frame
 
 
 SEARCH_MODES = {"keyword", "embedding", "hybrid"}
+
+PARAMETER_COLUMNS = [
+    "parameters",
+    "parameter_scores",
+    "filter_scores",
+    "composition",
+    "thought_composition",
+    "scores",
+]
 
 KEYWORD_COLUMNS = [
     "title",
@@ -362,6 +373,7 @@ class ThoughtMapSearchService:
             return output
 
         for _, row in results.iterrows():
+            parameters = self._extract_parameters(row)
             output.append(
                 SearchResult(
                     doc_id=str(row.get("doc_id", "") or ""),
@@ -370,11 +382,108 @@ class ThoughtMapSearchService:
                     source=str(row.get("source", "") or ""),
                     similarity=float(row.get("similarity", 0.0) or 0.0),
                     url=self._resolve_url(row),
-                    parameters=None,
+                    parameters=parameters,
                 )
             )
 
         return output
+
+    def _extract_parameters(self, row: pd.Series) -> list[dict] | None:
+        for column in PARAMETER_COLUMNS:
+            if column not in row.index:
+                continue
+
+            parameters = self._parse_parameter_value(row.get(column))
+
+            if parameters:
+                return parameters
+
+        return None
+
+    def _parse_parameter_value(self, value: object) -> list[dict]:
+        if value is None:
+            return []
+
+        if isinstance(value, float) and math.isnan(value):
+            return []
+
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return []
+
+            try:
+                value = json.loads(text)
+            except json.JSONDecodeError:
+                return []
+
+        if isinstance(value, dict):
+            return self._parameters_from_dict(value)
+
+        if isinstance(value, list):
+            return self._parameters_from_list(value)
+
+        return []
+
+    def _parameters_from_dict(self, data: dict) -> list[dict]:
+        if "key" in data and "value" in data:
+            parameter = self._make_parameter(data.get("key"), data.get("value"))
+            return [parameter] if parameter else []
+
+        for nested_key in PARAMETER_COLUMNS:
+            nested = data.get(nested_key)
+            parameters = self._parse_parameter_value(nested)
+            if parameters:
+                return parameters
+
+        parameters = []
+
+        for key, value in data.items():
+            parameter = self._make_parameter(key, value)
+            if parameter:
+                parameters.append(parameter)
+
+        return parameters
+
+    def _parameters_from_list(self, items: list) -> list[dict]:
+        parameters = []
+
+        for item in items:
+            if isinstance(item, dict):
+                if "key" in item and "value" in item:
+                    parameter = self._make_parameter(item.get("key"), item.get("value"))
+                    if parameter:
+                        parameters.append(parameter)
+                    continue
+
+                parameters.extend(self._parameters_from_dict(item))
+                continue
+
+            if isinstance(item, (list, tuple)) and len(item) >= 2:
+                parameter = self._make_parameter(item[0], item[1])
+                if parameter:
+                    parameters.append(parameter)
+
+        return parameters
+
+    def _make_parameter(self, key: object, value: object) -> dict | None:
+        key_text = normalize_text(key)
+
+        if not key_text:
+            return None
+
+        try:
+            numeric_value = float(value)
+        except (TypeError, ValueError):
+            return None
+
+        if math.isnan(numeric_value) or math.isinf(numeric_value):
+            return None
+
+        return {
+            "key": key_text,
+            "value": numeric_value,
+        }
 
     def _resolve_url(self, row: pd.Series) -> str | None:
         for column in ("url", "source_url", "link"):
