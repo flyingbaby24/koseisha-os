@@ -16,6 +16,7 @@ FALLBACK_USERS_DIR = BASE_DIR / "data" / "users"
 DOCUMENT_REQUIRED_COLUMNS = {"doc_id"}
 EMBEDDING_REQUIRED_COLUMNS = {"doc_id", "embedding"}
 MAP_POINT_REQUIRED_COLUMNS = {"doc_id"}
+PARAMETER_SCORE_REQUIRED_COLUMNS = {"doc_id"}
 
 
 def _warn(message: str) -> None:
@@ -63,6 +64,12 @@ def load_map_points(path: str | Path) -> pd.DataFrame:
     map_points = _read_csv(Path(path))
     _warn_missing_columns("map_points", map_points, MAP_POINT_REQUIRED_COLUMNS)
     return map_points
+
+
+def load_parameter_scores(path: str | Path) -> pd.DataFrame:
+    parameter_scores = _read_csv(Path(path))
+    _warn_missing_columns("parameter_scores", parameter_scores, PARAMETER_SCORE_REQUIRED_COLUMNS)
+    return parameter_scores
 
 
 def validate_db_frames(
@@ -225,6 +232,14 @@ def load_official_db(db_dir: str | Path | None = None) -> tuple[pd.DataFrame, pd
 
     validate_db_frames(documents, embeddings, map_points)
     return documents, embeddings, map_points
+
+
+def load_official_parameter_scores(db_dir: str | Path | None = None) -> pd.DataFrame | None:
+    db_path = Path(db_dir) if db_dir is not None else DEFAULT_OFFICIAL_DB_DIR
+    parameter_scores_path = db_path / "parameter_scores.csv"
+    if not parameter_scores_path.exists():
+        return None
+    return load_parameter_scores(parameter_scores_path)
 
 
 def load_user_db(

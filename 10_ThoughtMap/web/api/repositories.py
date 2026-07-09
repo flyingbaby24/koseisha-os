@@ -7,7 +7,7 @@ from typing import Protocol
 import pandas as pd
 
 from search_utils import parse_embedding
-from storage import load_official_db
+from storage import load_official_db, load_official_parameter_scores
 
 from .config import ApiSettings
 
@@ -22,6 +22,18 @@ DEFAULT_SQLITE_PATH = (
     / "official"
     / "thoughtmap.sqlite"
 )
+
+PARAMETER_SCORE_METADATA_COLUMNS = {
+    "doc_id",
+    "title",
+    "author",
+    "source",
+    "source_url",
+    "category",
+    "subcategory",
+    "created_at",
+    "updated_at",
+}
 
 
 def _resolve_project_path(value: str | Path) -> Path:
@@ -40,6 +52,62 @@ def _resolve_sqlite_path(db_path: str | Path | None) -> Path:
         return path
 
     return path / "thoughtmap.sqlite"
+
+
+def _parameter_score_columns(parameter_scores: pd.DataFrame) -> list[str]:
+    score_columns = []
+
+    for column in parameter_scores.columns:
+        if column in PARAMETER_SCORE_METADATA_COLUMNS:
+            continue
+
+        numeric = pd.to_numeric(parameter_scores[column], errors="coerce")
+        if numeric.notna().any():
+            score_columns.append(column)
+
+    return score_columns
+
+
+def _add_parameter_scores_payload(merged: pd.DataFrame, score_columns: list[str]) -> pd.DataFrame:
+    if not score_columns:
+        return merged
+
+    merged = merged.copy()
+
+    def build_payload(row: pd.Series) -> dict:
+        payload = {}
+        for column in score_columns:
+            value = pd.to_numeric(pd.Series([row.get(column)]), errors="coerce").iloc[0]
+            if pd.notna(value):
+                payload[column] = float(value)
+        return payload
+
+    merged["parameter_scores"] = merged.apply(build_payload, axis=1)
+    return merged
+
+
+def _join_parameter_scores(merged: pd.DataFrame, parameter_scores: pd.DataFrame | None) -> pd.DataFrame:
+    if parameter_scores is None or parameter_scores.empty or "doc_id" not in parameter_scores.columns:
+        return merged
+
+    score_columns = _parameter_score_columns(parameter_scores)
+    if not score_columns:
+        return merged
+
+    join_columns = ["doc_id", *score_columns]
+    scores = parameter_scores[join_columns].copy()
+    scores = scores.drop_duplicates("doc_id", keep="last")
+
+    merged = merged.merge(scores, on="doc_id", how="left")
+    return _add_parameter_scores_payload(merged, score_columns)
+
+
+def _sqlite_table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+        (table_name,),
+    ).fetchone()
+    return row is not None
 
 
 class SearchIndexRepository(Protocol):
@@ -64,7 +132,9 @@ class CsvSearchIndexRepository:
             return self._index
 
         documents, embeddings, _ = load_official_db(self.db_dir)
+        parameter_scores = load_official_parameter_scores(self.db_dir)
         merged = documents.merge(embeddings, on="doc_id", how="inner")
+        merged = _join_parameter_scores(merged, parameter_scores)
         merged = merged.copy()
         merged["_embedding_vec"] = merged["embedding"].map(parse_embedding)
         merged = merged[merged["_embedding_vec"].notna()].reset_index(drop=True)
@@ -108,8 +178,15 @@ class SqliteSearchIndexRepository:
                 """,
                 conn,
             )
+            parameter_scores = None
+            if _sqlite_table_exists(conn, "parameter_scores"):
+                parameter_scores = pd.read_sql_query(
+                    "SELECT * FROM parameter_scores",
+                    conn,
+                )
 
         merged = merged.copy()
+        merged = _join_parameter_scores(merged, parameter_scores)
         merged["_embedding_vec"] = merged["embedding"].map(parse_embedding)
         merged = merged[merged["_embedding_vec"].notna()].reset_index(drop=True)
 

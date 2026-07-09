@@ -103,6 +103,17 @@ Create SQLite from the current official CSV files:
 python -m api.migrate_csv_to_sqlite --csv-dir data/thoughtmap_db/official --sqlite-path data/thoughtmap_db/official/thoughtmap.sqlite
 ```
 
+Generate result parameter scores before SQLite migration when `/search` should
+return `results[].parameters`:
+
+```powershell
+python -m api.generate_parameter_scores --official-dir data/thoughtmap_db/official --filter filters/general.json --output data/thoughtmap_db/official/parameter_scores.csv
+```
+
+This is an offline generation step. `/search` does not recalculate embeddings or
+Thought Composition scores per request; it only reads `parameter_scores.csv` or
+the migrated `parameter_scores` SQLite table.
+
 Run the API with SQLite:
 
 ```powershell

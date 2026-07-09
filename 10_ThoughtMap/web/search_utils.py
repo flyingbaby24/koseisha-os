@@ -112,7 +112,7 @@ def work_similarity_by_vector(
             if normalize_text(row.get("doc_id", "")) == normalize_text(exclude_doc_id):
                 continue
 
-        rows.append({
+        result_row = {
             "similarity": cosine(target_vec, row["_embedding_vec"]),
             "doc_id": row.get("doc_id", ""),
             "gutenberg_id": row.get("gutenberg_id", ""),
@@ -124,7 +124,13 @@ def work_similarity_by_vector(
             "source_url": row.get("source_url", ""),
             "model_name": row.get("model_name", ""),
             "embedding": row.get("embedding", ""),
-        })
+        }
+
+        for column in ["parameters", "parameter_scores", "filter_scores", "composition", "thought_composition", "scores"]:
+            if column in row.index:
+                result_row[column] = row.get(column)
+
+        rows.append(result_row)
 
     out = pd.DataFrame(rows)
     if out.empty:

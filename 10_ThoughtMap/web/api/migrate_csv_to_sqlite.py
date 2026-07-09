@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from storage import load_official_db
+from storage import load_official_db, load_official_parameter_scores
 
 from .repositories import DEFAULT_SQLITE_PATH, PROJECT_ROOT, _resolve_project_path, _resolve_sqlite_path
 
@@ -38,6 +38,7 @@ def migrate_csv_to_sqlite(
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
     documents, embeddings, map_points = load_official_db(csv_path)
+    parameter_scores = load_official_parameter_scores(csv_path)
     documents = _ensure_columns(documents, ["doc_id", "title", "author", "source"])
     embeddings = _ensure_columns(embeddings, ["doc_id", "embedding", "model_name"])
 
@@ -46,9 +47,13 @@ def migrate_csv_to_sqlite(
         embeddings.to_sql("embeddings", conn, if_exists="replace", index=False)
         if map_points is not None:
             map_points.to_sql("map_points", conn, if_exists="replace", index=False)
+        if parameter_scores is not None:
+            parameter_scores.to_sql("parameter_scores", conn, if_exists="replace", index=False)
 
         conn.execute("CREATE INDEX IF NOT EXISTS idx_documents_doc_id ON documents(doc_id)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_embeddings_doc_id ON embeddings(doc_id)")
+        if parameter_scores is not None:
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_parameter_scores_doc_id ON parameter_scores(doc_id)")
         conn.commit()
 
     return {
@@ -56,6 +61,7 @@ def migrate_csv_to_sqlite(
         "documents": int(len(documents)),
         "embeddings": int(len(embeddings)),
         "map_points": int(len(map_points)) if map_points is not None else 0,
+        "parameter_scores": int(len(parameter_scores)) if parameter_scores is not None else 0,
     }
 
 
@@ -81,6 +87,7 @@ def main() -> None:
     print(f"documents: {result['documents']}")
     print(f"embeddings: {result['embeddings']}")
     print(f"map_points: {result['map_points']}")
+    print(f"parameter_scores: {result['parameter_scores']}")
 
 
 if __name__ == "__main__":
