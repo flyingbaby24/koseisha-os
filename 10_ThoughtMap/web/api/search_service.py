@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import hashlib
 import re
 from functools import lru_cache
-from pathlib import Path
 
 import pandas as pd
 
@@ -17,6 +15,7 @@ from search_utils import (
 from .config import ApiSettings, get_settings
 from .repositories import SearchIndexRepository, create_search_index_repository
 from .schemas import SearchResponse, SearchResult
+from .user_embedding_sqlite import load_user_embedding_frame
 
 
 SEARCH_MODES = {"keyword", "embedding", "hybrid"}
@@ -240,25 +239,14 @@ class ThoughtMapSearchService:
 
         return target_vec, exclude_doc_id
 
-    def _user_embedding_path(self, user_email: str) -> Path:
-        normalized = str(user_email or "").strip().lower()
-        if not normalized:
+    def _load_user_embeddings(self, user_email: str) -> pd.DataFrame:
+        if not str(user_email or "").strip():
             raise ValueError("user_email is required for personal embedding search.")
 
-        user_id = hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16]
-        base_dir = Path(__file__).resolve().parents[1]
-        return base_dir / "user_data" / user_id / "thoughtmap_embeddings.csv"
-
-    def _load_user_embeddings(self, user_email: str) -> pd.DataFrame:
-        csv_path = self._user_embedding_path(user_email)
-
-        if not csv_path.exists():
-            raise ValueError(f"Personal embedding DB not found: {csv_path}")
-
-        df = pd.read_csv(csv_path, dtype=str).fillna("")
+        df = load_user_embedding_frame(user_email)
 
         if "embedding" not in df.columns:
-            raise ValueError("Personal embedding CSV must contain an embedding column.")
+            raise ValueError("Personal embedding DB must contain an embedding column.")
 
         if "doc_id" not in df.columns:
             df["doc_id"] = [f"user_doc_{i:06d}" for i in range(len(df))]
@@ -271,7 +259,7 @@ class ThoughtMapSearchService:
         df = df[df["_embedding_vec"].notna()].copy()
 
         if df.empty:
-            raise ValueError("Personal embedding CSV has no valid embedding rows.")
+            raise ValueError("Personal embedding DB has no valid embedding rows.")
 
         return df.reset_index(drop=True)
 
