@@ -2664,76 +2664,361 @@ APIなどを確認して生きてはいない。
   "references": []
   },
   {
-    id: 34,
-    name: "苦肉計",
-    reading: "くにくけい",
-    english: "Inflict injury on oneself to win trust",
-    category: "Credibility",
-    bias: "犠牲を払う者は本気だと見なす",
-    behavioral: "Costly signaling / credibility heuristic",
-    summary: "自分に痛みを与えることで、本気度や信用を演出する。",
-    example: "身銭を切るPR、謝罪演出、内部告発の信頼性",
-    interpretation: `
+  "id": 34,
+  "name": "苦肉計",
+  "reading": "くにくけい",
+  "english": "Inflict injury on oneself to gain the enemy's trust",
+  "category": "Trust / Costly Signaling",
+
+  "bias": "コストシグナリング、信頼推論、服従シグナル",
+
+  "behavioral": "Costly signaling / heuristic reasoning / social signaling",
+
+  "summary": "自己犠牲を信頼の証拠として利用し、相手の推論を誘導する。",
+
+  "example": "自ら減給する経営者、涙ながらの謝罪、自腹で返金対応する企業、内部告発で職を失う覚悟を示す証言",
+
+  "interpretation": `
+苦肉計は「苦し紛れの策」ではない。
+
+本質は、人間が自己犠牲を信頼の証拠として解釈する認知を利用することにある。
+
+人は利益のために嘘をつく者はいても、
+大きな犠牲を払ってまで嘘をつく者は少ないと推論する。
+
+そのため、
+傷、損失、服従、犠牲などの高コストな行動は、
+「本気である」というシグナルとして受け取られやすい。
+
+苦肉計とは、
+苦しむことを目的とした兵法ではない。
+
+自己犠牲を信頼の証拠へ変換し、
+相手自身に誤った推論をさせる計略なのである。
 `,
-    principle: `
+
+  "principle": `
+人は事実そのものではなく、
+そこへ支払われたコストから真偽を推論する。
+
+高い代償を払う行動は、
+信頼性の高いシグナルとして処理されやすい。
+
+さらに、
+服従や無抵抗といった社会的シグナルが加わることで、
+相手は敵意の消失を推論し、
+警戒心を下げる。
+
+利用しているのは苦痛ではない。
+
+苦痛を証拠として解釈する人間の認知なのである。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  "breakdown": [
+    "信頼を獲得したい相手を定める",
+    "自己犠牲や高コスト行動を提示する",
+    "服従・無抵抗などの社会的シグナルを組み合わせる",
+    "相手に『本物だ』と推論させる",
+    "警戒心を低下させる",
+    "その認知を利用して目的を達成する"
+  ],
+
+  "noteTitle": "「苦肉の策」は本当に「苦し紛れの策」なのか──自己犠牲を利用した認知操作である",
+
+  "noteUrl": "https://note.com/flying_baby/n/n1eab3f7fc434",
+
+  "relatedStratagems": [10,14,30,33],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Costly signaling",
+    "Heuristic reasoning",
+    "Truth-default theory",
+    "Halo effect"
+  ],
+
+  "relatedConcepts": [
+    "コストシグナリング",
+    "信頼",
+    "自己犠牲",
+    "服従シグナル",
+    "社会的シグナル",
+    "認知バイアス",
+    "推論",
+    "ヒューリスティック"
+  ],
+
+  "relatedNotes": [],
+
+  "references": [
+    "Costly Signaling Theory",
+    "Social Signaling",
+    "Heuristic Decision Making"
+  ]
   },
   {
-    id: 35,
-    name: "連環計",
-    reading: "れんかんけい",
-    english: "Chain stratagems together",
-    category: "System",
-    bias: "複数要因の連鎖を見落とす",
-    behavioral: "Complexity neglect / systems trap",
-    summary: "単独ではなく、複数の仕掛けを連鎖させて逃げにくくする。",
-    example: "複数施策の組み合わせ、依存関係で縛る",
-    interpretation: `
+  "id": 35,
+  "name": "連環計",
+  "reading": "れんかんけい",
+  "english": "Chain Stratagem",
+  "category": "Dependency / Systems",
+
+  "bias": "複雑性の軽視、依存関係の不可視化、システム思考の欠如",
+
+  "behavioral": "Complexity neglect / systems thinking / network effects",
+
+  "summary": "複数の依存関係を設計し、一部ではなく全体を拘束する構造を作る。",
+
+  "example": "クラウドサービス連携、サプライチェーン、サブスクリプション、SNSアカウント連携、企業システム統合",
+
+  "interpretation": `
+連環計は「鎖で繋ぐ計略」ではない。
+
+本質は、複数の依存関係を設計することにある。
+
+人は個々の要素を見ることは得意でも、
+それらが互いにどのような関係を持ち、
+全体としてどのような制約を生み出しているかは見落としやすい。
+
+赤壁で船を鎖で繋いだことも、
+本質は鎖ではない。
+
+船が連結され、
+揺れが減り、
+艦隊が一体化し、
+火災が全体へ波及するという
+因果関係そのものが計略だったのである。
+
+連環計とは、
+要素ではなく関係性を設計し、
+一部ではなくシステム全体を拘束する計略なのである。
 `,
-    principle: `
+
+  "principle": `
+人は部品を見る。
+
+しかし、
+部品同士の依存関係や因果関係は見落としやすい。
+
+依存関係が増えるほど、
+一つの変化が全体へ波及し、
+個別最適では解決できない構造が生まれる。
+
+連環計とは、
+物理的な鎖ではなく、
+依存関係そのものを設計する兵法なのである。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  "breakdown": [
+    "複数の要素を把握する",
+    "要素同士へ依存関係を構築する",
+    "一つの変化が他へ波及する構造を作る",
+    "相手が全体構造を把握できない状態を維持する",
+    "一部ではなくシステム全体を拘束する"
+  ],
+
+  "noteTitle": "「連環計」は本当に「鎖で繋ぐ計略」なのか──依存関係を設計する認知戦である",
+
+  "noteUrl": "https://note.com/flying_baby/n/na35449d39615",
+
+  "relatedStratagems": [19,23,24,25],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Complexity neglect",
+    "Systems thinking",
+    "Network effects",
+    "Interdependence"
+  ],
+
+  "relatedConcepts": [
+    "依存関係",
+    "因果関係",
+    "システム思考",
+    "ネットワーク",
+    "複雑系",
+    "サプライチェーン",
+    "ロックイン",
+    "エコシステム"
+  ],
+
+  "relatedNotes": [],
+
+  "references": [
+    "Complexity Neglect",
+    "Systems Thinking",
+    "Network Theory",
+    "Complex Adaptive Systems"
+  ]
   },
   {
-    id: 36,
-    name: "走為上",
-    reading: "そういじょう",
-    english: "If all else fails, retreat",
-    category: "Exit",
-    bias: "撤退の恥、損切り回避",
-    behavioral: "Sunk cost fallacy / loss aversion",
-    summary: "逃げることを敗北ではなく、合理的な選択肢として扱う。",
-    example: "撤退判断、ピボット、プロジェクト停止",
-    interpretation: `
+  "id": 36,
+  "name": "走為上",
+  "reading": "そういじょう",
+  "english": "If all else fails, retreat",
+  "category": "Meta Cognition / Cognitive Frame",
+
+  "bias": "フレーミング効果、サンクコスト効果、損失回避、認知的固定",
+
+  "behavioral": "Framing effect / sunk cost fallacy / loss aversion / cognitive flexibility",
+
+  "summary": "相手が設計した認知フレームから離脱し、自ら選択権を取り戻す。",
+
+  "example": "消耗戦から撤退する、炎上議論へ参加しない、価格競争から市場を変える、SNS依存から離れる、競争そのものを避ける",
+
+  "interpretation": `
+走為上は「逃げる計略」ではない。
+
+本質は、相手が設計した認知フレームから離脱することにある。
+
+人は一度問題が提示されると、
+その前提を疑わず、
+与えられた枠組みの中で最善策を探し始める。
+
+しかし、
+最善の答えが
+「そのゲームに参加しないこと」
+である場合も存在する。
+
+走為上とは、
+勝敗を放棄する兵法ではない。
+
+勝敗という認知フレームそのものから降り、
+自ら選択権を取り戻す計略なのである。
 `,
-    principle: `
+
+  "principle": `
+認知フレームは思考の土台となる。
+
+人は一度フレームを受け入れると、
+その枠内でしか最適解を探せなくなる。
+
+さらに、
+サンクコストや損失回避によって、
+不利な状況でも撤退しにくくなる。
+
+走為上とは、
+勝敗を決めることではない。
+
+戦うか、
+逃げるかではなく、
+そのゲームへ参加するかどうかを
+自ら選択する兵法なのである。
 `,
-    breakdown: [],
-    noteTitle: "",
-    noteUrl: "",
-    relatedStratagems: [],
-    relatedIdioms: [],
-    relatedBiases: [],
-    relatedConcepts: [],
-    relatedNotes: [],
-    references: []
+
+  "breakdown": [
+    "相手が提示した認知フレームを認識する",
+    "そのフレームが自分に有利かを評価する",
+    "参加し続けるコストを判断する",
+    "必要なら認知フレームそのものから離脱する",
+    "新しい選択肢や土俵を自ら構築する",
+    "選択権を自分へ取り戻す"
+  ],
+
+  "noteTitle": "「逃げるが勝ち」は本当に敗北なのか──走為上は「認知フレームから離脱する」計略である",
+
+  "noteUrl": "https://note.com/flying_baby/n/n771bd2cedaf0",
+
+  "relatedStratagems": [8,9,11,15,16,20],
+
+  "relatedIdioms": [],
+
+  "relatedBiases": [
+    "Framing effect",
+    "Sunk cost fallacy",
+    "Loss aversion",
+    "Cognitive rigidity",
+    "Psychological reactance"
+  ],
+
+  "relatedConcepts": [
+    "認知フレーム",
+    "メタ認知",
+    "撤退戦略",
+    "サンクコスト",
+    "損失回避",
+    "認知的柔軟性",
+    "ゲーム理論",
+    "選択権"
+  ],
+
+  "relatedNotes": [],
+
+  "references": [
+    "Framing Effect",
+    "Prospect Theory",
+    "Sunk Cost Fallacy",
+    "Cognitive Flexibility",
+    "Metacognition"
+  ]
+  }];
+
+const cognitiveTree = [
+  {
+    id: "perception",
+    name: "認知を作る",
+    description: "正常性・背景・注目・認知モデルを形成する",
+    children: [
+      { id: "normality-background", name: "正常・背景を作る", stratagemIds: [1, 12, 25] },
+      { id: "attention-importance", name: "注目・重要度を作る", stratagemIds: [6, 7, 29] },
+      { id: "cognitive-model", name: "認知モデルを作る", stratagemIds: [14, 21, 24] }
+    ]
+  },
+  {
+    id: "information-inference",
+    name: "情報と推論を操作する",
+    description: "探索範囲・情報の空白・信頼経路を操作する",
+    children: [
+      { id: "search-space", name: "探索範囲を制限する", stratagemIds: [8, 16] },
+      { id: "uncertainty", name: "不確実性を作る", stratagemIds: [13, 20, 32] },
+      { id: "information-channel", name: "情報経路を操作する", stratagemIds: [33] }
+    ]
+  },
+  {
+    id: "trust-social",
+    name: "信頼と社会認知を操作する",
+    description: "敵味方・能力や権威の推定・犠牲・集団規範を利用する",
+    children: [
+      { id: "friend-foe", name: "敵味方認知", stratagemIds: [10, 30] },
+      { id: "ability-authority", name: "能力・権威の推定", stratagemIds: [18, 27] },
+      { id: "costly-signaling", name: "犠牲を信頼へ変える", stratagemIds: [34] },
+      { id: "social-norm", name: "集団規範を利用する", stratagemIds: [26] }
+    ]
+  },
+  {
+    id: "decision-action",
+    name: "意思決定と行動を操作する",
+    description: "優先順位・認知資源・実行コストを操作する",
+    children: [
+      { id: "priority", name: "優先順位を変える", stratagemIds: [2, 5, 31] },
+      { id: "cognitive-resource", name: "認知資源を消耗させる", stratagemIds: [4, 20] },
+      { id: "action-cost", name: "実行コストを設計する", stratagemIds: [17, 22, 28] },
+      { id: "voluntary-action", name: "他者を自発的に動かす", stratagemIds: [3, 16] }
+    ]
+  },
+  {
+    id: "environment-system",
+    name: "環境とシステムを操作する",
+    description: "環境・基盤・依存関係・支配構造へ介入する",
+    children: [
+      { id: "environment", name: "認知環境を変える", stratagemIds: [15] },
+      { id: "infrastructure", name: "基盤へ介入する", stratagemIds: [19, 25] },
+      { id: "dependency", name: "関係構造を設計する", stratagemIds: [23, 24, 35] },
+      { id: "control-center", name: "中心・支配構造を変える", stratagemIds: [18, 30] }
+    ]
+  },
+  {
+    id: "withdrawal-metacognition",
+    name: "継続・撤退・メタ認知",
+    description: "損失限定・離脱・フレーム変更を扱う",
+    children: [
+      { id: "loss-limitation", name: "損失を限定する", stratagemIds: [11] },
+      { id: "attrition", name: "消耗を待つ", stratagemIds: [9] },
+      { id: "controlled-exit", name: "状態を維持して離脱する", stratagemIds: [21, 28] },
+      { id: "frame-exit", name: "認知フレームから離脱する", stratagemIds: [36] }
+    ]
   }
 ];
 
@@ -2742,10 +3027,18 @@ const search = document.getElementById('search');
 const category = document.getElementById('category');
 const categoryCards = document.getElementById('categoryCards');
 const categoryCount = document.getElementById('categoryCount');
+const treeMode = document.getElementById('treeMode');
+const listMode = document.getElementById('listMode');
 
+const stratagemMap = new Map(stratagems.map((stratagem) => [stratagem.id, stratagem]));
 const categories = [...new Set(stratagems.map((stratagem) => stratagem.category))].sort();
+const leafCategories = cognitiveTree.flatMap((root) => root.children ?? []);
+const stratagemCategoryMap = buildStratagemCategoryMap(cognitiveTree);
+const resolvedCognitiveTree = cognitiveTree.map(resolveTreeNode);
+let currentView = 'tree';
+let selectedStratagemId = stratagems[0]?.id ?? null;
 
-categoryCount.textContent = categories.length;
+categoryCount.textContent = leafCategories.length;
 
 for (const categoryName of categories) {
   const option = document.createElement('option');
@@ -2768,41 +3061,127 @@ function toSearchText(value) {
   return String(value ?? '');
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function resolveTreeNode(node) {
+  return {
+    ...node,
+    stratagems: (node.stratagemIds ?? [])
+      .map((id) => stratagemMap.get(id))
+      .filter(Boolean),
+    children: (node.children ?? []).map(resolveTreeNode)
+  };
+}
+
+function buildStratagemCategoryMap(tree) {
+  const map = new Map();
+
+  tree.forEach((root) => {
+    (root.children ?? []).forEach((child) => {
+      (child.stratagemIds ?? []).forEach((id) => {
+        const memberships = map.get(id) ?? [];
+        memberships.push({
+          rootId: root.id,
+          rootName: root.name,
+          categoryId: child.id,
+          categoryName: child.name
+        });
+        map.set(id, memberships);
+      });
+    });
+  });
+
+  return map;
+}
+
+function validateCognitiveTree() {
+  const errors = [];
+  const allReferencedIds = new Set();
+
+  cognitiveTree.forEach((root) => {
+    (root.children ?? []).forEach((child) => {
+      const seenInLeaf = new Set();
+      (child.stratagemIds ?? []).forEach((id) => {
+        if (!stratagemMap.has(id)) errors.push('Missing stratagem id in cognitiveTree: ' + id);
+        if (seenInLeaf.has(id)) errors.push('Duplicate id ' + id + ' in category ' + child.id);
+        seenInLeaf.add(id);
+        allReferencedIds.add(id);
+      });
+    });
+  });
+
+  stratagems.forEach((stratagem) => {
+    if (!allReferencedIds.has(stratagem.id)) errors.push('Unclassified stratagem id: ' + stratagem.id);
+  });
+
+  return errors;
+}
+
 function renderOptionalSection(title, content) {
   if (!hasContent(content)) return '';
 
-  return '<div class="optional-section"><p><b>' + title + ':</b> ' + content + '</p></div>';
+  return '<div class="optional-section"><p><b>' + escapeHtml(title) + ':</b> ' + escapeHtml(content) + '</p></div>';
 }
 
 function renderBreakdown(items) {
   if (!hasItems(items)) return '';
 
   return '<div class="optional-section"><p><b>Breakdown:</b></p><ul class="breakdown-list">'
-    + items.map((item) => '<li>' + item + '</li>').join('')
+    + items.map((item) => '<li>' + escapeHtml(item) + '</li>').join('')
     + '</ul></div>';
 }
 
 function renderNoteLink(stratagem) {
   if (!hasContent(stratagem.noteUrl)) return '';
 
-  return '<a class="note-link" href="' + stratagem.noteUrl + '" target="_blank" rel="noopener noreferrer">Read Note &rarr;</a>';
+  return '<a class="note-link" href="' + escapeHtml(stratagem.noteUrl) + '" target="_blank" rel="noopener noreferrer">Read Note &rarr;</a>';
 }
 
 function renderCategoryCards() {
   categoryCards.innerHTML = '';
 
-  categories.forEach((categoryName) => {
-    const count = stratagems.filter((stratagem) => stratagem.category === categoryName).length;
+  resolvedCognitiveTree.forEach((root) => {
+    const count = root.children.reduce((total, child) => total + child.stratagems.length, 0);
     const div = document.createElement('div');
     div.className = 'category-card';
-    div.innerHTML = '<strong>' + categoryName + '</strong><span>' + count + ' stratagem' + (count > 1 ? 's' : '') + ' mapped</span>';
+    div.innerHTML = '<strong>' + escapeHtml(root.name) + '</strong><span>' + count + ' stratagem references mapped</span>';
     div.addEventListener('click', () => {
-      category.value = categoryName;
+      currentView = 'tree';
       render();
       document.getElementById('atlas').scrollIntoView({ behavior: 'smooth' });
     });
     categoryCards.appendChild(div);
   });
+}
+
+function renderMemberships(stratagem) {
+  const memberships = stratagemCategoryMap.get(stratagem.id) ?? [];
+  if (!memberships.length) return '';
+
+  return '<div class="optional-section"><p><b>所属する認知分類:</b></p><ul class="membership-list">'
+    + memberships.map((item) => '<li><span>' + escapeHtml(item.rootName) + '</span><small>' + escapeHtml(item.categoryName) + '</small></li>').join('')
+    + '</ul></div>';
+}
+
+function renderRelatedStratagems(stratagem) {
+  if (!hasItems(stratagem.relatedStratagems)) return '';
+
+  const related = stratagem.relatedStratagems
+    .map((id) => stratagemMap.get(id))
+    .filter(Boolean);
+
+  if (!related.length) return '';
+
+  return '<div class="optional-section"><p><b>関連する計略:</b></p><ul class="related-list">'
+    + related.map((item) => '<li><button type="button" class="link-button" data-stratagem-id="' + item.id + '">#' + String(item.id).padStart(2, '0') + ' ' + escapeHtml(item.name) + '</button></li>').join('')
+    + '</ul></div>';
 }
 
 function renderStratagemCard(stratagem) {
@@ -2811,16 +3190,18 @@ function renderStratagemCard(stratagem) {
   card.innerHTML = [
     '<div class="card-top">',
     '<span class="number">#' + String(stratagem.id).padStart(2, '0') + '</span>',
-    '<span class="badge">' + stratagem.category + '</span>',
+    '<span class="badge">' + escapeHtml(stratagem.category) + '</span>',
     '</div>',
-    '<h3>' + stratagem.name + '</h3>',
-    '<p class="reading">' + stratagem.reading + '</p>',
-    '<p class="english">' + stratagem.english + '</p>',
-    '<p class="summary">' + stratagem.summary + '</p>',
+    '<h3>' + escapeHtml(stratagem.name) + '</h3>',
+    '<p class="reading">' + escapeHtml(stratagem.reading) + '</p>',
+    '<p class="english">' + escapeHtml(stratagem.english) + '</p>',
+    '<p class="summary">' + escapeHtml(stratagem.summary) + '</p>',
     '<div class="meta">',
-    '<p><b>Bias:</b> ' + stratagem.bias + '</p>',
-    '<p><b>Behavioral reading:</b> ' + stratagem.behavioral + '</p>',
-    '<p><b>Modern example:</b> ' + stratagem.example + '</p>',
+    '<p><b>Bias:</b> ' + escapeHtml(stratagem.bias) + '</p>',
+    '<p><b>Behavioral reading:</b> ' + escapeHtml(stratagem.behavioral) + '</p>',
+    '<p><b>Modern example:</b> ' + escapeHtml(stratagem.example) + '</p>',
+    renderMemberships(stratagem),
+    renderRelatedStratagems(stratagem),
     renderOptionalSection('Jinn Interpretation', stratagem.interpretation),
     renderOptionalSection('Cognitive Principle', stratagem.principle),
     renderBreakdown(stratagem.breakdown),
@@ -2834,24 +3215,130 @@ function renderNoResults() {
   cards.innerHTML = '<article class="stratagem-card"><h3>No results</h3><p class="summary">別のキーワードで検索してください。</p></article>';
 }
 
-function render() {
+function stratagemMatches(stratagem, query) {
+  return !query || toSearchText(stratagem).toLowerCase().includes(query);
+}
+
+function renderTreeStratagemButton(stratagem) {
+  const isSelected = stratagem.id === selectedStratagemId ? ' selected' : '';
+  return [
+    '<button type="button" class="tree-stratagem' + isSelected + '" data-stratagem-id="' + stratagem.id + '">',
+    '<span class="tree-stratagem-number">#' + String(stratagem.id).padStart(2, '0') + '</span>',
+    '<span><b>' + escapeHtml(stratagem.name) + '</b><small>' + escapeHtml(stratagem.summary) + '</small></span>',
+    '</button>'
+  ].join('');
+}
+
+function renderTree() {
+  const query = search.value.toLowerCase().trim();
+  const visibleStratagemIds = new Set();
+
+  const treeHtml = resolvedCognitiveTree.map((root) => {
+    const childHtml = root.children.map((child) => {
+      const matchedStratagems = child.stratagems.filter((stratagem) => stratagemMatches(stratagem, query));
+      if (query && !matchedStratagems.length) return '';
+      matchedStratagems.forEach((stratagem) => visibleStratagemIds.add(stratagem.id));
+
+      return [
+        '<details class="tree-category" open>',
+        '<summary><span>' + escapeHtml(child.name) + '</span><small>' + matchedStratagems.length + '</small></summary>',
+        '<div class="tree-stratagems">',
+        matchedStratagems.map(renderTreeStratagemButton).join(''),
+        '</div>',
+        '</details>'
+      ].join('');
+    }).join('');
+
+    if (query && !childHtml) return '';
+
+    return [
+      '<details class="tree-root" open>',
+      '<summary><span>' + escapeHtml(root.name) + '</span><small>' + escapeHtml(root.description) + '</small></summary>',
+      '<div class="tree-children">',
+      childHtml,
+      '</div>',
+      '</details>'
+    ].join('');
+  }).join('');
+
+  if (!visibleStratagemIds.has(selectedStratagemId)) {
+    selectedStratagemId = visibleStratagemIds.values().next().value ?? selectedStratagemId;
+  }
+  const selectedStratagem = stratagemMap.get(selectedStratagemId) ?? stratagems[0];
+
+  cards.className = 'atlas-tree';
+  cards.innerHTML = [
+    '<div class="tree-panel">',
+    treeHtml || '<article class="stratagem-card"><h3>No results</h3><p class="summary">別のキーワードで検索してください。</p></article>',
+    '</div>',
+    '<div id="selectedDetail" class="detail-panel"></div>'
+  ].join('');
+
+  const detailPanel = document.getElementById('selectedDetail');
+  detailPanel.appendChild(renderStratagemCard(selectedStratagem));
+  bindStratagemSelection();
+}
+
+function renderList() {
   const query = search.value.toLowerCase().trim();
   const selectedCategory = category.value;
   const filtered = stratagems
     .filter((stratagem) => selectedCategory === 'all' || stratagem.category === selectedCategory)
-    .filter((stratagem) => toSearchText(stratagem).toLowerCase().includes(query));
+    .filter((stratagem) => stratagemMatches(stratagem, query));
 
+  cards.className = 'atlas-grid';
   cards.innerHTML = '';
 
   filtered.forEach((stratagem) => {
-    cards.appendChild(renderStratagemCard(stratagem));
+    const card = renderStratagemCard(stratagem);
+    card.addEventListener('click', () => {
+      selectedStratagemId = stratagem.id;
+    });
+    cards.appendChild(card);
   });
 
   if (!filtered.length) renderNoResults();
+  bindStratagemSelection();
+}
+
+function render() {
+  const isTree = currentView === 'tree';
+  treeMode.classList.toggle('active', isTree);
+  listMode.classList.toggle('active', !isTree);
+  category.disabled = isTree;
+  category.title = isTree ? '三十六計一覧で使用します' : '';
+
+  if (isTree) {
+    renderTree();
+  } else {
+    renderList();
+  }
+}
+
+function bindStratagemSelection() {
+  document.querySelectorAll('[data-stratagem-id]').forEach((element) => {
+    element.addEventListener('click', (event) => {
+      event.stopPropagation();
+      selectedStratagemId = Number(element.dataset.stratagemId);
+      render();
+    });
+  });
 }
 
 search.addEventListener('input', render);
 category.addEventListener('change', render);
+treeMode.addEventListener('click', () => {
+  currentView = 'tree';
+  render();
+});
+listMode.addEventListener('click', () => {
+  currentView = 'list';
+  render();
+});
 
 renderCategoryCards();
+const validationErrors = validateCognitiveTree();
+if (validationErrors.length) {
+  console.warn('Cognitive tree validation failed:', validationErrors);
+}
 render();

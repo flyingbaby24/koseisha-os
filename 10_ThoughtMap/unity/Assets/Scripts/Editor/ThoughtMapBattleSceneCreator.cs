@@ -13,6 +13,11 @@ public static class ThoughtMapBattleSceneCreator
 {
     private static readonly Vector2 ProductCardSize = new Vector2(176f, 272f);
     private static readonly Vector2 ProductCardGridSpacing = new Vector2(14f, 14f);
+    private static readonly string[] ExpectedCardTemplateNames =
+    {
+        "philosophy", "psychology", "science", "economy", "karma",
+        "emotion", "moral", "ideal", "individual", "community"
+    };
     private const float ProductListRowSpacing = 4f;
 
     private const string SceneFolder = "Assets/Scenes";
@@ -20,6 +25,9 @@ public static class ThoughtMapBattleSceneCreator
     private const string SpriteFolder = "Assets/Sprites";
     private const string CardSpriteFolder = "Assets/Sprites/Cards";
     private const string IconSpriteFolder = "Assets/Sprites/Icons";
+    private const string ArtBackgroundFolder = "Assets/Art/Backgrounds";
+    private const string CardTemplateFolder = "Assets/Art/CardTemplates";
+    private const string BattlePrepBackgroundPath = "Assets/Art/Backgrounds/battle_prep_bg.png";
 
     private const string BattlePrepScenePath = "Assets/Scenes/BattlePrepScene.unity";
     private const string BattleScenePath = "Assets/Scenes/BattleScene.unity";
@@ -65,6 +73,9 @@ public static class ThoughtMapBattleSceneCreator
         EnsurePlaceholderSpriteAssets();
         Sprite[] cardSprites = LoadSpritesFromFolder(CardSpriteFolder);
         Sprite[] iconSprites = LoadSpritesFromFolder(IconSpriteFolder);
+        Sprite[] templateSprites = LoadSpritesFromFolder(CardTemplateFolder);
+        Sprite battlePrepBackground = LoadSpriteAtPath(BattlePrepBackgroundPath);
+        LogProductBattlePrepSpriteLoad("Repair Product Battle Prep ScrollViews", battlePrepBackground, templateSprites);
         int repaired = 0;
         Scene scene = SceneManager.GetActiveScene();
         if (scene.IsValid())
@@ -76,7 +87,7 @@ public static class ThoughtMapBattleSceneCreator
                 {
                     RepairProductBattlePrepPanel(view);
                     RepairProductBattlePrepControls(view);
-                    RepairProductBattlePrepSpriteBindings(view, cardSprites, iconSprites);
+                    RepairProductBattlePrepSpriteBindings(view, cardSprites, iconSprites, templateSprites, battlePrepBackground);
                     repaired++;
                 }
             }
@@ -89,7 +100,7 @@ public static class ThoughtMapBattleSceneCreator
             {
                 RepairProductBattlePrepPanel(view);
                 RepairProductBattlePrepControls(view);
-                RepairProductBattlePrepSpriteBindings(view, cardSprites, iconSprites);
+                RepairProductBattlePrepSpriteBindings(view, cardSprites, iconSprites, templateSprites, battlePrepBackground);
                 repaired++;
             }
         }
@@ -149,6 +160,9 @@ public static class ThoughtMapBattleSceneCreator
         EnsurePlaceholderSpriteAssets();
         Sprite[] cardSprites = LoadSpritesFromFolder(CardSpriteFolder);
         Sprite[] iconSprites = LoadSpritesFromFolder(IconSpriteFolder);
+        Sprite[] templateSprites = LoadSpritesFromFolder(CardTemplateFolder);
+        Sprite battlePrepBackground = LoadSpriteAtPath(BattlePrepBackgroundPath);
+        LogProductBattlePrepSpriteLoad("Repair Product Battle Prep Sprites", battlePrepBackground, templateSprites);
 
         int repaired = 0;
         Scene scene = SceneManager.GetActiveScene();
@@ -159,7 +173,7 @@ public static class ThoughtMapBattleSceneCreator
                 ProductBattlePrepPanelView[] views = root.GetComponentsInChildren<ProductBattlePrepPanelView>(true);
                 foreach (ProductBattlePrepPanelView view in views)
                 {
-                    RepairProductBattlePrepSpriteBindings(view, cardSprites, iconSprites);
+                    RepairProductBattlePrepSpriteBindings(view, cardSprites, iconSprites, templateSprites, battlePrepBackground);
                     repaired++;
                 }
             }
@@ -170,7 +184,7 @@ public static class ThoughtMapBattleSceneCreator
             ProductBattlePrepPanelView[] views = selected.GetComponentsInChildren<ProductBattlePrepPanelView>(true);
             foreach (ProductBattlePrepPanelView view in views)
             {
-                RepairProductBattlePrepSpriteBindings(view, cardSprites, iconSprites);
+                RepairProductBattlePrepSpriteBindings(view, cardSprites, iconSprites, templateSprites, battlePrepBackground);
                 repaired++;
             }
         }
@@ -388,7 +402,8 @@ public static class ThoughtMapBattleSceneCreator
     {
         GameObject root = UiObject("DeckListPanel", typeof(Image));
         root.GetComponent<Image>().color = new Color(0.015f, 0.025f, 0.035f, 0.95f);
-        RectTransform content = CreateScrollContent(root.GetComponent<RectTransform>(), "Content", 2, ProductCardSize);
+        RectTransform content = EnsureLightweightListPanelStructure(root.GetComponent<RectTransform>());
+        content.gameObject.name = "Content";
         SavePrefab(root, DeckListPanelPrefabPath);
     }
 
@@ -543,10 +558,14 @@ public static class ThoughtMapBattleSceneCreator
         SetObject(so, "clearButton", clearButton);
         Sprite[] cardSprites = LoadSpritesFromFolder(CardSpriteFolder);
         Sprite[] iconSprites = LoadSpritesFromFolder(IconSpriteFolder);
+        Sprite[] templateSprites = LoadSpritesFromFolder(CardTemplateFolder);
+        Sprite battlePrepBackground = LoadSpriteAtPath(BattlePrepBackgroundPath);
+        SetObject(so, "battlePrepBackground", battlePrepBackground);
         SetObject(so, "defaultCardArt", FirstOrNull(cardSprites));
         SetObject(so, "defaultAttributeIcon", FirstOrNull(iconSprites));
         SetSpriteArray(so, "cardArtPool", cardSprites);
         SetAttributeSpriteArray(so, "attributeSprites", iconSprites);
+        SetAttributeSpriteArray(so, "cardTemplateSprites", templateSprites);
         so.ApplyModifiedPropertiesWithoutUndo();
 
         SavePrefab(canvas.gameObject, ProductBattlePrepCanvasPrefabPath);
@@ -646,6 +665,7 @@ public static class ThoughtMapBattleSceneCreator
 
         RectTransform cardListPanel = FindDescendant(view.transform, "CardListPanel") as RectTransform;
         RectTransform deckListPanel = FindDescendant(view.transform, "DeckListPanel") as RectTransform;
+        RectTransform formationGridPanel = FindDescendant(view.transform, "FormationGridPanel") as RectTransform;
         if (cardListPanel == null && deckListPanel == null)
         {
             Debug.LogWarning($"[SourceOfThoughtBattleScene] No CardListPanel or DeckListPanel found under {view.name}.");
@@ -655,6 +675,7 @@ public static class ThoughtMapBattleSceneCreator
         Undo.RecordObject(view, "Repair Product Battle Prep ScrollViews");
         RectTransform cardContent = cardListPanel == null ? null : EnsureLightweightListPanelStructure(cardListPanel);
         RectTransform deckContent = deckListPanel == null ? null : EnsureLightweightListPanelStructure(deckListPanel);
+        RectTransform formationContent = formationGridPanel == null ? null : EnsureFormationGridPanelStructure(formationGridPanel);
 
         SerializedObject so = new SerializedObject(view);
         if (cardContent != null)
@@ -667,9 +688,14 @@ public static class ThoughtMapBattleSceneCreator
             SetObject(so, "deckListContent", deckContent);
             EditorUtility.SetDirty(deckContent.gameObject);
         }
+        if (formationContent != null)
+        {
+            SetObject(so, "formationGridContent", formationContent);
+            EditorUtility.SetDirty(formationContent.gameObject);
+        }
         so.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(view);
-        Debug.Log($"[SourceOfThoughtBattleScene] ScrollView repaired for {view.name}: cardContent={cardContent?.name ?? "missing"}, deckContent={deckContent?.name ?? "missing"}.");
+        Debug.Log($"[SourceOfThoughtBattleScene] ScrollView repaired for {view.name}: cardContent={cardContent?.name ?? "missing"}, deckContent={deckContent?.name ?? "missing"}, formationContent={formationContent?.name ?? "missing"}.");
         return true;
     }
 
@@ -791,7 +817,13 @@ public static class ThoughtMapBattleSceneCreator
         return button;
     }
 
-    private static void RepairProductBattlePrepSpriteBindings(ProductBattlePrepPanelView view, Sprite[] cardSprites, Sprite[] iconSprites)
+    private static void RepairProductBattlePrepSpriteBindings(
+        ProductBattlePrepPanelView view,
+        Sprite[] cardSprites,
+        Sprite[] iconSprites,
+        Sprite[] templateSprites,
+        Sprite battlePrepBackground
+    )
     {
         if (view == null)
         {
@@ -800,12 +832,62 @@ public static class ThoughtMapBattleSceneCreator
 
         Undo.RecordObject(view, "Repair Product Battle Prep Sprites");
         SerializedObject so = new SerializedObject(view);
+        SetObject(so, "battlePrepBackground", battlePrepBackground);
         SetObject(so, "defaultCardArt", FirstOrNull(cardSprites));
         SetObject(so, "defaultAttributeIcon", FirstOrNull(iconSprites));
         SetSpriteArray(so, "cardArtPool", cardSprites);
         SetAttributeSpriteArray(so, "attributeSprites", iconSprites);
+        SetAttributeSpriteArray(so, "cardTemplateSprites", templateSprites);
         so.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(view);
+        Debug.Log(
+            $"[SourceOfThoughtBattleScene] Sprite bindings assigned to {view.name}: background={(battlePrepBackground == null ? "null" : battlePrepBackground.name)}, cardArtPool={(cardSprites == null ? 0 : cardSprites.Length)}, attributeSprites={(iconSprites == null ? 0 : iconSprites.Length)}, cardTemplateSprites={(templateSprites == null ? 0 : templateSprites.Length)}."
+        );
+    }
+
+    private static void LogProductBattlePrepSpriteLoad(string context, Sprite battlePrepBackground, Sprite[] templateSprites)
+    {
+        Debug.Log($"[SourceOfThoughtBattleScene] {context}: loading method=AssetDatabase editor repair. Runtime uses Inspector serialized Sprite references. Resources.Load is not used.");
+        Debug.Log($"[SourceOfThoughtBattleScene] Background: battle_prep_bg.png loaded={battlePrepBackground != null} sprite={(battlePrepBackground == null ? "null" : battlePrepBackground.name)} path={BattlePrepBackgroundPath}");
+        if (battlePrepBackground == null)
+        {
+            Debug.LogWarning($"[SourceOfThoughtBattleScene] Missing: battle_prep_bg.png at {BattlePrepBackgroundPath}");
+        }
+
+        int templateCount = templateSprites == null ? 0 : templateSprites.Length;
+        Debug.Log($"[SourceOfThoughtBattleScene] Template sprites found={templateCount} folder={CardTemplateFolder}");
+        if (templateSprites != null)
+        {
+            foreach (Sprite sprite in templateSprites)
+            {
+                Debug.Log($"[SourceOfThoughtBattleScene] Template: {(sprite == null ? "null" : sprite.name)}");
+            }
+        }
+
+        foreach (string expected in ExpectedCardTemplateNames)
+        {
+            if (!HasSpriteNamed(templateSprites, expected))
+            {
+                Debug.LogWarning($"[SourceOfThoughtBattleScene] Missing template: {expected}.png");
+            }
+        }
+    }
+
+    private static bool HasSpriteNamed(Sprite[] sprites, string expectedName)
+    {
+        if (sprites == null)
+        {
+            return false;
+        }
+
+        foreach (Sprite sprite in sprites)
+        {
+            if (sprite != null && sprite.name.Trim().ToLowerInvariant() == expectedName)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static RectTransform EnsureScrollablePanelStructure(RectTransform panel, int columns, Vector2 cellSize)
@@ -872,6 +954,8 @@ public static class ThoughtMapBattleSceneCreator
         contentRect.sizeDelta = Vector2.zero;
         contentRect.offsetMin = Vector2.zero;
         contentRect.offsetMax = Vector2.zero;
+
+        RemoveLayoutGroupsExcept<GridLayoutGroup>(contentRect.gameObject);
 
         GridLayoutGroup grid = contentRect.GetComponent<GridLayoutGroup>();
         if (grid == null)
@@ -984,11 +1068,7 @@ public static class ThoughtMapBattleSceneCreator
         contentRect.offsetMin = Vector2.zero;
         contentRect.offsetMax = Vector2.zero;
 
-        GridLayoutGroup grid = contentRect.GetComponent<GridLayoutGroup>();
-        if (grid != null)
-        {
-            Undo.DestroyObjectImmediate(grid);
-        }
+        RemoveLayoutGroupsExcept<VerticalLayoutGroup>(contentRect.gameObject);
 
         VerticalLayoutGroup vertical = contentRect.GetComponent<VerticalLayoutGroup>();
         if (vertical == null)
@@ -1027,6 +1107,69 @@ public static class ThoughtMapBattleSceneCreator
         EditorUtility.SetDirty(viewportRect.gameObject);
         EditorUtility.SetDirty(contentRect.gameObject);
         return contentRect;
+    }
+
+    private static RectTransform EnsureFormationGridPanelStructure(RectTransform panel)
+    {
+        if (panel == null)
+        {
+            return null;
+        }
+
+        RectTransform contentRect = FindDirectChild(panel, "Content") as RectTransform;
+        if (contentRect == null)
+        {
+            contentRect = FindDirectChild(panel, "GridContent") as RectTransform;
+        }
+        if (contentRect == null)
+        {
+            GameObject content = UiChild(panel, "Content", typeof(RectTransform));
+            contentRect = content.GetComponent<RectTransform>();
+            Undo.RegisterCreatedObjectUndo(content, "Create Product Battle Prep Formation Content");
+        }
+
+        contentRect.gameObject.name = "Content";
+        Anchor(contentRect, new Vector2(0.03f, 0.03f), new Vector2(0.97f, 0.90f));
+        RemoveLayoutGroupsExcept<GridLayoutGroup>(contentRect.gameObject);
+
+        GridLayoutGroup grid = contentRect.GetComponent<GridLayoutGroup>();
+        if (grid == null)
+        {
+            grid = Undo.AddComponent<GridLayoutGroup>(contentRect.gameObject);
+        }
+        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        grid.constraintCount = 5;
+        grid.cellSize = new Vector2(132f, 112f);
+        grid.spacing = new Vector2(8f, 8f);
+        grid.childAlignment = TextAnchor.MiddleCenter;
+
+        ContentSizeFitter fitter = contentRect.GetComponent<ContentSizeFitter>();
+        if (fitter != null)
+        {
+            Undo.DestroyObjectImmediate(fitter);
+        }
+
+        EditorUtility.SetDirty(panel.gameObject);
+        EditorUtility.SetDirty(contentRect.gameObject);
+        return contentRect;
+    }
+
+    private static void RemoveLayoutGroupsExcept<TKeep>(GameObject target) where TKeep : LayoutGroup
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        LayoutGroup[] groups = target.GetComponents<LayoutGroup>();
+        foreach (LayoutGroup group in groups)
+        {
+            if (group is TKeep)
+            {
+                continue;
+            }
+            Undo.DestroyObjectImmediate(group);
+        }
     }
 
     private static void CreateSimpleImagePrefab(string name, string path, Color color, Vector2 size)
@@ -1202,6 +1345,9 @@ public static class ThoughtMapBattleSceneCreator
         EnsureFolder("Assets", "Sprites");
         EnsureFolder("Assets/Sprites", "Cards");
         EnsureFolder("Assets/Sprites", "Icons");
+        EnsureFolder("Assets", "Art");
+        EnsureFolder("Assets/Art", "Backgrounds");
+        EnsureFolder("Assets/Art", "CardTemplates");
     }
 
     private static void EnsurePlaceholderSpriteAssets()
@@ -1210,6 +1356,8 @@ public static class ThoughtMapBattleSceneCreator
         EnsurePlaceholderPngAsset("Assets/Sprites/Icons/placeholder_attribute_icon.png", new Color(0.02f, 0.22f, 0.34f, 1f), new Color(0.1f, 0.85f, 1f, 1f));
         EnsureSpritesImportedFromFolder(CardSpriteFolder);
         EnsureSpritesImportedFromFolder(IconSpriteFolder);
+        EnsureSpritesImportedFromFolder(ArtBackgroundFolder);
+        EnsureSpritesImportedFromFolder(CardTemplateFolder);
         AssetDatabase.Refresh();
     }
 
@@ -1355,6 +1503,27 @@ public static class ThoughtMapBattleSceneCreator
             }
         }
         return sprites.ToArray();
+    }
+
+    private static Sprite LoadSpriteAtPath(string assetPath)
+    {
+        if (string.IsNullOrWhiteSpace(assetPath) || !File.Exists(assetPath))
+        {
+            Debug.LogWarning($"[SourceOfThoughtBattleScene] Missing: {assetPath}");
+            return null;
+        }
+
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer != null && importer.textureType != TextureImporterType.Sprite)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.SaveAndReimport();
+        }
+
+        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        Debug.Log($"[SourceOfThoughtBattleScene] AssetDatabase LoadSpriteAtPath path={assetPath} sprite={(sprite == null ? "null" : sprite.name)}");
+        return sprite;
     }
 
     private static Sprite FirstOrNull(Sprite[] sprites)

@@ -375,12 +375,59 @@ Card List / Deck 10 list rule:
 
 - `Card List` uses lightweight `ProductBattleCardListRowView` rows.
 - `Deck 10` also uses lightweight `ProductBattleCardListRowView` rows.
-- One row shows only card id/slot, card name, primary attribute, and state.
+- One row shows card id/slot, a small attribute template thumbnail, card name, primary attribute, and state.
 - Do not use `ProductBattleCardPrefab` inside `Card List` or `Deck 10`.
 - The row root is the only clickable object. Child TMP text and child images have `Raycast Target` disabled.
 - `Card List` click updates `CardDetailPanel` only.
 - `Deck 10` click updates `CardDetailPanel` and selects the card for Formation Grid placement.
 - Formation Grid can still use compact card-style visuals.
+
+### Product BattlePrep Art
+
+Battle Prep uses product mock art from:
+
+```text
+Assets/Art/Backgrounds/battle_prep_bg.png
+Assets/Art/CardTemplates/philosophy.png
+Assets/Art/CardTemplates/psychology.png
+Assets/Art/CardTemplates/science.png
+Assets/Art/CardTemplates/economy.png
+Assets/Art/CardTemplates/karma.png
+Assets/Art/CardTemplates/emotion.png
+Assets/Art/CardTemplates/moral.png
+Assets/Art/CardTemplates/ideal.png
+Assets/Art/CardTemplates/individual.png
+Assets/Art/CardTemplates/community.png
+```
+
+Run this after adding/replacing art:
+
+```text
+Tools > Source of Thought > Repair Product Battle Prep Sprites
+```
+
+or use the all-in-one repair:
+
+```text
+Tools > Source of Thought > Repair Product Battle Prep ScrollViews
+```
+
+`ProductBattlePrepPanelView` resolves the primary attribute to a card template first. If no template is assigned, it falls back to `Card Art Pool`, then `Default Card Art`.
+
+Mapping:
+
+- `Philosophy` / `哲学` -> `philosophy.png`
+- `Psychology` / `心理` -> `psychology.png`
+- `Science` / `科学` -> `science.png`
+- `Economy` / `Economics` / `経済` -> `economy.png`
+- `Karma` / `カルマ` -> `karma.png`
+- `Emotion` / `感情` -> `emotion.png`
+- `Moral` / `Morality` / `モラル` -> `moral.png`
+- `Ideal` / `理念` -> `ideal.png`
+- `Individual` / `個人` -> `individual.png`
+- `Community` / `共同体` -> `community.png`
+
+The Battle Prep background is created as the first Canvas child, followed by a dark overlay, then the UI panel. Both background objects have `Raycast Target` disabled.
 
 Runtime layout diagnostics:
 

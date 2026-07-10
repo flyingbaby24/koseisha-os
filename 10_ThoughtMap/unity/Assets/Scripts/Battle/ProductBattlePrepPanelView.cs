@@ -9,8 +9,13 @@ using UnityEngine.UI;
 
 public class ProductBattlePrepPanelView : MonoBehaviour
 {
-    private const float LightweightRowHeight = 38f;
+    private const float LightweightRowHeight = 46f;
     private const float LightweightRowSpacing = 4f;
+    private static readonly string[] ExpectedTemplateKeys =
+    {
+        "philosophy", "psychology", "science", "economy", "karma",
+        "emotion", "moral", "ideal", "individual", "community"
+    };
 
     [Header("Input")]
     [SerializeField] private TextAsset cardsCsvAsset;
@@ -39,11 +44,19 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     [SerializeField] private Button simulateButton;
     [SerializeField] private Button clearButton;
 
+    [Header("Background")]
+    [SerializeField] private Sprite battlePrepBackground;
+    [SerializeField] private Image backgroundImage;
+    [SerializeField] private Image darkOverlayImage;
+    [SerializeField] private Color darkOverlayColor = new Color(0f, 0f, 0f, 0.46f);
+    [SerializeField] private bool softenPanelForBackground = true;
+
     [Header("Sprites")]
     [SerializeField] private Sprite defaultCardArt;
     [SerializeField] private Sprite defaultAttributeIcon;
     [SerializeField] private Sprite[] cardArtPool;
     [SerializeField] private AttributeSpriteMap[] attributeSprites;
+    [SerializeField] private AttributeSpriteMap[] cardTemplateSprites;
 
     [Header("Rules")]
     [SerializeField] private int deckLimit = 10;
@@ -61,6 +74,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     private void Awake()
     {
         WireButtons();
+        EnsureBattlePrepBackground();
         EnsureListContentReferences();
         if (cardListContent != null)
         {
@@ -86,6 +100,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
     private void Start()
     {
+        LogRuntimeSpriteState();
         if (loadCardsOnStart)
         {
             LoadCards();
@@ -206,7 +221,8 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         {
             ProductBattleCardListRowView view = CreateListRow(cardListContent, cardListRowPrefab, "CardListRow");
             string state = deckCards.Contains(loadedCards[i]) ? "In Deck" : "";
-            view.Bind(loadedCards[i], i, GetCardId(loadedCards[i]), i == selectedLibraryIndex, deckCards.Contains(loadedCards[i]), state);
+            Sprite artSprite = ResolveCardArtForTarget(loadedCards[i], i, "Card List");
+            view.Bind(loadedCards[i], i, GetCardId(loadedCards[i]), i == selectedLibraryIndex, deckCards.Contains(loadedCards[i]), state, artSprite);
             view.SetClickHandler(OnLibraryCardClicked);
         }
         RestoreScrollPosition(scroll, scrollPosition);
@@ -233,7 +249,8 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         {
             ProductBattleCardListRowView view = CreateListRow(deckListContent, deckListRowPrefab, "DeckListRow");
             string state = placement.ContainsValue(deckCards[i]) ? "Placed" : "Ready";
-            view.Bind(deckCards[i], i, $"P{i + 1}", i == selectedDeckIndex, placement.ContainsValue(deckCards[i]), state);
+            Sprite artSprite = ResolveCardArtForTarget(deckCards[i], i, "Deck List");
+            view.Bind(deckCards[i], i, $"P{i + 1}", i == selectedDeckIndex, placement.ContainsValue(deckCards[i]), state, artSprite);
             view.SetClickHandler(OnDeckCardClicked);
         }
         RestoreScrollPosition(scroll, scrollPosition);
@@ -250,7 +267,14 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             if (placement.TryGetValue(index, out ThoughtMapBattleCardData card))
             {
                 int deckIndex = deckCards.IndexOf(card);
-                gridCells[index].BindCard(x, y, card, $"P{deckIndex + 1}", ResolveCardArt(deckIndex), ResolveAttributeIcon(card));
+                gridCells[index].BindCard(
+                    x,
+                    y,
+                    card,
+                    $"P{deckIndex + 1}",
+                    ResolveCardArtForTarget(card, deckIndex, $"Grid Cell ({x + 1},{y + 1})"),
+                    ResolveAttributeIconForTarget(card, $"Grid Cell ({x + 1},{y + 1})")
+                );
             }
             else
             {
@@ -360,7 +384,11 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         if (selectedLibraryIndex >= 0 && selectedLibraryIndex < loadedCards.Count)
         {
             ThoughtMapBattleCardData libraryCard = loadedCards[selectedLibraryIndex];
-            cardDetailPanel.Show(libraryCard, ResolveCardArt(selectedLibraryIndex), ResolveAttributeIcon(libraryCard));
+            cardDetailPanel.Show(
+                libraryCard,
+                ResolveCardArtForTarget(libraryCard, selectedLibraryIndex, "Detail Panel"),
+                ResolveAttributeIconForTarget(libraryCard, "Detail Panel")
+            );
             return;
         }
 
@@ -371,7 +399,11 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         ThoughtMapBattleCardData card = deckCards[selectedDeckIndex];
-        cardDetailPanel.Show(card, ResolveCardArt(selectedDeckIndex), ResolveAttributeIcon(card));
+        cardDetailPanel.Show(
+            card,
+            ResolveCardArtForTarget(card, selectedDeckIndex, "Detail Panel"),
+            ResolveAttributeIconForTarget(card, "Detail Panel")
+        );
     }
 
     public void SimulatePreview()
@@ -415,8 +447,14 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         SceneManager.LoadScene(battleSceneName);
     }
 
-    private Sprite ResolveCardArt(int index)
+    private Sprite ResolveCardArt(ThoughtMapBattleCardData card, int index)
     {
+        Sprite template = ResolveAttributeSprite(cardTemplateSprites, card == null ? "" : card.primaryAttribute);
+        if (template != null)
+        {
+            return template;
+        }
+
         if (cardArtPool != null && cardArtPool.Length > 0)
         {
             return cardArtPool[Mathf.Abs(index) % cardArtPool.Length];
@@ -426,34 +464,257 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
     private Sprite ResolveAttributeIcon(ThoughtMapBattleCardData card)
     {
-        string key = card == null ? "" : card.primaryAttribute;
-        if (attributeSprites != null)
+        return ResolveAttributeSprite(attributeSprites, card == null ? "" : card.primaryAttribute) ?? defaultAttributeIcon;
+    }
+
+    private Sprite ResolveCardArtForTarget(ThoughtMapBattleCardData card, int index, string target)
+    {
+        Sprite sprite = ResolveCardArt(card, index);
+        Debug.Log(
+            $"[ProductBattlePrep Art] {target}: Image.sprite candidate={SpriteName(sprite)} card='{CardName(card)}' attribute='{AttributeName(card)}' source=Inspector/serialized reference",
+            this
+        );
+        if (sprite == null)
         {
-            foreach (AttributeSpriteMap map in attributeSprites)
+            Debug.LogWarning(
+                $"[ProductBattlePrep Art] Missing: card template/default art for target={target}, card='{CardName(card)}', attribute='{AttributeName(card)}'.",
+                this
+            );
+        }
+        return sprite;
+    }
+
+    private Sprite ResolveAttributeIconForTarget(ThoughtMapBattleCardData card, string target)
+    {
+        Sprite sprite = ResolveAttributeIcon(card);
+        Debug.Log(
+            $"[ProductBattlePrep Art] {target}: Attribute Image.sprite candidate={SpriteName(sprite)} card='{CardName(card)}' attribute='{AttributeName(card)}' source=Inspector/serialized reference",
+            this
+        );
+        return sprite;
+    }
+
+    private void EnsureBattlePrepBackground()
+    {
+        if (battlePrepBackground == null)
+        {
+            Debug.LogWarning(
+                "[ProductBattlePrep Art] Missing: battle_prep_bg.png / battlePrepBackground Inspector reference is null. Runtime uses Inspector references; Resources.Load is not used.",
+                this
+            );
+            return;
+        }
+
+        RectTransform root = transform as RectTransform;
+        RectTransform parent = transform.parent as RectTransform;
+        if (root == null || parent == null)
+        {
+            return;
+        }
+
+        if (backgroundImage == null)
+        {
+            Transform existing = FindDirectChild(parent, "BattlePrepBackground");
+            GameObject backgroundObject = existing == null
+                ? new GameObject("BattlePrepBackground", typeof(RectTransform), typeof(Image))
+                : existing.gameObject;
+            backgroundObject.transform.SetParent(parent, false);
+            backgroundImage = backgroundObject.GetComponent<Image>();
+            if (backgroundImage == null)
             {
-                if (!string.IsNullOrWhiteSpace(map.attribute) && map.attribute == key)
+                backgroundImage = backgroundObject.AddComponent<Image>();
+            }
+        }
+
+        RectTransform backgroundRect = backgroundImage.GetComponent<RectTransform>();
+        backgroundRect.anchorMin = Vector2.zero;
+        backgroundRect.anchorMax = Vector2.one;
+        backgroundRect.offsetMin = Vector2.zero;
+        backgroundRect.offsetMax = Vector2.zero;
+        backgroundRect.SetAsFirstSibling();
+        backgroundImage.sprite = battlePrepBackground;
+        backgroundImage.enabled = true;
+        backgroundImage.preserveAspect = false;
+        backgroundImage.raycastTarget = false;
+        Debug.Log(
+            $"[ProductBattlePrep Art] Background Image.sprite assigned={SpriteName(backgroundImage.sprite)} method=Inspector/serialized reference",
+            this
+        );
+
+        if (darkOverlayImage == null)
+        {
+            Transform existing = FindDirectChild(parent, "BattlePrepDarkOverlay");
+            GameObject overlayObject = existing == null
+                ? new GameObject("BattlePrepDarkOverlay", typeof(RectTransform), typeof(Image))
+                : existing.gameObject;
+            overlayObject.transform.SetParent(parent, false);
+            darkOverlayImage = overlayObject.GetComponent<Image>();
+            if (darkOverlayImage == null)
+            {
+                darkOverlayImage = overlayObject.AddComponent<Image>();
+            }
+        }
+
+        RectTransform overlayRect = darkOverlayImage.GetComponent<RectTransform>();
+        overlayRect.anchorMin = Vector2.zero;
+        overlayRect.anchorMax = Vector2.one;
+        overlayRect.offsetMin = Vector2.zero;
+        overlayRect.offsetMax = Vector2.zero;
+        overlayRect.SetSiblingIndex(Mathf.Min(1, parent.childCount - 1));
+        darkOverlayImage.color = darkOverlayColor;
+        darkOverlayImage.raycastTarget = false;
+        Debug.Log("[ProductBattlePrep Art] Dark Overlay configured above background.", this);
+
+        root.SetAsLastSibling();
+
+        if (softenPanelForBackground)
+        {
+            Image panelImage = GetComponent<Image>();
+            if (panelImage != null)
+            {
+                Color color = panelImage.color;
+                color.a = Mathf.Min(color.a, 0.86f);
+                panelImage.color = color;
+            }
+        }
+    }
+
+    private void LogRuntimeSpriteState()
+    {
+        Debug.Log(
+            "[ProductBattlePrep Art] Runtime loading method: Inspector serialized Sprite references. AssetDatabase is Editor/Repair only. Resources.Load is not used.",
+            this
+        );
+        Debug.Log($"[ProductBattlePrep Art] Start: Battle Prep Background == null ? {battlePrepBackground == null}", this);
+        Debug.Log($"[ProductBattlePrep Art] Start: Card Template Sprite Count = {CountNonNullTemplateSprites()}", this);
+        Debug.Log($"[ProductBattlePrep Art] Start: Card Art Pool Count = {(cardArtPool == null ? 0 : cardArtPool.Count(sprite => sprite != null))}", this);
+        Debug.Log($"[ProductBattlePrep Art] Start: Attribute Sprite Count = {CountNonNullAttributeSprites(attributeSprites)}", this);
+
+        if (battlePrepBackground == null)
+        {
+            Debug.LogWarning("[ProductBattlePrep Art] Missing: battle_prep_bg.png", this);
+        }
+
+        foreach (string expected in ExpectedTemplateKeys)
+        {
+            if (!HasTemplateSprite(expected))
+            {
+                Debug.LogWarning($"[ProductBattlePrep Art] Missing template: {expected}", this);
+            }
+        }
+
+        if (cardTemplateSprites != null)
+        {
+            foreach (AttributeSpriteMap map in cardTemplateSprites)
+            {
+                Debug.Log($"[ProductBattlePrep Art] Template runtime ref: {map.attribute} => {SpriteName(map.sprite)}", this);
+            }
+        }
+    }
+
+    private int CountNonNullTemplateSprites()
+    {
+        return CountNonNullAttributeSprites(cardTemplateSprites);
+    }
+
+    private int CountNonNullAttributeSprites(AttributeSpriteMap[] maps)
+    {
+        if (maps == null)
+        {
+            return 0;
+        }
+        return maps.Count(map => map != null && map.sprite != null);
+    }
+
+    private bool HasTemplateSprite(string normalizedKey)
+    {
+        if (cardTemplateSprites == null)
+        {
+            return false;
+        }
+
+        foreach (AttributeSpriteMap map in cardTemplateSprites)
+        {
+            if (map != null && map.sprite != null && NormalizeAttributeKey(map.attribute) == normalizedKey)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private string SpriteName(Sprite sprite)
+    {
+        return sprite == null ? "null" : sprite.name;
+    }
+
+    private string CardName(ThoughtMapBattleCardData card)
+    {
+        return card == null ? "null" : card.cardName;
+    }
+
+    private string AttributeName(ThoughtMapBattleCardData card)
+    {
+        return card == null ? "" : card.primaryAttribute;
+    }
+
+    private Sprite ResolveAttributeSprite(AttributeSpriteMap[] maps, string attributeName)
+    {
+        string key = NormalizeAttributeKey(attributeName);
+        if (maps != null)
+        {
+            foreach (AttributeSpriteMap map in maps)
+            {
+                if (!string.IsNullOrWhiteSpace(map.attribute) && NormalizeAttributeKey(map.attribute) == key)
                 {
                     return map.sprite;
                 }
             }
         }
-        return defaultAttributeIcon;
+        return null;
+    }
+
+    private string NormalizeAttributeKey(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "";
+        }
+
+        string key = value.Trim().ToLowerInvariant();
+        switch (key)
+        {
+            case "哲学": return "philosophy";
+            case "心理": return "psychology";
+            case "科学": return "science";
+            case "経済": return "economy";
+            case "economics": return "economy";
+            case "カルマ": return "karma";
+            case "感情": return "emotion";
+            case "モラル": return "moral";
+            case "morality": return "moral";
+            case "理念": return "ideal";
+            case "個人": return "individual";
+            case "共同体": return "community";
+            default: return key;
+        }
     }
 
     private string GetSpriteWarning()
     {
         bool cardPoolEmpty = cardArtPool == null || cardArtPool.Length == 0;
+        bool templatePoolEmpty = cardTemplateSprites == null || cardTemplateSprites.Length == 0;
         bool hasDefaultCardArt = defaultCardArt != null;
         bool hasDefaultAttributeIcon = defaultAttributeIcon != null;
 
-        if (cardPoolEmpty && !hasDefaultCardArt)
+        if (templatePoolEmpty && cardPoolEmpty && !hasDefaultCardArt)
         {
-            return "Card Art Pool is empty and Default Card Art is not assigned";
+            return "Card Template Sprites and Card Art Pool are empty, and Default Card Art is not assigned";
         }
 
-        if (cardPoolEmpty)
+        if (templatePoolEmpty && cardPoolEmpty)
         {
-            return "Card Art Pool is empty";
+            return "Card Template Sprites and Card Art Pool are empty";
         }
 
         if (!hasDefaultAttributeIcon)
@@ -594,6 +855,12 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             return;
         }
 
+        if (IsUnderPanel(content, "FormationGridPanel"))
+        {
+            Debug.LogWarning($"[ProductBattlePrep] Skipped lightweight list normalization for {content.name} because it belongs to FormationGridPanel.", this);
+            return;
+        }
+
         RectTransform contentRect = content as RectTransform;
         if (contentRect == null)
         {
@@ -616,11 +883,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         contentRect.offsetMin = new Vector2(0f, contentRect.offsetMin.y);
         contentRect.offsetMax = new Vector2(0f, contentRect.offsetMax.y);
 
-        GridLayoutGroup grid = content.GetComponent<GridLayoutGroup>();
-        if (grid != null)
-        {
-            RemoveComponent(grid);
-        }
+        RemoveConflictingListLayoutGroups(content);
 
         VerticalLayoutGroup vertical = content.GetComponent<VerticalLayoutGroup>();
         if (vertical == null)
@@ -688,6 +951,35 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
     }
 
+    private void RemoveConflictingListLayoutGroups(Transform content)
+    {
+        LayoutGroup[] groups = content.GetComponents<LayoutGroup>();
+        foreach (LayoutGroup group in groups)
+        {
+            if (group is VerticalLayoutGroup)
+            {
+                continue;
+            }
+
+            Debug.Log($"[ProductBattlePrep] Replacing {group.GetType().Name} on {content.name} with VerticalLayoutGroup for lightweight list content.", this);
+            RemoveComponentImmediate(group);
+        }
+    }
+
+    private bool IsUnderPanel(Transform target, string panelName)
+    {
+        Transform current = target;
+        while (current != null)
+        {
+            if (current.name == panelName)
+            {
+                return true;
+            }
+            current = current.parent;
+        }
+        return false;
+    }
+
     private RectTransform EnsureRuntimeViewportContent(RectTransform contentRect)
     {
         if (contentRect == null)
@@ -753,7 +1045,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         scroll.verticalNormalizedPosition = Mathf.Clamp01(position);
     }
 
-    private void RemoveComponent(Component component)
+    private void RemoveComponentImmediate(Component component)
     {
         if (component == null)
         {
@@ -765,14 +1057,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             behaviour.enabled = false;
         }
 
-        if (Application.isPlaying)
-        {
-            Destroy(component);
-        }
-        else
-        {
-            DestroyImmediate(component);
-        }
+        DestroyImmediate(component);
     }
 
     private void LogScrollAreaDiagnostics(string label, Transform content)

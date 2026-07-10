@@ -9,6 +9,7 @@ public class ProductBattleCardListRowView : MonoBehaviour
 
     [SerializeField] private Button button;
     [SerializeField] private Image backgroundImage;
+    [SerializeField] private Image templateImage;
     [SerializeField] private TMP_Text slotText;
     [SerializeField] private TMP_Text cardNameText;
     [SerializeField] private TMP_Text attributeText;
@@ -39,7 +40,8 @@ public class ProductBattleCardListRowView : MonoBehaviour
         string slotLabel,
         bool selected,
         bool marked,
-        string stateLabel
+        string stateLabel,
+        Sprite templateSprite
     )
     {
         EnsureBuilt();
@@ -51,6 +53,11 @@ public class ProductBattleCardListRowView : MonoBehaviour
         SetText(cardNameText, Short(sourceCard == null ? "Empty" : sourceCard.cardName, 42));
         SetText(attributeText, sourceCard == null ? "-" : Short(sourceCard.primaryAttribute, 16));
         SetText(stateText, stateLabel);
+        if (templateImage != null)
+        {
+            templateImage.sprite = templateSprite;
+            templateImage.enabled = templateSprite != null;
+        }
 
         if (backgroundImage != null)
         {
@@ -140,6 +147,7 @@ public class ProductBattleCardListRowView : MonoBehaviour
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = true;
 
+        templateImage = templateImage == null ? CreateTemplateImage() : templateImage;
         slotText = slotText == null ? CreateText("SlotText", 52f, false) : slotText;
         cardNameText = cardNameText == null ? CreateText("CardNameText", 0f, true) : cardNameText;
         attributeText = attributeText == null ? CreateText("AttributeText", 94f, false) : attributeText;
@@ -163,6 +171,25 @@ public class ProductBattleCardListRowView : MonoBehaviour
         layout.flexibleWidth = flexible ? 1f : 0f;
         layout.flexibleHeight = 0f;
         return text;
+    }
+
+    private Image CreateTemplateImage()
+    {
+        GameObject child = new GameObject("TemplateImage", typeof(RectTransform));
+        child.transform.SetParent(transform, false);
+
+        Image image = child.AddComponent<Image>();
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+
+        LayoutElement layout = child.AddComponent<LayoutElement>();
+        layout.minWidth = 30f;
+        layout.preferredWidth = 30f;
+        layout.minHeight = 30f;
+        layout.preferredHeight = 30f;
+        layout.flexibleWidth = 0f;
+        layout.flexibleHeight = 0f;
+        return image;
     }
 
     private void ConfigureText(TMP_Text text, Color color, TextAlignmentOptions alignment)
