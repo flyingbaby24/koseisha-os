@@ -33,6 +33,11 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
 
     public void Show(ThoughtMapBattleCardData card, Sprite artSprite, Sprite attributeSprite)
     {
+        Show(card, artSprite, attributeSprite, "");
+    }
+
+    public void Show(ThoughtMapBattleCardData card, Sprite artSprite, Sprite attributeSprite, string resolvedThoughtAttribute)
+    {
         if (card == null)
         {
             Clear();
@@ -51,14 +56,65 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
 
         if (artImage != null)
         {
+            DisableOverlappingPlaceholderImages();
             artImage.sprite = artSprite;
-            artImage.enabled = artSprite != null;
+            artImage.enabled = true;
+            artImage.preserveAspect = true;
+            Color artColor = artImage.color;
+            artColor.a = 1f;
+            artImage.color = artColor;
+            artImage.transform.SetAsLastSibling();
+            Debug.Log(
+                $"[ProductBattlePrep Art] Detail Panel ArtImage: card title='{card.cardName}' resolved thought attribute='{FormatThoughtAttribute(resolvedThoughtAttribute)}' candidate sprite='{SpriteName(artSprite)}' assigned sprite='{SpriteName(artImage.sprite)}'",
+                this
+            );
+        }
+        else
+        {
+            Debug.LogWarning($"[ProductBattlePrep Art] Detail Panel artImage is null card='{card.cardName}'", this);
         }
         if (attributeIconImage != null)
         {
             attributeIconImage.sprite = attributeSprite;
             attributeIconImage.enabled = attributeSprite != null;
+            Debug.Log(
+                $"[ProductBattlePrep Art] Detail Panel Attribute Image.sprite assigned={(attributeSprite == null ? "null" : attributeSprite.name)} card='{card.cardName}'",
+                this
+            );
         }
+    }
+
+    private void DisableOverlappingPlaceholderImages()
+    {
+        if (artImage == null)
+        {
+            return;
+        }
+
+        Image[] images = GetComponentsInChildren<Image>(true);
+        foreach (Image image in images)
+        {
+            if (image == null || image == artImage)
+            {
+                continue;
+            }
+
+            string objectName = image.gameObject.name.ToLowerInvariant();
+            if (objectName.Contains("placeholder"))
+            {
+                image.enabled = false;
+            }
+        }
+    }
+
+    private string SpriteName(Sprite sprite)
+    {
+        return sprite == null ? "null" : sprite.name;
+    }
+
+    private string FormatThoughtAttribute(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "none" : value;
     }
 
     private void SetText(TMP_Text text, string value)

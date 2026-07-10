@@ -400,7 +400,8 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             cardDetailPanel.Show(
                 libraryCard,
                 ResolveCardArtForTarget(libraryCard, selectedLibraryIndex, "Detail Panel"),
-                ResolveAttributeIconForTarget(libraryCard, "Detail Panel")
+                ResolveAttributeIconForTarget(libraryCard, "Detail Panel"),
+                ResolveDominantThoughtAttributeKey(libraryCard)
             );
             return;
         }
@@ -415,7 +416,8 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         cardDetailPanel.Show(
             card,
             ResolveCardArtForTarget(card, selectedDeckIndex, "Detail Panel"),
-            ResolveAttributeIconForTarget(card, "Detail Panel")
+            ResolveAttributeIconForTarget(card, "Detail Panel"),
+            ResolveDominantThoughtAttributeKey(card)
         );
     }
 
