@@ -7,8 +7,8 @@ public static class ThoughtMapCardsCsvLoader
 {
     private static readonly string[] ParameterColumns =
     {
-        "philosophy", "psychology", "science", "economics", "karma",
-        "emotion", "morality", "ideal", "individual", "community"
+        "philosophy", "psychology", "science", "economy", "economics", "karma",
+        "emotion", "moral", "morality", "ideal", "individual", "community"
     };
 
     public static List<ThoughtMapBattleCardData> LoadFromText(string csvText)

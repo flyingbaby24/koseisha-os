@@ -16,6 +16,19 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         "philosophy", "psychology", "science", "economy", "karma",
         "emotion", "moral", "ideal", "individual", "community"
     };
+    private static readonly ThoughtParameterDefinition[] ThoughtParameterOrder =
+    {
+        new ThoughtParameterDefinition("philosophy", "philosophy", "哲学"),
+        new ThoughtParameterDefinition("psychology", "psychology", "心理"),
+        new ThoughtParameterDefinition("science", "science", "科学"),
+        new ThoughtParameterDefinition("economy", "economy", "economics", "経済"),
+        new ThoughtParameterDefinition("karma", "karma", "カルマ"),
+        new ThoughtParameterDefinition("emotion", "emotion", "感情"),
+        new ThoughtParameterDefinition("moral", "moral", "morality", "モラル"),
+        new ThoughtParameterDefinition("ideal", "ideal", "理念"),
+        new ThoughtParameterDefinition("individual", "individual", "個人"),
+        new ThoughtParameterDefinition("community", "community", "共同体")
+    };
 
     [Header("Input")]
     [SerializeField] private TextAsset cardsCsvAsset;
@@ -449,35 +462,39 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
     private Sprite ResolveCardArt(ThoughtMapBattleCardData card, int index)
     {
-        Sprite template = ResolveAttributeSprite(cardTemplateSprites, card == null ? "" : card.primaryAttribute);
+        string thoughtAttribute = ResolveDominantThoughtAttributeKey(card);
+        if (string.IsNullOrWhiteSpace(thoughtAttribute))
+        {
+            return defaultCardArt;
+        }
+
+        Sprite template = ResolveAttributeSprite(cardTemplateSprites, thoughtAttribute);
         if (template != null)
         {
             return template;
         }
 
-        if (cardArtPool != null && cardArtPool.Length > 0)
-        {
-            return cardArtPool[Mathf.Abs(index) % cardArtPool.Length];
-        }
         return defaultCardArt;
     }
 
     private Sprite ResolveAttributeIcon(ThoughtMapBattleCardData card)
     {
-        return ResolveAttributeSprite(attributeSprites, card == null ? "" : card.primaryAttribute) ?? defaultAttributeIcon;
+        string thoughtAttribute = ResolveDominantThoughtAttributeKey(card);
+        return ResolveAttributeSprite(attributeSprites, thoughtAttribute) ?? defaultAttributeIcon;
     }
 
     private Sprite ResolveCardArtForTarget(ThoughtMapBattleCardData card, int index, string target)
     {
         Sprite sprite = ResolveCardArt(card, index);
+        string thoughtAttribute = ResolveDominantThoughtAttributeKey(card);
         Debug.Log(
-            $"[ProductBattlePrep Art] {target}: Image.sprite candidate={SpriteName(sprite)} card='{CardName(card)}' attribute='{AttributeName(card)}' source=Inspector/serialized reference",
+            $"[ProductBattlePrep Art] {target}: card title='{CardName(card)}' battle attribute='{AttributeName(card)}' resolved thought attribute='{FormatThoughtAttributeForLog(thoughtAttribute)}' assigned sprite name='{SpriteName(sprite)}'",
             this
         );
         if (sprite == null)
         {
             Debug.LogWarning(
-                $"[ProductBattlePrep Art] Missing: card template/default art for target={target}, card='{CardName(card)}', attribute='{AttributeName(card)}'.",
+                $"[ProductBattlePrep Art] Missing: card template/default art for target={target}, card='{CardName(card)}', battle attribute='{AttributeName(card)}', resolved thought attribute='{FormatThoughtAttributeForLog(thoughtAttribute)}'.",
                 this
             );
         }
@@ -487,11 +504,70 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     private Sprite ResolveAttributeIconForTarget(ThoughtMapBattleCardData card, string target)
     {
         Sprite sprite = ResolveAttributeIcon(card);
+        string thoughtAttribute = ResolveDominantThoughtAttributeKey(card);
         Debug.Log(
-            $"[ProductBattlePrep Art] {target}: Attribute Image.sprite candidate={SpriteName(sprite)} card='{CardName(card)}' attribute='{AttributeName(card)}' source=Inspector/serialized reference",
+            $"[ProductBattlePrep Art] {target}: Attribute Image.sprite candidate={SpriteName(sprite)} card title='{CardName(card)}' battle attribute='{AttributeName(card)}' resolved thought attribute='{FormatThoughtAttributeForLog(thoughtAttribute)}'",
             this
         );
         return sprite;
+    }
+
+    private string ResolveDominantThoughtAttributeKey(ThoughtMapBattleCardData card)
+    {
+        if (card == null || card.parameterScores == null || card.parameterScores.Count == 0)
+        {
+            return "";
+        }
+
+        string bestKey = "";
+        float bestScore = float.NegativeInfinity;
+        bool found = false;
+
+        foreach (ThoughtParameterDefinition definition in ThoughtParameterOrder)
+        {
+            if (!TryGetThoughtParameterScore(card, definition, out float score))
+            {
+                continue;
+            }
+
+            if (!found || score > bestScore)
+            {
+                bestKey = definition.key;
+                bestScore = score;
+                found = true;
+            }
+        }
+
+        return found ? bestKey : "";
+    }
+
+    private bool TryGetThoughtParameterScore(ThoughtMapBattleCardData card, ThoughtParameterDefinition definition, out float score)
+    {
+        score = 0f;
+        if (card == null || card.parameterScores == null || definition.aliases == null)
+        {
+            return false;
+        }
+
+        foreach (string alias in definition.aliases)
+        {
+            if (card.parameterScores.TryGetValue(alias, out score))
+            {
+                return true;
+            }
+
+            string normalizedAlias = NormalizeAttributeKey(alias);
+            foreach (KeyValuePair<string, float> pair in card.parameterScores)
+            {
+                if (NormalizeAttributeKey(pair.Key) == normalizedAlias)
+                {
+                    score = pair.Value;
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private void EnsureBattlePrepBackground()
@@ -656,6 +732,11 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     private string AttributeName(ThoughtMapBattleCardData card)
     {
         return card == null ? "" : card.primaryAttribute;
+    }
+
+    private string FormatThoughtAttributeForLog(string thoughtAttribute)
+    {
+        return string.IsNullOrWhiteSpace(thoughtAttribute) ? "none" : thoughtAttribute;
     }
 
     private Sprite ResolveAttributeSprite(AttributeSpriteMap[] maps, string attributeName)
@@ -1149,4 +1230,16 @@ public class AttributeSpriteMap
 {
     public string attribute;
     public Sprite sprite;
+}
+
+public struct ThoughtParameterDefinition
+{
+    public readonly string key;
+    public readonly string[] aliases;
+
+    public ThoughtParameterDefinition(string key, params string[] aliases)
+    {
+        this.key = key;
+        this.aliases = aliases;
+    }
 }
