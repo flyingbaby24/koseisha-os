@@ -2953,7 +2953,7 @@ APIなどを確認して生きてはいない。
     "Cognitive Flexibility",
     "Metacognition"
   ]
-};
+  }];
 
 const cards = document.getElementById('cards');
 const search = document.getElementById('search');
