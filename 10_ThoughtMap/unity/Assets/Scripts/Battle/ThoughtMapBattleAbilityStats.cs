@@ -3,6 +3,9 @@ using UnityEngine;
 
 public static class ThoughtMapBattleAbilityStats
 {
+    private const float PercentScaleMax = 100f;
+    private const float ExtendedScaleMax = 1000f;
+
     public static readonly ThoughtMapBattleAbilityDefinition[] DisplayOrder =
     {
         new ThoughtMapBattleAbilityDefinition("HP", "HP", "individual", new Color(0.34f, 0.36f, 0.40f, 1f), "individual", "\u500B\u4EBA"),
@@ -24,19 +27,30 @@ public static class ThoughtMapBattleAbilityStats
         {
             ThoughtMapBattleAbilityDefinition definition = DisplayOrder[i];
             float rawValue = GetParameterValue(card, definition.aliases);
-            values[i] = new ThoughtMapBattleAbilityValue(definition, rawValue, NormalizeFill(rawValue));
+            float normalizedValue = NormalizeValue(rawValue);
+            values[i] = new ThoughtMapBattleAbilityValue(definition, rawValue, normalizedValue, Mathf.Clamp01(normalizedValue));
         }
         return values;
     }
 
     public static float NormalizeFill(float value)
     {
+        return Mathf.Clamp01(NormalizeValue(value));
+    }
+
+    public static float NormalizeValue(float value)
+    {
         if (value <= 1f)
         {
-            return Mathf.Clamp01(value);
+            return value;
         }
 
-        return Mathf.Clamp01(value / 100f);
+        if (value <= PercentScaleMax)
+        {
+            return value / PercentScaleMax;
+        }
+
+        return value / ExtendedScaleMax;
     }
 
     private static float GetParameterValue(ThoughtMapBattleCardData card, string[] aliases)
@@ -115,12 +129,14 @@ public struct ThoughtMapBattleAbilityValue
 {
     public readonly ThoughtMapBattleAbilityDefinition definition;
     public readonly float rawValue;
+    public readonly float normalizedValue;
     public readonly float fillAmount;
 
-    public ThoughtMapBattleAbilityValue(ThoughtMapBattleAbilityDefinition definition, float rawValue, float fillAmount)
+    public ThoughtMapBattleAbilityValue(ThoughtMapBattleAbilityDefinition definition, float rawValue, float normalizedValue, float fillAmount)
     {
         this.definition = definition;
         this.rawValue = rawValue;
+        this.normalizedValue = normalizedValue;
         this.fillAmount = fillAmount;
     }
 }

@@ -2751,6 +2751,67 @@ const treeViewButton = document.getElementById('treeViewButton');
 const listViewButton = document.getElementById('listViewButton');
 
 const categories = [...new Set(stratagems.map((stratagem) => stratagem.category))].sort();
+const stratagemMap = new Map(stratagems.map((stratagem) => [stratagem.id, stratagem]));
+const cognitiveTree = [
+  {
+    title: "認知を作る",
+    description: "正常性・背景・注目・認知モデルを形成する",
+    children: [
+      { title: "正常・背景を作る", stratagemIds: [1, 12, 25] },
+      { title: "注目・重要度を作る", stratagemIds: [6, 7, 29] },
+      { title: "認知モデルを作る", stratagemIds: [8, 13, 32] }
+    ]
+  },
+  {
+    title: "判断をずらす",
+    description: "疲労・損失・選択肢・優先順位を操作する",
+    children: [
+      { title: "疲労・時間を使う", stratagemIds: [4, 19] },
+      { title: "損失・危機を使う", stratagemIds: [5, 36] },
+      { title: "選択肢を設計する", stratagemIds: [16, 22] },
+      { title: "優先順位を変える", stratagemIds: [2, 6] }
+    ]
+  },
+  {
+    title: "社会を動かす",
+    description: "責任・信頼・依存・報酬によって人の行動を誘導する",
+    children: [
+      { title: "責任・代理を使う", stratagemIds: [3, 24] },
+      { title: "信頼・権威を使う", stratagemIds: [10, 14, 33, 34] },
+      { title: "依存関係を使う", stratagemIds: [23, 30] },
+      { title: "報酬・欲望を使う", stratagemIds: [31] }
+    ]
+  },
+  {
+    title: "情報を操る",
+    description: "虚実・情報経路・観測不能性・陽動で解釈を変える",
+    children: [
+      { title: "虚実を入れ替える", stratagemIds: [1, 7, 21] },
+      { title: "情報経路を使う", stratagemIds: [13, 27, 33] },
+      { title: "観測不能を使う", stratagemIds: [8, 20, 32] },
+      { title: "陽動・注意誘導", stratagemIds: [2, 6] }
+    ]
+  },
+  {
+    title: "構造を崩す",
+    description: "分断・資源・連鎖・置換によって相手の仕組みを崩す",
+    children: [
+      { title: "分断・隔離", stratagemIds: [11, 18] },
+      { title: "資源・補給を突く", stratagemIds: [15, 19] },
+      { title: "システム連鎖", stratagemIds: [35] },
+      { title: "置換・偽装", stratagemIds: [21, 25, 26] }
+    ]
+  },
+  {
+    title: "撤退と変換",
+    description: "機会・変身・出口・終局処理として戦略を畳み直す",
+    children: [
+      { title: "機会利用", stratagemIds: [5, 9, 12] },
+      { title: "変身・適応", stratagemIds: [17, 27, 28] },
+      { title: "出口・撤退", stratagemIds: [36] }
+    ]
+  }
+];
 const mobileQuery = window.matchMedia('(max-width: 899px)');
 let selectedStratagemId = stratagems[0]?.id ?? null;
 let atlasView = 'tree';
@@ -2867,19 +2928,21 @@ function renderNoResults() {
   detailPane.innerHTML = renderStratagemDetail(null);
 }
 
-function renderNavCard(stratagem) {
+function renderNavCard(stratagem, options = {}) {
+  const showBadge = options.showBadge !== false;
+  const showSummary = options.showSummary === true;
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = 'stratagem-nav-card';
+  button.className = 'stratagem-nav-card' + (showSummary ? ' tree-stratagem-card' : '');
   button.dataset.id = String(stratagem.id);
   button.classList.toggle('active', stratagem.id === selectedStratagemId);
+  const top = showBadge
+    ? '<div class="nav-card-top"><span class="number">#' + String(stratagem.id).padStart(2, '0') + '</span><span class="badge">' + stratagem.category + '</span></div>'
+    : '<div class="nav-card-top"><span class="number">#' + String(stratagem.id).padStart(2, '0') + '</span></div>';
   button.innerHTML = [
-    '<div class="nav-card-top">',
-    '<span class="number">#' + String(stratagem.id).padStart(2, '0') + '</span>',
-    '<span class="badge">' + stratagem.category + '</span>',
-    '</div>',
+    top,
     '<h3>' + stratagem.name + '</h3>',
-    '<p class="reading">' + stratagem.reading + '</p>',
+    showSummary ? '<p class="summary">' + stratagem.summary + '</p>' : '<p class="reading">' + stratagem.reading + '</p>',
     '<p class="english">' + stratagem.english + '</p>'
   ].join('');
   button.addEventListener('click', () => selectStratagem(stratagem.id));
@@ -2889,28 +2952,57 @@ function renderNavCard(stratagem) {
 function renderList(filtered) {
   cards.className = 'stratagem-list list-view';
   filtered.forEach((stratagem) => {
-    cards.appendChild(renderNavCard(stratagem));
+    cards.appendChild(renderNavCard(stratagem, { showBadge: true }));
   });
 }
 
 function renderTree(filtered) {
   cards.className = 'stratagem-list tree-view';
-  categories.forEach((categoryName) => {
-    const items = filtered.filter((stratagem) => stratagem.category === categoryName);
-    if (!items.length) return;
+  const filteredIds = new Set(filtered.map((stratagem) => stratagem.id));
 
-    const group = document.createElement('section');
-    group.className = 'category-group';
-    const heading = document.createElement('h3');
-    heading.className = 'category-heading';
-    heading.textContent = categoryName;
-    group.appendChild(heading);
+  cognitiveTree.forEach((root) => {
+    const childNodes = root.children
+      .map((child) => {
+        const childStratagems = child.stratagemIds
+          .map((id) => stratagemMap.get(id))
+          .filter((stratagem) => stratagem && filteredIds.has(stratagem.id));
+        return { child, childStratagems };
+      })
+      .filter((entry) => entry.childStratagems.length > 0);
 
-    items.forEach((stratagem) => {
-      group.appendChild(renderNavCard(stratagem));
+    if (!childNodes.length) return;
+
+    const rootDetails = document.createElement('details');
+    rootDetails.className = 'tree-root';
+    rootDetails.open = true;
+    rootDetails.innerHTML = [
+      '<summary class="tree-root-summary">',
+      '<span class="tree-root-title">' + root.title + '</span>',
+      '<span class="tree-root-description">' + root.description + '</span>',
+      '</summary>'
+    ].join('');
+
+    childNodes.forEach(({ child, childStratagems }) => {
+      const childDetails = document.createElement('details');
+      childDetails.className = 'tree-child';
+      childDetails.open = true;
+      childDetails.innerHTML = [
+        '<summary class="tree-child-summary">',
+        '<span>' + child.title + '</span>',
+        '<span class="count-badge">' + childStratagems.length + '</span>',
+        '</summary>'
+      ].join('');
+
+      const list = document.createElement('div');
+      list.className = 'tree-child-list';
+      childStratagems.forEach((stratagem) => {
+        list.appendChild(renderNavCard(stratagem, { showBadge: false, showSummary: true }));
+      });
+      childDetails.appendChild(list);
+      rootDetails.appendChild(childDetails);
     });
 
-    cards.appendChild(group);
+    cards.appendChild(rootDetails);
   });
 }
 

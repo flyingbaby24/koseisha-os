@@ -4,6 +4,8 @@ using UnityEngine.UI;
 
 public class ProductBattleCardDetailPanelView : MonoBehaviour
 {
+    private const int AbilityRowsPerColumn = 5;
+
     [SerializeField] private Image artImage;
     [SerializeField] private Image attributeIconImage;
     [SerializeField] private TMP_Text titleText;
@@ -138,26 +140,22 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
             Transform existing = transform.Find("AbilityBarRoot");
             if (existing == null)
             {
-                GameObject root = new GameObject("AbilityBarRoot", typeof(RectTransform), typeof(VerticalLayoutGroup));
+                GameObject root = new GameObject("AbilityBarRoot", typeof(RectTransform), typeof(HorizontalLayoutGroup));
                 root.transform.SetParent(transform, false);
                 RectTransform rootRect = root.GetComponent<RectTransform>();
                 rootRect.anchorMin = new Vector2(0.61f, 0.10f);
                 rootRect.anchorMax = new Vector2(0.98f, 0.76f);
                 rootRect.offsetMin = Vector2.zero;
                 rootRect.offsetMax = Vector2.zero;
-
-                VerticalLayoutGroup layout = root.GetComponent<VerticalLayoutGroup>();
-                layout.padding = new RectOffset(0, 0, 0, 0);
-                layout.spacing = 3f;
-                layout.childControlWidth = true;
-                layout.childControlHeight = true;
-                layout.childForceExpandWidth = true;
-                layout.childForceExpandHeight = false;
                 existing = root.transform;
             }
 
             abilityBarRoot = existing;
         }
+
+        ConfigureAbilityRoot(abilityBarRoot);
+        Transform leftColumn = GetOrCreateAbilityColumn("LeftColumn");
+        Transform rightColumn = GetOrCreateAbilityColumn("RightColumn");
 
         int expectedCount = ThoughtMapBattleAbilityStats.DisplayOrder.Length;
         ProductBattleAbilityBarView[] existingBars = abilityBarRoot.GetComponentsInChildren<ProductBattleAbilityBarView>(true);
@@ -165,7 +163,7 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         {
             for (int i = existingBars.Length; i < expectedCount; i++)
             {
-                ProductBattleAbilityBarView bar = CreateAbilityBar(i);
+                ProductBattleAbilityBarView bar = CreateAbilityBar(i, GetColumnForIndex(i, leftColumn, rightColumn));
                 bar.EnsureVisuals();
             }
             existingBars = abilityBarRoot.GetComponentsInChildren<ProductBattleAbilityBarView>(true);
@@ -176,21 +174,23 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         {
             abilityBars[i] = existingBars[i];
             abilityBars[i].gameObject.name = $"AbilityBar_{i:00}_{ThoughtMapBattleAbilityStats.DisplayOrder[i].shortName}";
+            abilityBars[i].transform.SetParent(GetColumnForIndex(i, leftColumn, rightColumn), false);
+            abilityBars[i].transform.SetSiblingIndex(i % AbilityRowsPerColumn);
             abilityBars[i].EnsureVisuals();
         }
     }
 
-    private ProductBattleAbilityBarView CreateAbilityBar(int index)
+    private ProductBattleAbilityBarView CreateAbilityBar(int index, Transform parent)
     {
         ProductBattleAbilityBarView bar = null;
         if (abilityBarPrefab != null)
         {
-            bar = Instantiate(abilityBarPrefab, abilityBarRoot);
+            bar = Instantiate(abilityBarPrefab, parent);
         }
         else
         {
             GameObject row = new GameObject($"AbilityBar_{index:00}", typeof(RectTransform), typeof(LayoutElement), typeof(ProductBattleAbilityBarView));
-            row.transform.SetParent(abilityBarRoot, false);
+            row.transform.SetParent(parent, false);
             bar = row.GetComponent<ProductBattleAbilityBarView>();
         }
 
@@ -209,6 +209,114 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         layout.preferredHeight = 18f;
         layout.flexibleHeight = 0f;
         return bar;
+    }
+
+    private void ConfigureAbilityRoot(Transform root)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        RemoveLayoutGroupsExcept<HorizontalLayoutGroup>(root.gameObject);
+        HorizontalLayoutGroup layout = root.GetComponent<HorizontalLayoutGroup>();
+        if (layout == null)
+        {
+            layout = root.gameObject.AddComponent<HorizontalLayoutGroup>();
+        }
+
+        layout.padding = new RectOffset(0, 0, 0, 0);
+        layout.spacing = 10f;
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = true;
+    }
+
+    private Transform GetOrCreateAbilityColumn(string columnName)
+    {
+        Transform existing = abilityBarRoot == null ? null : abilityBarRoot.Find(columnName);
+        if (existing != null)
+        {
+            ConfigureAbilityColumn(existing);
+            return existing;
+        }
+
+        GameObject column = new GameObject(columnName, typeof(RectTransform), typeof(LayoutElement), typeof(VerticalLayoutGroup));
+        column.transform.SetParent(abilityBarRoot, false);
+        ConfigureAbilityColumn(column.transform);
+        return column.transform;
+    }
+
+    private void ConfigureAbilityColumn(Transform column)
+    {
+        if (column == null)
+        {
+            return;
+        }
+
+        RectTransform rect = column as RectTransform;
+        if (rect != null)
+        {
+            rect.anchorMin = new Vector2(0f, 0f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        LayoutElement layoutElement = column.GetComponent<LayoutElement>();
+        if (layoutElement == null)
+        {
+            layoutElement = column.gameObject.AddComponent<LayoutElement>();
+        }
+        layoutElement.flexibleWidth = 1f;
+        layoutElement.flexibleHeight = 1f;
+
+        RemoveLayoutGroupsExcept<VerticalLayoutGroup>(column.gameObject);
+        VerticalLayoutGroup layout = column.GetComponent<VerticalLayoutGroup>();
+        if (layout == null)
+        {
+            layout = column.gameObject.AddComponent<VerticalLayoutGroup>();
+        }
+        layout.padding = new RectOffset(0, 0, 0, 0);
+        layout.spacing = 4f;
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+    }
+
+    private Transform GetColumnForIndex(int index, Transform leftColumn, Transform rightColumn)
+    {
+        return index < AbilityRowsPerColumn ? leftColumn : rightColumn;
+    }
+
+    private void RemoveLayoutGroupsExcept<TKeep>(GameObject target) where TKeep : LayoutGroup
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        LayoutGroup[] groups = target.GetComponents<LayoutGroup>();
+        foreach (LayoutGroup group in groups)
+        {
+            if (group is TKeep)
+            {
+                continue;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(group);
+            }
+            else
+            {
+                DestroyImmediate(group);
+            }
+        }
     }
 
     private void DisableOverlappingPlaceholderImages()

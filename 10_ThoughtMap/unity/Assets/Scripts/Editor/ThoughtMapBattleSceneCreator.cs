@@ -808,7 +808,7 @@ public static class ThoughtMapBattleSceneCreator
         GameObject rootObject;
         if (existing == null)
         {
-            rootObject = UiChild(parent, "AbilityBarRoot", typeof(RectTransform), typeof(VerticalLayoutGroup));
+            rootObject = UiChild(parent, "AbilityBarRoot", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             Undo.RegisterCreatedObjectUndo(rootObject, "Create Ability Bar Root");
         }
         else
@@ -819,17 +819,19 @@ public static class ThoughtMapBattleSceneCreator
         RectTransform rootRect = rootObject.GetComponent<RectTransform>();
         Anchor(rootRect, min, max);
 
-        VerticalLayoutGroup layout = rootObject.GetComponent<VerticalLayoutGroup>();
+        RemoveLayoutGroupsExcept<HorizontalLayoutGroup>(rootObject);
+        HorizontalLayoutGroup layout = rootObject.GetComponent<HorizontalLayoutGroup>();
         if (layout == null)
         {
-            layout = Undo.AddComponent<VerticalLayoutGroup>(rootObject);
+            layout = Undo.AddComponent<HorizontalLayoutGroup>(rootObject);
         }
         layout.padding = new RectOffset(0, 0, 0, 0);
-        layout.spacing = 3f;
+        layout.spacing = 10f;
+        layout.childAlignment = TextAnchor.MiddleCenter;
         layout.childControlWidth = true;
         layout.childControlHeight = true;
         layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
+        layout.childForceExpandHeight = true;
 
         EditorUtility.SetDirty(rootObject);
         return rootRect;
@@ -839,11 +841,99 @@ public static class ThoughtMapBattleSceneCreator
     {
         ThoughtMapBattleAbilityDefinition[] definitions = ThoughtMapBattleAbilityStats.DisplayOrder;
         ProductBattleAbilityBarView[] bars = new ProductBattleAbilityBarView[definitions.Length];
+        RectTransform leftColumn = GetOrCreateAbilityColumn(abilityRoot, "LeftColumn");
+        RectTransform rightColumn = GetOrCreateAbilityColumn(abilityRoot, "RightColumn");
+        MoveDirectAbilityBarsToColumns(abilityRoot, leftColumn, rightColumn);
         for (int i = 0; i < definitions.Length; i++)
         {
-            bars[i] = CreateAbilityBar(abilityRoot, i, definitions[i]);
+            bars[i] = CreateAbilityBar(i < 5 ? leftColumn : rightColumn, i, definitions[i]);
+            bars[i].transform.SetSiblingIndex(i % 5);
         }
         return bars;
+    }
+
+    private static void MoveDirectAbilityBarsToColumns(RectTransform abilityRoot, Transform leftColumn, Transform rightColumn)
+    {
+        if (abilityRoot == null)
+        {
+            return;
+        }
+
+        List<ProductBattleAbilityBarView> directBars = new List<ProductBattleAbilityBarView>();
+        for (int i = 0; i < abilityRoot.childCount; i++)
+        {
+            ProductBattleAbilityBarView bar = abilityRoot.GetChild(i).GetComponent<ProductBattleAbilityBarView>();
+            if (bar != null)
+            {
+                directBars.Add(bar);
+            }
+        }
+
+        for (int i = 0; i < directBars.Count; i++)
+        {
+            int index = ParseAbilityIndex(directBars[i].gameObject.name, i);
+            Transform targetColumn = index < 5 ? leftColumn : rightColumn;
+            directBars[i].transform.SetParent(targetColumn, false);
+            directBars[i].transform.SetSiblingIndex(index % 5);
+        }
+    }
+
+    private static int ParseAbilityIndex(string objectName, int fallback)
+    {
+        if (string.IsNullOrWhiteSpace(objectName))
+        {
+            return fallback;
+        }
+
+        string[] parts = objectName.Split('_');
+        if (parts.Length > 1 && int.TryParse(parts[1], out int index))
+        {
+            return Mathf.Clamp(index, 0, ThoughtMapBattleAbilityStats.DisplayOrder.Length - 1);
+        }
+        return fallback;
+    }
+
+    private static RectTransform GetOrCreateAbilityColumn(RectTransform abilityRoot, string columnName)
+    {
+        Transform existing = FindDirectChild(abilityRoot, columnName);
+        GameObject columnObject;
+        if (existing == null)
+        {
+            columnObject = UiChild(abilityRoot, columnName, typeof(RectTransform), typeof(LayoutElement), typeof(VerticalLayoutGroup));
+            Undo.RegisterCreatedObjectUndo(columnObject, "Create Ability Column");
+        }
+        else
+        {
+            columnObject = existing.gameObject;
+        }
+
+        RectTransform rect = columnObject.GetComponent<RectTransform>();
+        Anchor(rect, Vector2.zero, Vector2.one);
+
+        LayoutElement layoutElement = columnObject.GetComponent<LayoutElement>();
+        if (layoutElement == null)
+        {
+            layoutElement = Undo.AddComponent<LayoutElement>(columnObject);
+        }
+        layoutElement.flexibleWidth = 1f;
+        layoutElement.flexibleHeight = 1f;
+
+        RemoveLayoutGroupsExcept<VerticalLayoutGroup>(columnObject);
+        VerticalLayoutGroup layout = columnObject.GetComponent<VerticalLayoutGroup>();
+        if (layout == null)
+        {
+            layout = Undo.AddComponent<VerticalLayoutGroup>(columnObject);
+        }
+        layout.padding = new RectOffset(0, 0, 0, 0);
+        layout.spacing = 4f;
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        EditorUtility.SetDirty(columnObject);
+        return columnObject.GetComponent<RectTransform>();
     }
 
     private static ProductBattleAbilityBarView CreateAbilityBar(RectTransform parent, int index, ThoughtMapBattleAbilityDefinition definition)
@@ -872,23 +962,49 @@ public static class ThoughtMapBattleSceneCreator
         {
             layout = Undo.AddComponent<LayoutElement>(rowObject);
         }
-        layout.minHeight = 18f;
-        layout.preferredHeight = 18f;
+        layout.minHeight = 22f;
+        layout.preferredHeight = 22f;
         layout.flexibleHeight = 0f;
 
-        TMP_Text label = GetOrCreateText(rect, "LabelText", new Vector2(0f, 0f), new Vector2(0.20f, 1f), definition.shortName, 12, TextAlignmentOptions.Left);
-        Image background = GetOrCreateImage(rect, "BarBackground", new Vector2(0.22f, 0.22f), new Vector2(0.78f, 0.78f), new Color(0f, 0f, 0f, 0.42f));
+        HorizontalLayoutGroup rowLayout = rowObject.GetComponent<HorizontalLayoutGroup>();
+        if (rowLayout == null)
+        {
+            rowLayout = Undo.AddComponent<HorizontalLayoutGroup>(rowObject);
+        }
+        rowLayout.padding = new RectOffset(0, 0, 0, 0);
+        rowLayout.spacing = 5f;
+        rowLayout.childAlignment = TextAnchor.MiddleCenter;
+        rowLayout.childControlWidth = true;
+        rowLayout.childControlHeight = true;
+        rowLayout.childForceExpandWidth = false;
+        rowLayout.childForceExpandHeight = false;
+
+        TMP_Text label = GetOrCreateText(rect, "LabelText", Vector2.zero, Vector2.one, definition.shortName, 12, TextAlignmentOptions.MidlineLeft);
+        Image background = GetOrCreateImage(rect, "BarBackground", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0.42f));
         Image fill = GetOrCreateImage(background.rectTransform, "BarFill", Vector2.zero, Vector2.one, definition.color);
-        TMP_Text value = GetOrCreateText(rect, "ValueText", new Vector2(0.80f, 0f), new Vector2(1f, 1f), "0", 12, TextAlignmentOptions.Right);
+        TMP_Text value = GetOrCreateText(rect, "ValueText", Vector2.zero, Vector2.one, "0", 12, TextAlignmentOptions.MidlineRight);
+        SetLayout(label.gameObject, 46f, 22f, 0f);
+        SetLayout(background.gameObject, 0f, 12f, 1f);
+        SetLayout(value.gameObject, 42f, 22f, 0f);
+        label.transform.SetSiblingIndex(0);
+        background.transform.SetSiblingIndex(1);
+        value.transform.SetSiblingIndex(2);
 
         fill.type = Image.Type.Filled;
         fill.fillMethod = Image.FillMethod.Horizontal;
         fill.fillOrigin = (int)Image.OriginHorizontal.Left;
         fill.fillAmount = 0f;
+        fill.preserveAspect = false;
         background.raycastTarget = false;
         fill.raycastTarget = false;
         label.raycastTarget = false;
         value.raycastTarget = false;
+        label.enableWordWrapping = false;
+        label.overflowMode = TextOverflowModes.Overflow;
+        label.enableAutoSizing = false;
+        value.enableWordWrapping = false;
+        value.overflowMode = TextOverflowModes.Overflow;
+        value.enableAutoSizing = false;
 
         ProductBattleAbilityBarView bar = rowObject.GetComponent<ProductBattleAbilityBarView>();
         SerializedObject so = new SerializedObject(bar);
@@ -956,6 +1072,27 @@ public static class ThoughtMapBattleSceneCreator
         image.color = color;
         image.raycastTarget = false;
         return image;
+    }
+
+    private static void SetLayout(GameObject target, float width, float height, float flexibleWidth)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        LayoutElement layout = target.GetComponent<LayoutElement>();
+        if (layout == null)
+        {
+            layout = Undo.AddComponent<LayoutElement>(target);
+        }
+        layout.minWidth = width;
+        layout.preferredWidth = width;
+        layout.minHeight = height;
+        layout.preferredHeight = height;
+        layout.flexibleWidth = flexibleWidth;
+        layout.flexibleHeight = 0f;
+        EditorUtility.SetDirty(target);
     }
 
     private static void RepairProductBattlePrepControls(ProductBattlePrepPanelView view)

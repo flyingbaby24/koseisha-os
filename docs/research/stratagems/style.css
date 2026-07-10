@@ -345,6 +345,107 @@ select {
   text-transform: uppercase;
 }
 
+.tree-root {
+  border: 1px solid rgba(217, 170, 78, 0.22);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(217, 170, 78, 0.08), rgba(255, 255, 255, 0.025)),
+    rgba(18, 22, 32, 0.72);
+  padding: 14px;
+}
+
+.tree-root + .tree-root {
+  margin-top: 4px;
+}
+
+.tree-root-summary,
+.tree-child-summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.tree-root-summary::-webkit-details-marker,
+.tree-child-summary::-webkit-details-marker {
+  display: none;
+}
+
+.tree-root-summary {
+  display: grid;
+  gap: 4px;
+  padding: 4px 2px 12px;
+}
+
+.tree-root-summary::before {
+  content: "▾";
+  float: right;
+  justify-self: end;
+  color: var(--accent);
+  font-weight: 900;
+}
+
+.tree-root:not([open]) .tree-root-summary::before,
+.tree-child:not([open]) .tree-child-summary::before {
+  content: "▸";
+}
+
+.tree-root-title {
+  color: var(--text);
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.tree-root-description {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.tree-child {
+  border: 1px solid rgba(128, 216, 255, 0.16);
+  border-radius: 16px;
+  background: rgba(3, 5, 10, 0.26);
+  padding: 10px;
+}
+
+.tree-child + .tree-child {
+  margin-top: 10px;
+}
+
+.tree-child-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text);
+  font-weight: 850;
+}
+
+.tree-child-summary::before {
+  content: "▾";
+  color: var(--accent2);
+  font-weight: 900;
+}
+
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(128, 216, 255, 0.12);
+  border: 1px solid rgba(128, 216, 255, 0.32);
+  color: var(--accent2);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.tree-child-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .stratagem-nav-card {
   width: 100%;
   text-align: left;
@@ -360,6 +461,30 @@ select {
   transform: translateY(-1px);
   border-color: rgba(217, 170, 78, 0.66);
   background: rgba(217, 170, 78, 0.10);
+}
+
+.tree-stratagem-card {
+  border-radius: 14px;
+  padding: 13px;
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: none;
+}
+
+.tree-stratagem-card h3 {
+  font-size: 1rem;
+  margin-top: 8px;
+}
+
+.tree-stratagem-card .summary {
+  margin: 6px 0 8px;
+  color: #e7ded0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.tree-stratagem-card .english {
+  margin: 0;
+  font-size: 0.84rem;
 }
 
 .nav-card-top,
