@@ -88,6 +88,7 @@ public static class ThoughtMapBattleSceneCreator
                     RepairProductBattlePrepPanel(view);
                     RepairProductBattlePrepControls(view);
                     RepairProductBattlePrepSpriteBindings(view, cardSprites, iconSprites, templateSprites, battlePrepBackground);
+                    RepairProductBattlePrepAbilityBars(view);
                     repaired++;
                 }
             }
@@ -101,6 +102,7 @@ public static class ThoughtMapBattleSceneCreator
                 RepairProductBattlePrepPanel(view);
                 RepairProductBattlePrepControls(view);
                 RepairProductBattlePrepSpriteBindings(view, cardSprites, iconSprites, templateSprites, battlePrepBackground);
+                RepairProductBattlePrepAbilityBars(view);
                 repaired++;
             }
         }
@@ -151,6 +153,44 @@ public static class ThoughtMapBattleSceneCreator
         }
 
         Debug.Log($"[SourceOfThoughtBattleScene] Repaired Product Battle Prep controls on {repaired} component(s).");
+    }
+
+    [MenuItem("Tools/Source of Thought/Repair Product Battle Prep Ability Bars")]
+    public static void RepairProductBattlePrepAbilityBarsMenu()
+    {
+        int repaired = 0;
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.IsValid())
+        {
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                ProductBattlePrepPanelView[] views = root.GetComponentsInChildren<ProductBattlePrepPanelView>(true);
+                foreach (ProductBattlePrepPanelView view in views)
+                {
+                    RepairProductBattlePrepAbilityBars(view);
+                    repaired++;
+                }
+            }
+        }
+
+        foreach (GameObject selected in Selection.gameObjects)
+        {
+            ProductBattlePrepPanelView[] views = selected.GetComponentsInChildren<ProductBattlePrepPanelView>(true);
+            foreach (ProductBattlePrepPanelView view in views)
+            {
+                RepairProductBattlePrepAbilityBars(view);
+                repaired++;
+            }
+        }
+
+        if (repaired > 0)
+        {
+            EditorSceneManager.MarkSceneDirty(scene);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+
+        Debug.Log($"[SourceOfThoughtBattleScene] Repaired ability bars on {repaired} ProductBattlePrepPanelView component(s).");
     }
 
     [MenuItem("Tools/Source of Thought/Repair Product Battle Prep Sprites")]
@@ -332,7 +372,7 @@ public static class ThoughtMapBattleSceneCreator
         GameObject root = UiObject("ProductBattleGridCellPrefab", typeof(Image), typeof(Button), typeof(ProductBattleGridCellView));
         RectTransform rect = root.GetComponent<RectTransform>();
         rect.sizeDelta = new Vector2(132f, 112f);
-        root.GetComponent<Image>().color = new Color(0.025f, 0.032f, 0.04f, 0.96f);
+        root.GetComponent<Image>().color = new Color(0.025f, 0.032f, 0.04f, 0.62f);
 
         Image cardFrame = ChildImage(rect, "CardFrameImage", new Vector2(0.12f, 0.18f), new Vector2(0.88f, 0.72f), new Color(0.07f, 0.09f, 0.11f, 0.9f));
         Image art = ChildImage(rect, "ArtImage", new Vector2(0.18f, 0.26f), new Vector2(0.82f, 0.70f), new Color(0.10f, 0.11f, 0.13f, 1f));
@@ -366,19 +406,21 @@ public static class ThoughtMapBattleSceneCreator
         GameObject root = UiObject("CardDetailPanel", typeof(Image), typeof(ProductBattleCardDetailPanelView));
         RectTransform rect = root.GetComponent<RectTransform>();
         rect.sizeDelta = new Vector2(760f, 320f);
-        root.GetComponent<Image>().color = new Color(0.02f, 0.03f, 0.045f, 0.96f);
+        root.GetComponent<Image>().color = new Color(0.02f, 0.03f, 0.045f, 0.62f);
         ChildImage(rect, "ArtFrame", new Vector2(0.02f, 0.08f), new Vector2(0.38f, 0.92f), new Color(0.72f, 0.52f, 0.24f, 0.70f));
         Image art = ChildImage(rect, "ArtImage", new Vector2(0.04f, 0.11f), new Vector2(0.36f, 0.89f), new Color(0.12f, 0.14f, 0.16f, 1f));
         Image icon = ChildImage(rect, "AttributeIconImage", new Vector2(0.36f, 0.70f), new Vector2(0.43f, 0.88f), new Color(0f, 0.45f, 0.8f, 1f));
-        TMP_Text title = ChildText(rect, "TitleText", new Vector2(0.45f, 0.78f), new Vector2(0.96f, 0.94f), "Card Name", 24, TextAlignmentOptions.Left);
-        TMP_Text desc = ChildText(rect, "DescriptionText", new Vector2(0.45f, 0.52f), new Vector2(0.96f, 0.76f), "Description", 14, TextAlignmentOptions.TopLeft);
-        TMP_Text attr = ChildText(rect, "AttributeText", new Vector2(0.45f, 0.44f), new Vector2(0.96f, 0.52f), "Attribute", 15, TextAlignmentOptions.Left);
-        TMP_Text hp = ChildText(rect, "HpText", new Vector2(0.45f, 0.34f), new Vector2(0.58f, 0.42f), "HP", 18, TextAlignmentOptions.Left);
-        TMP_Text atk = ChildText(rect, "AtkText", new Vector2(0.60f, 0.34f), new Vector2(0.73f, 0.42f), "ATK", 18, TextAlignmentOptions.Left);
-        TMP_Text def = ChildText(rect, "DefenseText", new Vector2(0.75f, 0.34f), new Vector2(0.88f, 0.42f), "DEF", 18, TextAlignmentOptions.Left);
-        TMP_Text en = ChildText(rect, "EnText", new Vector2(0.89f, 0.34f), new Vector2(0.98f, 0.42f), "EN", 18, TextAlignmentOptions.Left);
-        TMP_Text skill = ChildText(rect, "SkillText", new Vector2(0.45f, 0.18f), new Vector2(0.96f, 0.30f), "Skill", 15, TextAlignmentOptions.Left);
-        TMP_Text rarity = ChildText(rect, "RarityText", new Vector2(0.68f, 0.88f), new Vector2(0.94f, 0.98f), "R4", 18, TextAlignmentOptions.Right);
+        TMP_Text title = ChildText(rect, "TitleText", new Vector2(0.45f, 0.78f), new Vector2(0.60f, 0.94f), "Card Name", 22, TextAlignmentOptions.Left);
+        TMP_Text desc = ChildText(rect, "DescriptionText", new Vector2(0.45f, 0.55f), new Vector2(0.60f, 0.76f), "Description", 13, TextAlignmentOptions.TopLeft);
+        TMP_Text attr = ChildText(rect, "AttributeText", new Vector2(0.45f, 0.40f), new Vector2(0.60f, 0.54f), "Battle / Thought", 13, TextAlignmentOptions.Left);
+        TMP_Text hp = ChildText(rect, "HpText", new Vector2(0.45f, 0.33f), new Vector2(0.52f, 0.39f), "HP", 13, TextAlignmentOptions.Left);
+        TMP_Text atk = ChildText(rect, "AtkText", new Vector2(0.53f, 0.33f), new Vector2(0.60f, 0.39f), "ATK", 13, TextAlignmentOptions.Left);
+        TMP_Text def = ChildText(rect, "DefenseText", new Vector2(0.45f, 0.27f), new Vector2(0.52f, 0.33f), "DEF", 13, TextAlignmentOptions.Left);
+        TMP_Text en = ChildText(rect, "EnText", new Vector2(0.53f, 0.27f), new Vector2(0.60f, 0.33f), "EN", 13, TextAlignmentOptions.Left);
+        TMP_Text skill = ChildText(rect, "SkillText", new Vector2(0.45f, 0.10f), new Vector2(0.60f, 0.25f), "Skill", 13, TextAlignmentOptions.Left);
+        TMP_Text rarity = ChildText(rect, "RarityText", new Vector2(0.52f, 0.88f), new Vector2(0.60f, 0.98f), "R4", 16, TextAlignmentOptions.Right);
+        RectTransform abilityRoot = CreateAbilityBarRoot(rect, new Vector2(0.61f, 0.10f), new Vector2(0.98f, 0.76f));
+        ProductBattleAbilityBarView[] abilityBars = CreateAbilityBars(abilityRoot);
 
         SerializedObject so = new SerializedObject(root.GetComponent<ProductBattleCardDetailPanelView>());
         SetObject(so, "artImage", art);
@@ -392,6 +434,8 @@ public static class ThoughtMapBattleSceneCreator
         SetObject(so, "enText", en);
         SetObject(so, "skillText", skill);
         SetObject(so, "rarityText", rarity);
+        SetObject(so, "abilityBarRoot", abilityRoot);
+        SetObjectArray(so, "abilityBars", abilityBars);
         so.ApplyModifiedPropertiesWithoutUndo();
 
         SavePrefab(root, CardDetailPanelPrefabPath);
@@ -401,7 +445,7 @@ public static class ThoughtMapBattleSceneCreator
     private static void CreateDeckListPanelPrefab()
     {
         GameObject root = UiObject("DeckListPanel", typeof(Image));
-        root.GetComponent<Image>().color = new Color(0.015f, 0.025f, 0.035f, 0.95f);
+        root.GetComponent<Image>().color = new Color(0.015f, 0.025f, 0.035f, 0.62f);
         RectTransform content = EnsureLightweightListPanelStructure(root.GetComponent<RectTransform>());
         content.gameObject.name = "Content";
         SavePrefab(root, DeckListPanelPrefabPath);
@@ -512,7 +556,7 @@ public static class ThoughtMapBattleSceneCreator
         GameObject panel = UiChild(canvasRect, "ProductBattlePrepPanel", typeof(RectTransform), typeof(Image), typeof(ProductBattlePrepPanelView));
         RectTransform panelRect = panel.GetComponent<RectTransform>();
         Anchor(panelRect, new Vector2(0.02f, 0.04f), new Vector2(0.98f, 0.96f));
-        panel.GetComponent<Image>().color = new Color(0.005f, 0.012f, 0.02f, 0.98f);
+        panel.GetComponent<Image>().color = new Color(0.005f, 0.012f, 0.02f, 0.08f);
 
         TMP_Text title = ChildText(panelRect, "TitleText", new Vector2(0.02f, 0.92f), new Vector2(0.38f, 0.99f), "Source of Thought - Battle Prep", 30, TextAlignmentOptions.Left);
         Button loadButton = CreateButton(panelRect, "LoadCardsButton", "Load Cards", new Vector2(0.54f, 0.93f), new Vector2(0.63f, 0.985f));
@@ -527,7 +571,7 @@ public static class ThoughtMapBattleSceneCreator
         GameObject detailObject = PrefabUtility.InstantiatePrefab(detailPrefab.gameObject, panelRect) as GameObject;
         RectTransform detail = detailObject.GetComponent<RectTransform>();
         detail.name = "CardDetailPanel";
-        Anchor(detail, new Vector2(0.26f, 0.66f), new Vector2(0.76f, 0.90f));
+        Anchor(detail, new Vector2(0.26f, 0.64f), new Vector2(0.76f, 0.90f));
         RectTransform deck = CreateLightweightListPanel(panelRect, "DeckListPanel", new Vector2(0.78f, 0.42f), new Vector2(0.985f, 0.90f), "Deck 10", out Transform deckContent);
         RectTransform formation = CreatePanel(panelRect, "FormationGridPanel", new Vector2(0.26f, 0.10f), new Vector2(0.76f, 0.64f), "5x5 Formation", out Transform formationContent);
         GridLayoutGroup formationGrid = formationContent.gameObject.AddComponent<GridLayoutGroup>();
@@ -616,7 +660,7 @@ public static class ThoughtMapBattleSceneCreator
         GameObject panel = UiChild(parent, name, typeof(RectTransform), typeof(Image));
         RectTransform rect = panel.GetComponent<RectTransform>();
         Anchor(rect, min, max);
-        panel.GetComponent<Image>().color = new Color(0.015f, 0.025f, 0.035f, 0.94f);
+        panel.GetComponent<Image>().color = new Color(0.015f, 0.025f, 0.035f, 0.62f);
         ChildText(rect, "HeadingText", new Vector2(0.03f, 0.92f), new Vector2(0.98f, 0.99f), title, 18, TextAlignmentOptions.Left);
         GameObject contentObject = UiChild(rect, "Content", typeof(RectTransform));
         RectTransform contentRect = contentObject.GetComponent<RectTransform>();
@@ -630,7 +674,7 @@ public static class ThoughtMapBattleSceneCreator
         GameObject panel = UiChild(parent, name, typeof(RectTransform), typeof(Image));
         RectTransform rect = panel.GetComponent<RectTransform>();
         Anchor(rect, min, max);
-        panel.GetComponent<Image>().color = new Color(0.015f, 0.025f, 0.035f, 0.94f);
+        panel.GetComponent<Image>().color = new Color(0.015f, 0.025f, 0.035f, 0.62f);
         ChildText(rect, "HeadingText", new Vector2(0.03f, 0.92f), new Vector2(0.98f, 0.99f), title, 18, TextAlignmentOptions.Left);
         RectTransform contentRect = EnsureScrollablePanelStructure(rect, columns, cellSize);
         content = contentRect;
@@ -642,7 +686,7 @@ public static class ThoughtMapBattleSceneCreator
         GameObject panel = UiChild(parent, name, typeof(RectTransform), typeof(Image));
         RectTransform rect = panel.GetComponent<RectTransform>();
         Anchor(rect, min, max);
-        panel.GetComponent<Image>().color = new Color(0.015f, 0.025f, 0.035f, 0.94f);
+        panel.GetComponent<Image>().color = new Color(0.015f, 0.025f, 0.035f, 0.62f);
         ChildText(rect, "HeadingText", new Vector2(0.03f, 0.92f), new Vector2(0.98f, 0.99f), title, 18, TextAlignmentOptions.Left);
         RectTransform contentRect = EnsureLightweightListPanelStructure(rect);
         content = contentRect;
@@ -697,6 +741,221 @@ public static class ThoughtMapBattleSceneCreator
         EditorUtility.SetDirty(view);
         Debug.Log($"[SourceOfThoughtBattleScene] ScrollView repaired for {view.name}: cardContent={cardContent?.name ?? "missing"}, deckContent={deckContent?.name ?? "missing"}, formationContent={formationContent?.name ?? "missing"}.");
         return true;
+    }
+
+    private static void RepairProductBattlePrepAbilityBars(ProductBattlePrepPanelView view)
+    {
+        if (view == null)
+        {
+            return;
+        }
+
+        ProductBattleCardDetailPanelView detail = view.GetComponentInChildren<ProductBattleCardDetailPanelView>(true);
+        if (detail == null)
+        {
+            Debug.LogWarning($"[SourceOfThoughtBattleScene] No ProductBattleCardDetailPanelView found under {view.name}; ability bars were not repaired.");
+            return;
+        }
+
+        Undo.RecordObject(detail, "Repair Product Battle Prep Ability Bars");
+        RectTransform detailRect = detail.transform as RectTransform;
+        RepairCardDetailPanelLayout(detailRect);
+        RectTransform abilityRoot = CreateAbilityBarRoot(detailRect, new Vector2(0.61f, 0.10f), new Vector2(0.98f, 0.76f));
+        ProductBattleAbilityBarView[] abilityBars = CreateAbilityBars(abilityRoot);
+
+        SerializedObject so = new SerializedObject(detail);
+        SetObject(so, "abilityBarRoot", abilityRoot);
+        SetObjectArray(so, "abilityBars", abilityBars);
+        so.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(detail);
+        EditorUtility.SetDirty(abilityRoot.gameObject);
+        Debug.Log($"[SourceOfThoughtBattleScene] Ability bars repaired for {detail.name}: count={abilityBars.Length}.");
+    }
+
+    private static void RepairCardDetailPanelLayout(RectTransform detailRect)
+    {
+        if (detailRect == null)
+        {
+            return;
+        }
+
+        AnchorChild(detailRect, "TitleText", new Vector2(0.45f, 0.78f), new Vector2(0.60f, 0.94f));
+        AnchorChild(detailRect, "DescriptionText", new Vector2(0.45f, 0.55f), new Vector2(0.60f, 0.76f));
+        AnchorChild(detailRect, "AttributeText", new Vector2(0.45f, 0.40f), new Vector2(0.60f, 0.54f));
+        AnchorChild(detailRect, "HpText", new Vector2(0.45f, 0.33f), new Vector2(0.52f, 0.39f));
+        AnchorChild(detailRect, "AtkText", new Vector2(0.53f, 0.33f), new Vector2(0.60f, 0.39f));
+        AnchorChild(detailRect, "DefenseText", new Vector2(0.45f, 0.27f), new Vector2(0.52f, 0.33f));
+        AnchorChild(detailRect, "EnText", new Vector2(0.53f, 0.27f), new Vector2(0.60f, 0.33f));
+        AnchorChild(detailRect, "SkillText", new Vector2(0.45f, 0.10f), new Vector2(0.60f, 0.25f));
+        AnchorChild(detailRect, "RarityText", new Vector2(0.52f, 0.88f), new Vector2(0.60f, 0.98f));
+    }
+
+    private static void AnchorChild(RectTransform parent, string childName, Vector2 min, Vector2 max)
+    {
+        RectTransform child = FindDescendant(parent, childName) as RectTransform;
+        if (child == null)
+        {
+            return;
+        }
+
+        Anchor(child, min, max);
+        EditorUtility.SetDirty(child);
+    }
+
+    private static RectTransform CreateAbilityBarRoot(RectTransform parent, Vector2 min, Vector2 max)
+    {
+        Transform existing = FindDirectChild(parent, "AbilityBarRoot");
+        GameObject rootObject;
+        if (existing == null)
+        {
+            rootObject = UiChild(parent, "AbilityBarRoot", typeof(RectTransform), typeof(VerticalLayoutGroup));
+            Undo.RegisterCreatedObjectUndo(rootObject, "Create Ability Bar Root");
+        }
+        else
+        {
+            rootObject = existing.gameObject;
+        }
+
+        RectTransform rootRect = rootObject.GetComponent<RectTransform>();
+        Anchor(rootRect, min, max);
+
+        VerticalLayoutGroup layout = rootObject.GetComponent<VerticalLayoutGroup>();
+        if (layout == null)
+        {
+            layout = Undo.AddComponent<VerticalLayoutGroup>(rootObject);
+        }
+        layout.padding = new RectOffset(0, 0, 0, 0);
+        layout.spacing = 3f;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        EditorUtility.SetDirty(rootObject);
+        return rootRect;
+    }
+
+    private static ProductBattleAbilityBarView[] CreateAbilityBars(RectTransform abilityRoot)
+    {
+        ThoughtMapBattleAbilityDefinition[] definitions = ThoughtMapBattleAbilityStats.DisplayOrder;
+        ProductBattleAbilityBarView[] bars = new ProductBattleAbilityBarView[definitions.Length];
+        for (int i = 0; i < definitions.Length; i++)
+        {
+            bars[i] = CreateAbilityBar(abilityRoot, i, definitions[i]);
+        }
+        return bars;
+    }
+
+    private static ProductBattleAbilityBarView CreateAbilityBar(RectTransform parent, int index, ThoughtMapBattleAbilityDefinition definition)
+    {
+        string rowName = $"AbilityBar_{index:00}_{definition.shortName}";
+        Transform existing = FindDirectChild(parent, rowName);
+        GameObject rowObject;
+        if (existing == null)
+        {
+            rowObject = UiChild(parent, rowName, typeof(RectTransform), typeof(LayoutElement), typeof(ProductBattleAbilityBarView));
+            Undo.RegisterCreatedObjectUndo(rowObject, "Create Ability Bar");
+        }
+        else
+        {
+            rowObject = existing.gameObject;
+        }
+
+        RectTransform rect = rowObject.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0f, 1f);
+        rect.anchorMax = new Vector2(1f, 1f);
+        rect.pivot = new Vector2(0.5f, 1f);
+        rect.sizeDelta = new Vector2(0f, 18f);
+
+        LayoutElement layout = rowObject.GetComponent<LayoutElement>();
+        if (layout == null)
+        {
+            layout = Undo.AddComponent<LayoutElement>(rowObject);
+        }
+        layout.minHeight = 18f;
+        layout.preferredHeight = 18f;
+        layout.flexibleHeight = 0f;
+
+        TMP_Text label = GetOrCreateText(rect, "LabelText", new Vector2(0f, 0f), new Vector2(0.20f, 1f), definition.shortName, 12, TextAlignmentOptions.Left);
+        Image background = GetOrCreateImage(rect, "BarBackground", new Vector2(0.22f, 0.22f), new Vector2(0.78f, 0.78f), new Color(0f, 0f, 0f, 0.42f));
+        Image fill = GetOrCreateImage(background.rectTransform, "BarFill", Vector2.zero, Vector2.one, definition.color);
+        TMP_Text value = GetOrCreateText(rect, "ValueText", new Vector2(0.80f, 0f), new Vector2(1f, 1f), "0", 12, TextAlignmentOptions.Right);
+
+        fill.type = Image.Type.Filled;
+        fill.fillMethod = Image.FillMethod.Horizontal;
+        fill.fillOrigin = (int)Image.OriginHorizontal.Left;
+        fill.fillAmount = 0f;
+        background.raycastTarget = false;
+        fill.raycastTarget = false;
+        label.raycastTarget = false;
+        value.raycastTarget = false;
+
+        ProductBattleAbilityBarView bar = rowObject.GetComponent<ProductBattleAbilityBarView>();
+        SerializedObject so = new SerializedObject(bar);
+        SetObject(so, "labelText", label);
+        SetObject(so, "valueText", value);
+        SetObject(so, "backgroundImage", background);
+        SetObject(so, "fillImage", fill);
+        so.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(rowObject);
+        return bar;
+    }
+
+    private static TMP_Text GetOrCreateText(RectTransform parent, string name, Vector2 min, Vector2 max, string value, int size, TextAlignmentOptions alignment)
+    {
+        Transform existing = FindDirectChild(parent, name);
+        TMP_Text text;
+        RectTransform rect;
+        if (existing == null)
+        {
+            text = ChildText(parent, name, min, max, value, size, alignment);
+            rect = text.rectTransform;
+            Undo.RegisterCreatedObjectUndo(text.gameObject, "Create Ability Bar Text");
+        }
+        else
+        {
+            text = existing.GetComponent<TMP_Text>();
+            if (text == null)
+            {
+                text = Undo.AddComponent<TextMeshProUGUI>(existing.gameObject);
+            }
+            rect = existing as RectTransform;
+            Anchor(rect, min, max);
+        }
+
+        text.text = value;
+        text.fontSize = size;
+        text.alignment = alignment;
+        text.enableWordWrapping = false;
+        text.raycastTarget = false;
+        return text;
+    }
+
+    private static Image GetOrCreateImage(RectTransform parent, string name, Vector2 min, Vector2 max, Color color)
+    {
+        Transform existing = FindDirectChild(parent, name);
+        Image image;
+        RectTransform rect;
+        if (existing == null)
+        {
+            image = ChildImage(parent, name, min, max, color);
+            rect = image.rectTransform;
+            Undo.RegisterCreatedObjectUndo(image.gameObject, "Create Ability Bar Image");
+        }
+        else
+        {
+            image = existing.GetComponent<Image>();
+            if (image == null)
+            {
+                image = Undo.AddComponent<Image>(existing.gameObject);
+            }
+            rect = existing as RectTransform;
+            Anchor(rect, min, max);
+        }
+
+        image.color = color;
+        image.raycastTarget = false;
+        return image;
     }
 
     private static void RepairProductBattlePrepControls(ProductBattlePrepPanelView view)
@@ -896,7 +1155,7 @@ public static class ThoughtMapBattleSceneCreator
         if (panelImage == null)
         {
             panelImage = Undo.AddComponent<Image>(panel.gameObject);
-            panelImage.color = new Color(0.015f, 0.025f, 0.035f, 0.94f);
+            panelImage.color = new Color(0.015f, 0.025f, 0.035f, 0.62f);
         }
 
         RectTransform viewportRect = FindDirectChild(panel, "Viewport") as RectTransform;
@@ -1007,7 +1266,7 @@ public static class ThoughtMapBattleSceneCreator
         {
             panelImage = Undo.AddComponent<Image>(panel.gameObject);
         }
-        panelImage.color = new Color(0.015f, 0.025f, 0.035f, 0.94f);
+        panelImage.color = new Color(0.015f, 0.025f, 0.035f, 0.62f);
 
         RectTransform viewportRect = FindDirectChild(panel, "Viewport") as RectTransform;
         if (viewportRect == null)
@@ -1480,6 +1739,21 @@ public static class ThoughtMapBattleSceneCreator
         if (property != null)
         {
             property.objectReferenceValue = value;
+        }
+    }
+
+    private static void SetObjectArray<T>(SerializedObject serializedObject, string propertyName, T[] values) where T : Object
+    {
+        SerializedProperty property = serializedObject.FindProperty(propertyName);
+        if (property == null || values == null)
+        {
+            return;
+        }
+
+        property.arraySize = values.Length;
+        for (int i = 0; i < values.Length; i++)
+        {
+            property.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
         }
     }
 

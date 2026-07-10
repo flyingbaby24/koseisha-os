@@ -61,8 +61,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     [SerializeField] private Sprite battlePrepBackground;
     [SerializeField] private Image backgroundImage;
     [SerializeField] private Image darkOverlayImage;
-    [SerializeField] private Color darkOverlayColor = new Color(0f, 0f, 0f, 0.46f);
+    [SerializeField] private Color darkOverlayColor = new Color(0f, 0f, 0f, 0.25f);
     [SerializeField] private bool softenPanelForBackground = true;
+    [SerializeField, Range(0f, 1f)] private float battlePrepOverlayAlpha = 0.25f;
+    [SerializeField, Range(0f, 1f)] private float panelBackgroundAlpha = 0.62f;
 
     [Header("Sprites")]
     [SerializeField] private Sprite defaultCardArt;
@@ -75,7 +77,8 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     [SerializeField] private int deckLimit = 10;
     [SerializeField] private int deployLimit = 5;
     [SerializeField] private int cardListRenderLimit = 60;
-    [SerializeField] private int playerRows = 3;
+    [SerializeField] private int playerRows = 5;
+    [SerializeField] private bool logFormationGridCells;
 
     private readonly List<ThoughtMapBattleCardData> loadedCards = new List<ThoughtMapBattleCardData>();
     private readonly List<ThoughtMapBattleCardData> deckCards = new List<ThoughtMapBattleCardData>();
@@ -86,8 +89,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
     private void Awake()
     {
+        EnsureFormationRules();
         WireButtons();
         EnsureBattlePrepBackground();
+        EnsurePanelTransparency();
         EnsureListContentReferences();
         if (cardListContent != null)
         {
@@ -107,8 +112,18 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             WarnMissingListContent("Deck 10", "DeckListPanel/Viewport/Content");
         }
         CollectSceneGridCells();
+        EnsureFormationGridLayout();
         RenderGrid();
         cardDetailPanel?.Clear();
+    }
+
+    private void EnsureFormationRules()
+    {
+        if (playerRows != 5)
+        {
+            Debug.Log($"[ProductBattlePrep Grid] playerRows changed from {playerRows} to 5 so all 5x5 formation cells are placeable.", this);
+            playerRows = 5;
+        }
     }
 
     private void Start()
@@ -272,11 +287,12 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     private void RenderGrid()
     {
         EnsureGridCells();
+        EnsureFormationGridLayout();
         for (int index = 0; index < gridCells.Count; index++)
         {
             int x = index % 5;
             int y = index / 5;
-            bool available = y < playerRows;
+            bool available = IsFormationCellAvailable(y);
             if (placement.TryGetValue(index, out ThoughtMapBattleCardData card))
             {
                 int deckIndex = deckCards.IndexOf(card);
@@ -294,23 +310,62 @@ public class ProductBattlePrepPanelView : MonoBehaviour
                 gridCells[index].BindEmpty(x, y, available);
             }
             gridCells[index].SetClickHandler(OnGridCellClicked);
+            if (logFormationGridCells)
+            {
+                Debug.Log($"[ProductBattlePrep Grid] cell index={index} x={x} y={y} available={available} hasCard={placement.ContainsKey(index)}", gridCells[index]);
+            }
         }
     }
 
     private void EnsureGridCells()
     {
         CollectSceneGridCells();
-        if (gridCells.Count >= 25 || gridCellPrefab == null || formationGridContent == null)
+        EnsureFormationGridLayout();
+        if (gridCells.Count == 25 || gridCellPrefab == null || formationGridContent == null)
         {
             return;
         }
 
-        ClearChildren(formationGridContent);
+        Debug.Log($"[ProductBattlePrep Grid] Rebuilding Formation Grid cells. Existing count={gridCells.Count}, required=25.", this);
+        ClearChildrenImmediate(formationGridContent);
         gridCells.Clear();
         for (int i = 0; i < 25; i++)
         {
             ProductBattleGridCellView cell = Instantiate(gridCellPrefab, formationGridContent);
+            cell.gameObject.name = $"FormationCell_{i:00}";
             gridCells.Add(cell);
+        }
+    }
+
+    private void EnsureFormationGridLayout()
+    {
+        if (formationGridContent == null)
+        {
+            return;
+        }
+
+        RectTransform contentRect = formationGridContent as RectTransform;
+        GridLayoutGroup grid = formationGridContent.GetComponent<GridLayoutGroup>();
+        if (grid == null)
+        {
+            grid = formationGridContent.gameObject.AddComponent<GridLayoutGroup>();
+        }
+
+        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        grid.constraintCount = 5;
+        if (grid.cellSize.x <= 0f || grid.cellSize.y <= 0f)
+        {
+            grid.cellSize = new Vector2(132f, 112f);
+        }
+        grid.spacing = new Vector2(Mathf.Max(0f, grid.spacing.x), Mathf.Max(0f, grid.spacing.y));
+        grid.childAlignment = TextAnchor.MiddleCenter;
+
+        if (contentRect != null)
+        {
+            float width = (grid.cellSize.x * 5f) + (grid.spacing.x * 4f) + grid.padding.left + grid.padding.right;
+            float height = (grid.cellSize.y * 5f) + (grid.spacing.y * 4f) + grid.padding.top + grid.padding.bottom;
+            contentRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, Mathf.Max(contentRect.rect.width, width));
+            contentRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Max(contentRect.rect.height, height));
         }
     }
 
@@ -350,6 +405,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         int index = cell.Y * 5 + cell.X;
+        Debug.Log($"[ProductBattlePrep Grid] clicked cell index={index} x={cell.X} y={cell.Y} available={IsFormationCellAvailable(cell.Y)} hasCard={placement.ContainsKey(index)}", cell);
         if (placement.ContainsKey(index))
         {
             placement.Remove(index);
@@ -358,9 +414,9 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             return;
         }
 
-        if (cell.Y >= playerRows)
+        if (!IsFormationCellAvailable(cell.Y))
         {
-            WriteStatus("Place player cards on the near-side rows.");
+            WriteStatus("This formation cell is not available.");
             return;
         }
 
@@ -385,6 +441,11 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         placement[index] = selected;
         RenderAll();
         WriteStatus($"Placed P{selectedDeckIndex + 1} at ({cell.X + 1},{cell.Y + 1}).");
+    }
+
+    private bool IsFormationCellAvailable(int row)
+    {
+        return row >= 0 && row < Mathf.Clamp(playerRows, 0, 5);
     }
 
     private void ShowSelectedDetail()
@@ -639,9 +700,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         overlayRect.offsetMin = Vector2.zero;
         overlayRect.offsetMax = Vector2.zero;
         overlayRect.SetSiblingIndex(Mathf.Min(1, parent.childCount - 1));
+        darkOverlayColor.a = Mathf.Clamp(battlePrepOverlayAlpha, 0.20f, 0.30f);
         darkOverlayImage.color = darkOverlayColor;
         darkOverlayImage.raycastTarget = false;
-        Debug.Log("[ProductBattlePrep Art] Dark Overlay configured above background.", this);
+        Debug.Log($"[ProductBattlePrep Art] Dark Overlay configured above background alpha={darkOverlayImage.color.a}.", this);
 
         root.SetAsLastSibling();
 
@@ -651,9 +713,46 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             if (panelImage != null)
             {
                 Color color = panelImage.color;
-                color.a = Mathf.Min(color.a, 0.86f);
+                color.a = Mathf.Min(color.a, panelBackgroundAlpha);
                 panelImage.color = color;
             }
+        }
+    }
+
+    private void EnsurePanelTransparency()
+    {
+        CanvasGroup[] canvasGroups = GetComponentsInChildren<CanvasGroup>(true);
+        foreach (CanvasGroup group in canvasGroups)
+        {
+            if (group.alpha < 1f)
+            {
+                group.alpha = 1f;
+            }
+        }
+
+        string[] panelNames =
+        {
+            "CardListPanel", "DeckListPanel", "FormationGridPanel", "CardDetailPanel", "DebugLogPanel"
+        };
+
+        foreach (string panelName in panelNames)
+        {
+            Transform panel = FindDescendant(transform, panelName);
+            if (panel == null)
+            {
+                continue;
+            }
+
+            Image image = panel.GetComponent<Image>();
+            if (image == null)
+            {
+                continue;
+            }
+
+            Color color = image.color;
+            color.a = Mathf.Clamp(panelBackgroundAlpha, 0.55f, 0.70f);
+            image.color = color;
+            Debug.Log($"[ProductBattlePrep Art] Panel alpha normalized: {panelName} alpha={color.a}", image);
         }
     }
 
@@ -1223,6 +1322,19 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         for (int i = root.childCount - 1; i >= 0; i--)
         {
             Destroy(root.GetChild(i).gameObject);
+        }
+    }
+
+    private void ClearChildrenImmediate(Transform root)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        for (int i = root.childCount - 1; i >= 0; i--)
+        {
+            DestroyImmediate(root.GetChild(i).gameObject);
         }
     }
 }

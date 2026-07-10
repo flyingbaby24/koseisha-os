@@ -32,11 +32,7 @@ public class ProductBattleGridCellView : MonoBehaviour
 
     private void Awake()
     {
-        if (button != null)
-        {
-            button.onClick.RemoveListener(HandleClicked);
-            button.onClick.AddListener(HandleClicked);
-        }
+        EnsureInteractionEnabled();
     }
 
     [ContextMenu("Auto Wire From Children")]
@@ -74,6 +70,7 @@ public class ProductBattleGridCellView : MonoBehaviour
         x = gridX;
         y = gridY;
         card = null;
+        EnsureInteractionEnabled();
         SetText(coordinateText, $"{x + 1},{y + 1}");
         SetText(unitIdText, "");
         SetText(cardNameText, available ? "Deploy" : "");
@@ -102,6 +99,7 @@ public class ProductBattleGridCellView : MonoBehaviour
         x = gridX;
         y = gridY;
         card = sourceCard;
+        EnsureInteractionEnabled();
         SetText(coordinateText, $"{x + 1},{y + 1}");
         SetText(unitIdText, unitId);
         SetText(cardNameText, Short(sourceCard == null ? "Empty" : sourceCard.cardName, 18));
@@ -114,26 +112,65 @@ public class ProductBattleGridCellView : MonoBehaviour
         {
             artImage.sprite = artSprite;
             artImage.enabled = artSprite != null;
+            Debug.Log(
+                $"[ProductBattlePrep Art] Grid Cell Image.sprite assigned={(artSprite == null ? "null" : artSprite.name)} cell=({x + 1},{y + 1}) card='{(sourceCard == null ? "null" : sourceCard.cardName)}'",
+                this
+            );
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"[ProductBattlePrep Art] Grid Cell artImage is null cell=({x + 1},{y + 1}) card='{(sourceCard == null ? "null" : sourceCard.cardName)}'",
+                this
+            );
         }
         if (attributeIconImage != null)
         {
             attributeIconImage.sprite = attributeSprite;
             attributeIconImage.enabled = attributeSprite != null;
+            Debug.Log(
+                $"[ProductBattlePrep Art] Grid Cell Attribute Image.sprite assigned={(attributeSprite == null ? "null" : attributeSprite.name)} cell=({x + 1},{y + 1}) card='{(sourceCard == null ? "null" : sourceCard.cardName)}'",
+                this
+            );
         }
     }
 
     public void SetClickHandler(UnityAction<ProductBattleGridCellView> handler)
     {
         clickHandler = handler;
+        EnsureInteractionEnabled();
+    }
+
+    private void EnsureInteractionEnabled()
+    {
+        CanvasGroup canvasGroup = GetComponent<CanvasGroup>();
+        if (canvasGroup != null)
+        {
+            canvasGroup.alpha = 1f;
+            canvasGroup.interactable = true;
+            canvasGroup.blocksRaycasts = true;
+        }
+
+        if (backgroundImage == null)
+        {
+            backgroundImage = GetComponent<Image>();
+        }
+        if (backgroundImage != null)
+        {
+            backgroundImage.raycastTarget = true;
+        }
+
         if (button == null)
         {
             button = GetComponent<Button>();
         }
-        if (button != null)
+        if (button == null)
         {
-            button.onClick.RemoveListener(HandleClicked);
-            button.onClick.AddListener(HandleClicked);
+            button = gameObject.AddComponent<Button>();
         }
+        button.interactable = true;
+        button.onClick.RemoveListener(HandleClicked);
+        button.onClick.AddListener(HandleClicked);
     }
 
     private void HandleClicked()
