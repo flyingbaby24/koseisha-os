@@ -19,6 +19,7 @@ LAST_SEARCH_KEYS = [
     "last_url",
     "last_elapsed",
     "last_mode",
+    "selected_result_index",
 ]
 
 DEBUG_KEYS = [
@@ -101,6 +102,15 @@ def inject_custom_css():
             border-right: 1px solid var(--tm-border);
         }
 
+        [data-testid="stSidebar"] * {
+            color: var(--tm-text) !important;
+        }
+
+        [data-testid="stSidebar"] .stCaption,
+        [data-testid="stSidebar"] p {
+            color: #c3d4ed !important;
+        }
+
         [data-testid="stSidebar"] .stButton > button {
             width: 100%;
             border: 1px solid rgba(56, 232, 255, 0.72);
@@ -178,6 +188,11 @@ def inject_custom_css():
             margin-bottom: 1rem;
         }
 
+        .tm-console {
+            padding: 1.15rem;
+            margin-bottom: 1rem;
+        }
+
         .tm-title {
             color: var(--tm-green);
             font-size: 0.78rem;
@@ -224,10 +239,43 @@ def inject_custom_css():
             margin: 0.7rem 0;
         }
 
+        .tm-best-card {
+            border: 1px solid rgba(93,255,179,0.42);
+            border-radius: 16px;
+            background:
+                linear-gradient(135deg, rgba(12, 30, 50, 0.96), rgba(10, 18, 38, 0.88)),
+                radial-gradient(circle at 92% 12%, rgba(93,255,179,0.16), transparent 24%);
+            padding: 1.15rem;
+            margin: 1rem 0;
+            box-shadow: 0 16px 44px rgba(0,0,0,0.28), inset 0 0 30px rgba(93,255,179,0.06);
+        }
+
+        .tm-section-heading {
+            color: var(--tm-text);
+            font-size: 1.25rem;
+            font-weight: 850;
+            margin: 1.2rem 0 0.55rem;
+        }
+
+        .tm-match-label {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 0.32rem 0.65rem;
+            background: rgba(93,255,179,0.12);
+            border: 1px solid rgba(93,255,179,0.36);
+            color: var(--tm-green);
+            font-size: 0.76rem;
+            font-weight: 850;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 0.55rem;
+        }
+
         .tm-result-title {
             color: var(--tm-text);
             font-weight: 850;
-            font-size: 1rem;
+            font-size: 1.05rem;
             overflow-wrap: anywhere;
         }
 
@@ -272,14 +320,69 @@ def inject_custom_css():
 
         textarea, input, .stTextInput input {
             border-color: rgba(56,232,255,0.34) !important;
+            color: var(--tm-text) !important;
+            background: rgba(5, 9, 20, 0.74) !important;
+        }
+
+        .stTextInput input {
+            min-height: 3rem;
+            font-size: 1rem;
+        }
+
+        .stButton > button,
+        .stDownloadButton > button,
+        [data-testid="stLinkButton"] a {
+            border: 1px solid rgba(56, 232, 255, 0.58) !important;
+            background: linear-gradient(90deg, rgba(9,168,255,0.95), rgba(143,93,255,0.95)) !important;
+            color: #ffffff !important;
+            font-weight: 850 !important;
+            border-radius: 12px !important;
+        }
+
+        .stDownloadButton > button:disabled,
+        .stButton > button:disabled {
+            background: rgba(78, 91, 120, 0.36) !important;
+            color: rgba(233,247,255,0.42) !important;
+            border-color: rgba(145,164,196,0.18) !important;
+        }
+
+        [data-testid="stExpander"] {
+            border: 1px solid rgba(56,232,255,0.22);
+            border-radius: 12px;
+            background: rgba(5, 9, 20, 0.32);
+        }
+
+        [data-testid="stExpander"] summary,
+        [data-testid="stExpander"] summary * {
+            color: var(--tm-text) !important;
+            font-weight: 800 !important;
         }
 
         @media (max-width: 900px) {
+            .block-container {
+                padding-left: 0.85rem;
+                padding-right: 0.85rem;
+                padding-top: 0.85rem;
+            }
             .tm-overview-grid {
                 grid-template-columns: 1fr;
             }
             .tm-hero {
                 padding: 1.45rem;
+            }
+            .tm-hero h1 {
+                font-size: 2.35rem;
+            }
+            .tm-chip-row {
+                gap: 0.45rem;
+            }
+            .tm-best-card,
+            .tm-shell,
+            .tm-console,
+            .tm-result-card,
+            .tm-work-card {
+                padding: 0.9rem;
+                border-radius: 12px;
             }
         }
         </style>
@@ -351,6 +454,60 @@ def author_frame(df: pd.DataFrame) -> pd.DataFrame:
         )
         .sort_values(["best_similarity", "works"], ascending=False)
     )
+
+
+def match_label(value) -> str:
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        return "Possible Match"
+
+    if score >= 0.75:
+        return "Strong Match"
+    if score >= 0.45:
+        return "Good Match"
+    return "Possible Match"
+
+
+def display_parameter_name(name: str) -> str:
+    text = str(name or "").strip().replace("_", " ")
+    if not text:
+        return ""
+    return " ".join(part.capitalize() for part in text.split())
+
+
+def display_slot_name(name: str) -> str:
+    parts = [display_parameter_name(part) for part in str(name).replace("/", "×").split("×")]
+    parts = [part for part in parts if part]
+    return " × ".join(parts)
+
+
+def get_result_index() -> int:
+    try:
+        return int(st.session_state.get("selected_result_index", 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def clamp_result_index(results: list[dict]) -> int:
+    if not results:
+        return 0
+    index = get_result_index()
+    return max(0, min(index, len(results) - 1))
+
+
+def rerun_app():
+    if hasattr(st, "rerun"):
+        st.rerun()
+    else:
+        st.experimental_rerun()
+
+
+def render_open_link(label: str, url: str):
+    if hasattr(st, "link_button"):
+        st.link_button(label, url)
+    else:
+        st.markdown(f"[{html.escape(label)}]({url})")
 
 
 def normalize_parameter_rows(item: dict) -> list[dict]:
@@ -499,19 +656,11 @@ def get_composition_axis_limit(values) -> int:
 
 
 def get_top_composition_groups(status_df: pd.DataFrame) -> list[tuple[str, float]]:
-    top = status_df.sort_values("share_%", ascending=False).head(6)
-    rows = top.to_dict("records")
-
-    groups = []
-    for i in range(0, len(rows), 2):
-        chunk = rows[i:i + 2]
-        if not chunk:
-            continue
-        label = " / ".join(str(row["parameter"]) for row in chunk)
-        share = sum(float(row["share_%"]) for row in chunk)
-        groups.append((label, share))
-
-    return groups
+    top = status_df.sort_values("share_%", ascending=False).head(3)
+    return [
+        (display_slot_name(str(row["parameter"])), float(row["share_%"]))
+        for _, row in top.iterrows()
+    ]
 
 
 def plot_status_bar(status_df: pd.DataFrame, title: str | None = None):
@@ -691,20 +840,14 @@ st.markdown(
 
 with st.sidebar:
     st.markdown("### Control Deck")
-    st.caption("Choose a search mode, connect your library, then launch.")
+    st.caption("Start with a query. Open Advanced Search Settings only when you need embedding or filter controls.")
+    st.markdown("---")
+    st.markdown("**Flow**")
+    st.caption("Search -> Best Match -> Detail -> Thought Profile")
 
-    st.markdown("#### 01 Search Mode")
-    search_mode = st.radio(
-        "Search type",
-        ["Keyword search", "Embedding similarity", "Hybrid"],
-        index=0,
-    )
 
-    st.markdown("#### 02 Limits")
-    top = st.slider("Top results", 1, 50, 10)
-    source = st.text_input("Source filter", value="all")
-    category = st.text_input("Category filter", value="all")
-    filter_name = st.selectbox("Parameter filter", ["general"])
+if "search_mode_choice" not in st.session_state:
+    st.session_state["search_mode_choice"] = "Keyword search"
 
 
 q = ""
@@ -712,36 +855,51 @@ email = ""
 target_doc_id = ""
 works = []
 selected = {}
+search_mode = st.session_state["search_mode_choice"]
+top = 10
+source = "all"
+category = "all"
+filter_name = "general"
 
-left, right = st.columns([1.05, 1.65], gap="large")
+st.markdown(
+    """
+    <div class="tm-shell tm-console">
+        <div class="tm-title">Search Console</div>
+        <div class="tm-desc">Enter a thought, author, title, or theme. Advanced controls stay tucked away until you need them.</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
-with left:
-    st.markdown(
-        """
-        <div class="tm-shell">
-            <div class="tm-title">Search Console</div>
-            <div class="tm-desc">Set the query. Embedding and Hybrid modes use a selected work from Personal Library as the target vector.</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+if search_mode == "Keyword search":
+    q = st.text_input(
+        "Search ThoughtMap",
+        value="Plato",
+        help="Searches author, title, source, category, tags, and notes.",
+    )
+elif search_mode == "Hybrid":
+    q = st.text_input(
+        "Search ThoughtMap",
+        value="",
+        placeholder="Optional keyword filter: Plato / love / war / technology",
+    )
+else:
+    st.info("Embedding similarity searches from a selected Personal Library work. Open Advanced Search Settings to choose the target.")
+
+with st.expander("Advanced Search Settings", expanded=False):
+    search_mode = st.radio(
+        "Search mode",
+        ["Keyword search", "Embedding similarity", "Hybrid"],
+        index=["Keyword search", "Embedding similarity", "Hybrid"].index(search_mode),
+        key="search_mode_choice",
     )
 
-    if search_mode == "Keyword search":
-        q = st.text_input(
-            "Keyword",
-            value="Plato",
-            help="Searches author, title, doc_id, source, category, tags, and notes.",
-        )
+    top = st.slider("Top results", 1, 50, 10)
+    source = st.text_input("Source filter", value="all")
+    category = st.text_input("Category filter", value="all")
+    filter_name = st.selectbox("Parameter filter", ["general"])
 
-    else:
-        q = ""
-        if search_mode == "Hybrid":
-            q = st.text_input(
-                "Keyword filter",
-                value="",
-                placeholder="Example: Plato / love / war / technology",
-            )
-
+    if search_mode != "Keyword search":
         email = st.text_input(
             "Registered e-mail",
             placeholder="example@example.com",
@@ -783,40 +941,7 @@ with left:
             except Exception as exc:
                 st.error(f"Failed to load Personal Library: {exc}")
 
-with right:
-    works_count = len(works)
-    mode_label = mode_to_api(search_mode)
-    st.markdown(
-        f"""
-        <div class="tm-overview-grid">
-            <div class="tm-stat-card">
-                <div class="tm-stat-label">Mode</div>
-                <div class="tm-stat-value" style="font-size:1.2rem;">{html.escape(mode_label)}</div>
-            </div>
-            <div class="tm-stat-card">
-                <div class="tm-stat-label">Top</div>
-                <div class="tm-stat-value">{top}</div>
-            </div>
-            <div class="tm-stat-card">
-                <div class="tm-stat-label">Library Works</div>
-                <div class="tm-stat-value">{works_count}</div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        """
-        <div class="tm-shell">
-            <div class="tm-title">Personal Library + Search</div>
-            <div class="tm-desc">The selected Personal Library work is passed to the API as target_doc_id, together with user_email.</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    search_clicked = st.button("Search FastAPI", type="primary")
+search_clicked = st.button("Search", type="primary")
 
 
 if search_clicked:
@@ -877,13 +1002,15 @@ if search_clicked:
     st.session_state["last_debug_url"] = attempted_url
 
     try:
-        data, elapsed, url = call_api(params)
+        with st.spinner("Searching ThoughtMap..."):
+            data, elapsed, url = call_api(params)
 
         st.session_state["last_data"] = data
         st.session_state["last_results"] = data.get("results", [])
         st.session_state["last_url"] = url
         st.session_state["last_elapsed"] = elapsed
         st.session_state["last_mode"] = search_mode
+        st.session_state["selected_result_index"] = 0
 
     except Exception as exc:
         clear_last_search()
@@ -903,114 +1030,157 @@ if last_error:
     st.error(last_error)
 
 if data is not None and not last_error:
-    st.success(f"{last_mode}: {len(results)} result(s) / {elapsed:.2f}s")
+    st.success(f"{len(results)} result(s) found / {elapsed:.2f}s")
 
     if not results:
         st.info("No results.")
 
     else:
         df = result_frame(results)
+        selected_index = clamp_result_index(results)
+        st.session_state["selected_result_index"] = selected_index
+        selected_result = results[selected_index]
+        best_result = results[0]
+        best_match_text = match_label(best_result.get("similarity", best_result.get("score", 0)))
+        selected_match_text = match_label(selected_result.get("similarity", selected_result.get("score", 0)))
 
-        left, right = st.columns([3, 2], gap="large")
+        st.markdown('<div class="tm-section-heading">Best Match</div>', unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div class="tm-best-card">
+                <div class="tm-match-label">{html.escape(best_match_text)}</div>
+                <div class="tm-result-title" style="font-size:1.35rem;">{html.escape(str(best_result.get('title') or 'Untitled'))}</div>
+                <div class="tm-result-meta">{html.escape(str(best_result.get('author') or 'Unknown'))} | {html.escape(str(best_result.get('source') or 'unknown'))}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        with left:
-            st.markdown("### Similar works")
+        if best_result.get("url"):
+            render_open_link("Open source", str(best_result.get("url")))
 
-            for _, row in df.head(8).iterrows():
-                source_text = row.get("source", "") or "unknown"
-                author_text = row.get("author", "") or "Unknown"
+        if selected_index != 0:
+            if st.button("Return to Best Match"):
+                st.session_state["selected_result_index"] = 0
+                rerun_app()
+
+        st.markdown('<div class="tm-section-heading">Selected Work Detail</div>', unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div class="tm-shell">
+                <div class="tm-match-label">{html.escape(selected_match_text)}</div>
+                <div class="tm-result-title" style="font-size:1.25rem;">{html.escape(str(selected_result.get('title') or 'Untitled'))}</div>
+                <div class="tm-result-meta">{html.escape(str(selected_result.get('author') or 'Unknown'))} | {html.escape(str(selected_result.get('source') or 'unknown'))}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        if selected_result.get("url"):
+            render_open_link("Open selected source", str(selected_result.get("url")))
+
+        with st.expander("Advanced Details", expanded=False):
+            st.write(f"doc_id: `{selected_result.get('doc_id', '')}`")
+            st.write(
+                "raw similarity:",
+                f"{float(selected_result.get('similarity', selected_result.get('score', 0))):.6f}",
+            )
+            st.json(selected_result)
+
+        st.markdown('<div class="tm-section-heading">Thought Profile</div>', unsafe_allow_html=True)
+        result_params = parse_parameter_value(selected_result.get("parameters"))
+        if not result_params:
+            result_params = normalize_parameter_rows(selected_result)
+
+        status_df = pd.DataFrame()
+        if result_params:
+            status_df = make_status_profile_from_parameters(result_params)
+
+            st.markdown("**Top Slots**")
+            for label, share in get_top_composition_groups(status_df):
                 st.markdown(
                     f"""
-                    <div class="tm-result-card">
-                        <div class="tm-result-title">{int(row['index']) + 1}. {html.escape(str(row['title'] or 'Untitled'))}</div>
-                        <div class="tm-result-meta">similarity {float(row['similarity']):.4f} | {html.escape(str(author_text))} | {html.escape(str(source_text))}</div>
-                        <div class="tm-result-preview">doc_id: {html.escape(str(row['doc_id']))}</div>
+                    <div class="tm-rank-card">
+                        <div class="tm-rank-name">{html.escape(str(label))}</div>
+                        <div class="tm-rank-value">{share:.1f}%</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
 
-            with st.expander("Raw similar works table"):
-                st.dataframe(df, use_container_width=True, hide_index=True)
+            with st.expander("Detailed Parameter Data", expanded=False):
+                detailed_df = status_df.copy()
+                detailed_df["parameter"] = detailed_df["parameter"].map(display_parameter_name)
+                st.dataframe(detailed_df, use_container_width=True, hide_index=True)
 
-            st.download_button(
-                "Download similar works CSV",
-                df.to_csv(index=False).encode("utf-8-sig"),
-                file_name="thoughtmap_search_results.csv",
-                mime="text/csv",
+            st.markdown('<div class="tm-section-heading">Main Graph</div>', unsafe_allow_html=True)
+            st.pyplot(
+                plot_status_bar(
+                    status_df,
+                    title=str(selected_result.get("title", "Selected Work")),
+                ),
+                use_container_width=True,
             )
+        else:
+            st.info("No Thought Profile data was returned for this result.")
+            available_keys = [key for key in PARAMETER_KEYS if key in selected_result]
+            if available_keys:
+                st.caption(f"Parameter-like keys exist but had no numeric values: {', '.join(available_keys)}")
+            else:
+                st.caption("API response has no parameter-like keys for this result.")
 
-            st.markdown("### Similar authors")
-            adf = author_frame(df)
+        with st.expander("Similar Works", expanded=False):
+            similar_df = df.iloc[1:].copy()
+            if similar_df.empty:
+                st.info("No additional similar works.")
+            else:
+                show_all = st.checkbox("Show all similar works", value=False)
+                visible_df = similar_df if show_all else similar_df.head(3)
 
+                for _, row in visible_df.iterrows():
+                    source_text = row.get("source", "") or "unknown"
+                    author_text = row.get("author", "") or "Unknown"
+                    result_index = int(row["index"])
+                    st.markdown(
+                        f"""
+                        <div class="tm-result-card">
+                            <div class="tm-result-title">{result_index + 1}. {html.escape(str(row['title'] or 'Untitled'))}</div>
+                            <div class="tm-result-meta">{html.escape(str(author_text))} | {html.escape(str(source_text))}</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if st.button("View Details", key=f"view_result_{result_index}"):
+                        st.session_state["selected_result_index"] = result_index
+                        rerun_app()
+
+                with st.expander("Raw Similar Works Table", expanded=False):
+                    st.dataframe(df, use_container_width=True, hide_index=True)
+
+        adf = author_frame(df)
+        with st.expander("Similar Authors", expanded=False):
             if adf.empty:
                 st.info("No author summary.")
             else:
-                st.dataframe(adf, use_container_width=True, hide_index=True)
-
-                st.download_button(
-                    "Download similar authors CSV",
-                    adf.to_csv(index=False).encode("utf-8-sig"),
-                    file_name="thoughtmap_similar_authors.csv",
-                    mime="text/csv",
-                )
-
-        with right:
-            st.markdown("### Selected work detail")
-
-            options = [
-                f"{row['index'] + 1}. {row['title']} / {row['author']} / {row['similarity']:.4f}"
-                for _, row in df.iterrows()
-            ]
-
-            selected_label = st.selectbox("Select result", options)
-            selected_index = options.index(selected_label)
-            selected_result = results[selected_index]
-
-            st.markdown(f"### {selected_result.get('title', 'Untitled')}")
-            st.write(f"Author: {selected_result.get('author', '') or 'Unknown'}")
-            st.write(f"Source: `{selected_result.get('source', '')}`")
-            st.write(f"doc_id: `{selected_result.get('doc_id', '')}`")
-            st.metric(
-                "Similarity",
-                f"{float(selected_result.get('similarity', selected_result.get('score', 0))):.4f}",
-            )
-
-            if selected_result.get("url"):
-                st.markdown(f"[Open source]({selected_result.get('url')})")
-
-            st.subheader("Parameters")
-            result_params = parse_parameter_value(selected_result.get("parameters"))
-            if not result_params:
-                result_params = normalize_parameter_rows(selected_result)
-
-            if result_params:
-                status_df = make_status_profile_from_parameters(result_params)
-
-                st.markdown("**Top Slots**")
-                for label, share in get_top_composition_groups(status_df):
+                top_authors = adf.head(3)
+                for _, row in top_authors.iterrows():
                     st.markdown(
                         f"""
-                        <div class="tm-rank-card">
-                            <div class="tm-rank-name">{html.escape(str(label))}</div>
-                            <div class="tm-rank-value">{share:.1f}%</div>
+                        <div class="tm-result-card">
+                            <div class="tm-result-title">{html.escape(str(row['author']))}</div>
+                            <div class="tm-result-meta">{int(row['works'])} related work(s)</div>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
 
-                st.markdown("**Status Matrix**")
-                st.dataframe(status_df, use_container_width=True, hide_index=True)
+                with st.expander("Raw Similar Authors Table", expanded=False):
+                    st.dataframe(adf, use_container_width=True, hide_index=True)
 
-                st.markdown("**Bar Chart**")
-                st.pyplot(
-                    plot_status_bar(
-                        status_df,
-                        title=str(selected_result.get("title", "Selected Work")),
-                    ),
-                    use_container_width=True,
-                )
-
+        with st.expander("Advanced Analysis", expanded=False):
+            if status_df.empty:
+                st.info("No additional Thought Profile charts.")
+            else:
                 st.markdown("**Composition Pie**")
                 pie_fig = plot_status_pie(status_df)
                 if pie_fig is not None:
@@ -1020,16 +1190,24 @@ if data is not None and not last_error:
 
                 st.markdown("**Radar Field**")
                 st.pyplot(plot_status_radar(status_df), use_container_width=True)
-            else:
-                st.info("No parameters.")
-                available_keys = [key for key in PARAMETER_KEYS if key in selected_result]
-                if available_keys:
-                    st.caption(f"Parameter-like keys exist but had no numeric values: {', '.join(available_keys)}")
-                else:
-                    st.caption("API response has no parameter-like keys for this result.")
 
-            with st.expander("Selected result raw JSON"):
-                st.json(selected_result)
+        with st.expander("Export Data", expanded=False):
+            st.download_button(
+                "Download similar works CSV",
+                df.to_csv(index=False).encode("utf-8-sig"),
+                file_name="thoughtmap_search_results.csv",
+                mime="text/csv",
+            )
+
+            if adf.empty:
+                st.caption("Similar authors CSV is unavailable because no author summary was found.")
+            else:
+                st.download_button(
+                    "Download similar authors CSV",
+                    adf.to_csv(index=False).encode("utf-8-sig"),
+                    file_name="thoughtmap_similar_authors.csv",
+                    mime="text/csv",
+                )
 
 
 if st.session_state.get("last_debug_mode") or data is not None:

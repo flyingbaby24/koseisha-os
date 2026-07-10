@@ -2954,6 +2954,7 @@ APIなどを確認して生きてはいない。
     "Metacognition"
   ]
   }];
+<<<<<<< HEAD
 
 const cognitiveTree = [
   {
@@ -3021,6 +3022,8 @@ const cognitiveTree = [
     ]
   }
 ];
+=======
+>>>>>>> 5ff45deb0d4f030398f410af9e3a444fd6971dcc
 
 const cards = document.getElementById('cards');
 const search = document.getElementById('search');
