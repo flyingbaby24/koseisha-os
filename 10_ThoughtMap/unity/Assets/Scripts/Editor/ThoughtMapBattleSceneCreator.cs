@@ -980,21 +980,29 @@ public static class ThoughtMapBattleSceneCreator
         rowLayout.childForceExpandHeight = false;
 
         TMP_Text label = GetOrCreateText(rect, "LabelText", Vector2.zero, Vector2.one, definition.shortName, 12, TextAlignmentOptions.MidlineLeft);
-        Image background = GetOrCreateImage(rect, "BarBackground", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0.42f));
-        Image fill = GetOrCreateImage(background.rectTransform, "BarFill", Vector2.zero, Vector2.one, definition.color);
+        RectTransform barContainer = GetOrCreateRect(rect, "BarContainer");
+        RemoveLegacyBarObject(rect, "BarBackground");
+        RemoveLegacyBarObject(rect, "BarFill");
+        Image background = GetOrCreateImage(barContainer, "BackgroundImage", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0.42f));
+        Image fill = GetOrCreateImage(barContainer, "FillImage", Vector2.zero, Vector2.one, definition.color);
         TMP_Text value = GetOrCreateText(rect, "ValueText", Vector2.zero, Vector2.one, "0", 12, TextAlignmentOptions.MidlineRight);
         SetLayout(label.gameObject, 46f, 22f, 0f);
-        SetLayout(background.gameObject, 0f, 12f, 1f);
+        SetLayout(barContainer.gameObject, 0f, 12f, 1f);
         SetLayout(value.gameObject, 42f, 22f, 0f);
         label.transform.SetSiblingIndex(0);
-        background.transform.SetSiblingIndex(1);
+        barContainer.transform.SetSiblingIndex(1);
         value.transform.SetSiblingIndex(2);
 
         fill.type = Image.Type.Filled;
         fill.fillMethod = Image.FillMethod.Horizontal;
-        fill.fillOrigin = (int)Image.OriginHorizontal.Left;
+        fill.fillOrigin = 0;
+        fill.fillClockwise = true;
         fill.fillAmount = 0f;
         fill.preserveAspect = false;
+        Anchor(background.rectTransform, Vector2.zero, Vector2.one);
+        Anchor(fill.rectTransform, Vector2.zero, Vector2.one);
+        RemoveLayoutComponents(background.gameObject);
+        RemoveLayoutComponents(fill.gameObject);
         background.raycastTarget = false;
         fill.raycastTarget = false;
         label.raycastTarget = false;
@@ -1010,6 +1018,7 @@ public static class ThoughtMapBattleSceneCreator
         SerializedObject so = new SerializedObject(bar);
         SetObject(so, "labelText", label);
         SetObject(so, "valueText", value);
+        SetObject(so, "barContainer", barContainer);
         SetObject(so, "backgroundImage", background);
         SetObject(so, "fillImage", fill);
         so.ApplyModifiedPropertiesWithoutUndo();
@@ -1072,6 +1081,54 @@ public static class ThoughtMapBattleSceneCreator
         image.color = color;
         image.raycastTarget = false;
         return image;
+    }
+
+    private static RectTransform GetOrCreateRect(RectTransform parent, string name)
+    {
+        Transform existing = FindDirectChild(parent, name);
+        GameObject rectObject;
+        if (existing == null)
+        {
+            rectObject = UiChild(parent, name, typeof(RectTransform));
+            Undo.RegisterCreatedObjectUndo(rectObject, "Create Ability Bar Container");
+        }
+        else
+        {
+            rectObject = existing.gameObject;
+        }
+
+        RectTransform rect = rectObject.GetComponent<RectTransform>();
+        Anchor(rect, Vector2.zero, Vector2.one);
+        return rect;
+    }
+
+    private static void RemoveLegacyBarObject(RectTransform root, string objectName)
+    {
+        Transform legacy = FindDirectChild(root, objectName);
+        if (legacy != null)
+        {
+            Undo.DestroyObjectImmediate(legacy.gameObject);
+        }
+    }
+
+    private static void RemoveLayoutComponents(GameObject target)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        LayoutElement layout = target.GetComponent<LayoutElement>();
+        if (layout != null)
+        {
+            Undo.DestroyObjectImmediate(layout);
+        }
+
+        ContentSizeFitter fitter = target.GetComponent<ContentSizeFitter>();
+        if (fitter != null)
+        {
+            Undo.DestroyObjectImmediate(fitter);
+        }
     }
 
     private static void SetLayout(GameObject target, float width, float height, float flexibleWidth)
