@@ -35,8 +35,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     [SerializeField] private string streamingAssetsCsvPath = "cards.csv";
     [SerializeField] private string deckFileName = "deck.json";
     [SerializeField] private string battleSceneName = "BattleScene";
+    [SerializeField] private string generatedSkillsRelativePath = GeneratedSkillLibrary.DefaultRelativePath;
     [SerializeField] private bool loadCardsOnStart = true;
     [SerializeField] private bool autoFillDeckOnLoad;
+    [SerializeField] private bool debugGeneratedSkills;
 
     [Header("Prefabs")]
     [SerializeField] private ProductBattleCardListRowView cardListRowPrefab;
@@ -48,6 +50,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     [SerializeField] private Transform deckListContent;
     [SerializeField] private Transform formationGridContent;
     [SerializeField] private ProductBattleCardDetailPanelView cardDetailPanel;
+    [SerializeField] private ProductBattleGeneratedSkillsPanelView generatedSkillsPanel;
     [SerializeField] private ProductBattleLogPanelView debugLogPanel;
     [SerializeField] private TMP_Text statusText;
     [SerializeField] private Button loadCardsButton;
@@ -83,9 +86,13 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     private readonly List<ThoughtMapBattleCardData> loadedCards = new List<ThoughtMapBattleCardData>();
     private readonly List<ThoughtMapBattleCardData> deckCards = new List<ThoughtMapBattleCardData>();
     private readonly Dictionary<int, ThoughtMapBattleCardData> placement = new Dictionary<int, ThoughtMapBattleCardData>();
+    private readonly List<GeneratedSkillDto> generatedSkills = new List<GeneratedSkillDto>();
+    private readonly Dictionary<string, GeneratedSkillDto> generatedSkillById = new Dictionary<string, GeneratedSkillDto>();
+    private readonly Dictionary<string, List<string>> assignedSkillIdsByCardId = new Dictionary<string, List<string>>();
     private readonly List<ProductBattleGridCellView> gridCells = new List<ProductBattleGridCellView>();
     private int selectedDeckIndex = -1;
     private int selectedLibraryIndex = -1;
+    private string selectedGeneratedSkillId = "";
 
     private void Awake()
     {
@@ -113,6 +120,8 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
         CollectSceneGridCells();
         EnsureFormationGridLayout();
+        EnsureGeneratedSkillsPanel();
+        WireGeneratedSkillsPanel();
         RenderGrid();
         cardDetailPanel?.Clear();
     }
@@ -133,6 +142,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         {
             LoadCards();
         }
+        LoadGeneratedSkills();
     }
 
     private void WireButtons()
@@ -151,8 +161,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         loadedCards.Clear();
         deckCards.Clear();
         placement.Clear();
+        assignedSkillIdsByCardId.Clear();
         selectedDeckIndex = -1;
         selectedLibraryIndex = -1;
+        selectedGeneratedSkillId = "";
 
         try
         {
@@ -176,6 +188,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         RenderAll();
+        RenderGeneratedSkills();
     }
 
     public void ClearPlacement()
@@ -225,6 +238,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         RenderDeck();
         RenderGrid();
         ShowSelectedDetail();
+        RenderGeneratedSkills();
     }
 
     private void RenderCardLibrary()
@@ -448,6 +462,196 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         return row >= 0 && row < Mathf.Clamp(playerRows, 0, 5);
     }
 
+    [ContextMenu("Load Generated Skills")]
+    public void LoadGeneratedSkills()
+    {
+        generatedSkills.Clear();
+        generatedSkillById.Clear();
+
+        List<GeneratedSkillDto> loaded = GeneratedSkillLibrary.LoadFromStreamingAssets(generatedSkillsRelativePath, debugGeneratedSkills);
+        generatedSkills.AddRange(loaded);
+        foreach (GeneratedSkillDto skill in loaded)
+        {
+            if (skill == null || string.IsNullOrWhiteSpace(skill.skill_id))
+            {
+                continue;
+            }
+            generatedSkillById[skill.skill_id] = skill;
+        }
+
+        if (debugGeneratedSkills)
+        {
+            Debug.Log($"[GeneratedSkills] Runtime skill count={generatedSkills.Count} path={generatedSkillsRelativePath}", this);
+        }
+        if (generatedSkills.Count == 0)
+        {
+            WriteStatus("No generated skills. Put generated_skills.json under StreamingAssets/GeneratedSkills.");
+        }
+
+        RenderGeneratedSkills();
+        ShowSelectedDetail();
+    }
+
+    public void AssignGeneratedSkill(GeneratedSkillDto skill)
+    {
+        if (skill == null || string.IsNullOrWhiteSpace(skill.skill_id))
+        {
+            WriteStatus("Select a generated skill first.");
+            return;
+        }
+
+        ThoughtMapBattleCardData card = GetSelectedDeckCard();
+        if (card == null)
+        {
+            WriteStatus("Assign requires a Deck 10 card. Select a deck card first.");
+            return;
+        }
+
+        string cardId = GetCardId(card);
+        if (!assignedSkillIdsByCardId.TryGetValue(cardId, out List<string> skillIds))
+        {
+            skillIds = new List<string>();
+            assignedSkillIdsByCardId[cardId] = skillIds;
+        }
+
+        if (skillIds.Contains(skill.skill_id))
+        {
+            WriteStatus("This skill is already assigned to the selected card.");
+            return;
+        }
+
+        if (skillIds.Count >= 3)
+        {
+            WriteStatus("Each card can have up to 3 assigned skills.");
+            return;
+        }
+
+        skillIds.Add(skill.skill_id);
+        selectedGeneratedSkillId = skill.skill_id;
+        if (debugGeneratedSkills)
+        {
+            Debug.Log($"[GeneratedSkills] Assigned skill_id={skill.skill_id} cardId={cardId}", this);
+        }
+        WriteStatus($"Assigned {skill.DisplayName} to P{selectedDeckIndex + 1}.");
+        RenderGeneratedSkills();
+        ShowSelectedDetail();
+    }
+
+    public void RemoveGeneratedSkill(GeneratedSkillDto skill)
+    {
+        if (skill == null || string.IsNullOrWhiteSpace(skill.skill_id))
+        {
+            WriteStatus("Select an assigned skill to remove.");
+            return;
+        }
+
+        ThoughtMapBattleCardData card = GetSelectedDeckCard();
+        if (card == null)
+        {
+            WriteStatus("Remove requires a Deck 10 card. Select a deck card first.");
+            return;
+        }
+
+        string cardId = GetCardId(card);
+        if (!assignedSkillIdsByCardId.TryGetValue(cardId, out List<string> skillIds) || !skillIds.Remove(skill.skill_id))
+        {
+            WriteStatus("That skill is not assigned to the selected card.");
+            return;
+        }
+
+        if (debugGeneratedSkills)
+        {
+            Debug.Log($"[GeneratedSkills] Removed skill_id={skill.skill_id} cardId={cardId}", this);
+        }
+        WriteStatus($"Removed {skill.DisplayName} from P{selectedDeckIndex + 1}.");
+        RenderGeneratedSkills();
+        ShowSelectedDetail();
+    }
+
+    private void OnGeneratedSkillSelected(GeneratedSkillDto skill)
+    {
+        selectedGeneratedSkillId = skill == null ? "" : skill.skill_id;
+        if (generatedSkillsPanel != null)
+        {
+            generatedSkillsPanel.SetSelectedSkill(selectedGeneratedSkillId);
+        }
+        RenderGeneratedSkills();
+        WriteStatus(skill == null
+            ? "No generated skill selected."
+            : $"Selected skill: {skill.DisplayName} - {ShortStatusText(skill.description_ja, skill.description_en)}");
+    }
+
+    private void RenderGeneratedSkills()
+    {
+        EnsureGeneratedSkillsPanel();
+        WireGeneratedSkillsPanel();
+        if (generatedSkillsPanel == null)
+        {
+            return;
+        }
+
+        ThoughtMapBattleCardData selectedCard = GetSelectedCard();
+        generatedSkillsPanel.SetSelectedSkill(selectedGeneratedSkillId);
+        generatedSkillsPanel.Render(
+            generatedSkills,
+            selectedCard == null ? "" : selectedCard.docId,
+            GetAssignedSkillIdsForCard(selectedCard)
+        );
+    }
+
+    private ThoughtMapBattleCardData GetSelectedCard()
+    {
+        if (selectedDeckIndex >= 0 && selectedDeckIndex < deckCards.Count)
+        {
+            return deckCards[selectedDeckIndex];
+        }
+        if (selectedLibraryIndex >= 0 && selectedLibraryIndex < loadedCards.Count)
+        {
+            return loadedCards[selectedLibraryIndex];
+        }
+        return null;
+    }
+
+    private ThoughtMapBattleCardData GetSelectedDeckCard()
+    {
+        return selectedDeckIndex >= 0 && selectedDeckIndex < deckCards.Count
+            ? deckCards[selectedDeckIndex]
+            : null;
+    }
+
+    private List<string> GetAssignedSkillIdsForCard(ThoughtMapBattleCardData card)
+    {
+        if (card == null)
+        {
+            return new List<string>();
+        }
+
+        return assignedSkillIdsByCardId.TryGetValue(GetCardId(card), out List<string> ids)
+            ? ids.Where(id => !string.IsNullOrWhiteSpace(id)).Take(3).ToList()
+            : new List<string>();
+    }
+
+    private List<GeneratedSkillDto> GetAssignedSkillsForCard(ThoughtMapBattleCardData card)
+    {
+        List<GeneratedSkillDto> result = new List<GeneratedSkillDto>();
+        foreach (string skillId in GetAssignedSkillIdsForCard(card))
+        {
+            if (generatedSkillById.TryGetValue(skillId, out GeneratedSkillDto skill))
+            {
+                result.Add(skill);
+            }
+        }
+        return result;
+    }
+
+    private void WireGeneratedSkillsPanel()
+    {
+        if (generatedSkillsPanel != null)
+        {
+            generatedSkillsPanel.SetHandlers(OnGeneratedSkillSelected, AssignGeneratedSkill, RemoveGeneratedSkill);
+        }
+    }
+
     private void ShowSelectedDetail()
     {
         if (cardDetailPanel == null)
@@ -462,7 +666,8 @@ public class ProductBattlePrepPanelView : MonoBehaviour
                 libraryCard,
                 ResolveCardArtForTarget(libraryCard, selectedLibraryIndex, "Detail Panel"),
                 ResolveAttributeIconForTarget(libraryCard, "Detail Panel"),
-                ResolveDominantThoughtAttributeKey(libraryCard)
+                ResolveDominantThoughtAttributeKey(libraryCard),
+                GetAssignedSkillsForCard(libraryCard)
             );
             return;
         }
@@ -478,7 +683,8 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             card,
             ResolveCardArtForTarget(card, selectedDeckIndex, "Detail Panel"),
             ResolveAttributeIconForTarget(card, "Detail Panel"),
-            ResolveDominantThoughtAttributeKey(card)
+            ResolveDominantThoughtAttributeKey(card),
+            GetAssignedSkillsForCard(card)
         );
     }
 
@@ -503,6 +709,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     {
         ThoughtMapBattleDeckConfig config = new ThoughtMapBattleDeckConfig();
         config.deckCardIds = deckCards.Select(GetCardId).ToList();
+        config.assignedSkills = BuildAssignedSkillSaveData();
         foreach (KeyValuePair<int, ThoughtMapBattleCardData> pair in placement.OrderBy(pair => pair.Key))
         {
             int x = pair.Key % 5;
@@ -513,7 +720,149 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
         string path = Path.Combine(Application.persistentDataPath, deckFileName);
         File.WriteAllText(path, JsonUtility.ToJson(config, true), Encoding.UTF8);
+        if (debugGeneratedSkills)
+        {
+            int count = config.assignedSkills == null ? 0 : config.assignedSkills.Sum(item => item.skillIds == null ? 0 : item.skillIds.Count);
+            Debug.Log($"[GeneratedSkills] Saved assigned skill count={count} path={path}", this);
+        }
         WriteStatus("Saved deck: " + path);
+    }
+
+    [ContextMenu("Restore Assigned Skills From Deck JSON")]
+    public void RestoreAssignedSkillsFromDeckJson()
+    {
+        string path = Path.Combine(Application.persistentDataPath, deckFileName);
+        if (!File.Exists(path))
+        {
+            Debug.LogWarning("[GeneratedSkills] deck.json not found for assigned skill restore: " + path, this);
+            return;
+        }
+
+        ThoughtMapBattleDeckConfig config = JsonUtility.FromJson<ThoughtMapBattleDeckConfig>(File.ReadAllText(path));
+        RestoreAssignedSkills(config);
+        RenderAll();
+    }
+
+    [ContextMenu("Load Deck JSON")]
+    public void LoadDeckJson()
+    {
+        string path = Path.Combine(Application.persistentDataPath, deckFileName);
+        if (!File.Exists(path))
+        {
+            WriteStatus("deck.json not found: " + path);
+            return;
+        }
+
+        ThoughtMapBattleDeckConfig config = JsonUtility.FromJson<ThoughtMapBattleDeckConfig>(File.ReadAllText(path));
+        if (config == null || config.deckCardIds == null)
+        {
+            WriteStatus("deck.json could not be read.");
+            return;
+        }
+
+        deckCards.Clear();
+        placement.Clear();
+        foreach (string cardId in config.deckCardIds)
+        {
+            ThoughtMapBattleCardData card = loadedCards.FirstOrDefault(candidate => GetCardId(candidate) == cardId);
+            if (card != null)
+            {
+                deckCards.Add(card);
+            }
+        }
+
+        if (config.gridPositions != null)
+        {
+            foreach (ThoughtMapBattleDeckPosition position in config.gridPositions)
+            {
+                ThoughtMapBattleCardData card = deckCards.FirstOrDefault(candidate => GetCardId(candidate) == position.cardId);
+                if (card == null)
+                {
+                    continue;
+                }
+
+                int x = Mathf.Clamp(position.x, 0, 4);
+                int y = Mathf.Clamp(position.y, 0, 4);
+                placement[y * 5 + x] = card;
+            }
+        }
+
+        RestoreAssignedSkills(config);
+        selectedDeckIndex = deckCards.Count > 0 ? 0 : -1;
+        selectedLibraryIndex = -1;
+        RenderAll();
+        WriteStatus("Loaded deck: " + path);
+    }
+
+    private List<CardAssignedSkillData> BuildAssignedSkillSaveData()
+    {
+        List<CardAssignedSkillData> result = new List<CardAssignedSkillData>();
+        foreach (ThoughtMapBattleCardData card in deckCards)
+        {
+            string cardId = GetCardId(card);
+            if (!assignedSkillIdsByCardId.TryGetValue(cardId, out List<string> skillIds))
+            {
+                continue;
+            }
+
+            List<string> validIds = skillIds
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct()
+                .Take(3)
+                .ToList();
+            if (validIds.Count > 0)
+            {
+                result.Add(new CardAssignedSkillData(cardId, validIds));
+            }
+        }
+        return result;
+    }
+
+    private void RestoreAssignedSkills(ThoughtMapBattleDeckConfig config)
+    {
+        assignedSkillIdsByCardId.Clear();
+        if (config == null || config.assignedSkills == null)
+        {
+            return;
+        }
+
+        int restored = 0;
+        foreach (CardAssignedSkillData item in config.assignedSkills)
+        {
+            if (item == null || string.IsNullOrWhiteSpace(item.cardId) || item.skillIds == null)
+            {
+                continue;
+            }
+
+            List<string> valid = new List<string>();
+            foreach (string skillId in item.skillIds)
+            {
+                if (string.IsNullOrWhiteSpace(skillId))
+                {
+                    continue;
+                }
+                if (!generatedSkillById.ContainsKey(skillId))
+                {
+                    Debug.LogWarning($"[GeneratedSkills] Saved skill_id not found in generated skill JSON: {skillId}", this);
+                    continue;
+                }
+                if (!valid.Contains(skillId) && valid.Count < 3)
+                {
+                    valid.Add(skillId);
+                }
+            }
+
+            if (valid.Count > 0)
+            {
+                assignedSkillIdsByCardId[item.cardId] = valid;
+                restored += valid.Count;
+            }
+        }
+
+        if (debugGeneratedSkills)
+        {
+            Debug.Log($"[GeneratedSkills] Restored assigned skill count={restored}", this);
+        }
     }
 
     public void StartBattleScene()
@@ -942,6 +1291,38 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         return view;
     }
 
+    [ContextMenu("Ensure Generated Skills Panel")]
+    public void EnsureGeneratedSkillsPanel()
+    {
+        if (generatedSkillsPanel == null)
+        {
+            Transform existing = FindDescendant(transform, "GeneratedSkillsPanel");
+            if (existing == null)
+            {
+                GameObject panelObject = new GameObject("GeneratedSkillsPanel", typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(ProductBattleGeneratedSkillsPanelView));
+                panelObject.transform.SetParent(transform, false);
+                RectTransform rect = panelObject.GetComponent<RectTransform>();
+                rect.anchorMin = new Vector2(0.78f, 0.06f);
+                rect.anchorMax = new Vector2(0.985f, 0.40f);
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+                Image image = panelObject.GetComponent<Image>();
+                image.color = new Color(0.015f, 0.025f, 0.035f, panelBackgroundAlpha);
+                generatedSkillsPanel = panelObject.GetComponent<ProductBattleGeneratedSkillsPanelView>();
+            }
+            else
+            {
+                generatedSkillsPanel = existing.GetComponent<ProductBattleGeneratedSkillsPanelView>();
+                if (generatedSkillsPanel == null)
+                {
+                    generatedSkillsPanel = existing.gameObject.AddComponent<ProductBattleGeneratedSkillsPanelView>();
+                }
+            }
+        }
+
+        generatedSkillsPanel?.EnsureBuilt();
+    }
+
     private void EnsureListContentReferences()
     {
         if (cardListContent == null)
@@ -1302,6 +1683,16 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             statusText.text = value;
         }
         Debug.Log("[ProductBattlePrep] " + value, this);
+    }
+
+    private string ShortStatusText(string primary, string fallback)
+    {
+        string value = string.IsNullOrWhiteSpace(primary) ? fallback : primary;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "";
+        }
+        return value.Length <= 120 ? value : value.Substring(0, 120) + "...";
     }
 
     private string GetCardId(ThoughtMapBattleCardData card)

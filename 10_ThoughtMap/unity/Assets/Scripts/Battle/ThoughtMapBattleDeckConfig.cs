@@ -7,6 +7,7 @@ public class ThoughtMapBattleDeckConfig
     public List<string> deckCardIds = new List<string>();
     public List<string> deployedCardIds = new List<string>();
     public List<ThoughtMapBattleDeckPosition> gridPositions = new List<ThoughtMapBattleDeckPosition>();
+    public List<CardAssignedSkillData> assignedSkills = new List<CardAssignedSkillData>();
 
     public bool HasDeck()
     {

@@ -193,6 +193,44 @@ public static class ThoughtMapBattleSceneCreator
         Debug.Log($"[SourceOfThoughtBattleScene] Repaired ability bars on {repaired} ProductBattlePrepPanelView component(s).");
     }
 
+    [MenuItem("Tools/Source of Thought/Repair Product Battle Prep Generated Skills")]
+    public static void RepairProductBattlePrepGeneratedSkillsMenu()
+    {
+        int repaired = 0;
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.IsValid())
+        {
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                ProductBattlePrepPanelView[] views = root.GetComponentsInChildren<ProductBattlePrepPanelView>(true);
+                foreach (ProductBattlePrepPanelView view in views)
+                {
+                    RepairProductBattlePrepGeneratedSkills(view);
+                    repaired++;
+                }
+            }
+        }
+
+        foreach (GameObject selected in Selection.gameObjects)
+        {
+            ProductBattlePrepPanelView[] views = selected.GetComponentsInChildren<ProductBattlePrepPanelView>(true);
+            foreach (ProductBattlePrepPanelView view in views)
+            {
+                RepairProductBattlePrepGeneratedSkills(view);
+                repaired++;
+            }
+        }
+
+        if (repaired > 0)
+        {
+            EditorSceneManager.MarkSceneDirty(scene);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+
+        Debug.Log($"[SourceOfThoughtBattleScene] Repaired Generated Skills UI on {repaired} ProductBattlePrepPanelView component(s).");
+    }
+
     [MenuItem("Tools/Source of Thought/Repair Product Battle Prep Sprites")]
     public static void RepairProductBattlePrepSprites()
     {
@@ -770,6 +808,36 @@ public static class ThoughtMapBattleSceneCreator
         EditorUtility.SetDirty(detail);
         EditorUtility.SetDirty(abilityRoot.gameObject);
         Debug.Log($"[SourceOfThoughtBattleScene] Ability bars repaired for {detail.name}: count={abilityBars.Length}.");
+    }
+
+    private static void RepairProductBattlePrepGeneratedSkills(ProductBattlePrepPanelView view)
+    {
+        if (view == null)
+        {
+            return;
+        }
+
+        Undo.RecordObject(view, "Repair Product Battle Prep Generated Skills");
+        view.EnsureGeneratedSkillsPanel();
+
+        ProductBattleCardDetailPanelView detail = view.GetComponentInChildren<ProductBattleCardDetailPanelView>(true);
+        if (detail != null)
+        {
+            Undo.RecordObject(detail, "Repair Assigned Skills Area");
+            detail.EnsureAssignedSkillsArea();
+            EditorUtility.SetDirty(detail);
+        }
+
+        ProductBattleGeneratedSkillsPanelView generatedPanel = view.GetComponentInChildren<ProductBattleGeneratedSkillsPanelView>(true);
+        if (generatedPanel != null)
+        {
+            Undo.RecordObject(generatedPanel, "Repair Generated Skills Panel");
+            generatedPanel.EnsureBuilt();
+            EditorUtility.SetDirty(generatedPanel);
+        }
+
+        EditorUtility.SetDirty(view);
+        Debug.Log($"[SourceOfThoughtBattleScene] Generated Skills UI repaired for {view.name}.");
     }
 
     private static void RepairCardDetailPanelLayout(RectTransform detailRect)
