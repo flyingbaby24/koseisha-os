@@ -32,6 +32,7 @@ from .skill_reference_embedding_generator import (
 )
 from .skill_stat_generator import generate_stat
 from .skill_target_generator import generate_target
+from .skill_trigger_generator import generate_trigger
 from .skill_validator import validate_skill
 from .skill_value_calculator import calculate_value
 
@@ -184,4 +185,3 @@ def generate_skill(
     )
     validate_skill(skill)
     return skill
-
