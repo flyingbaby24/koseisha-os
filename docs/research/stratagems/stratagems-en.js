@@ -1,0 +1,93 @@
+const makeStratagemTranslation = (name, category, summary, example, behavioral = category) => ({
+  name,
+  category,
+  bias: category,
+  behavioral,
+  summary,
+  example,
+  interpretation: summary,
+  principle: `Human judgment is shaped by ${category.toLowerCase()}. The stratagem works by changing how the situation is framed before a decision is made.`,
+  breakdown: [
+    "Identify the target's current cognitive frame.",
+    "Change the information, incentives, or constraints shaping that frame.",
+    "Allow the resulting judgment to guide the target's action."
+  ],
+  noteTitle: `${name}: a cognitive and behavioral interpretation`,
+  relatedBiases: behavioral.split(" / "),
+  relatedConcepts: category.split(" / "),
+  references: []
+});
+
+const stratagemTranslations = {
+  en: {
+    1: makeStratagemTranslation("Deceive the Heavens to Cross the Sea", "Normality / Habit", "What appears completely routine is rarely questioned. Repetition constructs normality and lowers vigilance.", "Information leakage hidden inside routine work; manipulative choices embedded in a familiar interface.", "Normalcy bias / habituation"),
+    2: makeStratagemTranslation("Besiege Wei to Rescue Zhao", "Attention / Indirect Pressure", "Change behavior indirectly by threatening another priority that competes for the target's limited resources.", "Attack a competitor's weak market instead of its core; introduce a competing issue in negotiation.", "Resource allocation / opportunity cost"),
+    3: makeStratagemTranslation("Kill with a Borrowed Knife", "Social / Responsibility", "Align another actor's interests, authority, or emotions with your objective so that they act without direct coercion.", "Use agencies, influencers, institutional authority, or third-party reviews.", "Diffusion of responsibility / agency problem"),
+    4: makeStratagemTranslation("Wait at Ease for the Exhausted Enemy", "Fatigue / Timing", "Preserve your own cognitive resources while uncertainty, delay, and repeated decisions deplete the other side.", "Long negotiations; present decisive terms after the other party becomes fatigued.", "Decision fatigue / cognitive load"),
+    5: makeStratagemTranslation("Loot a Burning House", "Loss / Crisis", "A crisis reallocates attention and resources, leaving previously protected areas exposed.", "Acquire customers during a competitor's crisis; buy sound assets during a market panic.", "Loss aversion / priority reallocation"),
+    6: makeStratagemTranslation("Make Noise in the East, Attack in the West", "Attention / Priority", "Make a secondary issue appear urgent so that attention and cognitive resources move away from the real objective.", "Use spectacle or controversy to overshadow a policy change, negotiation, or intrusion.", "Attentional bias / priority manipulation"),
+    7: makeStratagemTranslation("Create Something from Nothing", "Reality Construction / Social Attention", "Concentrated social attention can construct importance around something that initially has little substance.", "Queues, rankings, follower counts, reviews, and manufactured trends.", "Social proof / illusory truth effect"),
+    8: makeStratagemTranslation("Secretly Cross at Chencang", "Search Space / Exploration", "Restrict the target's search space so that an unseen route is never considered.", "Hide functions in an interface; frame a debate as a false binary.", "Choice architecture / bounded rationality"),
+    9: makeStratagemTranslation("Watch the Fire from Across the River", "Value / Commitment", "Recognize when identity and protected values make withdrawal psychologically impossible, then let time deepen the cost.", "Price wars, political polarization, social-media conflicts, and corporate attrition.", "Escalation of commitment / sunk cost fallacy"),
+    10: makeStratagemTranslation("Hide a Knife Behind a Smile", "Friend-Foe Recognition", "Use affiliation signals to shift friend-or-foe classification and release resources normally devoted to vigilance.", "Friendly sales language, political signaling, fraud, and reassuring interface design.", "Halo effect / in-group bias"),
+    11: makeStratagemTranslation("Sacrifice the Plum Tree to Preserve the Peach Tree", "Management / Capacity", "Management capacity is finite; deliberately release lower-priority commitments to protect the whole.", "Close obsolete businesses, reduce inventory, reorganize teams, or simplify relationships.", "Bounded rationality / loss aversion"),
+    12: makeStratagemTranslation("Take the Opportunity to Steal a Goat", "Background / Gradual Change", "Accumulate changes below the detection threshold until they become background assumptions and rewrite perception.", "Gradual subscription price increases, staged interface changes, and repeated advertising exposure.", "Change blindness / habituation"),
+    13: makeStratagemTranslation("Beat the Grass to Startle the Snake", "Threshold / Detection", "Apply a small stimulus to discover which changes cross the target's response threshold.", "Pilot pricing, probing questions, security audits, and testing negotiation limits.", "Signal detection / threshold effects"),
+    14: makeStratagemTranslation("Borrow a Corpse to Revive the Soul", "Success Memory / Legacy", "Transfer trust and expectations from a remembered success to a new object.", "Revived brands, legacy institutions, familiar franchises, and inherited credentials.", "Halo effect / associative transfer"),
+    15: makeStratagemTranslation("Lure the Tiger Away from the Mountain", "Context / Environment", "Do not confront ability directly; remove the environment and support systems that make that ability effective.", "Force a platform change, alter the market context, disrupt supply, or move the contest away from home ground.", "Context dependence / situated cognition"),
+    16: makeStratagemTranslation("To Capture, First Let Go", "Choice / Cognitive Task", "Let the target solve a bounded cognitive task and experience the resulting choice as self-authored.", "Plan selectors, guided sales choices, educational exercises, and magician's choice.", "Choice architecture / self-perception"),
+    17: makeStratagemTranslation("Throw a Brick to Attract Jade", "Evaluation / Entry Cost", "Design a low-cost entry point that makes the value of deeper engagement easy to evaluate.", "Samples, free trials, demos, consultations, summaries, and recommendations.", "Reciprocity / reduced evaluation cost"),
+    18: makeStratagemTranslation("Capture the Leader to Capture the Bandits", "Decision Network / Centrality", "Control the node where decisions actually converge rather than the person with the most visible title.", "Reach the real approver; optimize for the algorithm governing discovery.", "Network centrality / authority bias"),
+    19: makeStratagemTranslation("Remove the Firewood from Under the Pot", "Background / Infrastructure", "Intervene in the background infrastructure that makes the visible phenomenon possible.", "Cut funding, logistics, energy, servers, communications, or component supply.", "Systems thinking / infrastructure blindness"),
+    20: makeStratagemTranslation("Fish in Troubled Waters", "Decision / Cognitive Load", "Blur the standards of judgment and increase cognitive load until coherent choice becomes difficult.", "Flood discussion with conflicting criteria or make institutional rules needlessly complex.", "Cognitive overload / ambiguity aversion"),
+    21: makeStratagemTranslation("Shed the Shell Like a Golden Cicada", "Continuity / Cognitive Model", "Preserve surface continuity so that the target does not update an outdated mental model.", "Keep the brand and interface stable while ownership, incentives, or substance changes.", "Predictive processing / model inertia"),
+    22: makeStratagemTranslation("Shut the Door to Catch the Thief", "Action Cost / Choice Architecture", "Control practical choice by changing the cost of acting, entering, switching, or leaving.", "Complex cancellation flows, penalties, constrained recommendations, and asymmetric UI affordances.", "Choice architecture / friction costs"),
+    23: makeStratagemTranslation("Befriend Distant States While Attacking Nearby Ones", "Community / Relationship Cost", "Design the boundary between cooperation and competition by optimizing the cost of maintaining relationships.", "Cross-industry alliances, API ecosystems, role division, and platform strategies.", "Transaction costs / coalition formation"),
+    24: makeStratagemTranslation("Borrow a Path to Attack Guo", "Generalization / Cognitive Model", "Turn a small permission into a precedent by encouraging the target to generalize an established mental model.", "OAuth authorization, free trials, SaaS adoption, and platform integrations.", "Commitment consistency / generalization"),
+    25: makeStratagemTranslation("Replace the Beams and Pillars", "Background / Stable Infrastructure", "Background a supposedly stable foundation, then change the structure while attention remains elsewhere.", "Terms-of-service changes, pricing revisions, API updates, algorithm changes, and legal reform.", "Change blindness / status quo assumptions"),
+    26: makeStratagemTranslation("Point at the Mulberry, Curse the Locust", "Social Norm / Group Pressure", "Invoke group norms and the risk of exclusion to alter behavior without naming the target directly.", "General workplace warnings, implicit etiquette, public shaming, and 'everyone follows this rule' messaging.", "Conformity / normative social influence"),
+    27: makeStratagemTranslation("Feign Foolishness Without Going Mad", "Ability Estimation / Cognitive Shortcut", "Manipulate the proxies people use to estimate ability rather than ability itself.", "Appear inexperienced in negotiation; use titles, credentials, followers, or endorsements to shape evaluation.", "Halo effect / thin-slice judgment"),
+    28: makeStratagemTranslation("Remove the Ladder After Ascending the Roof", "Commitment / Exit Cost", "After commitment, make invested time, money, and identity salient so that continuation feels cheaper than withdrawal.", "Subscriptions, high-migration-cost SaaS, loyalty ranks, qualifications, and accumulated game progress.", "Sunk cost fallacy / escalation of commitment"),
+    29: makeStratagemTranslation("Decorate the Tree with Blossoms", "Evaluation / Signaling", "Shape evaluation by controlling the proxy signals an observer uses to infer underlying quality.", "Brand design, packaging, interiors, exhibition booths, follower counts, credentials, and polished interfaces.", "Signaling theory / attribute substitution"),
+    30: makeStratagemTranslation("Turn from Guest into Host", "Dependency / Negotiation Power", "Build dependency, then convert the resulting switching cost into bargaining power and practical control.", "Dependence on major customers, cloud providers, app stores, APIs, contractors, or social platforms.", "Dependency theory / lock-in effect"),
+    31: makeStratagemTranslation("The Beauty Trap", "Reward / Motivation", "Stimulate the reward system so that anticipated desire changes the weighting of every other decision factor.", "Romance scams, seductive investments, scarcity marketing, gacha effects, prestige brands, and social approval.", "Reward prediction / incentive salience"),
+    32: makeStratagemTranslation("The Empty Fort Strategy", "Inference / Uncertainty", "Leave an information gap that compels the target to generate competing explanations and delay commitment.", "Strategic silence in negotiation, concealed roadmaps, deliberate inaction, and withholding selected information.", "Predictive processing / ambiguity aversion"),
+    33: makeStratagemTranslation("Turn Trusted Channels Against the Target", "Trust / Information Channel", "Exploit a trusted information channel so that false information bypasses verification and forms a mistaken belief.", "Impersonation, compromised official accounts, fabricated leaks, deepfakes, and misinformation.", "Trust heuristic / source credibility"),
+    34: makeStratagemTranslation("Inflict Injury on Oneself to Win Trust", "Credibility / Costly Signaling", "Accept visible pain or sacrifice so observers infer commitment, sincerity, and credibility.", "Spending one's own money, costly apologies, whistleblowing, and irreversible commitments.", "Costly signaling / credibility heuristic"),
+    35: makeStratagemTranslation("Chain Stratagems Together", "Systems / Interdependence", "Link multiple mechanisms so that each reinforces the others and makes escape progressively harder.", "Combine policies, incentives, dependencies, and information controls into one system.", "Complexity neglect / systems trap"),
+    36: makeStratagemTranslation("If All Else Fails, Retreat", "Exit / Strategic Withdrawal", "Treat retreat as a rational option that preserves future agency rather than as a shameful defeat.", "Stop a failing project, pivot a business, exit a market, or cut losses.", "Sunk cost fallacy / loss aversion")
+  }
+};
+
+const cognitiveTreeTranslations = {
+  en: {
+    perception: { title: "Construct Perception", description: "Shape normality, background assumptions, attention, and cognitive models." },
+    "normality-background": { title: "Construct Normality and Background" },
+    "attention-importance": { title: "Construct Attention and Importance" },
+    "cognitive-model": { title: "Construct Cognitive Models" },
+    judgment: { title: "Shift Judgment", description: "Manipulate fatigue, loss, available choices, and priority allocation." },
+    "fatigue-time": { title: "Use Fatigue and Time" },
+    "loss-crisis": { title: "Use Loss and Crisis" },
+    "choice-design": { title: "Design the Choice Set" },
+    priority: { title: "Change Priorities" },
+    social: { title: "Move Social Systems", description: "Guide behavior through responsibility, trust, dependency, and reward." },
+    "responsibility-agency": { title: "Use Responsibility and Agency" },
+    "trust-authority": { title: "Use Trust and Authority" },
+    dependency: { title: "Build Dependency" },
+    "reward-desire": { title: "Use Reward and Desire" },
+    information: { title: "Manipulate Information", description: "Change interpretation through truth and illusion, channels, uncertainty, and misdirection." },
+    "truth-illusion": { title: "Exchange Truth and Illusion" },
+    "information-channel": { title: "Use Information Channels" },
+    unobservability: { title: "Use Unobservability" },
+    misdirection: { title: "Redirect Attention" },
+    structure: { title: "Break Structures", description: "Disrupt systems through isolation, resources, chains, and substitution." },
+    isolation: { title: "Divide and Isolate" },
+    resources: { title: "Target Resources and Supply" },
+    "system-chain": { title: "Build System Chains" },
+    substitution: { title: "Substitute and Disguise" },
+    transformation: { title: "Withdraw and Transform", description: "Reframe strategy through opportunity, adaptation, exit, and endgame decisions." },
+    opportunity: { title: "Exploit Opportunity" },
+    adaptation: { title: "Transform and Adapt" },
+    exit: { title: "Exit and Withdraw" }
+  }
+};
