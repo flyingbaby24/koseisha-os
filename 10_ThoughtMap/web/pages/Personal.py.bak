@@ -232,38 +232,12 @@ def inject_custom_css():
             border-color: rgba(56,232,255,0.34) !important;
         }
 
-        .stButton > button,
-        .stDownloadButton > button,
-        [data-testid="stLinkButton"] a {
-            min-height: 2.75rem;
-            border-radius: 12px !important;
-            font-weight: 800 !important;
-        }
-
-        [data-testid="stExpander"] {
-            border: 1px solid rgba(56,232,255,0.20);
-            border-radius: 12px;
-            background: rgba(5, 9, 20, 0.30);
-        }
-
-        [data-testid="stExpander"] summary,
-        [data-testid="stExpander"] summary * {
-            color: var(--tm-text) !important;
-            font-weight: 750 !important;
-        }
-
         @media (max-width: 900px) {
-            .block-container {
-                padding: 0.85rem 0.85rem 2rem;
-            }
             .tm-overview-grid {
                 grid-template-columns: 1fr;
             }
             .tm-hero {
                 padding: 1.45rem;
-            }
-            .tm-hero h1 {
-                font-size: 2.35rem;
             }
         }
         </style>
@@ -585,7 +559,7 @@ with right:
         st.write(f"doc_id: `{target_doc_id}`")
         st.write(f"user_email: `{email.strip()}`")
 
-    search_clicked = st.button("Search similar works", type="primary", use_container_width=True)
+    search_clicked = st.button("Search similar works", type="primary")
 
 
 if search_clicked:
@@ -640,27 +614,6 @@ if data is not None and not last_error:
         st.info("No results.")
     else:
         result_df = make_results_frame(results)
-
-        best_similarity = float(result_df["similarity"].max()) if not result_df.empty else 0.0
-        st.markdown(
-            f"""
-            <div class="tm-overview-grid">
-                <div class="tm-stat-card">
-                    <div class="tm-stat-label">Matches</div>
-                    <div class="tm-stat-value">{len(results)}</div>
-                </div>
-                <div class="tm-stat-card">
-                    <div class="tm-stat-label">Best similarity</div>
-                    <div class="tm-stat-value">{best_similarity:.3f}</div>
-                </div>
-                <div class="tm-stat-card">
-                    <div class="tm-stat-label">Response time</div>
-                    <div class="tm-stat-value">{elapsed:.2f}s</div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
 
         left, right = st.columns([3, 2], gap="large")
 
@@ -738,7 +691,7 @@ if data is not None and not last_error:
                     for p in params
                 ])
                 param_df["value"] = pd.to_numeric(param_df["value"], errors="coerce").fillna(0)
-                st.subheader("Thought Profile")
+                st.subheader("Parameters")
                 st.dataframe(param_df, use_container_width=True, hide_index=True)
                 st.bar_chart(param_df.set_index("parameter"))
 

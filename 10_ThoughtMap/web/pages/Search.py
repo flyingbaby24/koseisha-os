@@ -329,6 +329,21 @@ def inject_custom_css():
             font-size: 1rem;
         }
 
+        div[data-testid="stHorizontalBlock"] > div:has(.stTextInput) + div .stButton {
+            padding-top: 1.78rem;
+        }
+
+        div[data-testid="stHorizontalBlock"] > div:has(.stTextInput) + div .stButton > button {
+            min-height: 3rem;
+            width: 100%;
+        }
+
+        .tm-selection-note {
+            color: var(--tm-muted);
+            font-size: 0.82rem;
+            margin: -0.35rem 0 0.75rem;
+        }
+
         .stButton > button,
         .stDownloadButton > button,
         [data-testid="stLinkButton"] a {
@@ -375,6 +390,9 @@ def inject_custom_css():
             }
             .tm-chip-row {
                 gap: 0.45rem;
+            }
+            div[data-testid="stHorizontalBlock"] > div:has(.stTextInput) + div .stButton {
+                padding-top: 0;
             }
             .tm-best-card,
             .tm-shell,
@@ -871,18 +889,18 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-if search_mode == "Keyword search":
-    q = st.text_input(
-        "Search ThoughtMap",
-        value="Plato",
-        help="Searches author, title, source, category, tags, and notes.",
-    )
-elif search_mode == "Hybrid":
-    q = st.text_input(
-        "Search ThoughtMap",
-        value="",
-        placeholder="Optional keyword filter: Plato / love / war / technology",
-    )
+search_clicked = False
+if search_mode in ("Keyword search", "Hybrid"):
+    query_col, action_col = st.columns([5, 1], vertical_alignment="bottom")
+    with query_col:
+        q = st.text_input(
+            "Search ThoughtMap",
+            value="Plato" if search_mode == "Keyword search" else "",
+            placeholder="Author, title, theme, or phrase",
+            help="Searches author, title, source, category, tags, and notes.",
+        )
+    with action_col:
+        search_clicked = st.button("Search", type="primary", use_container_width=True)
 else:
     st.info("Embedding similarity searches from a selected Personal Library work. Open Advanced Search Settings to choose the target.")
 
@@ -941,7 +959,8 @@ with st.expander("Advanced Search Settings", expanded=False):
             except Exception as exc:
                 st.error(f"Failed to load Personal Library: {exc}")
 
-search_clicked = st.button("Search", type="primary")
+if search_mode == "Embedding similarity":
+    search_clicked = st.button("Search", type="primary", use_container_width=True)
 
 
 if search_clicked:
@@ -1044,6 +1063,26 @@ if data is not None and not last_error:
         best_match_text = match_label(best_result.get("similarity", best_result.get("score", 0)))
         selected_match_text = match_label(selected_result.get("similarity", selected_result.get("score", 0)))
 
+        st.markdown(
+            f"""
+            <div class="tm-overview-grid">
+                <div class="tm-stat-card">
+                    <div class="tm-stat-label">Results</div>
+                    <div class="tm-stat-value">{len(results)}</div>
+                </div>
+                <div class="tm-stat-card">
+                    <div class="tm-stat-label">Search mode</div>
+                    <div class="tm-stat-value" style="font-size:1.15rem;">{html.escape(str(last_mode))}</div>
+                </div>
+                <div class="tm-stat-card">
+                    <div class="tm-stat-label">Response time</div>
+                    <div class="tm-stat-value">{elapsed:.2f}s</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
         st.markdown('<div class="tm-section-heading">Best Match</div>', unsafe_allow_html=True)
         st.markdown(
             f"""
@@ -1065,6 +1104,10 @@ if data is not None and not last_error:
                 rerun_app()
 
         st.markdown('<div class="tm-section-heading">Selected Work Detail</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="tm-selection-note">Viewing result {selected_index + 1} of {len(results)}. Choosing a Similar Work updates this panel and its Thought Profile.</div>',
+            unsafe_allow_html=True,
+        )
         st.markdown(
             f"""
             <div class="tm-shell">
