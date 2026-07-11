@@ -81,6 +81,23 @@ def _select_effect_count(effect_matches, parameter_scores: dict[str, float]) -> 
     return 2 if top_gap <= 15.0 and similarity_gap <= 0.08 else 1
 
 
+def _normalize_trigger_for_effects(trigger: str, effect_types: list[str]) -> str:
+    """Avoid continuous passive triggers for instant or control effects."""
+    if trigger != "always":
+        return trigger
+
+    unsafe_always_effects = {
+        "damage",
+        "heal",
+        "seal",
+        "sp_recover",
+        "sp_damage",
+    }
+    if any(effect_type in unsafe_always_effects for effect_type in effect_types):
+        return "turn_start"
+    return trigger
+
+
 def generate_skill(
     skill_input: SkillInput,
     generation_version: int = 1,
@@ -133,6 +150,7 @@ def generate_skill(
     trigger = generate_trigger(trigger_matches)
     effect_count = _select_effect_count(effect_matches, skill_input.parameter_scores)
     effect_types = generate_effect_types(effect_matches, max_effects=effect_count)
+    trigger = _normalize_trigger_for_effects(trigger, effect_types)
     stat = generate_stat(stat_matches, skill_input.parameter_scores)
     concept_similarity = matched_concepts[0].similarity if matched_concepts else 0.0
 
@@ -162,7 +180,13 @@ def generate_skill(
     cost = calculate_cost(trigger, total_value, len(effects), config)
     cooldown = calculate_cooldown(trigger, max_value, config)
     name_ja, name_en = generate_skill_names(matched_concepts, effects)
-    description_ja, description_en = generate_descriptions(matched_concepts, trigger, effects)
+    description_ja, description_en = generate_descriptions(
+        matched_concepts,
+        trigger,
+        effects,
+        cost,
+        cooldown,
+    )
 
     skill = Skill(
         skill_id=_stable_skill_id(

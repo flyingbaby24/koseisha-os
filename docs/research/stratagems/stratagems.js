@@ -2749,66 +2749,73 @@ const mobileDetailNumber = document.getElementById('mobileDetailNumber');
 const closeDetailButton = document.getElementById('closeDetailButton');
 const treeViewButton = document.getElementById('treeViewButton');
 const listViewButton = document.getElementById('listViewButton');
+const languageButtons = [...document.querySelectorAll('[data-language]')];
 
 const categories = [...new Set(stratagems.map((stratagem) => stratagem.category))].sort();
 const stratagemMap = new Map(stratagems.map((stratagem) => [stratagem.id, stratagem]));
 const cognitiveTree = [
   {
+    id: "perception",
     title: "認知を作る",
     description: "正常性・背景・注目・認知モデルを形成する",
     children: [
-      { title: "正常・背景を作る", stratagemIds: [1, 12, 25] },
-      { title: "注目・重要度を作る", stratagemIds: [6, 7, 29] },
-      { title: "認知モデルを作る", stratagemIds: [8, 13, 32] }
+      { id: "normality-background", title: "正常・背景を作る", stratagemIds: [1, 12, 25] },
+      { id: "attention-importance", title: "注目・重要度を作る", stratagemIds: [6, 7, 29] },
+      { id: "cognitive-model", title: "認知モデルを作る", stratagemIds: [8, 13, 32] }
     ]
   },
   {
+    id: "judgment",
     title: "判断をずらす",
     description: "疲労・損失・選択肢・優先順位を操作する",
     children: [
-      { title: "疲労・時間を使う", stratagemIds: [4, 19] },
-      { title: "損失・危機を使う", stratagemIds: [5, 36] },
-      { title: "選択肢を設計する", stratagemIds: [16, 22] },
-      { title: "優先順位を変える", stratagemIds: [2, 6] }
+      { id: "fatigue-time", title: "疲労・時間を使う", stratagemIds: [4, 19] },
+      { id: "loss-crisis", title: "損失・危機を使う", stratagemIds: [5, 36] },
+      { id: "choice-design", title: "選択肢を設計する", stratagemIds: [16, 22] },
+      { id: "priority", title: "優先順位を変える", stratagemIds: [2, 6] }
     ]
   },
   {
+    id: "social",
     title: "社会を動かす",
     description: "責任・信頼・依存・報酬によって人の行動を誘導する",
     children: [
-      { title: "責任・代理を使う", stratagemIds: [3, 24] },
-      { title: "信頼・権威を使う", stratagemIds: [10, 14, 33, 34] },
-      { title: "依存関係を使う", stratagemIds: [23, 30] },
-      { title: "報酬・欲望を使う", stratagemIds: [31] }
+      { id: "responsibility-agency", title: "責任・代理を使う", stratagemIds: [3, 24] },
+      { id: "trust-authority", title: "信頼・権威を使う", stratagemIds: [10, 14, 33, 34] },
+      { id: "dependency", title: "依存関係を使う", stratagemIds: [23, 30] },
+      { id: "reward-desire", title: "報酬・欲望を使う", stratagemIds: [31] }
     ]
   },
   {
+    id: "information",
     title: "情報を操る",
     description: "虚実・情報経路・観測不能性・陽動で解釈を変える",
     children: [
-      { title: "虚実を入れ替える", stratagemIds: [1, 7, 21] },
-      { title: "情報経路を使う", stratagemIds: [13, 27, 33] },
-      { title: "観測不能を使う", stratagemIds: [8, 20, 32] },
-      { title: "陽動・注意誘導", stratagemIds: [2, 6] }
+      { id: "truth-illusion", title: "虚実を入れ替える", stratagemIds: [1, 7, 21] },
+      { id: "information-channel", title: "情報経路を使う", stratagemIds: [13, 27, 33] },
+      { id: "unobservability", title: "観測不能を使う", stratagemIds: [8, 20, 32] },
+      { id: "misdirection", title: "陽動・注意誘導", stratagemIds: [2, 6] }
     ]
   },
   {
+    id: "structure",
     title: "構造を崩す",
     description: "分断・資源・連鎖・置換によって相手の仕組みを崩す",
     children: [
-      { title: "分断・隔離", stratagemIds: [11, 18] },
-      { title: "資源・補給を突く", stratagemIds: [15, 19] },
-      { title: "システム連鎖", stratagemIds: [35] },
-      { title: "置換・偽装", stratagemIds: [21, 25, 26] }
+      { id: "isolation", title: "分断・隔離", stratagemIds: [11, 18] },
+      { id: "resources", title: "資源・補給を突く", stratagemIds: [15, 19] },
+      { id: "system-chain", title: "システム連鎖", stratagemIds: [35] },
+      { id: "substitution", title: "置換・偽装", stratagemIds: [21, 25, 26] }
     ]
   },
   {
+    id: "transformation",
     title: "撤退と変換",
     description: "機会・変身・出口・終局処理として戦略を畳み直す",
     children: [
-      { title: "機会利用", stratagemIds: [5, 9, 12] },
-      { title: "変身・適応", stratagemIds: [17, 27, 28] },
-      { title: "出口・撤退", stratagemIds: [36] }
+      { id: "opportunity", title: "機会利用", stratagemIds: [5, 9, 12] },
+      { id: "adaptation", title: "変身・適応", stratagemIds: [17, 27, 28] },
+      { id: "exit", title: "出口・撤退", stratagemIds: [36] }
     ]
   }
 ];
@@ -2817,13 +2824,6 @@ let selectedStratagemId = stratagems[0]?.id ?? null;
 let atlasView = 'tree';
 
 categoryCount.textContent = categories.length;
-
-for (const categoryName of categories) {
-  const option = document.createElement('option');
-  option.value = categoryName;
-  option.textContent = categoryName;
-  category.appendChild(option);
-}
 
 function hasContent(value) {
   return typeof value === 'string' && value.trim() !== '';
@@ -2848,7 +2848,7 @@ function renderOptionalSection(title, content) {
 function renderBreakdown(items) {
   if (!hasItems(items)) return '';
 
-  return '<div class="optional-section"><p><b>Breakdown:</b></p><ul class="breakdown-list">'
+  return '<div class="optional-section"><p><b>' + t('breakdown') + ':</b></p><ul class="breakdown-list">'
     + items.map((item) => '<li>' + item + '</li>').join('')
     + '</ul></div>';
 }
@@ -2856,7 +2856,7 @@ function renderBreakdown(items) {
 function renderNoteLink(stratagem) {
   if (!hasContent(stratagem.noteUrl)) return '';
 
-  return '<a class="note-link" href="' + stratagem.noteUrl + '" target="_blank" rel="noopener noreferrer">Read Note &rarr;</a>';
+  return '<a class="note-link" href="' + stratagem.noteUrl + '" target="_blank" rel="noopener noreferrer">' + t('note') + ' &rarr;</a>';
 }
 
 function getFilteredStratagems() {
@@ -2864,7 +2864,14 @@ function getFilteredStratagems() {
   const selectedCategory = category.value;
   return stratagems
     .filter((stratagem) => selectedCategory === 'all' || stratagem.category === selectedCategory)
-    .filter((stratagem) => toSearchText(stratagem).toLowerCase().includes(query));
+    .filter((stratagem) => {
+      if (!query) return true;
+      const fields = ['name', 'category', 'summary', 'bias', 'behavioral', 'example', 'relatedConcepts', 'relatedBiases'];
+      if (currentLanguage === 'ja') fields.push('reading', 'english');
+      const localized = fields.map((field) => getLocalizedField(stratagem, field));
+      const supplementalJapanese = currentLanguage === 'en' ? fields.map((field) => stratagem[field]) : [];
+      return toSearchText([...localized, ...supplementalJapanese]).toLowerCase().includes(query);
+    });
 }
 
 function getStratagemById(id) {
@@ -2878,6 +2885,83 @@ function setActiveView(nextView) {
   render();
 }
 
+function renderCategoryOptions() {
+  const selectedValue = category.value || 'all';
+  category.innerHTML = '';
+  const allOption = document.createElement('option');
+  allOption.value = 'all';
+  allOption.textContent = t('allCategories');
+  category.appendChild(allOption);
+
+  categories.forEach((categoryName) => {
+    const option = document.createElement('option');
+    const sample = stratagems.find((stratagem) => stratagem.category === categoryName);
+    option.value = categoryName;
+    option.textContent = sample ? getLocalizedField(sample, 'category') : categoryName;
+    category.appendChild(option);
+  });
+  category.value = categories.includes(selectedValue) ? selectedValue : 'all';
+}
+
+function updateLanguageUi() {
+  document.documentElement.lang = currentLanguage;
+  search.placeholder = t('searchPlaceholder');
+  treeViewButton.textContent = t('cognitiveTree');
+  listViewButton.textContent = t('stratagemList');
+  closeDetailButton.textContent = '← ' + t('backToList');
+  languageButtons.forEach((button) => {
+    button.setAttribute('aria-pressed', String(button.dataset.language === currentLanguage));
+  });
+  document.querySelectorAll('[data-i18n]').forEach((element) => {
+    element.textContent = t(element.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach((element) => {
+    element.innerHTML = t(element.dataset.i18nHtml);
+  });
+  renderCategoryOptions();
+  renderCategoryCards();
+}
+
+function captureTreeState() {
+  return [...cards.querySelectorAll('details[data-tree-id]')]
+    .map((node) => [node.dataset.treeId, node.open]);
+}
+
+function restoreTreeState(entries) {
+  const openState = new Map(entries);
+  [...cards.querySelectorAll('details[data-tree-id]')].forEach((node) => {
+    if (openState.has(node.dataset.treeId)) node.open = openState.get(node.dataset.treeId);
+  });
+}
+
+function setLanguage(language) {
+  if (!['ja', 'en'].includes(language) || language === currentLanguage) return;
+  const navigation = cards.parentElement;
+  const navigationScrollTop = navigation?.scrollTop ?? 0;
+  const detailScrollTop = detailPane.scrollTop;
+  const mobileScrollTop = mobileDetailContent.scrollTop;
+  const drawerWasOpen = mobileDetailDrawer.classList.contains('open');
+  const treeState = captureTreeState();
+
+  currentLanguage = language;
+  safeStorageSet('stratagems-language', language);
+  updateLanguageUrl(language);
+  updateLanguageUi();
+  render();
+  restoreTreeState(treeState);
+
+  requestAnimationFrame(() => {
+    if (navigation) navigation.scrollTop = navigationScrollTop;
+    detailPane.scrollTop = detailScrollTop;
+    mobileDetailContent.scrollTop = mobileScrollTop;
+    if (drawerWasOpen) {
+      mobileDetailDrawer.classList.add('open');
+      mobileDetailDrawer.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('detail-drawer-open');
+    }
+  });
+}
+
 function renderCategoryCards() {
   categoryCards.innerHTML = '';
 
@@ -2885,7 +2969,9 @@ function renderCategoryCards() {
     const count = stratagems.filter((stratagem) => stratagem.category === categoryName).length;
     const div = document.createElement('div');
     div.className = 'category-card';
-    div.innerHTML = '<strong>' + categoryName + '</strong><span>' + count + ' stratagem' + (count > 1 ? 's' : '') + ' mapped</span>';
+    const sample = stratagems.find((stratagem) => stratagem.category === categoryName);
+    const label = sample ? getLocalizedField(sample, 'category') : categoryName;
+    div.innerHTML = '<strong>' + label + '</strong><span>' + count + ' ' + t('mapped') + '</span>';
     div.addEventListener('click', () => {
       category.value = categoryName;
       render();
@@ -2897,26 +2983,28 @@ function renderCategoryCards() {
 
 function renderStratagemDetail(stratagem) {
   if (!stratagem) {
-    return '<article class="stratagem-card empty-state"><h3>No stratagem selected</h3><p class="summary">一覧から計略を選択してください。</p></article>';
+    return '<article class="stratagem-card empty-state"><h3>' + t('noSelection') + '</h3><p class="summary">' + t('selectFromList') + '</p></article>';
   }
 
+  const localizedName = getLocalizedField(stratagem, 'name');
+  const translatedName = currentLanguage === 'ja' ? stratagem.english : '';
   return [
     '<article class="stratagem-card">',
     '<div class="card-top">',
     '<span class="number">#' + String(stratagem.id).padStart(2, '0') + '</span>',
-    '<span class="badge">' + stratagem.category + '</span>',
+    '<span class="badge">' + getLocalizedField(stratagem, 'category') + '</span>',
     '</div>',
-    '<h3 id="mobileDetailTitle">' + stratagem.name + '</h3>',
-    '<p class="reading">' + stratagem.reading + '</p>',
-    '<p class="english">' + stratagem.english + '</p>',
-    '<p class="summary">' + stratagem.summary + '</p>',
+    '<h3 id="mobileDetailTitle">' + localizedName + '</h3>',
+    currentLanguage === 'ja' ? '<p class="reading">' + stratagem.reading + '</p>' : '',
+    translatedName && translatedName.toLowerCase() !== localizedName.toLowerCase() ? '<p class="english">' + translatedName + '</p>' : '',
+    '<p class="summary">' + getLocalizedField(stratagem, 'summary') + '</p>',
     '<div class="meta">',
-    '<p><b>Bias:</b> ' + stratagem.bias + '</p>',
-    '<p><b>Behavioral reading:</b> ' + stratagem.behavioral + '</p>',
-    '<p><b>Modern example:</b> ' + stratagem.example + '</p>',
-    renderOptionalSection('Jinn Interpretation', stratagem.interpretation),
-    renderOptionalSection('Cognitive Principle', stratagem.principle),
-    renderBreakdown(stratagem.breakdown),
+    '<p><b>' + t('bias') + ':</b> ' + getLocalizedField(stratagem, 'bias') + '</p>',
+    '<p><b>' + t('behavioral') + ':</b> ' + getLocalizedField(stratagem, 'behavioral') + '</p>',
+    '<p><b>' + t('example') + ':</b> ' + getLocalizedField(stratagem, 'example') + '</p>',
+    renderOptionalSection(t('interpretation'), getLocalizedField(stratagem, 'interpretation')),
+    renderOptionalSection(t('principle'), getLocalizedField(stratagem, 'principle')),
+    renderBreakdown(getLocalizedField(stratagem, 'breakdown')),
     renderNoteLink(stratagem),
     '</div>',
     '</article>'
@@ -2924,7 +3012,7 @@ function renderStratagemDetail(stratagem) {
 }
 
 function renderNoResults() {
-  cards.innerHTML = '<article class="stratagem-nav-card empty-state"><h3>No results</h3><p class="summary">別のキーワードで検索してください。</p></article>';
+  cards.innerHTML = '<article class="stratagem-nav-card empty-state"><h3>' + t('noResultsTitle') + '</h3><p class="summary">' + t('noResultsDescription') + '</p></article>';
   detailPane.innerHTML = renderStratagemDetail(null);
 }
 
@@ -2937,13 +3025,13 @@ function renderNavCard(stratagem, options = {}) {
   button.dataset.id = String(stratagem.id);
   button.classList.toggle('active', stratagem.id === selectedStratagemId);
   const top = showBadge
-    ? '<div class="nav-card-top"><span class="number">#' + String(stratagem.id).padStart(2, '0') + '</span><span class="badge">' + stratagem.category + '</span></div>'
+    ? '<div class="nav-card-top"><span class="number">#' + String(stratagem.id).padStart(2, '0') + '</span><span class="badge">' + getLocalizedField(stratagem, 'category') + '</span></div>'
     : '<div class="nav-card-top"><span class="number">#' + String(stratagem.id).padStart(2, '0') + '</span></div>';
   button.innerHTML = [
     top,
-    '<h3>' + stratagem.name + '</h3>',
-    showSummary ? '<p class="summary">' + stratagem.summary + '</p>' : '<p class="reading">' + stratagem.reading + '</p>',
-    '<p class="english">' + stratagem.english + '</p>'
+    '<h3>' + getLocalizedField(stratagem, 'name') + '</h3>',
+    showSummary ? '<p class="summary">' + getLocalizedField(stratagem, 'summary') + '</p>' : (currentLanguage === 'ja' ? '<p class="reading">' + stratagem.reading + '</p>' : ''),
+    currentLanguage === 'ja' ? '<p class="english">' + stratagem.english + '</p>' : ''
   ].join('');
   button.addEventListener('click', () => selectStratagem(stratagem.id));
   return button;
@@ -2974,21 +3062,23 @@ function renderTree(filtered) {
 
     const rootDetails = document.createElement('details');
     rootDetails.className = 'tree-root';
+    rootDetails.dataset.treeId = root.id;
     rootDetails.open = true;
     rootDetails.innerHTML = [
       '<summary class="tree-root-summary">',
-      '<span class="tree-root-title">' + root.title + '</span>',
-      '<span class="tree-root-description">' + root.description + '</span>',
+      '<span class="tree-root-title">' + getLocalizedTreeField(root, 'title') + '</span>',
+      '<span class="tree-root-description">' + getLocalizedTreeField(root, 'description') + '</span>',
       '</summary>'
     ].join('');
 
     childNodes.forEach(({ child, childStratagems }) => {
       const childDetails = document.createElement('details');
       childDetails.className = 'tree-child';
+      childDetails.dataset.treeId = child.id;
       childDetails.open = true;
       childDetails.innerHTML = [
         '<summary class="tree-child-summary">',
-        '<span>' + child.title + '</span>',
+        '<span>' + getLocalizedTreeField(child, 'title') + '</span>',
         '<span class="count-badge">' + childStratagems.length + '</span>',
         '</summary>'
       ].join('');
@@ -3073,6 +3163,9 @@ search.addEventListener('input', render);
 category.addEventListener('change', render);
 treeViewButton.addEventListener('click', () => setActiveView('tree'));
 listViewButton.addEventListener('click', () => setActiveView('list'));
+languageButtons.forEach((button) => {
+  button.addEventListener('click', () => setLanguage(button.dataset.language));
+});
 closeDetailButton.addEventListener('click', closeMobileDetail);
 mobileDetailDrawer.addEventListener('click', (event) => {
   if (event.target.matches('[data-close-detail]')) {
@@ -3085,5 +3178,5 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
-renderCategoryCards();
+updateLanguageUi();
 render();

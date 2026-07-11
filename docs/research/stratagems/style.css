@@ -78,6 +78,38 @@ nav {
   font-size: 0.95rem;
 }
 
+.language-switcher {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(8, 10, 15, 0.72);
+}
+
+.language-button {
+  min-width: 42px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.language-button[aria-pressed="true"] {
+  background: var(--accent);
+  color: #0b0d12;
+  box-shadow: 0 0 18px rgba(217, 170, 78, 0.25);
+}
+
+.language-button:focus-visible {
+  outline: 2px solid var(--accent2);
+  outline-offset: 2px;
+}
+
 nav a:hover {
   color: var(--accent);
 }
@@ -642,6 +674,12 @@ footer {
     align-items: flex-start;
     gap: 12px;
     flex-direction: column;
+  }
+
+  .language-switcher {
+    position: absolute;
+    top: 14px;
+    right: 4vw;
   }
 
   nav {
