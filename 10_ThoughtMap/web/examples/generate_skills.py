@@ -101,6 +101,11 @@ def parse_args() -> argparse.Namespace:
         help="Parameter scores CSV path. Required when --embeddings is used.",
     )
     parser.add_argument("--doc-id", default="", help="doc_id to generate from CSV inputs.")
+    parser.add_argument(
+        "--doc-ids",
+        default="",
+        help="Comma-separated doc_ids to compare from CSV inputs. Overrides --doc-id.",
+    )
     parser.add_argument("--model-name", default=DEFAULT_MODEL_NAME, help="SentenceTransformer model name.")
     parser.add_argument("--generation-version", type=int, default=1)
     parser.add_argument("--reference-cache", type=Path, default=None)
@@ -109,17 +114,19 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_skill_input(args: argparse.Namespace) -> SkillInput:
+def load_skill_input(args: argparse.Namespace, doc_id: str = "") -> SkillInput:
     if args.input_json:
         return _read_input_json(args.input_json)
     if not args.parameter_scores:
         raise ValueError("--parameter-scores is required when --embeddings is used.")
-    return _read_csv_input(args.embeddings, args.parameter_scores, args.doc_id)
+    return _read_csv_input(args.embeddings, args.parameter_scores, doc_id or args.doc_id)
 
 
-def main() -> int:
-    args = parse_args()
-    skill_input = load_skill_input(args)
+def _doc_ids_from_args(args: argparse.Namespace) -> list[str]:
+    return [item.strip() for item in args.doc_ids.split(",") if item.strip()]
+
+
+def _generate_payload(args: argparse.Namespace, skill_input: SkillInput) -> dict[str, Any]:
     kwargs: dict[str, Any] = {
         "skill_input": skill_input,
         "generation_version": args.generation_version,
@@ -127,9 +134,23 @@ def main() -> int:
     }
     if args.reference_cache:
         kwargs["reference_cache_path"] = args.reference_cache
+    return generate_skill(**kwargs).to_dict()
 
-    skill = generate_skill(**kwargs)
-    payload = skill.to_dict()
+
+def main() -> int:
+    args = parse_args()
+    doc_ids = _doc_ids_from_args(args)
+    if doc_ids and args.input_json:
+        raise ValueError("--doc-ids can only be used with CSV inputs.")
+
+    if doc_ids:
+        payload: dict[str, Any] | list[dict[str, Any]] = [
+            _generate_payload(args, load_skill_input(args, doc_id))
+            for doc_id in doc_ids
+        ]
+    else:
+        payload = _generate_payload(args, load_skill_input(args))
+
     text = json.dumps(payload, ensure_ascii=False, indent=2)
 
     if args.output:
@@ -145,4 +166,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -6,6 +6,15 @@ from .skill_target_generator import SUPPORTED_TARGETS
 from .skill_trigger_generator import SUPPORTED_TRIGGERS
 
 
+UNSAFE_ALWAYS_EFFECTS = {
+    "damage",
+    "heal",
+    "seal",
+    "sp_recover",
+    "sp_damage",
+}
+
+
 def validate_skill(skill: Skill) -> None:
     if not skill.doc_id:
         raise ValueError("Skill is missing doc_id.")
@@ -13,6 +22,13 @@ def validate_skill(skill: Skill) -> None:
         raise ValueError(f"Unsupported trigger: {skill.trigger}")
     if not 1 <= len(skill.effects) <= 2:
         raise ValueError("Skill must contain 1 or 2 effects.")
+    if skill.trigger == "always":
+        unsafe = [effect.effect_type for effect in skill.effects if effect.effect_type in UNSAFE_ALWAYS_EFFECTS]
+        if unsafe:
+            raise ValueError(
+                "trigger=always cannot be used with instant/control effect(s): "
+                + ", ".join(unsafe)
+            )
 
     for effect in skill.effects:
         if effect.effect_type not in SUPPORTED_EFFECTS:
@@ -23,4 +39,3 @@ def validate_skill(skill: Skill) -> None:
             raise ValueError("Effect value must be positive.")
         if not 0.0 <= effect.probability <= 1.0:
             raise ValueError("Effect probability must be between 0 and 1.")
-
