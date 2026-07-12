@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 public class ProductBattleGeneratedSkillRowView : MonoBehaviour
 {
-    [SerializeField] private TMP_FontAsset japaneseFontAsset;
+    [SerializeField] private TMP_FontAsset overrideFontAsset;
     [SerializeField] private TMP_Text nameText;
     [SerializeField] private TMP_Text metaText;
     [SerializeField] private TMP_Text effectText;
@@ -57,13 +57,13 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour
 
     public void SetFontAsset(TMP_FontAsset fontAsset)
     {
-        japaneseFontAsset = fontAsset;
+        overrideFontAsset = fontAsset;
         ApplyFontToGeneratedTexts();
     }
 
     public void ApplyFontToGeneratedTexts()
     {
-        if (japaneseFontAsset == null)
+        if (overrideFontAsset == null)
         {
             return;
         }
@@ -73,7 +73,7 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour
         {
             if (text != null)
             {
-                text.font = japaneseFontAsset;
+                text.font = overrideFontAsset;
             }
         }
     }
@@ -134,9 +134,9 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour
         rect.offsetMin = Vector2.zero;
         rect.offsetMax = Vector2.zero;
         TMP_Text text = child.AddComponent<TextMeshProUGUI>();
-        if (japaneseFontAsset != null)
+        if (overrideFontAsset != null)
         {
-            text.font = japaneseFontAsset;
+            text.font = overrideFontAsset;
         }
         text.fontSize = fontSize;
         text.color = new Color(0.86f, 0.96f, 1f, 1f);
