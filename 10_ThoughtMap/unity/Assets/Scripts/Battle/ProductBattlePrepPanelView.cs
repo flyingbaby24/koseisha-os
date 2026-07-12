@@ -41,10 +41,6 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     [SerializeField] private bool debugGeneratedSkills;
     [SerializeField] private bool showAllGeneratedSkillsWhenNoDeckMatch = true;
 
-    [Header("Fonts")]
-    [SerializeField] private TMP_FontAsset japaneseFontAsset;
-    [SerializeField] private TMP_Text fontReferenceText;
-
     [Header("Prefabs")]
     [SerializeField] private ProductBattleCardListRowView cardListRowPrefab;
     [SerializeField] private ProductBattleCardListRowView deckListRowPrefab;
@@ -127,7 +123,6 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         EnsureFormationGridCellArtImages();
         EnsureFormationGridLayout();
         EnsureGeneratedSkillsPanel();
-        ApplyJapaneseFontReferences();
         WireGeneratedSkillsPanel();
         RenderGrid();
         cardDetailPanel?.Clear();
@@ -514,57 +509,6 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         ShowSelectedDetail();
     }
 
-    public void ApplyJapaneseFontAsset(TMP_FontAsset fontAsset)
-    {
-        japaneseFontAsset = fontAsset;
-        ApplyJapaneseFontReferences();
-    }
-
-    public void ApplyJapaneseFontReferences()
-    {
-        TMP_FontAsset font = ResolveJapaneseFontAsset();
-        if (font == null)
-        {
-            if (debugGeneratedSkills)
-            {
-                Debug.LogWarning("[GeneratedSkills] Japanese TMP Font Asset is not assigned. Generated skill Japanese text may render as missing glyphs.", this);
-            }
-            return;
-        }
-
-        japaneseFontAsset = font;
-        if (statusText != null)
-        {
-            statusText.font = font;
-        }
-        if (cardDetailPanel != null)
-        {
-            cardDetailPanel.SetFontAsset(font);
-        }
-        if (generatedSkillsPanel != null)
-        {
-            generatedSkillsPanel.SetFontAsset(font);
-        }
-    }
-
-    private TMP_FontAsset ResolveJapaneseFontAsset()
-    {
-        if (japaneseFontAsset != null)
-        {
-            return japaneseFontAsset;
-        }
-        if (fontReferenceText != null && fontReferenceText.font != null)
-        {
-            return fontReferenceText.font;
-        }
-        if (statusText != null && statusText.font != null)
-        {
-            return statusText.font;
-        }
-        TMP_Text existingText = GetComponentInChildren<TMP_Text>(true);
-        return existingText == null ? null : existingText.font;
-    }
-
     public void AssignGeneratedSkill(GeneratedSkillDto skill)
     {
         if (skill == null || string.IsNullOrWhiteSpace(skill.skill_id))
@@ -651,7 +595,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         RenderGeneratedSkills();
         WriteStatus(skill == null
             ? "No generated skill selected."
-            : $"Selected skill: {skill.DisplayName} - {ShortStatusText(skill.description_ja, skill.description_en)}");
+            : $"Selected skill: {skill.DisplayName} - {ShortStatusText(skill.description_en, "")}");
     }
 
     private void RenderGeneratedSkills()
@@ -1480,7 +1424,6 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         generatedSkillsPanel?.EnsureBuilt();
-        ApplyJapaneseFontReferences();
     }
 
     private void EnsureListContentReferences()

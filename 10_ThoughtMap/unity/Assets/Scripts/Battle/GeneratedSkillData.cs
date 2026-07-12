@@ -18,7 +18,8 @@ public class GeneratedSkillDto
     public string description_ja;
     public string description_en;
 
-    public string DisplayName => string.IsNullOrWhiteSpace(name_ja) ? name_en : name_ja;
+    public string DisplayName => string.IsNullOrWhiteSpace(name_en) ? skill_id : name_en;
+    public string DisplayDescription => description_en ?? "";
 }
 
 [Serializable]
@@ -29,6 +30,8 @@ public class GeneratedSkillConceptDto
     public string category;
     public float similarity;
     public int rank;
+
+    public string DisplayLabel => label_en ?? "";
 }
 
 [Serializable]

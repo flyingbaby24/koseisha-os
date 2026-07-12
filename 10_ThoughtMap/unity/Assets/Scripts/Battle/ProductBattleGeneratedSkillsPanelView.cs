@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
 {
-    [SerializeField] private TMP_FontAsset japaneseFontAsset;
+    [SerializeField] private TMP_FontAsset overrideFontAsset;
     [SerializeField] private Transform content;
     [SerializeField] private TMP_Text headingText;
     [SerializeField] private TMP_Text emptyText;
@@ -94,13 +94,13 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
 
     public void SetFontAsset(TMP_FontAsset fontAsset)
     {
-        japaneseFontAsset = fontAsset;
+        overrideFontAsset = fontAsset;
         ApplyFontToGeneratedTexts();
     }
 
     public void ApplyFontToGeneratedTexts()
     {
-        if (japaneseFontAsset == null)
+        if (overrideFontAsset == null)
         {
             return;
         }
@@ -110,7 +110,7 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
         {
             if (text != null)
             {
-                text.font = japaneseFontAsset;
+                text.font = overrideFontAsset;
             }
         }
 
@@ -119,7 +119,7 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
         {
             if (row != null)
             {
-                row.SetFontAsset(japaneseFontAsset);
+                row.SetFontAsset(overrideFontAsset);
             }
         }
     }
@@ -246,7 +246,7 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
             rowObject.transform.SetParent(content, false);
             row = rowObject.GetComponent<ProductBattleGeneratedSkillRowView>();
         }
-        row.SetFontAsset(japaneseFontAsset);
+        row.SetFontAsset(overrideFontAsset);
         return row;
     }
 
@@ -260,9 +260,9 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
         rect.offsetMin = Vector2.zero;
         rect.offsetMax = Vector2.zero;
         TMP_Text text = child.AddComponent<TextMeshProUGUI>();
-        if (japaneseFontAsset != null)
+        if (overrideFontAsset != null)
         {
-            text.font = japaneseFontAsset;
+            text.font = overrideFontAsset;
         }
         text.text = textValue;
         text.fontSize = fontSize;
