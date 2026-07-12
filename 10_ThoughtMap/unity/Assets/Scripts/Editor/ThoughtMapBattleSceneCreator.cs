@@ -1,6 +1,7 @@
 ﻿#if UNITY_EDITOR
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using TMPro;
@@ -776,6 +777,7 @@ public static class ThoughtMapBattleSceneCreator
             EditorUtility.SetDirty(formationContent.gameObject);
         }
         so.ApplyModifiedPropertiesWithoutUndo();
+        RepairProductBattlePrepGridCellArtImages(view);
         EditorUtility.SetDirty(view);
         Debug.Log($"[SourceOfThoughtBattleScene] ScrollView repaired for {view.name}: cardContent={cardContent?.name ?? "missing"}, deckContent={deckContent?.name ?? "missing"}, formationContent={formationContent?.name ?? "missing"}.");
         return true;
@@ -819,12 +821,26 @@ public static class ThoughtMapBattleSceneCreator
 
         Undo.RecordObject(view, "Repair Product Battle Prep Generated Skills");
         view.EnsureGeneratedSkillsPanel();
+        RepairProductBattlePrepGridCellArtImages(view);
+        TMP_FontAsset japaneseFont = FindOrCreateJapaneseTmpFontAsset(view);
+        if (japaneseFont != null)
+        {
+            view.ApplyJapaneseFontAsset(japaneseFont);
+        }
+        else
+        {
+            Debug.LogWarning("[SourceOfThoughtBattleScene] Japanese TMP Font Asset was not found. Assign a Japanese-capable TMP Font Asset to ProductBattlePrepPanelView manually.");
+        }
 
         ProductBattleCardDetailPanelView detail = view.GetComponentInChildren<ProductBattleCardDetailPanelView>(true);
         if (detail != null)
         {
             Undo.RecordObject(detail, "Repair Assigned Skills Area");
             detail.EnsureAssignedSkillsArea();
+            if (japaneseFont != null)
+            {
+                detail.SetFontAsset(japaneseFont);
+            }
             EditorUtility.SetDirty(detail);
         }
 
@@ -833,11 +849,150 @@ public static class ThoughtMapBattleSceneCreator
         {
             Undo.RecordObject(generatedPanel, "Repair Generated Skills Panel");
             generatedPanel.EnsureBuilt();
+            if (japaneseFont != null)
+            {
+                generatedPanel.SetFontAsset(japaneseFont);
+            }
             EditorUtility.SetDirty(generatedPanel);
         }
 
         EditorUtility.SetDirty(view);
-        Debug.Log($"[SourceOfThoughtBattleScene] Generated Skills UI repaired for {view.name}.");
+        Debug.Log($"[SourceOfThoughtBattleScene] Generated Skills UI repaired for {view.name}. JapaneseFont={(japaneseFont == null ? "none" : japaneseFont.name)}.");
+    }
+
+    private static void RepairProductBattlePrepGridCellArtImages(ProductBattlePrepPanelView view)
+    {
+        if (view == null)
+        {
+            return;
+        }
+
+        ProductBattleGridCellView[] cells = view.GetComponentsInChildren<ProductBattleGridCellView>(true);
+        foreach (ProductBattleGridCellView cell in cells)
+        {
+            if (cell == null)
+            {
+                continue;
+            }
+
+            Undo.RecordObject(cell.gameObject, "Repair Formation Grid Cell Art Image");
+            cell.EnsureArtImage();
+            EditorUtility.SetDirty(cell.gameObject);
+        }
+
+        Debug.Log($"[SourceOfThoughtBattleScene] Formation Grid ArtImage repaired. cells={cells.Length}", view);
+    }
+
+    private static TMP_FontAsset FindOrCreateJapaneseTmpFontAsset(ProductBattlePrepPanelView view)
+    {
+        TMP_FontAsset sceneFont = FindJapaneseTmpFontAssetInScene(view);
+        if (sceneFont != null)
+        {
+            return sceneFont;
+        }
+
+        TMP_FontAsset projectFont = FindJapaneseTmpFontAssetInProject();
+        if (projectFont != null)
+        {
+            return projectFont;
+        }
+
+        return CreateJapaneseTmpFontAssetFromProjectFont();
+    }
+
+    private static TMP_FontAsset FindJapaneseTmpFontAssetInScene(ProductBattlePrepPanelView view)
+    {
+        if (view == null)
+        {
+            return null;
+        }
+
+        TMP_Text[] texts = view.gameObject.scene.GetRootGameObjects()
+            .SelectMany(root => root.GetComponentsInChildren<TMP_Text>(true))
+            .ToArray();
+
+        foreach (TMP_Text text in texts)
+        {
+            if (text != null && IsLikelyJapaneseFontAsset(text.font))
+            {
+                return text.font;
+            }
+        }
+
+        return null;
+    }
+
+    private static TMP_FontAsset FindJapaneseTmpFontAssetInProject()
+    {
+        string[] guids = AssetDatabase.FindAssets("t:TMP_FontAsset");
+        foreach (string guid in guids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            TMP_FontAsset fontAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(path);
+            if (IsLikelyJapaneseFontAsset(fontAsset))
+            {
+                return fontAsset;
+            }
+        }
+
+        return null;
+    }
+
+    private static TMP_FontAsset CreateJapaneseTmpFontAssetFromProjectFont()
+    {
+        string[] guids = AssetDatabase.FindAssets("t:Font");
+        foreach (string guid in guids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            string lowerPath = path.ToLowerInvariant();
+            if (!lowerPath.Contains("noto")
+                && !lowerPath.Contains("japanese")
+                && !lowerPath.Contains("jp")
+                && !lowerPath.Contains("gothic")
+                && !lowerPath.Contains("mincho"))
+            {
+                continue;
+            }
+
+            Font sourceFont = AssetDatabase.LoadAssetAtPath<Font>(path);
+            if (sourceFont == null)
+            {
+                continue;
+            }
+
+            string folder = "Assets/Fonts";
+            if (!AssetDatabase.IsValidFolder(folder))
+            {
+                AssetDatabase.CreateFolder("Assets", "Fonts");
+            }
+
+            string assetPath = AssetDatabase.GenerateUniqueAssetPath($"{folder}/{sourceFont.name}_Dynamic_TMP.asset");
+            TMP_FontAsset fontAsset = TMP_FontAsset.CreateFontAsset(sourceFont);
+            fontAsset.name = sourceFont.name + "_Dynamic_TMP";
+            fontAsset.atlasPopulationMode = AtlasPopulationMode.Dynamic;
+            AssetDatabase.CreateAsset(fontAsset, assetPath);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[SourceOfThoughtBattleScene] Created dynamic TMP Font Asset for Japanese text: {assetPath}");
+            return fontAsset;
+        }
+
+        return null;
+    }
+
+    private static bool IsLikelyJapaneseFontAsset(TMP_FontAsset fontAsset)
+    {
+        if (fontAsset == null)
+        {
+            return false;
+        }
+
+        string name = fontAsset.name.ToLowerInvariant();
+        return name.Contains("arialuni")
+            || name.Contains("noto")
+            || name.Contains("jp")
+            || name.Contains("japanese")
+            || name.Contains("gothic")
+            || name.Contains("mincho");
     }
 
     private static void RepairCardDetailPanelLayout(RectTransform detailRect)
