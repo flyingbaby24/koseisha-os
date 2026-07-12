@@ -39,6 +39,11 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     [SerializeField] private bool loadCardsOnStart = true;
     [SerializeField] private bool autoFillDeckOnLoad;
     [SerializeField] private bool debugGeneratedSkills;
+    [SerializeField] private bool showAllGeneratedSkillsWhenNoDeckMatch = true;
+
+    [Header("Fonts")]
+    [SerializeField] private TMP_FontAsset japaneseFontAsset;
+    [SerializeField] private TMP_Text fontReferenceText;
 
     [Header("Prefabs")]
     [SerializeField] private ProductBattleCardListRowView cardListRowPrefab;
@@ -119,8 +124,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             WarnMissingListContent("Deck 10", "DeckListPanel/Viewport/Content");
         }
         CollectSceneGridCells();
+        EnsureFormationGridCellArtImages();
         EnsureFormationGridLayout();
         EnsureGeneratedSkillsPanel();
+        ApplyJapaneseFontReferences();
         WireGeneratedSkillsPanel();
         RenderGrid();
         cardDetailPanel?.Clear();
@@ -347,6 +354,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         {
             ProductBattleGridCellView cell = Instantiate(gridCellPrefab, formationGridContent);
             cell.gameObject.name = $"FormationCell_{i:00}";
+            cell.EnsureArtImage();
             gridCells.Add(cell);
         }
     }
@@ -391,6 +399,18 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
         gridCells.Clear();
         gridCells.AddRange(formationGridContent.GetComponentsInChildren<ProductBattleGridCellView>(true));
+        EnsureFormationGridCellArtImages();
+    }
+
+    public void EnsureFormationGridCellArtImages()
+    {
+        foreach (ProductBattleGridCellView cell in gridCells)
+        {
+            if (cell != null)
+            {
+                cell.EnsureArtImage();
+            }
+        }
     }
 
     private void OnDeckCardClicked(ProductBattleCardListRowView view)
@@ -400,6 +420,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         RenderDeck();
         RenderCardLibrary();
         ShowSelectedDetail();
+        RenderGeneratedSkills();
         WriteStatus(selectedDeckIndex >= 0 ? $"Selected P{selectedDeckIndex + 1}." : "No card selected.");
     }
 
@@ -408,6 +429,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         selectedLibraryIndex = view == null ? -1 : view.Index;
         RenderCardLibrary();
         ShowSelectedDetail();
+        RenderGeneratedSkills();
         WriteStatus(selectedLibraryIndex >= 0 ? $"Previewing C{selectedLibraryIndex + 1}." : "No card selected.");
     }
 
@@ -490,6 +512,57 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
         RenderGeneratedSkills();
         ShowSelectedDetail();
+    }
+
+    public void ApplyJapaneseFontAsset(TMP_FontAsset fontAsset)
+    {
+        japaneseFontAsset = fontAsset;
+        ApplyJapaneseFontReferences();
+    }
+
+    public void ApplyJapaneseFontReferences()
+    {
+        TMP_FontAsset font = ResolveJapaneseFontAsset();
+        if (font == null)
+        {
+            if (debugGeneratedSkills)
+            {
+                Debug.LogWarning("[GeneratedSkills] Japanese TMP Font Asset is not assigned. Generated skill Japanese text may render as missing glyphs.", this);
+            }
+            return;
+        }
+
+        japaneseFontAsset = font;
+        if (statusText != null)
+        {
+            statusText.font = font;
+        }
+        if (cardDetailPanel != null)
+        {
+            cardDetailPanel.SetFontAsset(font);
+        }
+        if (generatedSkillsPanel != null)
+        {
+            generatedSkillsPanel.SetFontAsset(font);
+        }
+    }
+
+    private TMP_FontAsset ResolveJapaneseFontAsset()
+    {
+        if (japaneseFontAsset != null)
+        {
+            return japaneseFontAsset;
+        }
+        if (fontReferenceText != null && fontReferenceText.font != null)
+        {
+            return fontReferenceText.font;
+        }
+        if (statusText != null && statusText.font != null)
+        {
+            return statusText.font;
+        }
+        TMP_Text existingText = GetComponentInChildren<TMP_Text>(true);
+        return existingText == null ? null : existingText.font;
     }
 
     public void AssignGeneratedSkill(GeneratedSkillDto skill)
@@ -591,12 +664,98 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         ThoughtMapBattleCardData selectedCard = GetSelectedCard();
+        List<GeneratedSkillDto> deckMatchedSkills = GetDeckMatchedGeneratedSkills();
+        bool usedDebugFallback = false;
+        if (deckCards.Count > 0 && deckMatchedSkills.Count == 0 && showAllGeneratedSkillsWhenNoDeckMatch && generatedSkills.Count > 0)
+        {
+            usedDebugFallback = true;
+            deckMatchedSkills = generatedSkills
+                .Where(skill => skill != null && !string.IsNullOrWhiteSpace(skill.skill_id))
+                .OrderBy(skill => skill.DisplayName)
+                .ThenBy(skill => skill.skill_id)
+                .ToList();
+        }
         generatedSkillsPanel.SetSelectedSkill(selectedGeneratedSkillId);
         generatedSkillsPanel.Render(
-            generatedSkills,
+            deckMatchedSkills,
             selectedCard == null ? "" : selectedCard.docId,
             GetAssignedSkillIdsForCard(selectedCard)
         );
+
+        if (debugGeneratedSkills || usedDebugFallback)
+        {
+            Debug.Log($"[GeneratedSkills] Deck matched skill count={GetDeckMatchedGeneratedSkills().Count} displayed={deckMatchedSkills.Count} deck cards={deckCards.Count} fallbackAll={usedDebugFallback}", this);
+            LogGeneratedSkillDocIdMatching();
+        }
+    }
+
+    private List<GeneratedSkillDto> GetDeckMatchedGeneratedSkills()
+    {
+        List<GeneratedSkillDto> filtered = new List<GeneratedSkillDto>();
+        if (generatedSkills.Count == 0 || deckCards.Count == 0)
+        {
+            return filtered;
+        }
+
+        HashSet<string> addedSkillIds = new HashSet<string>();
+        foreach (ThoughtMapBattleCardData card in deckCards)
+        {
+            string docId = NormalizeDocId(card == null ? "" : card.docId);
+            if (string.IsNullOrWhiteSpace(docId))
+            {
+                continue;
+            }
+
+            IEnumerable<GeneratedSkillDto> matches = generatedSkills
+                .Where(skill => skill != null
+                    && !string.IsNullOrWhiteSpace(skill.skill_id)
+                    && NormalizeDocId(skill.doc_id) == docId)
+                .OrderBy(skill => skill.DisplayName)
+                .ThenBy(skill => skill.skill_id);
+
+            foreach (GeneratedSkillDto skill in matches)
+            {
+                if (addedSkillIds.Add(skill.skill_id))
+                {
+                    filtered.Add(skill);
+                }
+            }
+        }
+
+        return filtered;
+    }
+
+    private void LogGeneratedSkillDocIdMatching()
+    {
+        Debug.Log($"[GeneratedSkills] Matching debug: deckCardCount={deckCards.Count} skillCount={generatedSkills.Count}", this);
+        foreach (ThoughtMapBattleCardData card in deckCards)
+        {
+            Debug.Log($"[GeneratedSkills] Deck card: title='{(card == null ? "null" : card.cardName)}' doc_id='{(card == null ? "" : card.docId)}'", this);
+        }
+
+        int matchCount = 0;
+        foreach (GeneratedSkillDto skill in generatedSkills)
+        {
+            if (skill == null)
+            {
+                continue;
+            }
+
+            bool matched = deckCards.Any(card => card != null
+                && !string.IsNullOrWhiteSpace(card.docId)
+                && NormalizeDocId(card.docId) == NormalizeDocId(skill.doc_id));
+            if (matched)
+            {
+                matchCount++;
+            }
+            Debug.Log($"[GeneratedSkills] Skill: name='{skill.DisplayName}' doc_id='{skill.doc_id}' Matched: {matched}", this);
+        }
+        Debug.Log($"[GeneratedSkills] Matching debug complete. matchCount={matchCount}", this);
+    }
+
+    private string NormalizeDocId(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "" : value.Trim();
     }
 
     private ThoughtMapBattleCardData GetSelectedCard()
@@ -1321,6 +1480,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         generatedSkillsPanel?.EnsureBuilt();
+        ApplyJapaneseFontReferences();
     }
 
     private void EnsureListContentReferences()

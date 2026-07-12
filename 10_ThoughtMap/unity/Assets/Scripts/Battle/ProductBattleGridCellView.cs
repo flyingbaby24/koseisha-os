@@ -32,6 +32,7 @@ public class ProductBattleGridCellView : MonoBehaviour
 
     private void Awake()
     {
+        EnsureArtImage();
         EnsureInteractionEnabled();
     }
 
@@ -63,6 +64,41 @@ public class ProductBattleGridCellView : MonoBehaviour
         {
             button = GetComponentInChildren<Button>(true);
         }
+
+        EnsureArtImage();
+    }
+
+    public void EnsureArtImage()
+    {
+        if (artImage == null)
+        {
+            Transform existing = transform.Find("ArtImage");
+            if (existing != null)
+            {
+                artImage = existing.GetComponent<Image>();
+            }
+        }
+
+        if (artImage == null)
+        {
+            GameObject artObject = new GameObject("ArtImage", typeof(RectTransform), typeof(Image));
+            artObject.transform.SetParent(transform, false);
+            artImage = artObject.GetComponent<Image>();
+        }
+
+        RectTransform rect = artImage.transform as RectTransform;
+        if (rect != null)
+        {
+            rect.anchorMin = new Vector2(0.08f, 0.18f);
+            rect.anchorMax = new Vector2(0.92f, 0.86f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        artImage.preserveAspect = true;
+        artImage.raycastTarget = false;
+        artImage.color = Color.white;
+        artImage.transform.SetAsFirstSibling();
     }
 
     public void BindEmpty(int gridX, int gridY, bool available)
@@ -70,6 +106,7 @@ public class ProductBattleGridCellView : MonoBehaviour
         x = gridX;
         y = gridY;
         card = null;
+        EnsureArtImage();
         EnsureInteractionEnabled();
         SetText(coordinateText, $"{x + 1},{y + 1}");
         SetText(unitIdText, "");
@@ -99,6 +136,7 @@ public class ProductBattleGridCellView : MonoBehaviour
         x = gridX;
         y = gridY;
         card = sourceCard;
+        EnsureArtImage();
         EnsureInteractionEnabled();
         SetText(coordinateText, $"{x + 1},{y + 1}");
         SetText(unitIdText, unitId);

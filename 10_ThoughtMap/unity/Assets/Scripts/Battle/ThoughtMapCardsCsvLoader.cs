@@ -38,7 +38,7 @@ public static class ThoughtMapCardsCsvLoader
         ThoughtMapBattleCardData card = new ThoughtMapBattleCardData
         {
             cardId = Get(row, "card_id"),
-            docId = Get(row, "doc_id"),
+            docId = FirstNonEmpty(row, "doc_id", "document_id", "source_doc_id", "original_doc_id", "id"),
             cardName = Get(row, "card_name"),
             sourceTitle = Get(row, "source_title"),
             author = Get(row, "author"),
@@ -78,6 +78,19 @@ public static class ThoughtMapCardsCsvLoader
     private static string Get(Dictionary<string, string> row, string key)
     {
         return row.TryGetValue(key, out string value) ? value.Trim() : "";
+    }
+
+    private static string FirstNonEmpty(Dictionary<string, string> row, params string[] keys)
+    {
+        foreach (string key in keys)
+        {
+            string value = Get(row, key);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+        return "";
     }
 
     private static int GetInt(Dictionary<string, string> row, string key)

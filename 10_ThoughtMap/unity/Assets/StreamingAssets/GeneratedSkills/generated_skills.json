@@ -1,0 +1,399 @@
+[
+  {
+    "skill_id": "skill:1:8a0bf08651e5b981",
+    "doc_id": "doc_000000",
+    "name_ja": "探求の封印",
+    "name_en": "Inquiry Seal",
+    "concepts": [
+      {
+        "label_ja": "探求",
+        "label_en": "Inquiry",
+        "category": "Philosophy",
+        "similarity": 0.444655,
+        "rank": 1
+      },
+      {
+        "label_ja": "逆転",
+        "label_en": "Reversal",
+        "category": "Tactics",
+        "similarity": 0.188564,
+        "rank": 2
+      },
+      {
+        "label_ja": "因果",
+        "label_en": "Causality",
+        "category": "Karma",
+        "similarity": 0.181585,
+        "rank": 3
+      },
+      {
+        "label_ja": "連鎖",
+        "label_en": "Chain",
+        "category": "Relation",
+        "similarity": 0.125474,
+        "rank": 4
+      },
+      {
+        "label_ja": "洞察",
+        "label_en": "Insight",
+        "category": "Recognition",
+        "similarity": 0.114096,
+        "rank": 5
+      }
+    ],
+    "trigger": "turn_start",
+    "conditions": [],
+    "effects": [
+      {
+        "effect_order": 1,
+        "effect_type": "seal",
+        "target": "random_enemy",
+        "parameter": "skill_defense",
+        "operation": "decrease",
+        "value": 9,
+        "value_type": "flat",
+        "duration": 1,
+        "probability": 0.68
+      },
+      {
+        "effect_order": 2,
+        "effect_type": "heal",
+        "target": "self",
+        "parameter": "hp",
+        "operation": "recover",
+        "value": 10,
+        "value_type": "flat",
+        "duration": 0,
+        "probability": 0.78
+      }
+    ],
+    "cost": {
+      "sp": 0,
+      "hp_percent": 0.0,
+      "consume_action": false
+    },
+    "cooldown": 0,
+    "generation_version": 1,
+    "description_ja": "「探求」の概念から生成されたスキルです。ターン開始時に発動し、ランダムな敵を封印する。効果時間: 1ターン。発動率: 68% 自身のHPを10回復する。効果時間: 即時。発動率: 78% SP消費なし。 クールダウンなし。",
+    "description_en": "A skill shaped by the concept of Inquiry. It activates at the start of a turn and seals a random enemy. Duration: for 1 turn(s). Chance: 68% restores 10 HP to self. Duration: immediately. Chance: 78% No SP cost. No cooldown."
+  },
+  {
+    "skill_id": "skill:1:c7ab2398598a71d4",
+    "doc_id": "doc_000001",
+    "name_ja": "孤立の封印",
+    "name_en": "Isolation Seal",
+    "concepts": [
+      {
+        "label_ja": "孤立",
+        "label_en": "Isolation",
+        "category": "Individual",
+        "similarity": 0.180888,
+        "rank": 1
+      },
+      {
+        "label_ja": "覚醒",
+        "label_en": "Awakening",
+        "category": "Power",
+        "similarity": 0.158868,
+        "rank": 2
+      },
+      {
+        "label_ja": "衝動",
+        "label_en": "Impulse",
+        "category": "Emotion",
+        "similarity": 0.14869,
+        "rank": 3
+      },
+      {
+        "label_ja": "探求",
+        "label_en": "Inquiry",
+        "category": "Philosophy",
+        "similarity": 0.146718,
+        "rank": 4
+      },
+      {
+        "label_ja": "防衛",
+        "label_en": "Protection",
+        "category": "Defense",
+        "similarity": 0.143866,
+        "rank": 5
+      }
+    ],
+    "trigger": "low_hp",
+    "conditions": [
+      {
+        "condition_type": "hp_percent",
+        "parameter": "hp",
+        "operator": "<=",
+        "value": 35.0
+      }
+    ],
+    "effects": [
+      {
+        "effect_order": 1,
+        "effect_type": "seal",
+        "target": "single_enemy",
+        "parameter": "physical_defense",
+        "operation": "decrease",
+        "value": 7,
+        "value_type": "flat",
+        "duration": 1,
+        "probability": 0.553
+      },
+      {
+        "effect_order": 2,
+        "effect_type": "shield",
+        "target": "single_ally",
+        "parameter": "physical_defense",
+        "operation": "increase",
+        "value": 7,
+        "value_type": "flat",
+        "duration": 2,
+        "probability": 0.653
+      }
+    ],
+    "cost": {
+      "sp": 0,
+      "hp_percent": 0.0,
+      "consume_action": false
+    },
+    "cooldown": 0,
+    "generation_version": 1,
+    "description_ja": "「孤立」の概念から生成されたスキルです。HPが低下したときに発動し、敵単体を封印する。効果時間: 1ターン。発動率: 55% 味方単体に防御シールド7を与える。効果時間: 2ターン。発動率: 65% SP消費なし。 クールダウンなし。",
+    "description_en": "A skill shaped by the concept of Isolation. It activates when HP is low and seals one enemy. Duration: for 1 turn(s). Chance: 55% grants a 7-point shield to one ally. Duration: for 2 turn(s). Chance: 65% No SP cost. No cooldown."
+  },
+  {
+    "skill_id": "skill:1:9a38359a2ccf4fd1",
+    "doc_id": "doc_000002",
+    "name_ja": "探求の浸食",
+    "name_en": "Inquiry Erosion",
+    "concepts": [
+      {
+        "label_ja": "探求",
+        "label_en": "Inquiry",
+        "category": "Philosophy",
+        "similarity": 0.265953,
+        "rank": 1
+      },
+      {
+        "label_ja": "衝動",
+        "label_en": "Impulse",
+        "category": "Emotion",
+        "similarity": 0.238355,
+        "rank": 2
+      },
+      {
+        "label_ja": "孤立",
+        "label_en": "Isolation",
+        "category": "Individual",
+        "similarity": 0.160798,
+        "rank": 3
+      },
+      {
+        "label_ja": "調和",
+        "label_en": "Harmony",
+        "category": "Community",
+        "similarity": 0.129544,
+        "rank": 4
+      },
+      {
+        "label_ja": "因果",
+        "label_en": "Causality",
+        "category": "Karma",
+        "similarity": 0.114411,
+        "rank": 5
+      }
+    ],
+    "trigger": "turn_start",
+    "conditions": [],
+    "effects": [
+      {
+        "effect_order": 1,
+        "effect_type": "dot",
+        "target": "single_enemy",
+        "parameter": "skill_attack",
+        "operation": "damage",
+        "value": 12,
+        "value_type": "flat",
+        "duration": 3,
+        "probability": 0.748
+      },
+      {
+        "effect_order": 2,
+        "effect_type": "seal",
+        "target": "single_enemy",
+        "parameter": "skill_attack",
+        "operation": "decrease",
+        "value": 9,
+        "value_type": "flat",
+        "duration": 1,
+        "probability": 0.648
+      }
+    ],
+    "cost": {
+      "sp": 0,
+      "hp_percent": 0.0,
+      "consume_action": false
+    },
+    "cooldown": 0,
+    "generation_version": 1,
+    "description_ja": "「探求」の概念から生成されたスキルです。ターン開始時に発動し、敵単体へ継続ダメージ12を与える。効果時間: 3ターン。発動率: 75% 敵単体を封印する。効果時間: 1ターン。発動率: 65% SP消費なし。 クールダウンなし。",
+    "description_en": "A skill shaped by the concept of Inquiry. It activates at the start of a turn and deals 12 damage over time to one enemy. Duration: for 3 turn(s). Chance: 75% seals one enemy. Duration: for 1 turn(s). Chance: 65% No SP cost. No cooldown."
+  },
+  {
+    "skill_id": "skill:1:6b774f10fa8b10c8",
+    "doc_id": "doc_000003",
+    "name_ja": "探求の封印",
+    "name_en": "Inquiry Seal",
+    "concepts": [
+      {
+        "label_ja": "探求",
+        "label_en": "Inquiry",
+        "category": "Philosophy",
+        "similarity": 0.149978,
+        "rank": 1
+      },
+      {
+        "label_ja": "因果",
+        "label_en": "Causality",
+        "category": "Karma",
+        "similarity": 0.114491,
+        "rank": 2
+      },
+      {
+        "label_ja": "連鎖",
+        "label_en": "Chain",
+        "category": "Relation",
+        "similarity": 0.11103,
+        "rank": 3
+      },
+      {
+        "label_ja": "孤立",
+        "label_en": "Isolation",
+        "category": "Individual",
+        "similarity": 0.10947,
+        "rank": 4
+      },
+      {
+        "label_ja": "抵抗",
+        "label_en": "Resistance",
+        "category": "Defense",
+        "similarity": 0.095747,
+        "rank": 5
+      }
+    ],
+    "trigger": "battle_start",
+    "conditions": [],
+    "effects": [
+      {
+        "effect_order": 1,
+        "effect_type": "seal",
+        "target": "single_enemy",
+        "parameter": "luck",
+        "operation": "decrease",
+        "value": 8,
+        "value_type": "flat",
+        "duration": 1,
+        "probability": 0.627
+      },
+      {
+        "effect_order": 2,
+        "effect_type": "dot",
+        "target": "single_enemy",
+        "parameter": "luck",
+        "operation": "damage",
+        "value": 10,
+        "value_type": "flat",
+        "duration": 3,
+        "probability": 0.727
+      }
+    ],
+    "cost": {
+      "sp": 0,
+      "hp_percent": 0.0,
+      "consume_action": false
+    },
+    "cooldown": 0,
+    "generation_version": 1,
+    "description_ja": "「探求」の概念から生成されたスキルです。戦闘開始時に発動し、敵単体を封印する。効果時間: 1ターン。発動率: 63% 敵単体へ継続ダメージ10を与える。効果時間: 3ターン。発動率: 73% SP消費なし。 クールダウンなし。",
+    "description_en": "A skill shaped by the concept of Inquiry. It activates at the start of battle and seals one enemy. Duration: for 1 turn(s). Chance: 63% deals 10 damage over time to one enemy. Duration: for 3 turn(s). Chance: 73% No SP cost. No cooldown."
+  },
+  {
+    "skill_id": "skill:1:8f8abced8707b50c",
+    "doc_id": "doc_000004",
+    "name_ja": "探求の回復",
+    "name_en": "Inquiry Restoration",
+    "concepts": [
+      {
+        "label_ja": "探求",
+        "label_en": "Inquiry",
+        "category": "Philosophy",
+        "similarity": 0.294871,
+        "rank": 1
+      },
+      {
+        "label_ja": "覚醒",
+        "label_en": "Awakening",
+        "category": "Power",
+        "similarity": 0.250463,
+        "rank": 2
+      },
+      {
+        "label_ja": "回復",
+        "label_en": "Restoration",
+        "category": "Recovery",
+        "similarity": 0.230221,
+        "rank": 3
+      },
+      {
+        "label_ja": "浸食",
+        "label_en": "Erosion",
+        "category": "Damage",
+        "similarity": 0.204438,
+        "rank": 4
+      },
+      {
+        "label_ja": "逆転",
+        "label_en": "Reversal",
+        "category": "Tactics",
+        "similarity": 0.182942,
+        "rank": 5
+      }
+    ],
+    "trigger": "manual",
+    "conditions": [],
+    "effects": [
+      {
+        "effect_order": 1,
+        "effect_type": "heal",
+        "target": "all_allies",
+        "parameter": "hp",
+        "operation": "recover",
+        "value": 12,
+        "value_type": "flat",
+        "duration": 0,
+        "probability": 0.753
+      },
+      {
+        "effect_order": 2,
+        "effect_type": "sp_recover",
+        "target": "all_allies",
+        "parameter": "sp",
+        "operation": "recover",
+        "value": 12,
+        "value_type": "flat",
+        "duration": 0,
+        "probability": 0.753
+      }
+    ],
+    "cost": {
+      "sp": 15,
+      "hp_percent": 0.0,
+      "consume_action": true
+    },
+    "cooldown": 2,
+    "generation_version": 1,
+    "description_ja": "「探求」の概念から生成されたスキルです。手動で使用したときに発動し、味方全体のHPを12回復する。効果時間: 即時。発動率: 75% 味方全体のSPを12回復する。効果時間: 即時。発動率: 75% 消費SP: 15。 クールダウン: 2ターン。",
+    "description_en": "A skill shaped by the concept of Inquiry. It activates when used manually and restores 12 HP to all allies. Duration: immediately. Chance: 75% restores 12 SP to all allies. Duration: immediately. Chance: 75% SP cost: 15. Cooldown: 2 turn(s)."
+  }
+]

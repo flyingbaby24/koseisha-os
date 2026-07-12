@@ -6,6 +6,7 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
 {
     private const int AbilityRowsPerColumn = 5;
 
+    [SerializeField] private TMP_FontAsset japaneseFontAsset;
     [SerializeField] private Image artImage;
     [SerializeField] private Image attributeIconImage;
     [SerializeField] private TMP_Text titleText;
@@ -38,6 +39,30 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         if (artImage != null) artImage.enabled = false;
         if (attributeIconImage != null) attributeIconImage.enabled = false;
         ClearAbilityBars();
+        ApplyFontToGeneratedTexts();
+    }
+
+    public void SetFontAsset(TMP_FontAsset fontAsset)
+    {
+        japaneseFontAsset = fontAsset;
+        ApplyFontToGeneratedTexts();
+    }
+
+    public void ApplyFontToGeneratedTexts()
+    {
+        if (japaneseFontAsset == null)
+        {
+            return;
+        }
+
+        TMP_Text[] texts = GetComponentsInChildren<TMP_Text>(true);
+        foreach (TMP_Text text in texts)
+        {
+            if (text != null)
+            {
+                text.font = japaneseFontAsset;
+            }
+        }
     }
 
     public void Show(ThoughtMapBattleCardData card, Sprite artSprite, Sprite attributeSprite)
@@ -102,6 +127,7 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
 
         RenderAbilityBars(card);
         SetAssignedSkills(assignedSkills);
+        ApplyFontToGeneratedTexts();
     }
 
     public void SetAssignedSkills(System.Collections.Generic.IReadOnlyList<GeneratedSkillDto> assignedSkills)
@@ -264,6 +290,10 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
 
         if (assignedSkillsText != null)
         {
+            if (japaneseFontAsset != null)
+            {
+                assignedSkillsText.font = japaneseFontAsset;
+            }
             assignedSkillsText.fontSize = 11f;
             assignedSkillsText.color = new Color(0.86f, 0.96f, 1f, 1f);
             assignedSkillsText.alignment = TextAlignmentOptions.TopLeft;

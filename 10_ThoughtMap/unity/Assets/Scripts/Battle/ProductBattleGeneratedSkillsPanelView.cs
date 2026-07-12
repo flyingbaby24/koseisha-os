@@ -7,6 +7,7 @@ using UnityEngine.UI;
 
 public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
 {
+    [SerializeField] private TMP_FontAsset japaneseFontAsset;
     [SerializeField] private Transform content;
     [SerializeField] private TMP_Text headingText;
     [SerializeField] private TMP_Text emptyText;
@@ -87,6 +88,40 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
         {
             Debug.Log($"[GeneratedSkills] Rendered {ordered.Count} skills. selectedCardDocId={selectedCardDocId}", this);
         }
+
+        ApplyFontToGeneratedTexts();
+    }
+
+    public void SetFontAsset(TMP_FontAsset fontAsset)
+    {
+        japaneseFontAsset = fontAsset;
+        ApplyFontToGeneratedTexts();
+    }
+
+    public void ApplyFontToGeneratedTexts()
+    {
+        if (japaneseFontAsset == null)
+        {
+            return;
+        }
+
+        TMP_Text[] texts = GetComponentsInChildren<TMP_Text>(true);
+        foreach (TMP_Text text in texts)
+        {
+            if (text != null)
+            {
+                text.font = japaneseFontAsset;
+            }
+        }
+
+        ProductBattleGeneratedSkillRowView[] generatedRows = GetComponentsInChildren<ProductBattleGeneratedSkillRowView>(true);
+        foreach (ProductBattleGeneratedSkillRowView row in generatedRows)
+        {
+            if (row != null)
+            {
+                row.SetFontAsset(japaneseFontAsset);
+            }
+        }
     }
 
     [ContextMenu("Ensure Generated Skills Panel")]
@@ -133,6 +168,8 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
         {
             emptyText = CreateText("EmptyText", new Vector2(0.06f, 0.40f), new Vector2(0.94f, 0.56f), "No generated skills", 14f, TextAlignmentOptions.Center);
         }
+
+        ApplyFontToGeneratedTexts();
     }
 
     private RectTransform EnsureViewport()
@@ -209,6 +246,7 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
             rowObject.transform.SetParent(content, false);
             row = rowObject.GetComponent<ProductBattleGeneratedSkillRowView>();
         }
+        row.SetFontAsset(japaneseFontAsset);
         return row;
     }
 
@@ -222,6 +260,10 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
         rect.offsetMin = Vector2.zero;
         rect.offsetMax = Vector2.zero;
         TMP_Text text = child.AddComponent<TextMeshProUGUI>();
+        if (japaneseFontAsset != null)
+        {
+            text.font = japaneseFontAsset;
+        }
         text.text = textValue;
         text.fontSize = fontSize;
         text.color = new Color(0.86f, 0.96f, 1f, 1f);
@@ -249,4 +291,3 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
         }
     }
 }
-
