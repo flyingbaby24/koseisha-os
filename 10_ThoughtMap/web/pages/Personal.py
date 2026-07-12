@@ -290,6 +290,21 @@ def load_saved_works(email: str) -> list[dict]:
     return data.get("works", [])
 
 
+@st.cache_data(ttl=300)
+def load_parameter_options() -> list[str]:
+    data, _elapsed, _url = api_get("/search/filter-options", {})
+    return data.get("parameters") or ["general"]
+
+
+def personal_value_options(works: list[dict], field: str) -> list[str]:
+    values = {}
+    for work in works:
+        value = str(work.get(field, "") or "").strip()
+        if value:
+            values.setdefault(value.casefold(), value)
+    return ["all", *sorted(values.values(), key=str.casefold)]
+
+
 def search_similar(
     email: str,
     target_doc_id: str,
@@ -429,30 +444,44 @@ with st.sidebar:
         key="library_email",
     )
 
+    email_key = email.strip().casefold()
+    if email_key != st.session_state.get("personal_loaded_email", ""):
+        st.session_state["personal_saved_works"] = []
+        st.session_state["personal_loaded_email"] = email_key
+        for key in ["personal_source_filter", "personal_category_filter", "personal_parameter_filter", "personal_library_target"]:
+            st.session_state.pop(key, None)
+
     reload_clicked = st.button("Reload Library")
 
     st.markdown("#### 02 Similarity Search")
-    top = st.slider("Top results", 1, 50, 10)
-    source = st.text_input("Source filter", value="all")
-    category = st.text_input("Category filter", value="all")
-    filter_name = st.selectbox("Parameter filter", ["general"])
+    current_works = st.session_state.get("personal_saved_works", [])
+    top = st.slider("Top results", 1, 50, 10, key="personal_top")
+    source = st.selectbox("Source filter", personal_value_options(current_works, "source"), key="personal_source_filter")
+    category = st.selectbox("Category filter", personal_value_options(current_works, "category"), key="personal_category_filter")
+    try:
+        parameter_options = load_parameter_options()
+    except Exception:
+        parameter_options = ["general"]
+    filter_name = st.selectbox("Parameter filter", parameter_options, key="personal_parameter_filter")
 
 
-if "saved_works" not in st.session_state:
-    st.session_state["saved_works"] = []
+if "personal_saved_works" not in st.session_state:
+    st.session_state["personal_saved_works"] = []
+if "personal_loaded_email" not in st.session_state:
+    st.session_state["personal_loaded_email"] = ""
 
 if "selected_target_doc_id" not in st.session_state:
     st.session_state["selected_target_doc_id"] = ""
 
-if email.strip() and (reload_clicked or not st.session_state["saved_works"]):
+if email.strip() and (reload_clicked or not st.session_state["personal_saved_works"]):
     try:
         works = load_saved_works(email)
-        st.session_state["saved_works"] = works
+        st.session_state["personal_saved_works"] = works
     except Exception as exc:
         st.error(f"Failed to load Personal Library: {exc}")
 
 
-works = st.session_state.get("saved_works", [])
+works = st.session_state.get("personal_saved_works", [])
 
 if not email.strip():
     st.info("Enter your registered e-mail to load your Personal Library.")

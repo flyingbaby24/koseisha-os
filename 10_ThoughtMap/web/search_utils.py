@@ -21,6 +21,116 @@ def normalize_key(value: object) -> str:
     return text.strip()
 
 
+NO_FILTER_VALUES = {"", "all", "general"}
+
+
+def normalize_filter_value(value: object) -> str:
+    """Normalize UI/API filter values without treating NULL as text."""
+    return normalize_key(value)
+
+
+def is_no_filter(value: object) -> bool:
+    return normalize_filter_value(value) in NO_FILTER_VALUES
+
+
+def parse_multi_value(value: object) -> list[str]:
+    """Read a scalar, JSON list/dict, or delimiter-separated metadata value."""
+    text = normalize_text(value)
+    if not text:
+        return []
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, list):
+            return [normalize_text(item) for item in parsed if normalize_text(item)]
+        if isinstance(parsed, dict):
+            return [normalize_text(key) for key, enabled in parsed.items() if enabled and normalize_text(key)]
+        if parsed is not None and not isinstance(parsed, (dict, list)):
+            text = normalize_text(parsed)
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return [part.strip() for part in re.split(r"[|;,]", text) if part.strip()]
+
+
+def filter_options(df: pd.DataFrame, column: str, default: str = "all", multi: bool = False) -> list[str]:
+    if df is None or df.empty or column not in df.columns:
+        return [default]
+    values: dict[str, str] = {}
+    for raw in df[column]:
+        items = parse_multi_value(raw) if multi else [normalize_text(raw)]
+        for item in items:
+            key = normalize_key(item)
+            if key and key not in values:
+                values[key] = item
+    return [default, *sorted(values.values(), key=lambda item: normalize_key(item))]
+
+
+def apply_metadata_filter(df: pd.DataFrame, column: str, selected: object, multi: bool = False) -> pd.DataFrame:
+    if df is None or df.empty or is_no_filter(selected) or column not in df.columns:
+        return df
+    wanted = normalize_filter_value(selected)
+    if multi:
+        mask = df[column].map(lambda value: wanted in {normalize_key(item) for item in parse_multi_value(value)})
+    else:
+        mask = df[column].map(normalize_key) == wanted
+    return df[mask].copy().reset_index(drop=True)
+
+
+def parameter_names(df: pd.DataFrame) -> list[str]:
+    names: dict[str, str] = {}
+    if df is None or df.empty:
+        return []
+    for column in ["parameter_scores", "parameters", "filter_scores", "composition", "thought_composition", "scores"]:
+        if column not in df.columns:
+            continue
+        for raw in df[column]:
+            value = raw
+            if isinstance(raw, str):
+                try:
+                    value = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+            if isinstance(value, dict):
+                for key in value:
+                    if normalize_key(key): names.setdefault(normalize_key(key), normalize_text(key))
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        key = item.get("key")
+                        if normalize_key(key): names.setdefault(normalize_key(key), normalize_text(key))
+    return sorted(names.values(), key=normalize_key)
+
+
+def _parameter_score_map(row: pd.Series) -> dict[str, float]:
+    for column in ["parameter_scores", "parameters", "filter_scores", "composition", "thought_composition", "scores"]:
+        if column not in row.index:
+            continue
+        value = row.get(column)
+        if isinstance(value, str):
+            try: value = json.loads(value)
+            except json.JSONDecodeError: continue
+        if isinstance(value, dict):
+            return {normalize_key(k): float(v) for k, v in value.items() if normalize_key(k) and pd.notna(v)}
+        if isinstance(value, list):
+            out = {}
+            for item in value:
+                if isinstance(item, dict) and "key" in item and "value" in item:
+                    try: out[normalize_key(item["key"])] = float(item["value"])
+                    except (TypeError, ValueError): pass
+            if out: return out
+    return {}
+
+
+def apply_parameter_filter(df: pd.DataFrame, selected: object) -> pd.DataFrame:
+    """Keep works whose highest-scoring (representative) parameter is selected."""
+    if df is None or df.empty or is_no_filter(selected):
+        return df
+    wanted = normalize_filter_value(selected)
+    def matches(row: pd.Series) -> bool:
+        scores = _parameter_score_map(row)
+        return bool(scores) and max(scores, key=scores.get) == wanted
+    return df[df.apply(matches, axis=1)].copy().reset_index(drop=True)
+
+
 def safe_filename(value: object, max_len: int = 80) -> str:
     text = normalize_text(value) or "embedding"
     text = re.sub(r"[\\/:*?\"<>|]+", "_", text)

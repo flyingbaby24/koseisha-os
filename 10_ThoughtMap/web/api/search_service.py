@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import math
 import re
+import logging
+import time
 from functools import lru_cache
 
 import pandas as pd
@@ -12,6 +14,10 @@ from search_utils import (
     normalize_text,
     parse_embedding,
     work_similarity_by_vector,
+    apply_metadata_filter,
+    apply_parameter_filter,
+    filter_options,
+    parameter_names,
 )
 
 from .config import ApiSettings, get_settings
@@ -21,6 +27,7 @@ from .user_embedding_sqlite import load_user_embedding_frame
 
 
 SEARCH_MODES = {"keyword", "embedding", "hybrid"}
+logger = logging.getLogger("thoughtmap.search")
 
 PARAMETER_COLUMNS = [
     "parameters",
@@ -70,6 +77,7 @@ class ThoughtMapSearchService:
             mode=mode,
             source=source,
             category=category,
+            filter_name=filter_name,
             target_doc_id=target_doc_id,
             user_email=user_email,
         )
@@ -86,6 +94,7 @@ class ThoughtMapSearchService:
         mode: str = "keyword",
         source: str = "",
         category: str = "",
+        filter_name: str = "",
         target_doc_id: str = "",
         user_email: str = "",
     ) -> list[SearchResult]:
@@ -99,11 +108,18 @@ class ThoughtMapSearchService:
         if mode not in SEARCH_MODES:
             raise ValueError(f"Unsupported search mode: {mode}")
 
+        started = time.perf_counter()
         index = self.repository.load_index()
-        index = self._filter_by_source(index, source)
-        index = self._filter_by_category(index, category)
+        counts = {"library": len(index)}
+        index = apply_metadata_filter(index, "source", source)
+        counts["source"] = len(index)
+        index = apply_metadata_filter(index, "category", category, multi=True)
+        counts["category"] = len(index)
+        index = apply_parameter_filter(index, filter_name)
+        counts["parameter"] = len(index)
 
         if index.empty:
+            logger.info("page=api mode=%s source=%r category=%r parameter=%r counts=%s candidates=0 results=0 elapsed=%.4f", mode, source, category, filter_name, counts, time.perf_counter()-started)
             return []
 
         if mode == "keyword":
@@ -132,17 +148,23 @@ class ThoughtMapSearchService:
                 user_email=user_email,
             )
 
-        return self._to_search_results(results)
+        output = self._to_search_results(results)
+        logger.info("page=api mode=%s source=%r category=%r parameter=%r counts=%s candidates=%d results=%d elapsed=%.4f", mode, source, category, filter_name, counts, len(index), len(output), time.perf_counter()-started)
+        return output
+
+    def filter_options(self) -> dict[str, list[str]]:
+        index = self.repository.load_index()
+        return {
+            "sources": filter_options(index, "source"),
+            "categories": filter_options(index, "category", multi=True),
+            "parameters": ["general", *parameter_names(index)],
+        }
 
     def _filter_by_source(self, index: pd.DataFrame, source: str) -> pd.DataFrame:
-        if not source or source.lower() == "all" or "source" not in index.columns:
-            return index
-        return index[index["source"].map(normalize_text).str.lower() == source.lower()].reset_index(drop=True)
+        return apply_metadata_filter(index, "source", source)
 
     def _filter_by_category(self, index: pd.DataFrame, category: str) -> pd.DataFrame:
-        if not category or category.lower() == "all" or "category" not in index.columns:
-            return index
-        return index[index["category"].map(normalize_text).str.lower() == category.lower()].reset_index(drop=True)
+        return apply_metadata_filter(index, "category", category, multi=True)
 
     def _keyword_search(self, index: pd.DataFrame, query: str, top: int) -> pd.DataFrame:
         results = index.copy()

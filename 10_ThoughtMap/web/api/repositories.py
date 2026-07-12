@@ -10,6 +10,7 @@ from search_utils import parse_embedding
 from storage import load_official_db, load_official_parameter_scores
 
 from .config import ApiSettings
+from .db_source import OfficialDatabaseSource
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -90,6 +91,11 @@ def _join_parameter_scores(merged: pd.DataFrame, parameter_scores: pd.DataFrame 
     if parameter_scores is None or parameter_scores.empty or "doc_id" not in parameter_scores.columns:
         return merged
 
+    parameter_scores = parameter_scores.copy()
+    parameter_scores["doc_id"] = parameter_scores["doc_id"].fillna("").astype(str).str.strip()
+    parameter_scores = parameter_scores[parameter_scores["doc_id"] != ""]
+    merged = merged.copy()
+    merged["doc_id"] = merged["doc_id"].fillna("").astype(str).str.strip()
     score_columns = _parameter_score_columns(parameter_scores)
     if not score_columns:
         return merged
@@ -108,6 +114,14 @@ def _sqlite_table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
         (table_name,),
     ).fetchone()
     return row is not None
+
+
+def _normalize_doc_ids(frame: pd.DataFrame) -> pd.DataFrame:
+    frame = frame.copy()
+    if "doc_id" in frame.columns:
+        frame["doc_id"] = frame["doc_id"].fillna("").astype(str).str.strip()
+        frame = frame[frame["doc_id"] != ""]
+    return frame
 
 
 class SearchIndexRepository(Protocol):
@@ -133,7 +147,7 @@ class CsvSearchIndexRepository:
 
         documents, embeddings, _ = load_official_db(self.db_dir)
         parameter_scores = load_official_parameter_scores(self.db_dir)
-        merged = documents.merge(embeddings, on="doc_id", how="inner")
+        merged = _normalize_doc_ids(documents).merge(_normalize_doc_ids(embeddings), on="doc_id", how="inner")
         merged = _join_parameter_scores(merged, parameter_scores)
         merged = merged.copy()
         merged["_embedding_vec"] = merged["embedding"].map(parse_embedding)
@@ -174,7 +188,7 @@ class SqliteSearchIndexRepository:
                     embeddings.model_name
                 FROM documents
                 INNER JOIN embeddings
-                    ON documents.doc_id = embeddings.doc_id
+                    ON TRIM(CAST(documents.doc_id AS TEXT)) = TRIM(CAST(embeddings.doc_id AS TEXT))
                 """,
                 conn,
             )
@@ -184,6 +198,11 @@ class SqliteSearchIndexRepository:
                     "SELECT * FROM parameter_scores",
                     conn,
                 )
+
+        # Older SQLite files predate the parameter_scores table. Keep the
+        # documented CSV sidecar usable until the next migration refreshes DB.
+        if parameter_scores is None:
+            parameter_scores = load_official_parameter_scores(self.db_path.parent)
 
         merged = merged.copy()
         merged = _join_parameter_scores(merged, parameter_scores)
@@ -199,6 +218,8 @@ def create_search_index_repository(settings: ApiSettings) -> SearchIndexReposito
         return CsvSearchIndexRepository(settings.db_dir)
 
     if settings.backend == "sqlite":
-        return SqliteSearchIndexRepository(settings.db_dir)
+        configured_path = settings.official_db_path or _resolve_sqlite_path(settings.db_dir)
+        db_path = OfficialDatabaseSource(configured_path, settings.official_db_url).ensure_local()
+        return SqliteSearchIndexRepository(db_path)
 
     raise ValueError(f"Unsupported THOUGHTMAP_BACKEND: {settings.backend}")

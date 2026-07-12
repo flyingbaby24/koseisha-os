@@ -73,6 +73,14 @@ def search(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@app.get("/search/filter-options")
+def search_filter_options() -> dict[str, list[str]]:
+    try:
+        return get_search_service().filter_options()
+    except (FileNotFoundError, OSError, ValueError):
+        return {"sources": ["all"], "categories": ["all"], "parameters": ["general"]}
+
+
 @app.get("/users/by-email/saved")
 def list_saved_by_email(email: str = Query(..., min_length=3)) -> dict:
     try:

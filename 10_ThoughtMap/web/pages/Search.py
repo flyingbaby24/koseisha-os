@@ -423,6 +423,13 @@ def call_api(params: dict) -> tuple[dict, float, str]:
     return data, time.time() - start, url
 
 
+@st.cache_data(ttl=300)
+def load_filter_options() -> dict:
+    url = API_BASE_URL + "/search/filter-options"
+    with urllib.request.urlopen(url, timeout=60) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
 def load_personal_works(email: str) -> list[dict]:
     url = API_BASE_URL + "/users/by-email/saved?" + urllib.parse.urlencode(
         {"email": email.strip()}
@@ -878,6 +885,10 @@ top = 10
 source = "all"
 category = "all"
 filter_name = "general"
+try:
+    search_filter_options = load_filter_options()
+except Exception:
+    search_filter_options = {"sources": ["all"], "categories": ["all"], "parameters": ["general"]}
 
 st.markdown(
     """
@@ -912,10 +923,10 @@ with st.expander("Advanced Search Settings", expanded=False):
         key="search_mode_choice",
     )
 
-    top = st.slider("Top results", 1, 50, 10)
-    source = st.text_input("Source filter", value="all")
-    category = st.text_input("Category filter", value="all")
-    filter_name = st.selectbox("Parameter filter", ["general"])
+    top = st.slider("Top results", 1, 50, 10, key="search_top")
+    source = st.selectbox("Source filter", search_filter_options.get("sources") or ["all"], key="search_source_filter")
+    category = st.selectbox("Category filter", search_filter_options.get("categories") or ["all"], key="search_category_filter")
+    filter_name = st.selectbox("Parameter filter", search_filter_options.get("parameters") or ["general"], key="search_parameter_filter")
 
     if search_mode != "Keyword search":
         email = st.text_input(

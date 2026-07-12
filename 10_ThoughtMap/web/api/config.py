@@ -18,10 +18,13 @@ class ApiSettings:
     db_dir: Path | None = None
     model_name: str = DEFAULT_MODEL_NAME
     allowed_origins: tuple[str, ...] = ("*",)
+    official_db_path: Path | None = None
+    official_db_url: str = ""
 
 
 def get_settings() -> ApiSettings:
     db_dir_text = os.getenv("THOUGHTMAP_DB_DIR", "").strip()
+    official_db_path = os.getenv("THOUGHTMAP_OFFICIAL_DB_PATH", "").strip()
     origins_text = os.getenv("THOUGHTMAP_ALLOWED_ORIGINS", "*")
 
     return ApiSettings(
@@ -29,4 +32,6 @@ def get_settings() -> ApiSettings:
         db_dir=Path(db_dir_text) if db_dir_text else None,
         model_name=os.getenv("THOUGHTMAP_MODEL_NAME", DEFAULT_MODEL_NAME),
         allowed_origins=tuple(_split_csv(origins_text) or ["*"]),
+        official_db_path=Path(official_db_path) if official_db_path else None,
+        official_db_url=os.getenv("THOUGHTMAP_OFFICIAL_DB_URL", "").strip(),
     )

@@ -181,3 +181,18 @@ The MVP uses `default` only. It intentionally does not add authentication yet.
 ## Result URLs
 
 `/search` includes optional `url` when metadata has `url`, `source_url`, or `link`. For Gutendex/Gutenberg rows, the API can infer `https://www.gutenberg.org/ebooks/{id}` from `gutenberg_id` or numeric `doc_id`.
+# Official SQLite source
+
+For SQLite deployments, the official database can be supplied as a local file
+or downloaded once into a local cache:
+
+```text
+THOUGHTMAP_BACKEND=sqlite
+THOUGHTMAP_OFFICIAL_DB_PATH=/var/cache/thoughtmap/thoughtmap.sqlite
+THOUGHTMAP_OFFICIAL_DB_URL=https://.../files/thoughtmap.sqlite
+```
+
+`THOUGHTMAP_OFFICIAL_DB_URL` must be a direct file-download URL, not a Zenodo
+record page. A download occurs only when the configured local path is absent.
+It is written to a temporary file, integrity-checked, and atomically moved into
+place. An existing local cache is never replaced after a failed download.
