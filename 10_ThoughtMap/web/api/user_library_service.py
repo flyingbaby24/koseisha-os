@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import logging
+import time
 
 import pandas as pd
 
@@ -19,6 +21,9 @@ from .schemas import (
     SaveDocumentResponse,
     SavedDocumentsResponse,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class UserLibraryService:
@@ -53,18 +58,30 @@ class UserLibraryService:
         email: str,
         request: SaveDocumentRequest,
     ) -> SaveDocumentResponse:
+        started = time.perf_counter()
         doc_id = str(request.doc_id or "").strip()
         if not doc_id:
             raise ValueError("doc_id is required")
 
+        logger.info("Personal service official lookup started doc_id=%s", doc_id)
         row = self._find_source_row(doc_id)
+        logger.info("Personal service official lookup finished doc_id=%s elapsed=%.3fs", doc_id, time.perf_counter() - started)
         saved_at = datetime.now(timezone.utc).isoformat()
-        return self.personal_repository.save_document(
+        logger.info("Personal service repository save started doc_id=%s", doc_id)
+        response = self.personal_repository.save_document(
             email_hash=email_hash_for(email),
             row=row,
             saved_at=saved_at,
             parameters=request.parameters,
         )
+        logger.info(
+            "Personal service repository save finished doc_id=%s saved=%s duplicate=%s elapsed=%.3fs",
+            doc_id,
+            response.saved,
+            response.duplicate,
+            time.perf_counter() - started,
+        )
+        return response
 
     def list_saved_by_email(self, email: str) -> SavedDocumentsResponse:
         return self.personal_repository.list_saved(email_hash_for(email))

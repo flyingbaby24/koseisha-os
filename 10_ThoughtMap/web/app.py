@@ -4,6 +4,8 @@ import logging
 import os
 import re
 import json
+import socket
+import time
 import zipfile
 import tempfile
 import io
@@ -190,7 +192,41 @@ def parameter_rows_from_embedding_row(row: pd.Series) -> list[dict[str, object]]
     return out or None
 
 
-def post_save_document_by_email(api_base_url: str, email: str, doc_id: str, parameters=None) -> dict[str, object]:
+def call_health_api(api_base_url: str, timeout_seconds: int) -> dict[str, object]:
+    url = build_api_url(api_base_url, "/health")
+    started = time.perf_counter()
+    request = Request(url, headers={"Accept": "application/json"}, method="GET")
+    try:
+        with urlopen(request, timeout=timeout_seconds) as response:
+            body = response.read().decode("utf-8", errors="replace")
+            return {
+                "ok": 200 <= int(response.status) < 300,
+                "url": url,
+                "status_code": int(response.status),
+                "response_text": body,
+                "elapsed_seconds": round(time.perf_counter() - started, 3),
+                "exception_type": "",
+                "exception_message": "",
+            }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "url": url,
+            "status_code": getattr(exc, "code", None),
+            "response_text": _read_error_body(exc),
+            "elapsed_seconds": round(time.perf_counter() - started, 3),
+            "exception_type": type(exc).__name__,
+            "exception_message": str(exc),
+        }
+
+
+def post_save_document_by_email(
+    api_base_url: str,
+    email: str,
+    doc_id: str,
+    parameters=None,
+    timeout_seconds: int = 90,
+) -> dict[str, object]:
     url = build_api_url(api_base_url, "/users/by-email/save")
     payload = {
         "email": normalize_registered_email(email),
@@ -211,36 +247,84 @@ def post_save_document_by_email(api_base_url: str, email: str, doc_id: str, para
     )
 
     logger.info("Posting personal save request to %s", url)
+    started = time.perf_counter()
     try:
-        with urlopen(request, timeout=30) as response:
+        with urlopen(request, timeout=timeout_seconds) as response:
             response_body = response.read().decode("utf-8", errors="replace")
             logger.info("Personal save response status=%s body=%s", response.status, response_body[:1000])
+            parsed_json_error = _json_decode_error(response_body)
             return {
-                "ok": 200 <= int(response.status) < 300,
+                "ok": 200 <= int(response.status) < 300 and parsed_json_error == "",
+                "doc_id": payload["doc_id"],
                 "url": url,
                 "status_code": int(response.status),
                 "response_text": response_body,
+                "elapsed_seconds": round(time.perf_counter() - started, 3),
+                "exception_type": "JSONDecodeError" if parsed_json_error else "",
+                "exception_message": parsed_json_error,
                 "request_json": payload,
             }
     except HTTPError as exc:
-        response_body = exc.read().decode("utf-8", errors="replace")
+        response_body = _read_error_body(exc)
         logger.warning("Personal save HTTP error url=%s status=%s body=%s", url, exc.code, response_body[:1000])
         return {
             "ok": False,
+            "doc_id": payload["doc_id"],
             "url": url,
             "status_code": int(exc.code),
             "response_text": response_body,
+            "elapsed_seconds": round(time.perf_counter() - started, 3),
+            "exception_type": type(exc).__name__,
+            "exception_message": str(exc),
             "request_json": payload,
         }
-    except URLError as exc:
-        logger.warning("Personal save URL error url=%s reason=%s", url, exc.reason)
+    except (TimeoutError, socket.timeout, URLError) as exc:
+        logger.warning("Personal save network error url=%s type=%s message=%s", url, type(exc).__name__, exc)
         return {
             "ok": False,
+            "doc_id": payload["doc_id"],
             "url": url,
             "status_code": None,
-            "response_text": str(exc.reason),
+            "response_text": _read_error_body(exc),
+            "elapsed_seconds": round(time.perf_counter() - started, 3),
+            "exception_type": type(exc).__name__,
+            "exception_message": str(exc),
             "request_json": payload,
         }
+    except Exception as exc:
+        logger.exception("Personal save unexpected communication error.")
+        return {
+            "ok": False,
+            "doc_id": payload["doc_id"],
+            "url": url,
+            "status_code": None,
+            "response_text": _read_error_body(exc),
+            "elapsed_seconds": round(time.perf_counter() - started, 3),
+            "exception_type": type(exc).__name__,
+            "exception_message": str(exc),
+            "request_json": payload,
+        }
+
+
+def _read_error_body(exc: BaseException) -> str:
+    if isinstance(exc, HTTPError):
+        try:
+            return exc.read().decode("utf-8", errors="replace")
+        except Exception:
+            return str(exc)
+    if isinstance(exc, URLError):
+        return str(getattr(exc, "reason", exc))
+    return str(exc)
+
+
+def _json_decode_error(text: str) -> str:
+    if not str(text or "").strip():
+        return ""
+    try:
+        json.loads(text)
+    except json.JSONDecodeError as exc:
+        return str(exc)
+    return ""
 
 
 def build_embedding_export_frame(
@@ -820,6 +904,13 @@ personal_api_base_url = st.sidebar.text_input(
     ),
     help="FastAPI endpoint for saving Personal Library data.",
 )
+personal_api_timeout_seconds = st.sidebar.number_input(
+    "Personal API timeout seconds",
+    min_value=10,
+    max_value=180,
+    value=90,
+    step=10,
+)
 user_id = make_user_id_from_email(registered_email)
 if user_id:
     st.sidebar.caption(f"user_id: `{user_id}`")
@@ -1191,8 +1282,23 @@ with tab6:
             save_url = build_api_url(personal_api_base_url, "/users/by-email/save")
             st.caption(f"POST URL: `{save_url}`")
 
+            health_result = call_health_api(
+                personal_api_base_url,
+                timeout_seconds=int(personal_api_timeout_seconds),
+            )
+            if not health_result.get("ok"):
+                st.warning("Personal API health check failed. Save was not started.")
+                with st.expander("Personal API health debug", expanded=True):
+                    st.write(health_result)
+                st.stop()
+
             results = []
-            for _, row in embedding_df.iterrows():
+            total_rows = len(embedding_df)
+            progress_text = st.empty()
+            progress_bar = st.progress(0)
+            for index, (_, row) in enumerate(embedding_df.iterrows(), start=1):
+                progress_text.info(f"Saving {index} / {total_rows}")
+                progress_bar.progress(index / max(1, total_rows))
                 doc_id = str(row.get("doc_id", "") or "").strip()
                 if not doc_id:
                     continue
@@ -1201,8 +1307,10 @@ with tab6:
                     email=registered_email,
                     doc_id=doc_id,
                     parameters=parameter_rows_from_embedding_row(row),
+                    timeout_seconds=int(personal_api_timeout_seconds),
                 )
                 results.append(result)
+            progress_text.success(f"Save requests finished: {len(results)} document(s).")
 
             success_count = sum(1 for item in results if item.get("ok"))
             failure_count = len(results) - success_count
@@ -1213,9 +1321,13 @@ with tab6:
 
             debug_rows = [
                 {
+                    "doc_id": item.get("doc_id"),
                     "url": item.get("url"),
                     "status_code": item.get("status_code"),
                     "response_text": item.get("response_text"),
+                    "elapsed_seconds": item.get("elapsed_seconds"),
+                    "exception_type": item.get("exception_type"),
+                    "exception_message": item.get("exception_message"),
                     "request_json": {
                         key: value
                         for key, value in dict(item.get("request_json") or {}).items()

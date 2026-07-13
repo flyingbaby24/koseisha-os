@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import time
 import uuid
 from typing import Any
 
@@ -34,6 +36,7 @@ from .personal_repository import (
 from .schemas import DeleteSavedDocumentResponse, SaveDocumentResponse, SavedDocumentsResponse
 
 
+logger = logging.getLogger(__name__)
 metadata = MetaData()
 
 users = Table(
@@ -96,11 +99,13 @@ class PostgresPersonalRepository:
         saved_at: str,
         parameters: object | None,
     ) -> SaveDocumentResponse:
+        started = time.perf_counter()
         user_id = self._get_or_create_user_id(email_hash)
         doc_id = row_text(row, "doc_id")
         if not doc_id:
             raise ValueError("doc_id is required")
 
+        logger.info("Postgres personal save transaction started doc_id=%s", doc_id)
         with self.engine.begin() as conn:
             existing = conn.execute(
                 select(saved_works).where(
@@ -109,6 +114,11 @@ class PostgresPersonalRepository:
                 )
             ).mappings().first()
             if existing is not None:
+                logger.info(
+                    "Postgres personal save duplicate doc_id=%s elapsed=%.3fs",
+                    doc_id,
+                    time.perf_counter() - started,
+                )
                 return SaveDocumentResponse(
                     saved=False,
                     duplicate=True,
@@ -146,6 +156,7 @@ class PostgresPersonalRepository:
                     )
                 )
 
+        logger.info("Postgres personal save committed doc_id=%s elapsed=%.3fs", doc_id, time.perf_counter() - started)
         return SaveDocumentResponse(
             saved=True,
             duplicate=False,
