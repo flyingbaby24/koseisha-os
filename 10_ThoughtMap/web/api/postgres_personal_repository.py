@@ -24,6 +24,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql import func
 
+from .config import normalize_database_url
 from .personal_repository import (
     build_saved_item,
     normalize_parameters,
@@ -81,11 +82,12 @@ class PostgresPersonalRepository:
     """PostgreSQL-backed Personal library repository."""
 
     def __init__(self, database_url: str) -> None:
-        if not str(database_url or "").strip():
+        normalized_url = normalize_database_url(database_url)
+        if not normalized_url:
             raise RuntimeError(
                 "DATABASE_URL is required when THOUGHTMAP_PERSONAL_BACKEND=postgres"
             )
-        self.engine: Engine = create_engine(database_url, pool_pre_ping=True)
+        self.engine: Engine = create_engine(normalized_url, pool_pre_ping=True)
 
     def save_document(
         self,

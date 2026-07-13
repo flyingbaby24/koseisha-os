@@ -6,6 +6,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from api.config import normalize_database_url
 from api.postgres_personal_repository import metadata
 
 
@@ -18,7 +19,7 @@ target_metadata = metadata
 
 
 def _database_url() -> str:
-    url = os.getenv("DATABASE_URL", "").strip()
+    url = normalize_database_url(os.getenv("DATABASE_URL", ""))
     if not url:
         raise RuntimeError("DATABASE_URL is required to run personal DB migrations")
     return url

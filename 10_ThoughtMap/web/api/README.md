@@ -130,6 +130,10 @@ $env:THOUGHTMAP_PERSONAL_BACKEND="postgres"
 $env:DATABASE_URL="postgresql+psycopg://USER:PASSWORD@HOST:PORT/DBNAME"
 ```
 
+Render may provide `DATABASE_URL` as `postgresql://...`. The API and Alembic
+normalize that to `postgresql+psycopg://...` internally so SQLAlchemy uses the
+installed psycopg 3 driver. Do not add `psycopg2-binary` for this API.
+
 The historical local file backend remains available for local development only:
 
 ```text
@@ -202,6 +206,12 @@ Run Alembic migration from `10_ThoughtMap/web`:
 ```powershell
 $env:DATABASE_URL="postgresql+psycopg://USER:PASSWORD@HOST:PORT/DBNAME"
 python -m alembic -c alembic.ini upgrade head
+```
+
+On Render, the build command can use the platform-provided `DATABASE_URL`:
+
+```bash
+pip install -r requirements-api.txt && python -m alembic -c alembic.ini upgrade head
 ```
 
 Render configuration:

@@ -6,7 +6,7 @@ import unittest
 
 import pandas as pd
 
-from api.config import ApiSettings
+from api.config import ApiSettings, normalize_database_url
 from api.personal_repository import create_personal_repository, email_hash_for
 from api.schemas import SaveDocumentRequest
 from api.user_library_service import UserLibraryService
@@ -89,6 +89,21 @@ def make_service(personal_repository=None) -> UserLibraryService:
 
 
 class UserLibraryServiceTests(unittest.TestCase):
+    def test_normalize_database_url_uses_psycopg3_for_render_postgres_url(self) -> None:
+        normalized = normalize_database_url("postgresql://user:pass@host:5432/db")
+
+        self.assertEqual(normalized, "postgresql+psycopg://user:pass@host:5432/db")
+
+    def test_normalize_database_url_keeps_explicit_psycopg3_url(self) -> None:
+        normalized = normalize_database_url("postgresql+psycopg://user:pass@host:5432/db")
+
+        self.assertEqual(normalized, "postgresql+psycopg://user:pass@host:5432/db")
+
+    def test_normalize_database_url_keeps_non_postgres_url(self) -> None:
+        normalized = normalize_database_url("sqlite:///local.db")
+
+        self.assertEqual(normalized, "sqlite:///local.db")
+
     def test_duplicate_save_same_email_doc_id_is_not_duplicated(self) -> None:
         service = make_service()
         request = SaveDocumentRequest(doc_id="doc:1")

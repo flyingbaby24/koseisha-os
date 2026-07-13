@@ -11,6 +11,7 @@ from typing import Iterable
 import pandas as pd
 from sqlalchemy import create_engine, insert, select
 
+from .config import normalize_database_url
 from .personal_repository import DEFAULT_COMPAT_EMAIL, email_hash_for, normalize_parameters
 from .postgres_personal_repository import saved_embeddings, saved_works, users
 from .repositories import PROJECT_ROOT
@@ -50,7 +51,7 @@ def main() -> None:
         print("Dry run only. No PostgreSQL writes performed.")
         return
 
-    database_url = str(args.database_url or "").strip()
+    database_url = normalize_database_url(args.database_url)
     if not database_url:
         raise RuntimeError("DATABASE_URL is required unless --dry-run is used.")
 
