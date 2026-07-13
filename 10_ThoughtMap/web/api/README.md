@@ -24,6 +24,9 @@ Embedding/vector helpers
 - `config.py`: environment-driven settings.
 - `repositories.py`: CSV repository now, SQLite boundary later.
 - `search_service.py`: query embedding and search orchestration.
+- `personal_repository.py`: Personal library repository boundary.
+- `postgres_personal_repository.py`: PostgreSQL implementation for Personal saved works.
+- `user_library_service.py`: coordinates official lookup and Personal persistence.
 
 ## Run locally
 
@@ -47,6 +50,8 @@ $env:THOUGHTMAP_BACKEND="csv"
 $env:THOUGHTMAP_DB_DIR="data/thoughtmap_db/official"
 $env:THOUGHTMAP_ALLOWED_ORIGINS="*"
 $env:THOUGHTMAP_MODEL_NAME="paraphrase-multilingual-MiniLM-L12-v2"
+$env:THOUGHTMAP_PERSONAL_BACKEND="local"
+$env:DATABASE_URL=""
 ```
 
 ## Append Personal DB To Official Master
@@ -103,17 +108,6 @@ Create SQLite from the current official CSV files:
 python -m api.migrate_csv_to_sqlite --csv-dir data/thoughtmap_db/official --sqlite-path data/thoughtmap_db/official/thoughtmap.sqlite
 ```
 
-Generate result parameter scores before SQLite migration when `/search` should
-return `results[].parameters`:
-
-```powershell
-python -m api.generate_parameter_scores --official-dir data/thoughtmap_db/official --filter filters/general.json --output data/thoughtmap_db/official/parameter_scores.csv
-```
-
-This is an offline generation step. `/search` does not recalculate embeddings or
-Thought Composition scores per request; it only reads `parameter_scores.csv` or
-the migrated `parameter_scores` SQLite table.
-
 Run the API with SQLite:
 
 ```powershell
@@ -126,30 +120,17 @@ When `THOUGHTMAP_DB_DIR` points to a directory, the SQLite repository uses
 `thoughtmap.sqlite` inside that directory. You can also pass a direct `.sqlite`
 file path.
 
-Personal Library saves use the same SQLite path resolution. Set
-`THOUGHTMAP_DB_DIR` to the same directory or `.sqlite` file for `/search`,
-`/users/by-email/save-embeddings`, and `/users/by-email/saved`.
+## Personal Saved Library MVP
 
-For Render, attach a persistent disk and point `THOUGHTMAP_DB_DIR` at a path
-under the disk mount. Example:
+The API can save selected search results into a Personal library. Production
+deployments should use PostgreSQL:
 
-```text
-THOUGHTMAP_BACKEND=sqlite
-THOUGHTMAP_DB_DIR=/var/data/thoughtmap_db/official
+```powershell
+$env:THOUGHTMAP_PERSONAL_BACKEND="postgres"
+$env:DATABASE_URL="postgresql+psycopg://USER:PASSWORD@HOST:PORT/DBNAME"
 ```
 
-With this example, both official search data and Personal Library data use:
-
-```text
-/var/data/thoughtmap_db/official/thoughtmap.sqlite
-```
-
-The SQLite file must exist at that path, or be created from the official CSVs
-before the service handles writes.
-
-## User Saved Library MVP
-
-The API can save selected search results into the local default user library:
+The historical local file backend remains available for local development only:
 
 ```text
 data/thoughtmap_db/users/default/
@@ -158,7 +139,39 @@ data/thoughtmap_db/users/default/
   favorites.json
 ```
 
-Save a selected document:
+The email-based API is a temporary user lookup mechanism, not authentication.
+The API normalizes email with trim/lowercase, hashes it with SHA-256, and stores
+the hash as the user key. Do not treat possession of an email string as proof of
+identity.
+
+Save a selected document by email:
+
+```powershell
+curl -X POST "http://127.0.0.1:8000/users/by-email/save" -H "Content-Type: application/json" -d "{\"email\":\"user@example.com\",\"doc_id\":\"gutendex:12345\",\"parameters\":{\"philosophy\":42}}"
+```
+
+List saved documents by email. This shape is kept for Unity:
+
+```powershell
+curl "http://127.0.0.1:8000/users/by-email/saved?email=user@example.com"
+```
+
+Response:
+
+```json
+{
+  "works": []
+}
+```
+
+Delete a saved document by email:
+
+```powershell
+curl -X DELETE "http://127.0.0.1:8000/users/by-email/saved/gutendex%3A12345?email=user@example.com"
+```
+
+Compatibility routes still exist and map to a fixed default user in the same
+Personal repository:
 
 ```powershell
 curl -X POST "http://127.0.0.1:8000/users/default/save" -H "Content-Type: application/json" -d "{"doc_id":"gutendex:12345"}"
@@ -176,23 +189,55 @@ Delete a saved document:
 curl -X DELETE "http://127.0.0.1:8000/users/default/saved/gutendex%3A12345"
 ```
 
-The MVP uses `default` only. It intentionally does not add authentication yet.
+## Personal PostgreSQL migration
+
+Install API dependencies:
+
+```powershell
+pip install -r requirements-api.txt
+```
+
+Run Alembic migration from `10_ThoughtMap/web`:
+
+```powershell
+$env:DATABASE_URL="postgresql+psycopg://USER:PASSWORD@HOST:PORT/DBNAME"
+python -m alembic -c alembic.ini upgrade head
+```
+
+Render configuration:
+
+```text
+THOUGHTMAP_PERSONAL_BACKEND=postgres
+DATABASE_URL=<Render PostgreSQL internal database URL>
+```
+
+Legacy file import is manual and never runs at API startup. Preview first:
+
+```powershell
+python -m api.migrate_personal_files_to_postgres --dry-run
+```
+
+Then import:
+
+```powershell
+python -m api.migrate_personal_files_to_postgres --database-url $env:DATABASE_URL
+```
+
+The script reads:
+
+- `data/thoughtmap_db/users/default/favorites.json`
+- `data/thoughtmap_db/users/default/documents.csv`
+- `data/thoughtmap_db/users/default/embeddings.csv`
+- `web/user_data/*/thoughtmap_embeddings.csv`
+
+## Unity Personal Library check
+
+1. Deploy the API with `THOUGHTMAP_PERSONAL_BACKEND=postgres` and migrated tables.
+2. In Unity Battle Prep, set the API base URL to the deployed FastAPI URL.
+3. Enter the same email used by save/list.
+4. Run Load Personal.
+5. Confirm the returned works appear in the Card List and keep `doc_id`.
 
 ## Result URLs
 
 `/search` includes optional `url` when metadata has `url`, `source_url`, or `link`. For Gutendex/Gutenberg rows, the API can infer `https://www.gutenberg.org/ebooks/{id}` from `gutenberg_id` or numeric `doc_id`.
-# Official SQLite source
-
-For SQLite deployments, the official database can be supplied as a local file
-or downloaded once into a local cache:
-
-```text
-THOUGHTMAP_BACKEND=sqlite
-THOUGHTMAP_OFFICIAL_DB_PATH=/var/cache/thoughtmap/thoughtmap.sqlite
-THOUGHTMAP_OFFICIAL_DB_URL=https://.../files/thoughtmap.sqlite
-```
-
-`THOUGHTMAP_OFFICIAL_DB_URL` must be a direct file-download URL, not a Zenodo
-record page. A download occurs only when the configured local path is absent.
-It is written to a temporary file, integrity-checked, and atomically moved into
-place. An existing local cache is never replaced after a failed download.

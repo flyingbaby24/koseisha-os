@@ -11,6 +11,10 @@ public class ThoughtMapBattleCardData
     public string sourceTitle;
     public string author;
     public string source;
+    public string category;
+    public string url;
+    public string sourceDocId;
+    public string dataScope = "official";
     public string primaryAttribute;
     public string secondaryAttribute;
     public int statPhysicalAttack;

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -25,7 +27,11 @@ class SearchResponse(BaseModel):
 
 class SaveDocumentRequest(BaseModel):
     doc_id: str
-    parameters: list[ParameterScore] | None = None
+    parameters: Any | None = None
+
+
+class EmailSaveDocumentRequest(SaveDocumentRequest):
+    email: str
 
 
 class SavedDocument(BaseModel):
@@ -33,6 +39,9 @@ class SavedDocument(BaseModel):
     title: str = ""
     author: str = ""
     source: str = ""
+    category: str = ""
+    url: str | None = None
+    source_url: str | None = None
     saved_at: str = ""
     original_doc_id: str = ""
     parameters: list[ParameterScore] | None = None
@@ -46,6 +55,10 @@ class SaveDocumentResponse(BaseModel):
 
 class SavedDocumentsResponse(BaseModel):
     items: list[SavedDocument]
+
+
+class SavedWorksResponse(BaseModel):
+    works: list[SavedDocument]
 
 
 class DeleteSavedDocumentResponse(BaseModel):

@@ -446,19 +446,20 @@ public static class ThoughtMapBattleSceneCreator
         RectTransform rect = root.GetComponent<RectTransform>();
         rect.sizeDelta = new Vector2(760f, 320f);
         root.GetComponent<Image>().color = new Color(0.02f, 0.03f, 0.045f, 0.62f);
-        ChildImage(rect, "ArtFrame", new Vector2(0.02f, 0.08f), new Vector2(0.38f, 0.92f), new Color(0.72f, 0.52f, 0.24f, 0.70f));
-        Image art = ChildImage(rect, "ArtImage", new Vector2(0.04f, 0.11f), new Vector2(0.36f, 0.89f), new Color(0.12f, 0.14f, 0.16f, 1f));
-        Image icon = ChildImage(rect, "AttributeIconImage", new Vector2(0.36f, 0.70f), new Vector2(0.43f, 0.88f), new Color(0f, 0.45f, 0.8f, 1f));
-        TMP_Text title = ChildText(rect, "TitleText", new Vector2(0.45f, 0.78f), new Vector2(0.60f, 0.94f), "Card Name", 22, TextAlignmentOptions.Left);
-        TMP_Text desc = ChildText(rect, "DescriptionText", new Vector2(0.45f, 0.55f), new Vector2(0.60f, 0.76f), "Description", 13, TextAlignmentOptions.TopLeft);
-        TMP_Text attr = ChildText(rect, "AttributeText", new Vector2(0.45f, 0.40f), new Vector2(0.60f, 0.54f), "Battle / Thought", 13, TextAlignmentOptions.Left);
-        TMP_Text hp = ChildText(rect, "HpText", new Vector2(0.45f, 0.33f), new Vector2(0.52f, 0.39f), "HP", 13, TextAlignmentOptions.Left);
-        TMP_Text atk = ChildText(rect, "AtkText", new Vector2(0.53f, 0.33f), new Vector2(0.60f, 0.39f), "ATK", 13, TextAlignmentOptions.Left);
-        TMP_Text def = ChildText(rect, "DefenseText", new Vector2(0.45f, 0.27f), new Vector2(0.52f, 0.33f), "DEF", 13, TextAlignmentOptions.Left);
-        TMP_Text en = ChildText(rect, "EnText", new Vector2(0.53f, 0.27f), new Vector2(0.60f, 0.33f), "EN", 13, TextAlignmentOptions.Left);
-        TMP_Text skill = ChildText(rect, "SkillText", new Vector2(0.45f, 0.10f), new Vector2(0.60f, 0.25f), "Skill", 13, TextAlignmentOptions.Left);
-        TMP_Text rarity = ChildText(rect, "RarityText", new Vector2(0.52f, 0.88f), new Vector2(0.60f, 0.98f), "R4", 16, TextAlignmentOptions.Right);
-        RectTransform abilityRoot = CreateAbilityBarRoot(rect, new Vector2(0.61f, 0.28f), new Vector2(0.98f, 0.76f));
+        ChildImage(rect, "ArtFrame", new Vector2(0.02f, 0.08f), new Vector2(0.22f, 0.92f), new Color(0.72f, 0.52f, 0.24f, 0.70f));
+        Image art = ChildImage(rect, "ArtImage", new Vector2(0.035f, 0.11f), new Vector2(0.205f, 0.89f), new Color(0.12f, 0.14f, 0.16f, 1f));
+        Image icon = ChildImage(rect, "AttributeIconImage", new Vector2(0.22f, 0.82f), new Vector2(0.23f, 0.88f), new Color(0f, 0.45f, 0.8f, 0f));
+        icon.enabled = false;
+        TMP_Text title = ChildText(rect, "TitleText", new Vector2(0.24f, 0.78f), new Vector2(0.40f, 0.94f), "Card Name", 22, TextAlignmentOptions.Left);
+        TMP_Text desc = ChildText(rect, "DescriptionText", new Vector2(0.24f, 0.55f), new Vector2(0.40f, 0.76f), "Description", 13, TextAlignmentOptions.TopLeft);
+        TMP_Text attr = ChildText(rect, "AttributeText", new Vector2(0.24f, 0.40f), new Vector2(0.40f, 0.54f), "Battle / Thought", 13, TextAlignmentOptions.Left);
+        TMP_Text hp = ChildText(rect, "HpText", new Vector2(0.24f, 0.33f), new Vector2(0.32f, 0.39f), "HP", 13, TextAlignmentOptions.Left);
+        TMP_Text atk = ChildText(rect, "AtkText", new Vector2(0.33f, 0.33f), new Vector2(0.40f, 0.39f), "ATK", 13, TextAlignmentOptions.Left);
+        TMP_Text def = ChildText(rect, "DefenseText", new Vector2(0.24f, 0.27f), new Vector2(0.32f, 0.33f), "DEF", 13, TextAlignmentOptions.Left);
+        TMP_Text en = ChildText(rect, "EnText", new Vector2(0.33f, 0.27f), new Vector2(0.40f, 0.33f), "EN", 13, TextAlignmentOptions.Left);
+        TMP_Text skill = ChildText(rect, "SkillText", new Vector2(0.24f, 0.10f), new Vector2(0.40f, 0.25f), "Skill", 13, TextAlignmentOptions.Left);
+        TMP_Text rarity = ChildText(rect, "RarityText", new Vector2(0.34f, 0.88f), new Vector2(0.40f, 0.98f), "R4", 16, TextAlignmentOptions.Right);
+        RectTransform abilityRoot = CreateAbilityBarRoot(rect, new Vector2(0.42f, 0.28f), new Vector2(0.99f, 0.76f));
         ProductBattleAbilityBarView[] abilityBars = CreateAbilityBars(abilityRoot);
 
         SerializedObject so = new SerializedObject(root.GetComponent<ProductBattleCardDetailPanelView>());
@@ -605,6 +606,8 @@ public static class ThoughtMapBattleSceneCreator
         Button startButton = CreateButton(panelRect, "StartBattleButton", "Battle", new Vector2(0.915f, 0.93f), new Vector2(0.985f, 0.985f));
         Button clearButton = CreateButton(panelRect, "ClearButton", "Clear", new Vector2(0.02f, 0.01f), new Vector2(0.10f, 0.07f));
         TMP_Text status = ChildText(panelRect, "StatusText", new Vector2(0.18f, 0.01f), new Vector2(0.70f, 0.07f), "Ready", 16, TextAlignmentOptions.Left);
+        TMP_InputField personalEmailInput = CreateInput(panelRect, "PersonalEmailInput", "email", new Vector2(0.70f, 0.01f), new Vector2(0.86f, 0.07f));
+        Button loadPersonalButton = CreateButton(panelRect, "LoadPersonalLibraryButton", "Load Personal", new Vector2(0.865f, 0.01f), new Vector2(0.985f, 0.07f));
 
         RectTransform cardList = CreateLightweightListPanel(panelRect, "CardListPanel", new Vector2(0.02f, 0.10f), new Vector2(0.24f, 0.90f), "Card List", out Transform cardListContent);
         GameObject detailObject = PrefabUtility.InstantiatePrefab(detailPrefab.gameObject, panelRect) as GameObject;
@@ -625,6 +628,11 @@ public static class ThoughtMapBattleSceneCreator
         Anchor(log, new Vector2(0.78f, 0.10f), new Vector2(0.985f, 0.40f));
 
         ProductBattlePrepPanelView view = panel.GetComponent<ProductBattlePrepPanelView>();
+        ThoughtMapPersonalLibraryApiClient personalClient = panel.GetComponent<ThoughtMapPersonalLibraryApiClient>();
+        if (personalClient == null)
+        {
+            personalClient = panel.AddComponent<ThoughtMapPersonalLibraryApiClient>();
+        }
         SerializedObject so = new SerializedObject(view);
         SetObject(so, "gridCellPrefab", cellPrefab);
         SetObject(so, "cardListContent", cardListContent);
@@ -633,6 +641,9 @@ public static class ThoughtMapBattleSceneCreator
         SetObject(so, "cardDetailPanel", detailObject.GetComponent<ProductBattleCardDetailPanelView>());
         SetObject(so, "debugLogPanel", logObject.GetComponent<ProductBattleLogPanelView>());
         SetObject(so, "statusText", status);
+        SetObject(so, "personalLibraryApiClient", personalClient);
+        SetObject(so, "personalEmailInput", personalEmailInput);
+        SetObject(so, "loadPersonalLibraryButton", loadPersonalButton);
         SetObject(so, "loadCardsButton", loadButton);
         SetObject(so, "addToDeckButton", addToDeckButton);
         SetObject(so, "saveDeckButton", saveButton);
@@ -800,7 +811,7 @@ public static class ThoughtMapBattleSceneCreator
         Undo.RecordObject(detail, "Repair Product Battle Prep Ability Bars");
         RectTransform detailRect = detail.transform as RectTransform;
         RepairCardDetailPanelLayout(detailRect);
-        RectTransform abilityRoot = CreateAbilityBarRoot(detailRect, new Vector2(0.61f, 0.28f), new Vector2(0.98f, 0.76f));
+        RectTransform abilityRoot = CreateAbilityBarRoot(detailRect, new Vector2(0.42f, 0.28f), new Vector2(0.99f, 0.76f));
         ProductBattleAbilityBarView[] abilityBars = CreateAbilityBars(abilityRoot);
 
         SerializedObject so = new SerializedObject(detail);
@@ -872,15 +883,37 @@ public static class ThoughtMapBattleSceneCreator
             return;
         }
 
-        AnchorChild(detailRect, "TitleText", new Vector2(0.45f, 0.78f), new Vector2(0.60f, 0.94f));
-        AnchorChild(detailRect, "DescriptionText", new Vector2(0.45f, 0.55f), new Vector2(0.60f, 0.76f));
-        AnchorChild(detailRect, "AttributeText", new Vector2(0.45f, 0.40f), new Vector2(0.60f, 0.54f));
-        AnchorChild(detailRect, "HpText", new Vector2(0.45f, 0.33f), new Vector2(0.52f, 0.39f));
-        AnchorChild(detailRect, "AtkText", new Vector2(0.53f, 0.33f), new Vector2(0.60f, 0.39f));
-        AnchorChild(detailRect, "DefenseText", new Vector2(0.45f, 0.27f), new Vector2(0.52f, 0.33f));
-        AnchorChild(detailRect, "EnText", new Vector2(0.53f, 0.27f), new Vector2(0.60f, 0.33f));
-        AnchorChild(detailRect, "SkillText", new Vector2(0.45f, 0.10f), new Vector2(0.60f, 0.25f));
-        AnchorChild(detailRect, "RarityText", new Vector2(0.52f, 0.88f), new Vector2(0.60f, 0.98f));
+        AnchorChild(detailRect, "ArtFrame", new Vector2(0.02f, 0.08f), new Vector2(0.22f, 0.92f));
+        AnchorChild(detailRect, "ArtImage", new Vector2(0.035f, 0.11f), new Vector2(0.205f, 0.89f));
+        HideDetailAttributeIcon(detailRect);
+        AnchorChild(detailRect, "TitleText", new Vector2(0.24f, 0.78f), new Vector2(0.40f, 0.94f));
+        AnchorChild(detailRect, "DescriptionText", new Vector2(0.24f, 0.55f), new Vector2(0.40f, 0.76f));
+        AnchorChild(detailRect, "AttributeText", new Vector2(0.24f, 0.40f), new Vector2(0.40f, 0.54f));
+        AnchorChild(detailRect, "HpText", new Vector2(0.24f, 0.33f), new Vector2(0.32f, 0.39f));
+        AnchorChild(detailRect, "AtkText", new Vector2(0.33f, 0.33f), new Vector2(0.40f, 0.39f));
+        AnchorChild(detailRect, "DefenseText", new Vector2(0.24f, 0.27f), new Vector2(0.32f, 0.33f));
+        AnchorChild(detailRect, "EnText", new Vector2(0.33f, 0.27f), new Vector2(0.40f, 0.33f));
+        AnchorChild(detailRect, "SkillText", new Vector2(0.24f, 0.10f), new Vector2(0.40f, 0.25f));
+        AnchorChild(detailRect, "RarityText", new Vector2(0.34f, 0.88f), new Vector2(0.40f, 0.98f));
+    }
+
+    private static void HideDetailAttributeIcon(RectTransform detailRect)
+    {
+        RectTransform iconRect = FindDescendant(detailRect, "AttributeIconImage") as RectTransform;
+        if (iconRect == null)
+        {
+            return;
+        }
+
+        Anchor(iconRect, new Vector2(0.22f, 0.82f), new Vector2(0.23f, 0.88f));
+        Image iconImage = iconRect.GetComponent<Image>();
+        if (iconImage != null)
+        {
+            iconImage.enabled = false;
+            iconImage.color = new Color(iconImage.color.r, iconImage.color.g, iconImage.color.b, 0f);
+        }
+        EditorUtility.SetDirty(iconRect);
+        EditorUtility.SetDirty(iconRect.gameObject);
     }
 
     private static void AnchorChild(RectTransform parent, string childName, Vector2 min, Vector2 max)
@@ -1065,7 +1098,7 @@ public static class ThoughtMapBattleSceneCreator
             rowLayout = Undo.AddComponent<HorizontalLayoutGroup>(rowObject);
         }
         rowLayout.padding = new RectOffset(0, 0, 0, 0);
-        rowLayout.spacing = 5f;
+        rowLayout.spacing = 2f;
         rowLayout.childAlignment = TextAnchor.MiddleCenter;
         rowLayout.childControlWidth = true;
         rowLayout.childControlHeight = true;
@@ -1085,12 +1118,12 @@ public static class ThoughtMapBattleSceneCreator
         TMP_Text legacyValue = FindDirectChild(rect, "ValueText") == null
             ? null
             : FindDirectChild(rect, "ValueText").GetComponent<TMP_Text>();
-        SetLayout(label.gameObject, 58f, 26f, 0f);
-        SetLayout(baseValue.gameObject, 34f, 26f, 0f);
-        SetLayout(barContainer.gameObject, 0f, 14f, 1f);
-        SetLayout(modifier.gameObject, 42f, 26f, 0f);
-        SetLayout(arrow.gameObject, 18f, 26f, 0f);
-        SetLayout(finalValue.gameObject, 34f, 26f, 0f);
+        SetLayout(label.gameObject, 44f, 26f, 0f);
+        SetLayout(baseValue.gameObject, 28f, 26f, 0f);
+        SetLayout(barContainer.gameObject, 34f, 14f, 1f);
+        SetLayout(modifier.gameObject, 34f, 26f, 0f);
+        SetLayout(arrow.gameObject, 12f, 26f, 0f);
+        SetLayout(finalValue.gameObject, 32f, 26f, 0f);
         label.transform.SetSiblingIndex(0);
         baseValue.transform.SetSiblingIndex(1);
         barContainer.transform.SetSiblingIndex(2);
@@ -1104,6 +1137,8 @@ public static class ThoughtMapBattleSceneCreator
         fill.fillClockwise = true;
         fill.fillAmount = 0f;
         fill.preserveAspect = false;
+        fill.color = new Color(definition.color.r, definition.color.g, definition.color.b, 0.95f);
+        background.color = new Color(0f, 0f, 0f, 0.50f);
         Anchor(background.rectTransform, Vector2.zero, Vector2.one);
         Anchor(fill.rectTransform, Vector2.zero, Vector2.one);
         RemoveLayoutComponents(background.gameObject);
@@ -1307,8 +1342,18 @@ public static class ThoughtMapBattleSceneCreator
         Button saveButton = EnsurePrepButton(root, "SaveDeckButton", "Save Deck", new Vector2(0.725f, 0.93f), new Vector2(0.805f, 0.985f));
         Button simulateButton = EnsurePrepButton(root, "SimulateButton", "Preview", new Vector2(0.815f, 0.93f), new Vector2(0.905f, 0.985f));
         Button startButton = EnsurePrepButton(root, "StartBattleButton", "Battle", new Vector2(0.915f, 0.93f), new Vector2(0.985f, 0.985f));
+        TMP_InputField personalEmailInput = EnsurePrepInput(root, "PersonalEmailInput", "email", new Vector2(0.70f, 0.01f), new Vector2(0.86f, 0.07f));
+        Button loadPersonalButton = EnsurePrepButton(root, "LoadPersonalLibraryButton", "Load Personal", new Vector2(0.865f, 0.01f), new Vector2(0.985f, 0.07f));
+        ThoughtMapPersonalLibraryApiClient personalClient = view.GetComponent<ThoughtMapPersonalLibraryApiClient>();
+        if (personalClient == null)
+        {
+            personalClient = Undo.AddComponent<ThoughtMapPersonalLibraryApiClient>(view.gameObject);
+        }
         NormalizeProductCardViews(root);
         SerializedObject so = new SerializedObject(view);
+        SetObject(so, "personalLibraryApiClient", personalClient);
+        SetObject(so, "personalEmailInput", personalEmailInput);
+        SetObject(so, "loadPersonalLibraryButton", loadPersonalButton);
         SetObject(so, "loadCardsButton", loadButton);
         SetObject(so, "addToDeckButton", addToDeckButton);
         SetObject(so, "saveDeckButton", saveButton);
@@ -1414,6 +1459,36 @@ public static class ThoughtMapBattleSceneCreator
 
         EditorUtility.SetDirty(button.gameObject);
         return button;
+    }
+
+    private static TMP_InputField EnsurePrepInput(RectTransform parent, string name, string placeholder, Vector2 min, Vector2 max)
+    {
+        if (parent == null)
+        {
+            return null;
+        }
+
+        Transform existing = FindDirectChild(parent, name);
+        TMP_InputField input;
+        if (existing != null)
+        {
+            input = existing.GetComponent<TMP_InputField>();
+            if (input == null)
+            {
+                input = Undo.AddComponent<TMP_InputField>(existing.gameObject);
+            }
+        }
+        else
+        {
+            input = CreateInput(parent, name, placeholder, min, max);
+            Undo.RegisterCreatedObjectUndo(input.gameObject, "Create Personal Email Input");
+        }
+
+        RectTransform rect = input.transform as RectTransform;
+        Anchor(rect, min, max);
+        ConfigureInput(input, placeholder);
+        EditorUtility.SetDirty(input.gameObject);
+        return input;
     }
 
     private static void RepairProductBattlePrepSpriteBindings(
@@ -1789,6 +1864,57 @@ public static class ThoughtMapBattleSceneCreator
         labelText.enableWordWrapping = false;
         labelText.overflowMode = TextOverflowModes.Overflow;
         return buttonObject.GetComponent<Button>();
+    }
+
+    private static TMP_InputField CreateInput(RectTransform parent, string name, string placeholder, Vector2 min, Vector2 max)
+    {
+        GameObject inputObject = UiChild(parent, name, typeof(RectTransform), typeof(Image), typeof(TMP_InputField));
+        RectTransform rect = inputObject.GetComponent<RectTransform>();
+        Anchor(rect, min, max);
+        TMP_InputField input = inputObject.GetComponent<TMP_InputField>();
+        ConfigureInput(input, placeholder);
+        return input;
+    }
+
+    private static void ConfigureInput(TMP_InputField input, string placeholder)
+    {
+        if (input == null)
+        {
+            return;
+        }
+
+        Image image = input.GetComponent<Image>();
+        if (image == null)
+        {
+            image = input.gameObject.AddComponent<Image>();
+        }
+        image.color = new Color(0.03f, 0.06f, 0.08f, 0.95f);
+        image.raycastTarget = true;
+
+        RectTransform rect = input.transform as RectTransform;
+        TMP_Text text = input.textComponent;
+        if (text == null)
+        {
+            text = ChildText(rect, "Text", new Vector2(0.04f, 0f), new Vector2(0.98f, 1f), "", 14, TextAlignmentOptions.Left);
+            input.textComponent = text;
+        }
+        text.fontSize = 14f;
+        text.enableWordWrapping = false;
+        text.overflowMode = TextOverflowModes.Ellipsis;
+        text.raycastTarget = false;
+
+        TMP_Text placeholderText = input.placeholder as TMP_Text;
+        if (placeholderText == null)
+        {
+            placeholderText = ChildText(rect, "Placeholder", new Vector2(0.04f, 0f), new Vector2(0.98f, 1f), placeholder, 14, TextAlignmentOptions.Left);
+            input.placeholder = placeholderText;
+        }
+        placeholderText.text = placeholder;
+        placeholderText.fontSize = 14f;
+        placeholderText.color = new Color(0.65f, 0.75f, 0.78f, 0.85f);
+        placeholderText.enableWordWrapping = false;
+        placeholderText.overflowMode = TextOverflowModes.Ellipsis;
+        placeholderText.raycastTarget = false;
     }
 
     private static Slider CreateSlider(RectTransform parent, string name, Vector2 min, Vector2 max)

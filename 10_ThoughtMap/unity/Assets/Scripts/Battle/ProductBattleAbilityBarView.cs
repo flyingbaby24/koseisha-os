@@ -5,11 +5,12 @@ using UnityEngine.UI;
 public class ProductBattleAbilityBarView : MonoBehaviour
 {
     private const float RowHeight = 26f;
-    private const float LabelWidth = 58f;
-    private const float BaseValueWidth = 34f;
-    private const float ModifierWidth = 42f;
-    private const float ArrowWidth = 18f;
-    private const float FinalValueWidth = 34f;
+    private const float LabelWidth = 44f;
+    private const float BarMinWidth = 34f;
+    private const float BaseValueWidth = 28f;
+    private const float ModifierWidth = 34f;
+    private const float ArrowWidth = 12f;
+    private const float FinalValueWidth = 32f;
     private static Sprite generatedSolidSprite;
 
     [SerializeField] private TMP_Text labelText;
@@ -138,7 +139,7 @@ public class ProductBattleAbilityBarView : MonoBehaviour
             rowLayout = root.gameObject.AddComponent<HorizontalLayoutGroup>();
         }
         rowLayout.padding = new RectOffset(0, 0, 0, 0);
-        rowLayout.spacing = 5f;
+        rowLayout.spacing = 2f;
         rowLayout.childAlignment = TextAnchor.MiddleCenter;
         rowLayout.childControlWidth = true;
         rowLayout.childControlHeight = true;
@@ -147,7 +148,7 @@ public class ProductBattleAbilityBarView : MonoBehaviour
 
         ConfigureLayout(labelText == null ? null : labelText.gameObject, LabelWidth, RowHeight, 0f);
         ConfigureLayout(baseValueText == null ? null : baseValueText.gameObject, BaseValueWidth, RowHeight, 0f);
-        ConfigureLayout(barContainer == null ? null : barContainer.gameObject, 0f, 14f, 1f);
+        ConfigureLayout(barContainer == null ? null : barContainer.gameObject, BarMinWidth, 14f, 1f);
         ConfigureLayout(modifierText == null ? null : modifierText.gameObject, ModifierWidth, RowHeight, 0f);
         ConfigureLayout(arrowText == null ? null : arrowText.gameObject, ArrowWidth, RowHeight, 0f);
         ConfigureLayout(finalValueText == null ? null : finalValueText.gameObject, FinalValueWidth, RowHeight, 0f);
@@ -173,6 +174,7 @@ public class ProductBattleAbilityBarView : MonoBehaviour
             fillImage.fillClockwise = true;
             fillImage.preserveAspect = false;
             fillImage.raycastTarget = false;
+            fillImage.color = new Color(fillImage.color.r, fillImage.color.g, fillImage.color.b, 0.95f);
             Stretch(fillImage.rectTransform);
             RemoveLayoutComponents(fillImage.gameObject);
         }
@@ -180,6 +182,7 @@ public class ProductBattleAbilityBarView : MonoBehaviour
         if (backgroundImage != null)
         {
             EnsureImageSprite(backgroundImage);
+            backgroundImage.color = new Color(0f, 0f, 0f, 0.50f);
             backgroundImage.raycastTarget = false;
             Stretch(backgroundImage.rectTransform);
             RemoveLayoutComponents(backgroundImage.gameObject);

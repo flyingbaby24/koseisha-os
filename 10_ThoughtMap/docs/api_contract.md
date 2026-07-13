@@ -204,22 +204,18 @@ Current MVP storage shape:
 Embedding values are currently stored as JSON text.
 
 
-## User Saved Library
+## Personal Saved Library
 
-Status: MVP implemented for user_id `default`.
+Status: MVP implemented for email-based lookup plus legacy `default` compatibility.
 
-These endpoints let Unity save selected search results into a local user library. Authentication is intentionally not implemented yet.
+Production Personal data is stored in PostgreSQL behind the API when
+`THOUGHTMAP_PERSONAL_BACKEND=postgres`. Unity and Streamlit should not depend
+on local files, SQLite paths, GitHub, or Zenodo storage locations.
 
-Storage path:
+The email-based endpoints are not authentication. The backend normalizes email
+with trim/lowercase, hashes it with SHA-256, and uses that hash as the user key.
 
-```text
-data/thoughtmap_db/users/default/
-  documents.csv
-  embeddings.csv
-  favorites.json
-```
-
-### POST /users/default/save
+### POST /users/by-email/save
 
 Save one selected document by `doc_id`.
 
@@ -227,6 +223,7 @@ Request:
 
 ```json
 {
+  "email": "user@example.com",
   "doc_id": "gutendex:12345",
   "parameters": [
     { "key": "philosophy", "value": 42.0 }
@@ -234,19 +231,52 @@ Request:
 }
 ```
 
-Only `doc_id` is required. `parameters` is optional and is used by Unity to persist the currently displayed filter scores.
+`parameters` may also be sent as an object:
+
+```json
+{
+  "email": "user@example.com",
+  "doc_id": "gutendex:12345",
+  "parameters": {
+    "philosophy": 42.0
+  }
+}
+```
 
 Duplicate saves are skipped and return `duplicate: true`.
 
-### GET /users/default/saved
+### GET /users/by-email/saved
 
-Return saved items from `favorites.json`.
+Query:
 
-### DELETE /users/default/saved/{doc_id}
+```text
+/users/by-email/saved?email=user@example.com
+```
 
-Remove a saved item from `favorites.json`, `documents.csv`, and `embeddings.csv`.
+Response shape is intentionally stable for Unity:
 
-Future user registration can generalize the `default` path to `/users/{user_id}/...` without changing the saved CSV shape.
+```json
+{
+  "works": []
+}
+```
+
+### DELETE /users/by-email/saved/{doc_id}
+
+Query:
+
+```text
+/users/by-email/saved/gutendex%3A12345?email=user@example.com
+```
+
+### Compatibility Default Routes
+
+The following legacy routes remain available and map to a fixed default user in
+the same Personal repository:
+
+- `POST /users/default/save`
+- `GET /users/default/saved`
+- `DELETE /users/default/saved/{doc_id}`
 
 ## Repository Hygiene
 

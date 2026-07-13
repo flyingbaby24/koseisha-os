@@ -41,6 +41,13 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     [SerializeField] private bool debugGeneratedSkills;
     [SerializeField] private bool showAllGeneratedSkillsWhenNoDeckMatch = true;
 
+    [Header("Personal Library API")]
+    [SerializeField] private ThoughtMapPersonalLibraryApiClient personalLibraryApiClient;
+    [SerializeField] private TMP_InputField personalEmailInput;
+    [SerializeField] private Button loadPersonalLibraryButton;
+    [SerializeField] private string personalLibraryEmail;
+    [SerializeField] private bool fallbackToSampleCardsOnApiError = true;
+
     [Header("Prefabs")]
     [SerializeField] private ProductBattleCardListRowView cardListRowPrefab;
     [SerializeField] private ProductBattleCardListRowView deckListRowPrefab;
@@ -101,6 +108,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     {
         EnsureFormationRules();
         EnsureResonanceCalculator();
+        EnsurePersonalLibraryApiClient();
         WireButtons();
         EnsureTopControlReadability();
         EnsureBattlePrepBackground();
@@ -155,6 +163,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     private void WireButtons()
     {
         AddClick(loadCardsButton, LoadCards);
+        AddClick(loadPersonalLibraryButton, LoadPersonalLibrary);
         AddClick(addToDeckButton, AddSelectedCardToDeck);
         AddClick(saveDeckButton, SaveDeckJson);
         AddClick(startBattleButton, StartBattleScene);
@@ -196,6 +205,80 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
         RenderAll();
         RenderGeneratedSkills();
+    }
+
+    [ContextMenu("Load Personal Library")]
+    public void LoadPersonalLibrary()
+    {
+        EnsurePersonalLibraryApiClient();
+        if (personalLibraryApiClient == null)
+        {
+            WriteStatus("Personal Library API client is not assigned.");
+            return;
+        }
+
+        string email = GetPersonalLibraryEmail();
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            WriteStatus("Enter a registered email address first.");
+            return;
+        }
+
+        WriteStatus("Loading Personal Library...");
+        StartCoroutine(personalLibraryApiClient.GetSavedByEmail(
+            email,
+            ApplyPersonalLibraryResponse,
+            HandlePersonalLibraryError
+        ));
+    }
+
+    private void ApplyPersonalLibraryResponse(PersonalLibraryResponse response)
+    {
+        SavedDocument[] works = response == null ? new SavedDocument[0] : response.WorksOrItems;
+        List<ThoughtMapBattleCardData> personalCards = new List<ThoughtMapBattleCardData>();
+        HashSet<string> seenIds = new HashSet<string>();
+
+        foreach (SavedDocument work in works)
+        {
+            ThoughtMapBattleCardData card = ThoughtMapBattleCardFactory.FromSavedDocument(work, "personal");
+            if (card == null)
+            {
+                continue;
+            }
+
+            string id = GetCardId(card);
+            if (string.IsNullOrWhiteSpace(id) || !seenIds.Add(id))
+            {
+                continue;
+            }
+
+            personalCards.Add(card);
+        }
+
+        loadedCards.Clear();
+        deckCards.Clear();
+        placement.Clear();
+        assignedSkillIdsByCardId.Clear();
+        selectedDeckIndex = -1;
+        selectedLibraryIndex = -1;
+        selectedGeneratedSkillId = "";
+        loadedCards.AddRange(personalCards);
+
+        RenderAll();
+        RenderGeneratedSkills();
+        WriteStatus(personalCards.Count == 0
+            ? "Personal Library is empty."
+            : $"Loaded {personalCards.Count} Personal Library cards.");
+    }
+
+    private void HandlePersonalLibraryError(string message)
+    {
+        WriteStatus("Could not load Personal Library. " + ShortStatusText(message, "API request failed."));
+        if (fallbackToSampleCardsOnApiError && loadedCards.Count == 0)
+        {
+            LoadCards();
+            WriteStatus("Personal Library unavailable. Loaded sample cards instead.");
+        }
     }
 
     public void ClearPlacement()
@@ -269,7 +352,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             ProductBattleCardListRowView view = CreateListRow(cardListContent, cardListRowPrefab, "CardListRow");
-            string state = deckCards.Contains(loadedCards[i]) ? "In Deck" : "";
+            string state = FormatCardListState(loadedCards[i], deckCards.Contains(loadedCards[i]) ? "In Deck" : "");
             Sprite artSprite = ResolveCardArtForTarget(loadedCards[i], i, "Card List");
             view.Bind(loadedCards[i], i, GetCardId(loadedCards[i]), i == selectedLibraryIndex, deckCards.Contains(loadedCards[i]), state, artSprite);
             view.SetClickHandler(OnLibraryCardClicked);
@@ -297,7 +380,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         for (int i = 0; i < deckCards.Count; i++)
         {
             ProductBattleCardListRowView view = CreateListRow(deckListContent, deckListRowPrefab, "DeckListRow");
-            string state = placement.ContainsValue(deckCards[i]) ? "Placed" : "Ready";
+            string state = FormatCardListState(deckCards[i], placement.ContainsValue(deckCards[i]) ? "Placed" : "Ready");
             Sprite artSprite = ResolveCardArtForTarget(deckCards[i], i, "Deck List");
             view.Bind(deckCards[i], i, $"P{i + 1}", i == selectedDeckIndex, placement.ContainsValue(deckCards[i]), state, artSprite);
             view.SetClickHandler(OnDeckCardClicked);
@@ -1436,6 +1519,8 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         NormalizeTopButton(saveDeckButton, "Save Deck", new Vector2(0.725f, 0.93f), new Vector2(0.805f, 0.985f));
         NormalizeTopButton(simulateButton, "Preview", new Vector2(0.815f, 0.93f), new Vector2(0.905f, 0.985f));
         NormalizeTopButton(startBattleButton, "Battle", new Vector2(0.915f, 0.93f), new Vector2(0.985f, 0.985f));
+        NormalizeEmailInput(personalEmailInput, new Vector2(0.70f, 0.01f), new Vector2(0.86f, 0.07f));
+        NormalizeTopButton(loadPersonalLibraryButton, "Load Personal", new Vector2(0.865f, 0.01f), new Vector2(0.985f, 0.07f));
     }
 
     private void NormalizeTopButton(Button button, string label, Vector2 min, Vector2 max)
@@ -1459,6 +1544,37 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             labelText.enableWordWrapping = false;
             labelText.overflowMode = TextOverflowModes.Overflow;
             AddTextShadow(labelText);
+        }
+    }
+
+    private void NormalizeEmailInput(TMP_InputField input, Vector2 min, Vector2 max)
+    {
+        if (input == null)
+        {
+            return;
+        }
+
+        RectTransform rect = input.transform as RectTransform;
+        if (rect != null)
+        {
+            AnchorTo(rect, min, max);
+        }
+
+        TMP_Text text = input.textComponent;
+        if (text != null)
+        {
+            text.fontSize = 14f;
+            text.enableWordWrapping = false;
+            text.overflowMode = TextOverflowModes.Ellipsis;
+        }
+
+        TMP_Text placeholder = input.placeholder as TMP_Text;
+        if (placeholder != null)
+        {
+            placeholder.text = "email";
+            placeholder.fontSize = 14f;
+            placeholder.enableWordWrapping = false;
+            placeholder.overflowMode = TextOverflowModes.Ellipsis;
         }
     }
 
@@ -1582,6 +1698,42 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     private string CardName(ThoughtMapBattleCardData card)
     {
         return card == null ? "null" : card.cardName;
+    }
+
+    private void EnsurePersonalLibraryApiClient()
+    {
+        if (personalLibraryApiClient != null)
+        {
+            return;
+        }
+
+        personalLibraryApiClient = GetComponent<ThoughtMapPersonalLibraryApiClient>();
+        if (personalLibraryApiClient == null)
+        {
+            personalLibraryApiClient = gameObject.AddComponent<ThoughtMapPersonalLibraryApiClient>();
+        }
+    }
+
+    private string GetPersonalLibraryEmail()
+    {
+        if (personalEmailInput != null && !string.IsNullOrWhiteSpace(personalEmailInput.text))
+        {
+            return personalEmailInput.text.Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(personalLibraryEmail) ? "" : personalLibraryEmail.Trim();
+    }
+
+    private string FormatCardListState(ThoughtMapBattleCardData card, string state)
+    {
+        string scope = card == null ? "" : card.dataScope;
+        bool isPersonal = string.Equals(scope, "personal", System.StringComparison.OrdinalIgnoreCase);
+        if (!isPersonal)
+        {
+            return state;
+        }
+
+        return string.IsNullOrWhiteSpace(state) ? "Personal" : $"Personal / {state}";
     }
 
     private string AttributeName(ThoughtMapBattleCardData card)

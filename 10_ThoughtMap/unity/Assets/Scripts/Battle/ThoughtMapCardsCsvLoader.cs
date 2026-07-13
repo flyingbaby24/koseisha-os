@@ -43,6 +43,10 @@ public static class ThoughtMapCardsCsvLoader
             sourceTitle = Get(row, "source_title"),
             author = Get(row, "author"),
             source = Get(row, "source"),
+            category = Get(row, "category"),
+            url = FirstNonEmpty(row, "url", "source_url"),
+            sourceDocId = FirstNonEmpty(row, "source_doc_id", "original_doc_id", "doc_id", "document_id", "id"),
+            dataScope = FirstNonEmpty(row, "data_scope", "owner_type", "scope"),
             primaryAttribute = Get(row, "primary_attribute"),
             secondaryAttribute = Get(row, "secondary_attribute"),
             statPhysicalAttack = GetInt(row, "stat_physical_attack"),
@@ -63,6 +67,14 @@ public static class ThoughtMapCardsCsvLoader
         if (string.IsNullOrWhiteSpace(card.cardName))
         {
             card.cardName = string.IsNullOrWhiteSpace(card.sourceTitle) ? card.docId : card.sourceTitle;
+        }
+        if (string.IsNullOrWhiteSpace(card.dataScope))
+        {
+            card.dataScope = "official";
+        }
+        if (string.IsNullOrWhiteSpace(card.sourceDocId))
+        {
+            card.sourceDocId = card.docId;
         }
 
         foreach (string parameter in ParameterColumns)

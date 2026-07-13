@@ -128,10 +128,10 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         }
         if (attributeIconImage != null)
         {
-            attributeIconImage.sprite = attributeSprite;
-            attributeIconImage.enabled = attributeSprite != null;
+            attributeIconImage.sprite = null;
+            attributeIconImage.enabled = false;
             Debug.Log(
-                $"[ProductBattlePrep Art] Detail Panel Attribute Image.sprite assigned={(attributeSprite == null ? "null" : attributeSprite.name)} card='{card.cardName}'",
+                $"[ProductBattlePrep Art] Detail Panel AttributeIconImage hidden to keep ability bars readable. candidate sprite={(attributeSprite == null ? "null" : attributeSprite.name)} card='{card.cardName}'",
                 this
             );
         }
@@ -234,8 +234,8 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
                 GameObject root = new GameObject("AbilityBarRoot", typeof(RectTransform), typeof(HorizontalLayoutGroup));
                 root.transform.SetParent(transform, false);
                 RectTransform rootRect = root.GetComponent<RectTransform>();
-                rootRect.anchorMin = new Vector2(0.61f, 0.28f);
-                rootRect.anchorMax = new Vector2(0.98f, 0.76f);
+                rootRect.anchorMin = new Vector2(0.42f, 0.28f);
+                rootRect.anchorMax = new Vector2(0.99f, 0.76f);
                 rootRect.offsetMin = Vector2.zero;
                 rootRect.offsetMax = Vector2.zero;
                 existing = root.transform;
@@ -379,8 +379,8 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         RectTransform rect = root as RectTransform;
         if (rect != null)
         {
-            rect.anchorMin = new Vector2(0.61f, 0.28f);
-            rect.anchorMax = new Vector2(0.98f, 0.76f);
+            rect.anchorMin = new Vector2(0.42f, 0.28f);
+            rect.anchorMax = new Vector2(0.99f, 0.76f);
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
         }

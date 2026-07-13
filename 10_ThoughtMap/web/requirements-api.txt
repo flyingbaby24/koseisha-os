@@ -3,4 +3,6 @@ uvicorn[standard]
 pandas
 numpy
 scikit-learn
-python-dotenv
+SQLAlchemy
+psycopg[binary]
+alembic
