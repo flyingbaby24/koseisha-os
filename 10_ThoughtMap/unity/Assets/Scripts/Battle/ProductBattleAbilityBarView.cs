@@ -4,12 +4,19 @@ using UnityEngine.UI;
 
 public class ProductBattleAbilityBarView : MonoBehaviour
 {
-    private const float RowHeight = 22f;
-    private const float LabelWidth = 46f;
-    private const float ValueWidth = 42f;
+    private const float RowHeight = 26f;
+    private const float LabelWidth = 58f;
+    private const float BaseValueWidth = 34f;
+    private const float ModifierWidth = 42f;
+    private const float ArrowWidth = 18f;
+    private const float FinalValueWidth = 34f;
     private static Sprite generatedSolidSprite;
 
     [SerializeField] private TMP_Text labelText;
+    [SerializeField] private TMP_Text baseValueText;
+    [SerializeField] private TMP_Text modifierText;
+    [SerializeField] private TMP_Text arrowText;
+    [SerializeField] private TMP_Text finalValueText;
     [SerializeField] private TMP_Text valueText;
     [SerializeField] private RectTransform barContainer;
     [SerializeField] private Image backgroundImage;
@@ -19,7 +26,7 @@ public class ProductBattleAbilityBarView : MonoBehaviour
     {
         EnsureVisuals();
         SetText(labelText, value.definition.shortName);
-        SetText(valueText, FormatValue(value.rawValue));
+        SetValueTexts(value);
 
         if (backgroundImage != null)
         {
@@ -51,6 +58,10 @@ public class ProductBattleAbilityBarView : MonoBehaviour
     {
         EnsureVisuals();
         SetText(labelText, "");
+        SetText(baseValueText, "");
+        SetText(modifierText, "");
+        SetText(arrowText, "");
+        SetText(finalValueText, "");
         SetText(valueText, "");
         if (fillImage != null)
         {
@@ -68,7 +79,12 @@ public class ProductBattleAbilityBarView : MonoBehaviour
 
         if (labelText == null)
         {
-            labelText = GetOrCreateText(root, "LabelText", "HP", 12, TextAlignmentOptions.MidlineLeft);
+            labelText = GetOrCreateText(root, "LabelText", "HP", 14, TextAlignmentOptions.MidlineLeft);
+        }
+
+        if (baseValueText == null)
+        {
+            baseValueText = GetOrCreateText(root, "BaseValueText", "0", 13, TextAlignmentOptions.MidlineRight);
         }
 
         if (barContainer == null)
@@ -87,9 +103,33 @@ public class ProductBattleAbilityBarView : MonoBehaviour
             fillImage = GetOrCreateImage(barContainer, "FillImage", Color.white);
         }
 
+        if (modifierText == null)
+        {
+            modifierText = GetOrCreateText(root, "ModifierText", "", 13, TextAlignmentOptions.MidlineRight);
+        }
+
+        if (arrowText == null)
+        {
+            arrowText = GetOrCreateText(root, "ArrowText", "", 13, TextAlignmentOptions.Center);
+        }
+
+        if (finalValueText == null)
+        {
+            finalValueText = GetOrCreateText(root, "FinalValueText", "", 13, TextAlignmentOptions.MidlineRight);
+        }
+
         if (valueText == null)
         {
-            valueText = GetOrCreateText(root, "ValueText", "0", 12, TextAlignmentOptions.MidlineRight);
+            Transform legacyValue = root.Find("ValueText");
+            if (legacyValue != null)
+            {
+                valueText = legacyValue.GetComponent<TMP_Text>();
+            }
+        }
+        if (valueText != null)
+        {
+            valueText.text = "";
+            valueText.gameObject.SetActive(false);
         }
 
         HorizontalLayoutGroup rowLayout = root.GetComponent<HorizontalLayoutGroup>();
@@ -106,27 +146,23 @@ public class ProductBattleAbilityBarView : MonoBehaviour
         rowLayout.childForceExpandHeight = false;
 
         ConfigureLayout(labelText == null ? null : labelText.gameObject, LabelWidth, RowHeight, 0f);
-        ConfigureLayout(barContainer == null ? null : barContainer.gameObject, 0f, 12f, 1f);
-        ConfigureLayout(valueText == null ? null : valueText.gameObject, ValueWidth, RowHeight, 0f);
+        ConfigureLayout(baseValueText == null ? null : baseValueText.gameObject, BaseValueWidth, RowHeight, 0f);
+        ConfigureLayout(barContainer == null ? null : barContainer.gameObject, 0f, 14f, 1f);
+        ConfigureLayout(modifierText == null ? null : modifierText.gameObject, ModifierWidth, RowHeight, 0f);
+        ConfigureLayout(arrowText == null ? null : arrowText.gameObject, ArrowWidth, RowHeight, 0f);
+        ConfigureLayout(finalValueText == null ? null : finalValueText.gameObject, FinalValueWidth, RowHeight, 0f);
         if (labelText != null) labelText.transform.SetSiblingIndex(0);
-        if (barContainer != null) barContainer.transform.SetSiblingIndex(1);
-        if (valueText != null) valueText.transform.SetSiblingIndex(2);
+        if (baseValueText != null) baseValueText.transform.SetSiblingIndex(1);
+        if (barContainer != null) barContainer.transform.SetSiblingIndex(2);
+        if (modifierText != null) modifierText.transform.SetSiblingIndex(3);
+        if (arrowText != null) arrowText.transform.SetSiblingIndex(4);
+        if (finalValueText != null) finalValueText.transform.SetSiblingIndex(5);
 
-        if (labelText != null)
-        {
-            labelText.overflowMode = TextOverflowModes.Overflow;
-            labelText.enableAutoSizing = false;
-            labelText.fontSize = 12;
-            labelText.enableWordWrapping = false;
-        }
-
-        if (valueText != null)
-        {
-            valueText.overflowMode = TextOverflowModes.Overflow;
-            valueText.enableAutoSizing = false;
-            valueText.fontSize = 12;
-            valueText.enableWordWrapping = false;
-        }
+        ConfigureText(labelText, 14);
+        ConfigureText(baseValueText, 13);
+        ConfigureText(modifierText, 13);
+        ConfigureText(arrowText, 13);
+        ConfigureText(finalValueText, 13);
 
         if (fillImage != null)
         {
@@ -155,6 +191,40 @@ public class ProductBattleAbilityBarView : MonoBehaviour
         }
     }
 
+    private void SetValueTexts(ThoughtMapBattleAbilityValue value)
+    {
+        SetText(baseValueText, FormatValue(value.rawValue));
+        if (value.resonanceApplies && Mathf.Abs(value.resonanceModifier) >= 0.0001f)
+        {
+            SetText(modifierText, FormatModifier(value.resonanceModifier));
+            SetText(arrowText, "->");
+            SetText(finalValueText, FormatValue(value.finalValue));
+        }
+        else
+        {
+            SetText(modifierText, "");
+            SetText(arrowText, "");
+            SetText(finalValueText, "");
+        }
+
+        SetText(valueText, "");
+    }
+
+    private static void ConfigureText(TMP_Text text, int fontSize)
+    {
+        if (text == null)
+        {
+            return;
+        }
+
+        text.overflowMode = TextOverflowModes.Overflow;
+        text.enableAutoSizing = false;
+        text.fontSize = fontSize;
+        text.enableWordWrapping = false;
+        text.raycastTarget = false;
+        text.gameObject.SetActive(true);
+    }
+
     private static TMP_Text GetOrCreateText(RectTransform parent, string name, string value, int fontSize, TextAlignmentOptions alignment)
     {
         Transform existing = parent.Find(name);
@@ -169,6 +239,13 @@ public class ProductBattleAbilityBarView : MonoBehaviour
         text.enableWordWrapping = false;
         text.overflowMode = TextOverflowModes.Overflow;
         text.raycastTarget = false;
+        Shadow shadow = text.GetComponent<Shadow>();
+        if (shadow == null)
+        {
+            shadow = text.gameObject.AddComponent<Shadow>();
+        }
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.72f);
+        shadow.effectDistance = new Vector2(1f, -1f);
         return text;
     }
 
@@ -290,7 +367,7 @@ public class ProductBattleAbilityBarView : MonoBehaviour
             fillImage = null;
         }
 
-        DestroyObject(legacy.gameObject);
+        legacy.gameObject.SetActive(false);
     }
 
     private static void DestroyObject(Object target)
@@ -313,6 +390,23 @@ public class ProductBattleAbilityBarView : MonoBehaviour
     private static string FormatValue(float value)
     {
         return Mathf.Abs(value - Mathf.Round(value)) < 0.01f ? Mathf.RoundToInt(value).ToString() : value.ToString("0.##");
+    }
+
+    private static string FormatAbilityValue(ThoughtMapBattleAbilityValue value)
+    {
+        if (!value.resonanceApplies || Mathf.Abs(value.resonanceModifier) < 0.0001f)
+        {
+            return FormatValue(value.rawValue);
+        }
+
+        string modifier = FormatModifier(value.resonanceModifier);
+        return $"{FormatValue(value.rawValue)} {modifier} -> {FormatValue(value.finalValue)}";
+    }
+
+    private static string FormatModifier(float modifier)
+    {
+        float percent = modifier * 100f;
+        return percent >= 0f ? $"+{percent:0}%" : $"{percent:0}%";
     }
 
     private static void SetText(TMP_Text text, string value)

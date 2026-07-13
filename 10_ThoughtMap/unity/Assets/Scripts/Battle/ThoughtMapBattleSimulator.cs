@@ -5,12 +5,23 @@ using UnityEngine;
 
 public class ThoughtMapBattleSimulator
 {
-    private readonly ThoughtMapHateCalculator hateCalculator = new ThoughtMapHateCalculator();
+    private readonly ThoughtMapHateCalculator hateCalculator;
+    private readonly ThoughtMapBattleResonanceCalculator resonanceCalculator;
+    private readonly ThoughtMapBattleResonanceConfig resonanceConfig;
     private readonly IThoughtMapEmbeddingSimilarityProvider similarityProvider;
+    private readonly bool debugResonanceAndHate;
 
-    public ThoughtMapBattleSimulator(IThoughtMapEmbeddingSimilarityProvider similarityProvider = null)
+    public ThoughtMapBattleSimulator(
+        IThoughtMapEmbeddingSimilarityProvider similarityProvider = null,
+        ThoughtMapBattleResonanceConfig resonanceConfig = null,
+        bool debugResonanceAndHate = false
+    )
     {
         this.similarityProvider = similarityProvider ?? new ThoughtMapParameterSimilarityProvider();
+        this.resonanceConfig = resonanceConfig == null ? ThoughtMapBattleResonanceConfig.RuntimeDefault : resonanceConfig;
+        this.debugResonanceAndHate = debugResonanceAndHate;
+        this.resonanceCalculator = new ThoughtMapBattleResonanceCalculator(this.resonanceConfig);
+        this.hateCalculator = new ThoughtMapHateCalculator(this.resonanceConfig, debugResonanceAndHate);
     }
 
     public ThoughtMapBattleReport Simulate(
@@ -32,6 +43,8 @@ public class ThoughtMapBattleSimulator
         report.logLines.Add($"Enemy : {DescribeTeam(enemyUnits)}");
         LogInitialPositionBonuses(playerUnits, report);
         LogInitialPositionBonuses(enemyUnits, report);
+        LogInitialResonance(playerUnits, report);
+        LogInitialResonance(enemyUnits, report);
 
         for (int round = 1; round <= maxRounds; round++)
         {
@@ -42,8 +55,8 @@ public class ThoughtMapBattleSimulator
             List<ThoughtMapBattleUnit> turnOrder = playerUnits
                 .Concat(enemyUnits)
                 .Where(unit => unit.IsAlive)
-                .OrderByDescending(unit => unit.card.statSpeed)
-                .ThenByDescending(unit => unit.card.statLuck)
+                .OrderByDescending(unit => GetFinalStat(unit, GetAllies(unit, playerUnits, enemyUnits), unit.card.statSpeed))
+                .ThenByDescending(unit => GetFinalStat(unit, GetAllies(unit, playerUnits, enemyUnits), unit.card.statLuck))
                 .ToList();
 
             foreach (ThoughtMapBattleUnit unit in turnOrder)
@@ -53,13 +66,14 @@ public class ThoughtMapBattleSimulator
                     continue;
                 }
 
+                List<ThoughtMapBattleUnit> allies = unit.team == "Player" ? playerUnits : enemyUnits;
                 List<ThoughtMapBattleUnit> enemies = unit.team == "Player" ? enemyUnits : playerUnits;
                 if (!enemies.Any(enemy => enemy.IsAlive))
                 {
                     break;
                 }
 
-                ThoughtMapBattleUnit target = hateCalculator.SelectTarget(unit, enemies, round);
+                ThoughtMapBattleUnit target = hateCalculator.SelectTarget(unit, enemies, round, report.logLines);
                 if (target == null)
                 {
                     continue;
@@ -74,7 +88,7 @@ public class ThoughtMapBattleSimulator
                 }
                 unit.lastTargetKey = targetKey;
 
-                ResolveAttack(unit, target, unit.team == "Player" ? playerUnits : enemyUnits, report, round);
+                ResolveAttack(unit, target, allies, enemies, report, round);
             }
 
             if (!playerUnits.Any(unit => unit.IsAlive) || !enemyUnits.Any(unit => unit.IsAlive))
@@ -96,13 +110,20 @@ public class ThoughtMapBattleSimulator
         ThoughtMapBattleUnit attacker,
         ThoughtMapBattleUnit target,
         List<ThoughtMapBattleUnit> allies,
+        List<ThoughtMapBattleUnit> targetAllies,
         ThoughtMapBattleReport report,
         int round
     )
     {
         bool useSkill = attacker.sp >= 20 && attacker.card.statSkillAttack >= attacker.card.statPhysicalAttack;
-        int attack = useSkill ? attacker.card.statSkillAttack : attacker.card.statPhysicalAttack;
-        int defense = useSkill ? target.card.statSkillDefense : target.card.statPhysicalDefense;
+        ThoughtMapResonanceResult attackerResonance = resonanceCalculator.CalculateTotalModifier(attacker, allies);
+        ThoughtMapResonanceResult targetResonance = resonanceCalculator.CalculateTotalModifier(target, targetAllies);
+        int attack = useSkill
+            ? GetFinalStat(attacker, allies, attacker.card.statSkillAttack)
+            : GetFinalStat(attacker, allies, attacker.card.statPhysicalAttack);
+        int defense = useSkill
+            ? GetFinalStat(target, targetAllies, target.card.statSkillDefense)
+            : GetFinalStat(target, targetAllies, target.card.statPhysicalDefense);
 
         float affinity = ThoughtMapAttributeAffinity.GetMultiplier(
             attacker.card.primaryAttribute,
@@ -112,7 +133,9 @@ public class ThoughtMapBattleSimulator
         ThoughtMapGridBonus attackerGrid = ThoughtMapGridBonusCalculator.GetBonus(attacker.position, attacker.team);
         ThoughtMapGridBonus targetGrid = ThoughtMapGridBonusCalculator.GetBonus(target.position, target.team);
         ThoughtMapSupportBonus support = GetSupportBonus(attacker, allies);
-        float hitChance = Mathf.Clamp01(0.72f + ((attacker.card.statAccuracy - target.card.statEvasion) / 220f));
+        int accuracy = GetFinalStat(attacker, allies, attacker.card.statAccuracy);
+        int evasion = GetFinalStat(target, targetAllies, target.card.statEvasion);
+        float hitChance = Mathf.Clamp01(0.72f + ((accuracy - evasion) / 220f));
         float roll = ((attacker.card.raritySeed + target.card.skillSeed + report.rounds * 13) % 100) / 100f;
 
         if (roll > hitChance)
@@ -133,7 +156,8 @@ public class ThoughtMapBattleSimulator
                 method = useSkill ? "skill" : "attack",
             });
             report.logLines.Add(
-                $"Turn {round}: {DescribeUnit(attacker)} -> {DescribeUnit(target)} | miss"
+                $"Turn {round}: {DescribeUnit(attacker)} -> {DescribeUnit(target)} | miss | " +
+                $"Resonance ATK {FormatPercent(1f + attackerResonance.totalModifier)} DEF {FormatPercent(1f + targetResonance.totalModifier)}"
             );
             return;
         }
@@ -160,6 +184,7 @@ public class ThoughtMapBattleSimulator
             $"damage {damage} | HP {target.hp}/{target.maxHp} " +
             $"| {DescribeAffinity(affinity)} x{affinity:0.00} | " +
             $"Position Bonus ATK {FormatPercent(attackerGrid.attackMultiplier)} DEF {FormatPercent(targetGrid.defenseMultiplier)} HP {FormatPercent(attackerGrid.hpMultiplier)} | " +
+            $"Resonance ATK {FormatPercent(1f + attackerResonance.totalModifier)} DEF {FormatPercent(1f + targetResonance.totalModifier)} | " +
             $"Support Bonus {FormatPercent(support.multiplier)} Similarity {support.similarity:0.00}"
         );
 
@@ -208,6 +233,21 @@ public class ThoughtMapBattleSimulator
         return string.Join(", ", units.Select(unit => $"{unit.card.cardName}@{unit.position}"));
     }
 
+    private List<ThoughtMapBattleUnit> GetAllies(
+        ThoughtMapBattleUnit unit,
+        List<ThoughtMapBattleUnit> playerUnits,
+        List<ThoughtMapBattleUnit> enemyUnits
+    )
+    {
+        return unit != null && unit.team == "Player" ? playerUnits : enemyUnits;
+    }
+
+    private int GetFinalStat(ThoughtMapBattleUnit unit, List<ThoughtMapBattleUnit> allies, int baseValue)
+    {
+        ThoughtMapResonanceResult resonance = resonanceCalculator.CalculateTotalModifier(unit, allies);
+        return Mathf.Max(1, Mathf.RoundToInt(baseValue * (1f + resonance.totalModifier)));
+    }
+
     private string DescribeUnit(ThoughtMapBattleUnit unit)
     {
         if (unit == null || unit.card == null)
@@ -228,6 +268,20 @@ public class ThoughtMapBattleSimulator
                 $"ATK {FormatPercent(bonus.attackMultiplier)} DEF {FormatPercent(bonus.defenseMultiplier)} " +
                 $"HP {FormatPercent(bonus.hpMultiplier)} Hate {FormatPercent(bonus.hateMultiplier)}"
             );
+        }
+    }
+
+    private void LogInitialResonance(List<ThoughtMapBattleUnit> units, ThoughtMapBattleReport report)
+    {
+        if (!debugResonanceAndHate && !resonanceConfig.DebugLogging)
+        {
+            return;
+        }
+
+        foreach (ThoughtMapBattleUnit unit in units)
+        {
+            ThoughtMapResonanceResult result = resonanceCalculator.CalculateTotalModifier(unit, units);
+            report.logLines.Add("Resonance | " + result.ToDebugText());
         }
     }
 

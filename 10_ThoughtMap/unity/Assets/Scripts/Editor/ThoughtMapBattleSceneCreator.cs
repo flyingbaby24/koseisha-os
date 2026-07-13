@@ -458,7 +458,7 @@ public static class ThoughtMapBattleSceneCreator
         TMP_Text en = ChildText(rect, "EnText", new Vector2(0.53f, 0.27f), new Vector2(0.60f, 0.33f), "EN", 13, TextAlignmentOptions.Left);
         TMP_Text skill = ChildText(rect, "SkillText", new Vector2(0.45f, 0.10f), new Vector2(0.60f, 0.25f), "Skill", 13, TextAlignmentOptions.Left);
         TMP_Text rarity = ChildText(rect, "RarityText", new Vector2(0.52f, 0.88f), new Vector2(0.60f, 0.98f), "R4", 16, TextAlignmentOptions.Right);
-        RectTransform abilityRoot = CreateAbilityBarRoot(rect, new Vector2(0.61f, 0.10f), new Vector2(0.98f, 0.76f));
+        RectTransform abilityRoot = CreateAbilityBarRoot(rect, new Vector2(0.61f, 0.28f), new Vector2(0.98f, 0.76f));
         ProductBattleAbilityBarView[] abilityBars = CreateAbilityBars(abilityRoot);
 
         SerializedObject so = new SerializedObject(root.GetComponent<ProductBattleCardDetailPanelView>());
@@ -597,12 +597,12 @@ public static class ThoughtMapBattleSceneCreator
         Anchor(panelRect, new Vector2(0.02f, 0.04f), new Vector2(0.98f, 0.96f));
         panel.GetComponent<Image>().color = new Color(0.005f, 0.012f, 0.02f, 0.08f);
 
-        TMP_Text title = ChildText(panelRect, "TitleText", new Vector2(0.02f, 0.92f), new Vector2(0.38f, 0.99f), "Source of Thought - Battle Prep", 30, TextAlignmentOptions.Left);
-        Button loadButton = CreateButton(panelRect, "LoadCardsButton", "Load Cards", new Vector2(0.54f, 0.93f), new Vector2(0.63f, 0.985f));
-        Button addToDeckButton = CreateButton(panelRect, "AddToDeckButton", "Add to Deck", new Vector2(0.64f, 0.93f), new Vector2(0.735f, 0.985f));
-        Button saveButton = CreateButton(panelRect, "SaveDeckButton", "Save", new Vector2(0.745f, 0.93f), new Vector2(0.815f, 0.985f));
-        Button simulateButton = CreateButton(panelRect, "SimulateButton", "Simulate", new Vector2(0.825f, 0.93f), new Vector2(0.905f, 0.985f));
-        Button startButton = CreateButton(panelRect, "StartBattleButton", "Start", new Vector2(0.915f, 0.93f), new Vector2(0.985f, 0.985f));
+        TMP_Text title = ChildText(panelRect, "TitleText", new Vector2(0.02f, 0.925f), new Vector2(0.48f, 0.99f), "Source of Thought - Battle Prep", 30, TextAlignmentOptions.Left);
+        Button loadButton = CreateButton(panelRect, "LoadCardsButton", "Load Cards", new Vector2(0.50f, 0.93f), new Vector2(0.595f, 0.985f));
+        Button addToDeckButton = CreateButton(panelRect, "AddToDeckButton", "Add Deck", new Vector2(0.605f, 0.93f), new Vector2(0.715f, 0.985f));
+        Button saveButton = CreateButton(panelRect, "SaveDeckButton", "Save Deck", new Vector2(0.725f, 0.93f), new Vector2(0.805f, 0.985f));
+        Button simulateButton = CreateButton(panelRect, "SimulateButton", "Preview", new Vector2(0.815f, 0.93f), new Vector2(0.905f, 0.985f));
+        Button startButton = CreateButton(panelRect, "StartBattleButton", "Battle", new Vector2(0.915f, 0.93f), new Vector2(0.985f, 0.985f));
         Button clearButton = CreateButton(panelRect, "ClearButton", "Clear", new Vector2(0.02f, 0.01f), new Vector2(0.10f, 0.07f));
         TMP_Text status = ChildText(panelRect, "StatusText", new Vector2(0.18f, 0.01f), new Vector2(0.70f, 0.07f), "Ready", 16, TextAlignmentOptions.Left);
 
@@ -800,7 +800,7 @@ public static class ThoughtMapBattleSceneCreator
         Undo.RecordObject(detail, "Repair Product Battle Prep Ability Bars");
         RectTransform detailRect = detail.transform as RectTransform;
         RepairCardDetailPanelLayout(detailRect);
-        RectTransform abilityRoot = CreateAbilityBarRoot(detailRect, new Vector2(0.61f, 0.10f), new Vector2(0.98f, 0.76f));
+        RectTransform abilityRoot = CreateAbilityBarRoot(detailRect, new Vector2(0.61f, 0.28f), new Vector2(0.98f, 0.76f));
         ProductBattleAbilityBarView[] abilityBars = CreateAbilityBars(abilityRoot);
 
         SerializedObject so = new SerializedObject(detail);
@@ -1018,7 +1018,7 @@ public static class ThoughtMapBattleSceneCreator
             layout = Undo.AddComponent<VerticalLayoutGroup>(columnObject);
         }
         layout.padding = new RectOffset(0, 0, 0, 0);
-        layout.spacing = 4f;
+        layout.spacing = 5f;
         layout.childAlignment = TextAnchor.UpperCenter;
         layout.childControlWidth = true;
         layout.childControlHeight = true;
@@ -1048,15 +1048,15 @@ public static class ThoughtMapBattleSceneCreator
         rect.anchorMin = new Vector2(0f, 1f);
         rect.anchorMax = new Vector2(1f, 1f);
         rect.pivot = new Vector2(0.5f, 1f);
-        rect.sizeDelta = new Vector2(0f, 18f);
+        rect.sizeDelta = new Vector2(0f, 26f);
 
         LayoutElement layout = rowObject.GetComponent<LayoutElement>();
         if (layout == null)
         {
             layout = Undo.AddComponent<LayoutElement>(rowObject);
         }
-        layout.minHeight = 22f;
-        layout.preferredHeight = 22f;
+        layout.minHeight = 26f;
+        layout.preferredHeight = 26f;
         layout.flexibleHeight = 0f;
 
         HorizontalLayoutGroup rowLayout = rowObject.GetComponent<HorizontalLayoutGroup>();
@@ -1072,19 +1072,31 @@ public static class ThoughtMapBattleSceneCreator
         rowLayout.childForceExpandWidth = false;
         rowLayout.childForceExpandHeight = false;
 
-        TMP_Text label = GetOrCreateText(rect, "LabelText", Vector2.zero, Vector2.one, definition.shortName, 12, TextAlignmentOptions.MidlineLeft);
+        TMP_Text label = GetOrCreateText(rect, "LabelText", Vector2.zero, Vector2.one, definition.shortName, 14, TextAlignmentOptions.MidlineLeft);
+        TMP_Text baseValue = GetOrCreateText(rect, "BaseValueText", Vector2.zero, Vector2.one, "0", 13, TextAlignmentOptions.MidlineRight);
         RectTransform barContainer = GetOrCreateRect(rect, "BarContainer");
         RemoveLegacyBarObject(rect, "BarBackground");
         RemoveLegacyBarObject(rect, "BarFill");
         Image background = GetOrCreateImage(barContainer, "BackgroundImage", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0.42f));
         Image fill = GetOrCreateImage(barContainer, "FillImage", Vector2.zero, Vector2.one, definition.color);
-        TMP_Text value = GetOrCreateText(rect, "ValueText", Vector2.zero, Vector2.one, "0", 12, TextAlignmentOptions.MidlineRight);
-        SetLayout(label.gameObject, 46f, 22f, 0f);
-        SetLayout(barContainer.gameObject, 0f, 12f, 1f);
-        SetLayout(value.gameObject, 42f, 22f, 0f);
+        TMP_Text modifier = GetOrCreateText(rect, "ModifierText", Vector2.zero, Vector2.one, "", 13, TextAlignmentOptions.MidlineRight);
+        TMP_Text arrow = GetOrCreateText(rect, "ArrowText", Vector2.zero, Vector2.one, "", 13, TextAlignmentOptions.Center);
+        TMP_Text finalValue = GetOrCreateText(rect, "FinalValueText", Vector2.zero, Vector2.one, "", 13, TextAlignmentOptions.MidlineRight);
+        TMP_Text legacyValue = FindDirectChild(rect, "ValueText") == null
+            ? null
+            : FindDirectChild(rect, "ValueText").GetComponent<TMP_Text>();
+        SetLayout(label.gameObject, 58f, 26f, 0f);
+        SetLayout(baseValue.gameObject, 34f, 26f, 0f);
+        SetLayout(barContainer.gameObject, 0f, 14f, 1f);
+        SetLayout(modifier.gameObject, 42f, 26f, 0f);
+        SetLayout(arrow.gameObject, 18f, 26f, 0f);
+        SetLayout(finalValue.gameObject, 34f, 26f, 0f);
         label.transform.SetSiblingIndex(0);
-        barContainer.transform.SetSiblingIndex(1);
-        value.transform.SetSiblingIndex(2);
+        baseValue.transform.SetSiblingIndex(1);
+        barContainer.transform.SetSiblingIndex(2);
+        modifier.transform.SetSiblingIndex(3);
+        arrow.transform.SetSiblingIndex(4);
+        finalValue.transform.SetSiblingIndex(5);
 
         fill.type = Image.Type.Filled;
         fill.fillMethod = Image.FillMethod.Horizontal;
@@ -1099,24 +1111,51 @@ public static class ThoughtMapBattleSceneCreator
         background.raycastTarget = false;
         fill.raycastTarget = false;
         label.raycastTarget = false;
-        value.raycastTarget = false;
+        baseValue.raycastTarget = false;
+        modifier.raycastTarget = false;
+        arrow.raycastTarget = false;
+        finalValue.raycastTarget = false;
         label.enableWordWrapping = false;
         label.overflowMode = TextOverflowModes.Overflow;
         label.enableAutoSizing = false;
-        value.enableWordWrapping = false;
-        value.overflowMode = TextOverflowModes.Overflow;
-        value.enableAutoSizing = false;
+        ConfigureAbilityText(baseValue);
+        ConfigureAbilityText(modifier);
+        ConfigureAbilityText(arrow);
+        ConfigureAbilityText(finalValue);
+        if (legacyValue != null)
+        {
+            legacyValue.text = "";
+            legacyValue.gameObject.SetActive(false);
+        }
 
         ProductBattleAbilityBarView bar = rowObject.GetComponent<ProductBattleAbilityBarView>();
         SerializedObject so = new SerializedObject(bar);
         SetObject(so, "labelText", label);
-        SetObject(so, "valueText", value);
+        SetObject(so, "baseValueText", baseValue);
+        SetObject(so, "modifierText", modifier);
+        SetObject(so, "arrowText", arrow);
+        SetObject(so, "finalValueText", finalValue);
+        SetObject(so, "valueText", legacyValue);
         SetObject(so, "barContainer", barContainer);
         SetObject(so, "backgroundImage", background);
         SetObject(so, "fillImage", fill);
         so.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(bar);
         EditorUtility.SetDirty(rowObject);
         return bar;
+    }
+
+    private static void ConfigureAbilityText(TMP_Text text)
+    {
+        if (text == null)
+        {
+            return;
+        }
+
+        text.enableWordWrapping = false;
+        text.overflowMode = TextOverflowModes.Overflow;
+        text.enableAutoSizing = false;
+        text.raycastTarget = false;
     }
 
     private static TMP_Text GetOrCreateText(RectTransform parent, string name, Vector2 min, Vector2 max, string value, int size, TextAlignmentOptions alignment)
@@ -1200,7 +1239,9 @@ public static class ThoughtMapBattleSceneCreator
         Transform legacy = FindDirectChild(root, objectName);
         if (legacy != null)
         {
-            Undo.DestroyObjectImmediate(legacy.gameObject);
+            Undo.RecordObject(legacy.gameObject, "Disable Legacy Ability Bar Object");
+            legacy.gameObject.SetActive(false);
+            EditorUtility.SetDirty(legacy.gameObject);
         }
     }
 
@@ -1260,13 +1301,22 @@ public static class ThoughtMapBattleSceneCreator
         }
 
         Undo.RecordObject(view, "Repair Product Battle Prep Controls");
-        Button addToDeckButton = EnsurePrepButton(root, "AddToDeckButton", "Add to Deck", new Vector2(0.64f, 0.93f), new Vector2(0.735f, 0.985f));
+        AnchorChild(root, "TitleText", new Vector2(0.02f, 0.925f), new Vector2(0.48f, 0.99f));
+        Button loadButton = EnsurePrepButton(root, "LoadCardsButton", "Load Cards", new Vector2(0.50f, 0.93f), new Vector2(0.595f, 0.985f));
+        Button addToDeckButton = EnsurePrepButton(root, "AddToDeckButton", "Add Deck", new Vector2(0.605f, 0.93f), new Vector2(0.715f, 0.985f));
+        Button saveButton = EnsurePrepButton(root, "SaveDeckButton", "Save Deck", new Vector2(0.725f, 0.93f), new Vector2(0.805f, 0.985f));
+        Button simulateButton = EnsurePrepButton(root, "SimulateButton", "Preview", new Vector2(0.815f, 0.93f), new Vector2(0.905f, 0.985f));
+        Button startButton = EnsurePrepButton(root, "StartBattleButton", "Battle", new Vector2(0.915f, 0.93f), new Vector2(0.985f, 0.985f));
         NormalizeProductCardViews(root);
         SerializedObject so = new SerializedObject(view);
+        SetObject(so, "loadCardsButton", loadButton);
         SetObject(so, "addToDeckButton", addToDeckButton);
+        SetObject(so, "saveDeckButton", saveButton);
+        SetObject(so, "simulateButton", simulateButton);
+        SetObject(so, "startBattleButton", startButton);
         so.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(view);
-        Debug.Log($"[SourceOfThoughtBattleScene] AddToDeckButton repaired for {view.name}: {(addToDeckButton == null ? "missing" : addToDeckButton.name)}.");
+        Debug.Log($"[SourceOfThoughtBattleScene] Top controls repaired for {view.name}.");
     }
 
     private static void NormalizeProductCardViews(RectTransform root)
@@ -1357,6 +1407,9 @@ public static class ThoughtMapBattleSceneCreator
             labelText = ChildText(rect, "Label", Vector2.zero, Vector2.one, label, 15, TextAlignmentOptions.Center);
         }
         labelText.text = label;
+        labelText.fontSize = 14;
+        labelText.enableWordWrapping = false;
+        labelText.overflowMode = TextOverflowModes.Overflow;
         labelText.gameObject.SetActive(true);
 
         EditorUtility.SetDirty(button.gameObject);
@@ -1732,7 +1785,9 @@ public static class ThoughtMapBattleSceneCreator
         RectTransform rect = buttonObject.GetComponent<RectTransform>();
         Anchor(rect, min, max);
         buttonObject.GetComponent<Image>().color = new Color(0.06f, 0.08f, 0.09f, 0.98f);
-        ChildText(rect, "Label", Vector2.zero, Vector2.one, label, 15, TextAlignmentOptions.Center);
+        TMP_Text labelText = ChildText(rect, "Label", Vector2.zero, Vector2.one, label, 14, TextAlignmentOptions.Center);
+        labelText.enableWordWrapping = false;
+        labelText.overflowMode = TextOverflowModes.Overflow;
         return buttonObject.GetComponent<Button>();
     }
 

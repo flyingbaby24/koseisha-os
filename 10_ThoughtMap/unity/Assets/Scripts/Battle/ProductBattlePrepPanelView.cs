@@ -9,7 +9,7 @@ using UnityEngine.UI;
 
 public class ProductBattlePrepPanelView : MonoBehaviour
 {
-    private const float LightweightRowHeight = 46f;
+    private const float LightweightRowHeight = 50f;
     private const float LightweightRowSpacing = 4f;
     private static readonly string[] ExpectedTemplateKeys =
     {
@@ -83,6 +83,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     [SerializeField] private int cardListRenderLimit = 60;
     [SerializeField] private int playerRows = 5;
     [SerializeField] private bool logFormationGridCells;
+    [SerializeField] private ThoughtMapBattleResonanceConfig resonanceConfig;
 
     private readonly List<ThoughtMapBattleCardData> loadedCards = new List<ThoughtMapBattleCardData>();
     private readonly List<ThoughtMapBattleCardData> deckCards = new List<ThoughtMapBattleCardData>();
@@ -94,13 +95,17 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     private int selectedDeckIndex = -1;
     private int selectedLibraryIndex = -1;
     private string selectedGeneratedSkillId = "";
+    private ThoughtMapBattleResonanceCalculator resonanceCalculator;
 
     private void Awake()
     {
         EnsureFormationRules();
+        EnsureResonanceCalculator();
         WireButtons();
+        EnsureTopControlReadability();
         EnsureBattlePrepBackground();
         EnsurePanelTransparency();
+        EnsureReadableTextEffects();
         EnsureListContentReferences();
         if (cardListContent != null)
         {
@@ -304,6 +309,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     {
         EnsureGridCells();
         EnsureFormationGridLayout();
+        Dictionary<int, ThoughtMapResonanceResult> resonanceResults = CalculatePlacementResonanceByCell();
         for (int index = 0; index < gridCells.Count; index++)
         {
             int x = index % 5;
@@ -320,6 +326,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
                     ResolveCardArtForTarget(card, deckIndex, $"Grid Cell ({x + 1},{y + 1})"),
                     ResolveAttributeIconForTarget(card, $"Grid Cell ({x + 1},{y + 1})")
                 );
+                if (resonanceResults.TryGetValue(index, out ThoughtMapResonanceResult resonanceResult))
+                {
+                    gridCells[index].SetResonanceModifier(resonanceResult.totalModifier);
+                }
             }
             else
             {
@@ -520,11 +530,20 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         ThoughtMapBattleCardData card = GetSelectedDeckCard();
         if (card == null)
         {
-            WriteStatus("Assign requires a Deck 10 card. Select a deck card first.");
+            WriteStatus("Select a deck card first.");
+            Debug.Log($"[GeneratedSkills] Assign result=Blocked reason=SelectDeckCard skill_id={skill.skill_id}", this);
             return;
         }
 
         string cardId = GetCardId(card);
+        string alreadyAssignedCardId = FindAssignedCardIdForSkill(skill.skill_id);
+        if (!string.IsNullOrWhiteSpace(alreadyAssignedCardId) && alreadyAssignedCardId != cardId)
+        {
+            WriteStatus("Skill already assigned to another deck card.");
+            Debug.Log($"[GeneratedSkills] Assign skill_id={skill.skill_id} target card={cardId} already assigned card={alreadyAssignedCardId} result=BlockedOtherCard", this);
+            return;
+        }
+
         if (!assignedSkillIdsByCardId.TryGetValue(cardId, out List<string> skillIds))
         {
             skillIds = new List<string>();
@@ -533,22 +552,21 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
         if (skillIds.Contains(skill.skill_id))
         {
-            WriteStatus("This skill is already assigned to the selected card.");
+            WriteStatus("Skill already assigned to this card.");
+            Debug.Log($"[GeneratedSkills] Assign skill_id={skill.skill_id} target card={cardId} already assigned card={cardId} result=BlockedSameCard", this);
             return;
         }
 
-        if (skillIds.Count >= 3)
+        if (skillIds.Count >= 1)
         {
-            WriteStatus("Each card can have up to 3 assigned skills.");
+            WriteStatus("This card already has an assigned skill.");
+            Debug.Log($"[GeneratedSkills] Assign skill_id={skill.skill_id} target card={cardId} already assigned card= result=BlockedLimit", this);
             return;
         }
 
         skillIds.Add(skill.skill_id);
         selectedGeneratedSkillId = skill.skill_id;
-        if (debugGeneratedSkills)
-        {
-            Debug.Log($"[GeneratedSkills] Assigned skill_id={skill.skill_id} cardId={cardId}", this);
-        }
+        Debug.Log($"[GeneratedSkills] Assign skill_id={skill.skill_id} target card={cardId} already assigned card= result=Assigned", this);
         WriteStatus($"Assigned {skill.DisplayName} to P{selectedDeckIndex + 1}.");
         RenderGeneratedSkills();
         ShowSelectedDetail();
@@ -565,7 +583,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         ThoughtMapBattleCardData card = GetSelectedDeckCard();
         if (card == null)
         {
-            WriteStatus("Remove requires a Deck 10 card. Select a deck card first.");
+            WriteStatus("Select a deck card first.");
             return;
         }
 
@@ -623,7 +641,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         generatedSkillsPanel.Render(
             deckMatchedSkills,
             selectedCard == null ? "" : selectedCard.docId,
-            GetAssignedSkillIdsForCard(selectedCard)
+            GetAssignedSkillIdsForCard(selectedCard),
+            BuildSkillAssignmentLabels(),
+            GetSelectedDeckCard() != null,
+            GetSelectedDeckCard() != null && GetAssignedSkillIdsForCard(GetSelectedDeckCard()).Count == 0
         );
 
         if (debugGeneratedSkills || usedDebugFallback)
@@ -730,8 +751,68 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         return assignedSkillIdsByCardId.TryGetValue(GetCardId(card), out List<string> ids)
-            ? ids.Where(id => !string.IsNullOrWhiteSpace(id)).Take(3).ToList()
+            ? ids.Where(id => !string.IsNullOrWhiteSpace(id)).Take(1).ToList()
             : new List<string>();
+    }
+
+    private string FindAssignedCardIdForSkill(string skillId)
+    {
+        if (string.IsNullOrWhiteSpace(skillId))
+        {
+            return "";
+        }
+
+        foreach (ThoughtMapBattleCardData deckCard in deckCards)
+        {
+            string cardId = GetCardId(deckCard);
+            if (string.IsNullOrWhiteSpace(cardId))
+            {
+                continue;
+            }
+
+            if (assignedSkillIdsByCardId.TryGetValue(cardId, out List<string> skillIds)
+                && skillIds != null
+                && skillIds.Contains(skillId))
+            {
+                return cardId;
+            }
+        }
+
+        return "";
+    }
+
+    private Dictionary<string, string> BuildSkillAssignmentLabels()
+    {
+        Dictionary<string, string> labels = new Dictionary<string, string>();
+        for (int i = 0; i < deckCards.Count; i++)
+        {
+            ThoughtMapBattleCardData card = deckCards[i];
+            string cardId = GetCardId(card);
+            if (!assignedSkillIdsByCardId.TryGetValue(cardId, out List<string> skillIds) || skillIds == null)
+            {
+                continue;
+            }
+
+            foreach (string skillId in skillIds)
+            {
+                if (string.IsNullOrWhiteSpace(skillId) || labels.ContainsKey(skillId))
+                {
+                    continue;
+                }
+
+                labels[skillId] = $"P{i + 1} {ShortCardName(card)}";
+            }
+        }
+        return labels;
+    }
+
+    private string ShortCardName(ThoughtMapBattleCardData card)
+    {
+        if (card == null || string.IsNullOrWhiteSpace(card.cardName))
+        {
+            return "Card";
+        }
+        return card.cardName.Length <= 18 ? card.cardName : card.cardName.Substring(0, 18) + "...";
     }
 
     private List<GeneratedSkillDto> GetAssignedSkillsForCard(ThoughtMapBattleCardData card)
@@ -765,12 +846,14 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         if (selectedLibraryIndex >= 0 && selectedLibraryIndex < loadedCards.Count)
         {
             ThoughtMapBattleCardData libraryCard = loadedCards[selectedLibraryIndex];
+            List<GeneratedSkillDto> assignedSkills = GetAssignedSkillsForCard(libraryCard);
+            LogSelectedCardSkillState(libraryCard, assignedSkills);
             cardDetailPanel.Show(
                 libraryCard,
                 ResolveCardArtForTarget(libraryCard, selectedLibraryIndex, "Detail Panel"),
                 ResolveAttributeIconForTarget(libraryCard, "Detail Panel"),
                 ResolveDominantThoughtAttributeKey(libraryCard),
-                GetAssignedSkillsForCard(libraryCard)
+                assignedSkills
             );
             return;
         }
@@ -782,13 +865,100 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         ThoughtMapBattleCardData card = deckCards[selectedDeckIndex];
+        List<GeneratedSkillDto> deckAssignedSkills = GetAssignedSkillsForCard(card);
+        LogSelectedCardSkillState(card, deckAssignedSkills);
+        ThoughtMapResonanceResult resonanceResult = GetSelectedCardResonanceResult(card) ?? new ThoughtMapResonanceResult(null);
         cardDetailPanel.Show(
             card,
             ResolveCardArtForTarget(card, selectedDeckIndex, "Detail Panel"),
             ResolveAttributeIconForTarget(card, "Detail Panel"),
             ResolveDominantThoughtAttributeKey(card),
-            GetAssignedSkillsForCard(card)
+            deckAssignedSkills,
+            resonanceResult
         );
+    }
+
+    [ContextMenu("Refresh Resonance Display")]
+    public void RefreshResonanceDisplay()
+    {
+        EnsureResonanceCalculator();
+        RenderGrid();
+        ShowSelectedDetail();
+        WriteStatus("Resonance display refreshed.");
+    }
+
+    private void EnsureResonanceCalculator()
+    {
+        resonanceCalculator = new ThoughtMapBattleResonanceCalculator(
+            resonanceConfig == null ? ThoughtMapBattleResonanceConfig.RuntimeDefault : resonanceConfig
+        );
+    }
+
+    private Dictionary<int, ThoughtMapResonanceResult> CalculatePlacementResonanceByCell()
+    {
+        EnsureResonanceCalculator();
+        Dictionary<int, ThoughtMapResonanceResult> results = new Dictionary<int, ThoughtMapResonanceResult>();
+        List<ThoughtMapBattleUnit> units = BuildPlacedBattleUnits();
+        foreach (ThoughtMapBattleUnit unit in units)
+        {
+            int index = unit.position.y * 5 + unit.position.x;
+            results[index] = resonanceCalculator.CalculateTotalModifier(unit, units);
+        }
+        return results;
+    }
+
+    private ThoughtMapResonanceResult GetSelectedCardResonanceResult(ThoughtMapBattleCardData card)
+    {
+        if (card == null)
+        {
+            return null;
+        }
+
+        Dictionary<int, ThoughtMapResonanceResult> results = CalculatePlacementResonanceByCell();
+        foreach (KeyValuePair<int, ThoughtMapBattleCardData> pair in placement)
+        {
+            if (pair.Value == card && results.TryGetValue(pair.Key, out ThoughtMapResonanceResult result))
+            {
+                return result;
+            }
+        }
+
+        return null;
+    }
+
+    private List<ThoughtMapBattleUnit> BuildPlacedBattleUnits()
+    {
+        List<ThoughtMapBattleUnit> units = new List<ThoughtMapBattleUnit>();
+        foreach (KeyValuePair<int, ThoughtMapBattleCardData> pair in placement.OrderBy(item => item.Key))
+        {
+            if (pair.Value == null)
+            {
+                continue;
+            }
+
+            int x = pair.Key % 5;
+            int y = pair.Key / 5;
+            ThoughtMapBattleUnit unit = new ThoughtMapBattleUnit(pair.Value, "Player", new ThoughtMapGridPosition(x, y));
+            int deckIndex = deckCards.IndexOf(pair.Value);
+            unit.battleId = $"P{(deckIndex >= 0 ? deckIndex + 1 : units.Count + 1)}";
+            units.Add(unit);
+        }
+
+        return units;
+    }
+
+    private void LogSelectedCardSkillState(ThoughtMapBattleCardData card, List<GeneratedSkillDto> resolvedSkills)
+    {
+        if (!debugGeneratedSkills)
+        {
+            return;
+        }
+
+        List<string> assignedIds = GetAssignedSkillIdsForCard(card);
+        Debug.Log($"[GeneratedSkills] Selected card: title='{(card == null ? "null" : card.cardName)}' cardId='{GetCardId(card)}'", this);
+        Debug.Log($"[GeneratedSkills] Assigned skill IDs: {string.Join(", ", assignedIds)}", this);
+        Debug.Log($"[GeneratedSkills] Resolved assigned skills: {string.Join(", ", (resolvedSkills ?? new List<GeneratedSkillDto>()).Select(skill => skill == null ? "null" : skill.DisplayName))}", this);
+        Debug.Log($"[GeneratedSkills] Detail panel rendered skill count={(resolvedSkills == null ? 0 : resolvedSkills.Count)}", this);
     }
 
     public void SimulatePreview()
@@ -900,6 +1070,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     private List<CardAssignedSkillData> BuildAssignedSkillSaveData()
     {
         List<CardAssignedSkillData> result = new List<CardAssignedSkillData>();
+        HashSet<string> savedSkillIds = new HashSet<string>();
         foreach (ThoughtMapBattleCardData card in deckCards)
         {
             string cardId = GetCardId(card);
@@ -908,11 +1079,23 @@ public class ProductBattlePrepPanelView : MonoBehaviour
                 continue;
             }
 
-            List<string> validIds = skillIds
-                .Where(id => !string.IsNullOrWhiteSpace(id))
-                .Distinct()
-                .Take(3)
-                .ToList();
+            List<string> validIds = new List<string>();
+            foreach (string skillId in skillIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct())
+            {
+                if (savedSkillIds.Contains(skillId))
+                {
+                    Debug.LogWarning($"[GeneratedSkills] Duplicate assigned skill ignored during save. skill_id={skillId} cardId={cardId}", this);
+                    continue;
+                }
+                if (validIds.Count >= 1)
+                {
+                    Debug.LogWarning($"[GeneratedSkills] Extra assigned skill ignored during save because each card can have only one skill. skill_id={skillId} cardId={cardId}", this);
+                    break;
+                }
+
+                validIds.Add(skillId);
+                savedSkillIds.Add(skillId);
+            }
             if (validIds.Count > 0)
             {
                 result.Add(new CardAssignedSkillData(cardId, validIds));
@@ -930,10 +1113,17 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         int restored = 0;
+        HashSet<string> restoredSkillIds = new HashSet<string>();
+        HashSet<string> deckCardIds = new HashSet<string>(deckCards.Select(GetCardId).Where(id => !string.IsNullOrWhiteSpace(id)));
         foreach (CardAssignedSkillData item in config.assignedSkills)
         {
             if (item == null || string.IsNullOrWhiteSpace(item.cardId) || item.skillIds == null)
             {
+                continue;
+            }
+            if (!deckCardIds.Contains(item.cardId))
+            {
+                Debug.LogWarning($"[GeneratedSkills] Saved assigned skill entry ignored because card is not in current deck. cardId={item.cardId}", this);
                 continue;
             }
 
@@ -949,9 +1139,20 @@ public class ProductBattlePrepPanelView : MonoBehaviour
                     Debug.LogWarning($"[GeneratedSkills] Saved skill_id not found in generated skill JSON: {skillId}", this);
                     continue;
                 }
-                if (!valid.Contains(skillId) && valid.Count < 3)
+                if (restoredSkillIds.Contains(skillId))
+                {
+                    Debug.LogWarning($"[GeneratedSkills] Duplicate assigned skill ignored during restore. skill_id={skillId} cardId={item.cardId}", this);
+                    continue;
+                }
+                if (valid.Count >= 1)
+                {
+                    Debug.LogWarning($"[GeneratedSkills] Extra assigned skill ignored during restore because each card can have only one skill. skill_id={skillId} cardId={item.cardId}", this);
+                    continue;
+                }
+                if (!valid.Contains(skillId))
                 {
                     valid.Add(skillId);
+                    restoredSkillIds.Add(skillId);
                 }
             }
 
@@ -1184,7 +1385,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
         string[] panelNames =
         {
-            "CardListPanel", "DeckListPanel", "FormationGridPanel", "CardDetailPanel", "DebugLogPanel"
+            "CardListPanel", "DeckListPanel", "FormationGridPanel", "CardDetailPanel", "DebugLogPanel", "GeneratedSkillsPanel"
         };
 
         foreach (string panelName in panelNames)
@@ -1206,6 +1407,107 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             image.color = color;
             Debug.Log($"[ProductBattlePrep Art] Panel alpha normalized: {panelName} alpha={color.a}", image);
         }
+    }
+
+    private void EnsureTopControlReadability()
+    {
+        RectTransform root = transform as RectTransform;
+        if (root == null)
+        {
+            return;
+        }
+
+        RectTransform title = FindDescendant(transform, "TitleText") as RectTransform;
+        if (title != null)
+        {
+            AnchorTo(title, new Vector2(0.02f, 0.925f), new Vector2(0.48f, 0.99f));
+            TMP_Text titleText = title.GetComponent<TMP_Text>();
+            if (titleText != null)
+            {
+                titleText.fontSize = Mathf.Max(titleText.fontSize, 30f);
+                titleText.enableWordWrapping = false;
+                titleText.overflowMode = TextOverflowModes.Overflow;
+                AddTextShadow(titleText);
+            }
+        }
+
+        NormalizeTopButton(loadCardsButton, "Load Cards", new Vector2(0.50f, 0.93f), new Vector2(0.595f, 0.985f));
+        NormalizeTopButton(addToDeckButton, "Add Deck", new Vector2(0.605f, 0.93f), new Vector2(0.715f, 0.985f));
+        NormalizeTopButton(saveDeckButton, "Save Deck", new Vector2(0.725f, 0.93f), new Vector2(0.805f, 0.985f));
+        NormalizeTopButton(simulateButton, "Preview", new Vector2(0.815f, 0.93f), new Vector2(0.905f, 0.985f));
+        NormalizeTopButton(startBattleButton, "Battle", new Vector2(0.915f, 0.93f), new Vector2(0.985f, 0.985f));
+    }
+
+    private void NormalizeTopButton(Button button, string label, Vector2 min, Vector2 max)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        RectTransform rect = button.transform as RectTransform;
+        if (rect != null)
+        {
+            AnchorTo(rect, min, max);
+        }
+
+        TMP_Text labelText = button.GetComponentInChildren<TMP_Text>(true);
+        if (labelText != null)
+        {
+            labelText.text = label;
+            labelText.fontSize = 14f;
+            labelText.enableWordWrapping = false;
+            labelText.overflowMode = TextOverflowModes.Overflow;
+            AddTextShadow(labelText);
+        }
+    }
+
+    private void EnsureReadableTextEffects()
+    {
+        AddTextShadow(statusText);
+        TMP_Text[] headings = GetComponentsInChildren<TMP_Text>(true);
+        foreach (TMP_Text text in headings)
+        {
+            if (text == null)
+            {
+                continue;
+            }
+
+            string lower = text.gameObject.name.ToLowerInvariant();
+            if (lower.Contains("title") || lower.Contains("heading") || lower.Contains("status"))
+            {
+                AddTextShadow(text);
+            }
+        }
+    }
+
+    private static void AddTextShadow(TMP_Text text)
+    {
+        if (text == null)
+        {
+            return;
+        }
+
+        Shadow shadow = text.GetComponent<Shadow>();
+        if (shadow == null)
+        {
+            shadow = text.gameObject.AddComponent<Shadow>();
+        }
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.75f);
+        shadow.effectDistance = new Vector2(1f, -1f);
+    }
+
+    private static void AnchorTo(RectTransform rect, Vector2 min, Vector2 max)
+    {
+        if (rect == null)
+        {
+            return;
+        }
+
+        rect.anchorMin = min;
+        rect.anchorMax = max;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
     }
 
     private void LogRuntimeSpriteState()

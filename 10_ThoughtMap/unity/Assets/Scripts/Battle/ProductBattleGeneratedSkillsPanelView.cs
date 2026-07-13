@@ -45,12 +45,16 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
     public void Render(
         IEnumerable<GeneratedSkillDto> skills,
         string selectedCardDocId,
-        IEnumerable<string> assignedSkillIds)
+        IEnumerable<string> assignedSkillIds,
+        Dictionary<string, string> assignedSkillLabels,
+        bool selectedCardIsDeckCard,
+        bool selectedCardCanReceiveSkill)
     {
         EnsureBuilt();
         ClearRows();
 
         HashSet<string> assigned = new HashSet<string>(assignedSkillIds ?? Enumerable.Empty<string>());
+        Dictionary<string, string> assignmentLabels = assignedSkillLabels ?? new Dictionary<string, string>();
         List<GeneratedSkillDto> ordered = (skills ?? Enumerable.Empty<GeneratedSkillDto>())
             .Where(skill => skill != null && !string.IsNullOrWhiteSpace(skill.skill_id))
             .OrderByDescending(skill => !string.IsNullOrWhiteSpace(selectedCardDocId) && skill.doc_id == selectedCardDocId)
@@ -71,12 +75,17 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
 
         foreach (GeneratedSkillDto skill in ordered)
         {
+            bool assignedAnywhere = assignmentLabels.TryGetValue(skill.skill_id, out string assignedLabel);
+            bool assignedToSelected = assigned.Contains(skill.skill_id);
             ProductBattleGeneratedSkillRowView row = CreateRow();
             row.Bind(
                 skill,
                 skill.skill_id == selectedSkillId,
-                assigned.Contains(skill.skill_id),
+                assignedAnywhere,
+                assignedAnywhere ? assignedLabel : "",
                 !string.IsNullOrWhiteSpace(selectedCardDocId) && skill.doc_id == selectedCardDocId,
+                selectedCardIsDeckCard && selectedCardCanReceiveSkill && !assignedAnywhere,
+                assignedToSelected,
                 HandleSelected,
                 onAssign,
                 onRemove
@@ -111,6 +120,7 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
             if (text != null)
             {
                 text.font = overrideFontAsset;
+                ConfigureReadableText(text, text.fontSize);
             }
         }
 
@@ -142,8 +152,9 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
 
         if (headingText == null)
         {
-            headingText = CreateText("HeadingText", new Vector2(0.04f, 0.90f), new Vector2(0.96f, 0.99f), "Generated Skills", 17f, TextAlignmentOptions.Left);
+            headingText = CreateText("HeadingText", new Vector2(0.04f, 0.90f), new Vector2(0.96f, 0.99f), "Generated Skills", 19f, TextAlignmentOptions.Left);
         }
+        ConfigureReadableText(headingText, 19f);
 
         RectTransform viewport = EnsureViewport();
         if (content == null)
@@ -166,8 +177,9 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
 
         if (emptyText == null)
         {
-            emptyText = CreateText("EmptyText", new Vector2(0.06f, 0.40f), new Vector2(0.94f, 0.56f), "No generated skills", 14f, TextAlignmentOptions.Center);
+            emptyText = CreateText("EmptyText", new Vector2(0.06f, 0.40f), new Vector2(0.94f, 0.56f), "No generated skills", 15f, TextAlignmentOptions.Center);
         }
+        ConfigureReadableText(emptyText, 15f);
 
         ApplyFontToGeneratedTexts();
     }
@@ -208,8 +220,8 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
 
         VerticalLayoutGroup layout = target.GetComponent<VerticalLayoutGroup>();
         if (layout == null) layout = target.gameObject.AddComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(6, 6, 6, 6);
-        layout.spacing = 6f;
+        layout.padding = new RectOffset(8, 8, 8, 8);
+        layout.spacing = 8f;
         layout.childAlignment = TextAnchor.UpperCenter;
         layout.childControlWidth = true;
         layout.childControlHeight = true;
@@ -269,7 +281,27 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
         text.color = new Color(0.86f, 0.96f, 1f, 1f);
         text.alignment = alignment;
         text.raycastTarget = false;
+        ConfigureReadableText(text, fontSize);
         return text;
+    }
+
+    private static void ConfigureReadableText(TMP_Text text, float fontSize)
+    {
+        if (text == null)
+        {
+            return;
+        }
+
+        text.fontSize = fontSize;
+        text.enableWordWrapping = true;
+        text.overflowMode = TextOverflowModes.Overflow;
+        Shadow shadow = text.GetComponent<Shadow>();
+        if (shadow == null)
+        {
+            shadow = text.gameObject.AddComponent<Shadow>();
+        }
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.72f);
+        shadow.effectDistance = new Vector2(1f, -1f);
     }
 
     private void HandleSelected(GeneratedSkillDto skill)

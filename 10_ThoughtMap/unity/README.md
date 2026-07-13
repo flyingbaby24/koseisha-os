@@ -1903,3 +1903,129 @@ Runtime compatibility:
 - If an older scene already contains `ResultRadarChart` or `QueryRadarChart` without a separate base object, `ThoughtMapDetailPanelV2View` creates the missing `ResultRadarHologramBase` / `QueryRadarHologramBase` sibling automatically.
 - The base object is placed as the first sibling so it renders behind the radar chart.
 - The radar chart is placed as the last sibling so grid, axes, polygon, outline, vertices, and labels stay in front.
+
+## Battle Resonance And Hate
+
+The battle MVP now has a small configurable backend for friendly resonance and enemy target selection.
+
+Core files:
+
+- `ThoughtMapBattleResonanceConfig`: ScriptableObject settings for resonance stat modifiers, clamp range, hate weights, and debug logging.
+- `ThoughtMapBattleResonanceCalculator`: finds only up/down/left/right adjacent allies and calculates stacked resonance modifiers.
+- `ThoughtMapHateCalculator`: selects the highest-scoring target with `ColumnWeight x DepthWeight x ResonanceWeight x SkillModifier x RandomModifier`.
+- `ThoughtMapBattleSimulator`: applies resonance only when calculating final battle stats; base card stats are not rewritten.
+
+Card resonance:
+
+- `cards.csv` may include `resonance` or `resonance_coefficient`.
+- If those are missing, `embedding_score` is used as the resonance coefficient.
+- Values above `1` are treated as `0-100` scale and normalized to `0-1`.
+
+Changing settings:
+
+1. Create a config asset from `Assets > Create > Source of Thought > Battle Resonance Config`.
+2. Assign it to `ThoughtMapBattleMvpController` in the Battle scene.
+3. Tune:
+   - friendly resonance diff bands
+   - min/max final resonance modifier
+   - hate resonance bands
+   - same/adjacent/far column weights
+   - front/back depth weights
+   - random modifier range
+4. Enable `Debug Logging` on the config, or `Debug Resonance And Hate` on the controller, only when inspecting calculations.
+
+Verification:
+
+- Run `Tools > Source of Thought > Verify Battle Resonance And Hate`.
+- The verifier checks:
+  - diagonal cards do not resonate
+  - orthogonal cards resonate
+  - resonance diff `0.0` and `0.5` produce different modifiers
+  - multiple adjacent modifiers stack
+  - final modifiers stay clamped
+  - same-column/front targets score higher
+  - back targets score lower
+  - larger resonance differences increase hate
+  - taunt/stealth style skill modifiers affect hate
+
+### Battle Prep Resonance Display
+
+Battle Prep uses the same `ThoughtMapBattleResonanceCalculator` and `ThoughtMapBattleResonanceConfig` as the battle simulator. It does not have a separate UI-only formula.
+
+Where it appears:
+
+- Formation grid cells show a small total resonance modifier such as `+15%` or `-10%` for placed cards.
+- The Card Detail ability bars show combat base value, resonance modifier, and final value for placed deck cards.
+- HP and SP remain base values because the simulator resonance modifier is applied only to combat stats.
+- Unplaced deck cards show combat base values without a resonance modifier.
+- Library cards that are not in the deck remain a preview and do not show resonance.
+
+Refresh behavior:
+
+- Deploy, remove, move, swap, clear, deck load, and render refresh all recalculate placed-card resonance.
+- If you change the assigned `Battle Resonance Config` while inspecting the scene, use the `ProductBattlePrepPanelView` context menu `Refresh Resonance Display`.
+
+Checks:
+
+- No adjacent cards: no modifier text.
+- Up/down/left/right adjacent cards: modifier appears.
+- Diagonal-only cards: no modifier change.
+- Multiple adjacent cards: modifiers stack and are clamped by the config.
+- A large resonance difference uses the configured negative band if present.
+
+## Battle Prep 1080p Readability
+
+Battle Prep should be checked at real `1920 x 1080` Game View size before enlarging UI globally. The Unity Editor preview may show a smaller scale such as `0.56x`, which makes text look smaller than it will in a real 1080p capture.
+
+Current readability rules:
+
+- Keep the formation grid and panel layout roughly stable.
+- Use wider top controls: `Load Cards`, `Add Deck`, `Save Deck`, `Preview`, `Battle`.
+- Generated Skill rows use taller rows with separated name, trigger/cost/cooldown, effect summary, assignment state, and Assign/Remove buttons.
+- Card List and Deck List remain lightweight row lists, not large card prefabs.
+- Ability stat labels and values use a larger minimum font size.
+- Headings, status text, and list text use subtle shadows so text stays readable over the background.
+
+If an older scene still has cramped controls, run:
+
+```text
+Tools > Source of Thought > Repair Product Battle Prep ScrollViews
+Tools > Source of Thought > Repair Product Battle Prep Generated Skills
+Tools > Source of Thought > Repair Product Battle Prep Ability Bars
+```
+
+Then open Game View at `1920 x 1080` and only use the scaled editor view for quick layout checks.
+
+### Ability Bar Repair Structure
+
+`Repair Product Battle Prep Ability Bars` is intended to be idempotent. It should add or reconnect only the missing objects under each `ProductBattleAbilityBarView`; it should not rebuild the whole detail panel.
+
+Expected hierarchy per ability row:
+
+```text
+AbilityBar_00_HP
+  LabelText
+  BaseValueText
+  BarContainer
+    BackgroundImage
+    FillImage
+  ModifierText
+  ArrowText
+  FinalValueText
+```
+
+Legacy direct children named `BarBackground`, `BarFill`, or `ValueText` may remain in old scenes, but they are disabled instead of deleted. The active serialized references should point to:
+
+- `LabelText`
+- `BaseValueText`
+- `ModifierText`
+- `ArrowText`
+- `FinalValueText`
+- `BarContainer`
+- `BackgroundImage`
+- `FillImage`
+
+Display examples:
+
+- Unplaced or no modifier: `P.ATK 80`
+- Placed with resonance: `P.ATK 80 +15% -> 92`

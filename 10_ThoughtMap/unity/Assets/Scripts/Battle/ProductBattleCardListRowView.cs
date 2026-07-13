@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 public class ProductBattleCardListRowView : MonoBehaviour
 {
-    private static readonly Vector2 DefaultRowSize = new Vector2(0f, 38f);
+    private static readonly Vector2 DefaultRowSize = new Vector2(0f, 44f);
 
     [SerializeField] private Button button;
     [SerializeField] private Image backgroundImage;
@@ -50,13 +50,24 @@ public class ProductBattleCardListRowView : MonoBehaviour
         index = sourceIndex;
 
         SetText(slotText, slotLabel);
-        SetText(cardNameText, Short(sourceCard == null ? "Empty" : sourceCard.cardName, 42));
-        SetText(attributeText, sourceCard == null ? "-" : Short(sourceCard.primaryAttribute, 16));
+        SetText(cardNameText, Short(sourceCard == null ? "Empty" : sourceCard.cardName, 60));
+        SetText(attributeText, sourceCard == null ? "-" : Short(sourceCard.primaryAttribute, 18));
         SetText(stateText, stateLabel);
         if (templateImage != null)
         {
             templateImage.sprite = templateSprite;
             templateImage.enabled = templateSprite != null;
+            Debug.Log(
+                $"[ProductBattlePrep Art] List Row Image.sprite assigned={(templateSprite == null ? "null" : templateSprite.name)} row='{slotLabel}' card='{(sourceCard == null ? "null" : sourceCard.cardName)}'",
+                this
+            );
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"[ProductBattlePrep Art] List Row templateImage is null row='{slotLabel}' card='{(sourceCard == null ? "null" : sourceCard.cardName)}'",
+                this
+            );
         }
 
         if (backgroundImage != null)
@@ -139,7 +150,7 @@ public class ProductBattleCardListRowView : MonoBehaviour
         {
             layout = gameObject.AddComponent<HorizontalLayoutGroup>();
         }
-        layout.padding = new RectOffset(8, 8, 4, 4);
+        layout.padding = new RectOffset(8, 8, 5, 5);
         layout.spacing = 8f;
         layout.childAlignment = TextAnchor.MiddleLeft;
         layout.childControlWidth = true;
@@ -150,8 +161,8 @@ public class ProductBattleCardListRowView : MonoBehaviour
         templateImage = templateImage == null ? CreateTemplateImage() : templateImage;
         slotText = slotText == null ? CreateText("SlotText", 52f, false) : slotText;
         cardNameText = cardNameText == null ? CreateText("CardNameText", 0f, true) : cardNameText;
-        attributeText = attributeText == null ? CreateText("AttributeText", 94f, false) : attributeText;
-        stateText = stateText == null ? CreateText("StateText", 64f, false) : stateText;
+        attributeText = attributeText == null ? CreateText("AttributeText", 104f, false) : attributeText;
+        stateText = stateText == null ? CreateText("StateText", 74f, false) : stateText;
 
         ConfigureText(slotText, mutedTextColor, TextAlignmentOptions.MidlineLeft);
         ConfigureText(cardNameText, textColor, TextAlignmentOptions.MidlineLeft);
@@ -185,8 +196,8 @@ public class ProductBattleCardListRowView : MonoBehaviour
         LayoutElement layout = child.AddComponent<LayoutElement>();
         layout.minWidth = 30f;
         layout.preferredWidth = 30f;
-        layout.minHeight = 30f;
-        layout.preferredHeight = 30f;
+        layout.minHeight = 34f;
+        layout.preferredHeight = 34f;
         layout.flexibleWidth = 0f;
         layout.flexibleHeight = 0f;
         return image;
@@ -199,12 +210,19 @@ public class ProductBattleCardListRowView : MonoBehaviour
             return;
         }
 
-        text.fontSize = 13f;
+        text.fontSize = 14.5f;
         text.color = color;
         text.alignment = alignment;
         text.enableWordWrapping = false;
         text.overflowMode = TextOverflowModes.Ellipsis;
         text.raycastTarget = false;
+        Shadow shadow = text.GetComponent<Shadow>();
+        if (shadow == null)
+        {
+            shadow = text.gameObject.AddComponent<Shadow>();
+        }
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.72f);
+        shadow.effectDistance = new Vector2(1f, -1f);
     }
 
     private void ConfigureRaycasts()

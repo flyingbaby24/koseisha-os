@@ -56,7 +56,8 @@ public static class ThoughtMapCardsCsvLoader
             statHp = GetInt(row, "stat_hp"),
             statSp = GetInt(row, "stat_sp"),
             raritySeed = GetInt(row, "rarity_seed"),
-            skillSeed = GetInt(row, "skill_seed")
+            skillSeed = GetInt(row, "skill_seed"),
+            resonance = NormalizeResonance(FirstFloat(row, 0.5f, "resonance", "resonance_coefficient", "embedding_score"))
         };
 
         if (string.IsNullOrWhiteSpace(card.cardName))
@@ -109,5 +110,33 @@ public static class ThoughtMapCardsCsvLoader
             return 0f;
         }
         return float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float parsed) ? parsed : 0f;
+    }
+
+    private static float FirstFloat(Dictionary<string, string> row, float fallback, params string[] keys)
+    {
+        foreach (string key in keys)
+        {
+            if (!row.TryGetValue(key, out string value) || string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return fallback;
+    }
+
+    private static float NormalizeResonance(float value)
+    {
+        if (value > 1f)
+        {
+            value /= 100f;
+        }
+
+        return Mathf.Clamp01(value);
     }
 }

@@ -82,6 +82,17 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         string resolvedThoughtAttribute,
         System.Collections.Generic.IReadOnlyList<GeneratedSkillDto> assignedSkills)
     {
+        Show(card, artSprite, attributeSprite, resolvedThoughtAttribute, assignedSkills, null);
+    }
+
+    public void Show(
+        ThoughtMapBattleCardData card,
+        Sprite artSprite,
+        Sprite attributeSprite,
+        string resolvedThoughtAttribute,
+        System.Collections.Generic.IReadOnlyList<GeneratedSkillDto> assignedSkills,
+        ThoughtMapResonanceResult resonanceResult)
+    {
         if (card == null)
         {
             Clear();
@@ -125,7 +136,7 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
             );
         }
 
-        RenderAbilityBars(card);
+        RenderAbilityBars(card, resonanceResult);
         SetAssignedSkills(assignedSkills);
         ApplyFontToGeneratedTexts();
     }
@@ -139,20 +150,28 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         }
 
         System.Text.StringBuilder builder = new System.Text.StringBuilder();
-        builder.AppendLine("Assigned Skills");
-        for (int i = 0; i < 3; i++)
+        GeneratedSkillDto skill = assignedSkills != null && assignedSkills.Count > 0 ? assignedSkills[0] : null;
+        if (skill == null)
         {
-            GeneratedSkillDto skill = assignedSkills != null && i < assignedSkills.Count ? assignedSkills[i] : null;
-            if (skill == null)
-            {
-                builder.AppendLine($"{i + 1}. Empty");
-                continue;
-            }
-
-            builder.AppendLine($"{i + 1}. {skill.DisplayName}");
-            builder.AppendLine($"   {GeneratedSkillLibrary.ShortSummary(skill)}");
+            builder.AppendLine("Assigned Skill: None");
         }
+        else
+        {
+            builder.AppendLine($"Assigned Skill: {skill.DisplayName}");
+            builder.AppendLine($"Trigger: {skill.trigger} / Effect: {FirstEffectType(skill)} / CT: {skill.cooldown}");
+        }
+
         assignedSkillsText.text = builder.ToString();
+    }
+
+    private string FirstEffectType(GeneratedSkillDto skill)
+    {
+        if (skill == null || skill.effects == null || skill.effects.Count == 0 || skill.effects[0] == null)
+        {
+            return "-";
+        }
+
+        return string.IsNullOrWhiteSpace(skill.effects[0].effect_type) ? "-" : skill.effects[0].effect_type;
     }
 
     [ContextMenu("Rebuild Ability Bars")]
@@ -164,13 +183,20 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
 
     private void RenderAbilityBars(ThoughtMapBattleCardData card)
     {
+        RenderAbilityBars(card, null);
+    }
+
+    private void RenderAbilityBars(ThoughtMapBattleCardData card, ThoughtMapResonanceResult resonanceResult)
+    {
         EnsureAbilityBars();
         if (abilityBars == null || abilityBars.Length == 0)
         {
             return;
         }
 
-        ThoughtMapBattleAbilityValue[] values = ThoughtMapBattleAbilityStats.BuildValues(card);
+        ThoughtMapBattleAbilityValue[] values = resonanceResult == null
+            ? ThoughtMapBattleAbilityStats.BuildValues(card)
+            : ThoughtMapBattleAbilityStats.BuildCombatValues(card, resonanceResult.totalModifier, true);
         int count = Mathf.Min(abilityBars.Length, values.Length);
         for (int i = 0; i < count; i++)
         {
@@ -208,7 +234,7 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
                 GameObject root = new GameObject("AbilityBarRoot", typeof(RectTransform), typeof(HorizontalLayoutGroup));
                 root.transform.SetParent(transform, false);
                 RectTransform rootRect = root.GetComponent<RectTransform>();
-                rootRect.anchorMin = new Vector2(0.61f, 0.10f);
+                rootRect.anchorMin = new Vector2(0.61f, 0.28f);
                 rootRect.anchorMax = new Vector2(0.98f, 0.76f);
                 rootRect.offsetMin = Vector2.zero;
                 rootRect.offsetMax = Vector2.zero;
@@ -257,7 +283,7 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
                 root.transform.SetParent(transform, false);
                 RectTransform rootRect = root.GetComponent<RectTransform>();
                 rootRect.anchorMin = new Vector2(0.61f, 0.02f);
-                rootRect.anchorMax = new Vector2(0.98f, 0.10f);
+                rootRect.anchorMax = new Vector2(0.98f, 0.26f);
                 rootRect.offsetMin = Vector2.zero;
                 rootRect.offsetMax = Vector2.zero;
                 Image image = root.GetComponent<Image>();
@@ -266,6 +292,15 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
                 existing = root.transform;
             }
             assignedSkillsRoot = existing;
+        }
+
+        RectTransform assignedRootRect = assignedSkillsRoot as RectTransform;
+        if (assignedRootRect != null)
+        {
+            assignedRootRect.anchorMin = new Vector2(0.61f, 0.02f);
+            assignedRootRect.anchorMax = new Vector2(0.98f, 0.26f);
+            assignedRootRect.offsetMin = Vector2.zero;
+            assignedRootRect.offsetMax = Vector2.zero;
         }
 
         if (assignedSkillsText == null)
@@ -298,7 +333,7 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
             assignedSkillsText.color = new Color(0.86f, 0.96f, 1f, 1f);
             assignedSkillsText.alignment = TextAlignmentOptions.TopLeft;
             assignedSkillsText.enableWordWrapping = true;
-            assignedSkillsText.overflowMode = TextOverflowModes.Ellipsis;
+            assignedSkillsText.overflowMode = TextOverflowModes.Overflow;
             assignedSkillsText.raycastTarget = false;
         }
     }
@@ -321,15 +356,15 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         rect.anchorMin = new Vector2(0f, 1f);
         rect.anchorMax = new Vector2(1f, 1f);
         rect.pivot = new Vector2(0.5f, 1f);
-        rect.sizeDelta = new Vector2(0f, 18f);
+        rect.sizeDelta = new Vector2(0f, 26f);
 
         LayoutElement layout = bar.GetComponent<LayoutElement>();
         if (layout == null)
         {
             layout = bar.gameObject.AddComponent<LayoutElement>();
         }
-        layout.minHeight = 18f;
-        layout.preferredHeight = 18f;
+        layout.minHeight = 26f;
+        layout.preferredHeight = 26f;
         layout.flexibleHeight = 0f;
         return bar;
     }
@@ -339,6 +374,15 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         if (root == null)
         {
             return;
+        }
+
+        RectTransform rect = root as RectTransform;
+        if (rect != null)
+        {
+            rect.anchorMin = new Vector2(0.61f, 0.28f);
+            rect.anchorMax = new Vector2(0.98f, 0.76f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
         }
 
         RemoveLayoutGroupsExcept<HorizontalLayoutGroup>(root.gameObject);

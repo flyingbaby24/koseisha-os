@@ -11,6 +11,7 @@ public class ThoughtMapBattleUnit
     public int damageTaken;
     public string lastTargetKey = "";
     public string battleId = "";
+    public float skillHateModifier = 1f;
 
     public bool IsAlive => hp > 0;
 

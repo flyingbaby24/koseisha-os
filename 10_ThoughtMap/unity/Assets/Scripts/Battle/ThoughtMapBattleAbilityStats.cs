@@ -33,6 +33,35 @@ public static class ThoughtMapBattleAbilityStats
         return values;
     }
 
+    public static ThoughtMapBattleAbilityValue[] BuildCombatValues(
+        ThoughtMapBattleCardData card,
+        float resonanceModifier,
+        bool showResonance
+    )
+    {
+        ThoughtMapBattleAbilityValue[] values = new ThoughtMapBattleAbilityValue[DisplayOrder.Length];
+        for (int i = 0; i < DisplayOrder.Length; i++)
+        {
+            ThoughtMapBattleAbilityDefinition definition = DisplayOrder[i];
+            float rawValue = GetCombatValue(card, definition.thoughtKey);
+            bool resonanceApplies = showResonance && ResonanceApplies(definition.thoughtKey);
+            float finalValue = resonanceApplies
+                ? Mathf.Max(1f, Mathf.Round(rawValue * (1f + resonanceModifier)))
+                : rawValue;
+            float normalizedValue = NormalizeValue(finalValue);
+            values[i] = new ThoughtMapBattleAbilityValue(
+                definition,
+                rawValue,
+                normalizedValue,
+                Mathf.Clamp01(normalizedValue),
+                resonanceModifier,
+                finalValue,
+                resonanceApplies
+            );
+        }
+        return values;
+    }
+
     public static float NormalizeFill(float value)
     {
         return Mathf.Clamp01(NormalizeValue(value));
@@ -78,6 +107,47 @@ public static class ThoughtMapBattleAbilityStats
         }
 
         return 0f;
+    }
+
+    private static float GetCombatValue(ThoughtMapBattleCardData card, string thoughtKey)
+    {
+        if (card == null)
+        {
+            return 0f;
+        }
+
+        switch (NormalizeKey(thoughtKey))
+        {
+            case "individual": return card.MaxHp;
+            case "community": return card.MaxSp;
+            case "philosophy": return card.statPhysicalAttack;
+            case "psychology": return card.statSkillAttack;
+            case "science": return card.statPhysicalDefense;
+            case "moral": return card.statSkillDefense;
+            case "economy": return card.statSpeed;
+            case "emotion": return card.statEvasion;
+            case "ideal": return card.statAccuracy;
+            case "karma": return card.statLuck;
+            default: return 0f;
+        }
+    }
+
+    private static bool ResonanceApplies(string thoughtKey)
+    {
+        switch (NormalizeKey(thoughtKey))
+        {
+            case "philosophy":
+            case "psychology":
+            case "science":
+            case "moral":
+            case "economy":
+            case "emotion":
+            case "ideal":
+            case "karma":
+                return true;
+            default:
+                return false;
+        }
     }
 
     private static string NormalizeKey(string value)
@@ -131,12 +201,31 @@ public struct ThoughtMapBattleAbilityValue
     public readonly float rawValue;
     public readonly float normalizedValue;
     public readonly float fillAmount;
+    public readonly float resonanceModifier;
+    public readonly float finalValue;
+    public readonly bool resonanceApplies;
 
     public ThoughtMapBattleAbilityValue(ThoughtMapBattleAbilityDefinition definition, float rawValue, float normalizedValue, float fillAmount)
+        : this(definition, rawValue, normalizedValue, fillAmount, 0f, rawValue, false)
+    {
+    }
+
+    public ThoughtMapBattleAbilityValue(
+        ThoughtMapBattleAbilityDefinition definition,
+        float rawValue,
+        float normalizedValue,
+        float fillAmount,
+        float resonanceModifier,
+        float finalValue,
+        bool resonanceApplies
+    )
     {
         this.definition = definition;
         this.rawValue = rawValue;
         this.normalizedValue = normalizedValue;
         this.fillAmount = fillAmount;
+        this.resonanceModifier = resonanceModifier;
+        this.finalValue = finalValue;
+        this.resonanceApplies = resonanceApplies;
     }
 }

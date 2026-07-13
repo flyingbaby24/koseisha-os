@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 [Serializable]
 public class ThoughtMapBattleCardData
@@ -24,6 +25,7 @@ public class ThoughtMapBattleCardData
     public int statSp;
     public int raritySeed;
     public int skillSeed;
+    [Range(0f, 1f)] public float resonance = 0.5f;
 
     public readonly Dictionary<string, float> parameterScores = new Dictionary<string, float>();
 

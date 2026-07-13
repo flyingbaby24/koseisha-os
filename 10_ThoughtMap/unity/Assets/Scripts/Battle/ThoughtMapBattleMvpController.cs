@@ -46,6 +46,8 @@ public class ThoughtMapBattleMvpController : MonoBehaviour
     [Header("Simulation")]
     [SerializeField] private int maxRounds = 20;
     [SerializeField] private bool runOnStart;
+    [SerializeField] private ThoughtMapBattleResonanceConfig resonanceConfig;
+    [SerializeField] private bool debugResonanceAndHate;
 
     [Header("Optional UI")]
     [SerializeField] private ThoughtMapBattleCardView cardViewPrefab;
@@ -114,7 +116,7 @@ public class ThoughtMapBattleMvpController : MonoBehaviour
         List<ThoughtMapBattleUnit> enemyUnits = BuildUnits(enemyDeployedCards, "Enemy", enemyPositions);
         RenderGrid(playerUnits, enemyUnits);
 
-        ThoughtMapBattleSimulator simulator = new ThoughtMapBattleSimulator();
+        ThoughtMapBattleSimulator simulator = new ThoughtMapBattleSimulator(null, resonanceConfig, debugResonanceAndHate);
         ThoughtMapBattleReport report = simulator.Simulate(playerUnits, enemyUnits, maxRounds, SetTurn);
         WriteLog(report.ToMultilineLog());
         string resultLabel = $"{ToPlayerResult(report.winner)} / Rounds: {report.rounds}";

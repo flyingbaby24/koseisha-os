@@ -17,6 +17,7 @@ public class ProductBattleGridCellView : MonoBehaviour
     [SerializeField] private TMP_Text unitIdText;
     [SerializeField] private TMP_Text cardNameText;
     [SerializeField] private TMP_Text attributeText;
+    [SerializeField] private TMP_Text resonanceText;
 
     [Header("Interaction")]
     [SerializeField] private Button button;
@@ -47,6 +48,7 @@ public class ProductBattleGridCellView : MonoBehaviour
             else if (objectName.Contains("unit") || objectName.Contains("id")) unitIdText = text;
             else if (objectName.Contains("name")) cardNameText = text;
             else if (objectName.Contains("attribute")) attributeText = text;
+            else if (objectName.Contains("resonance")) resonanceText = text;
         }
 
         Image[] images = GetComponentsInChildren<Image>(true);
@@ -112,6 +114,7 @@ public class ProductBattleGridCellView : MonoBehaviour
         SetText(unitIdText, "");
         SetText(cardNameText, available ? "Deploy" : "");
         SetText(attributeText, "");
+        SetResonanceModifier(0f);
         if (placedGlowImage != null)
         {
             placedGlowImage.gameObject.SetActive(false);
@@ -173,6 +176,26 @@ public class ProductBattleGridCellView : MonoBehaviour
         }
     }
 
+    public void SetResonanceModifier(float modifier)
+    {
+        EnsureResonanceText();
+        if (resonanceText == null)
+        {
+            return;
+        }
+
+        if (Mathf.Abs(modifier) < 0.0001f)
+        {
+            resonanceText.gameObject.SetActive(false);
+            resonanceText.text = "";
+            return;
+        }
+
+        float percent = modifier * 100f;
+        resonanceText.gameObject.SetActive(true);
+        resonanceText.text = percent >= 0f ? $"+{percent:0}%" : $"{percent:0}%";
+    }
+
     public void SetClickHandler(UnityAction<ProductBattleGridCellView> handler)
     {
         clickHandler = handler;
@@ -209,6 +232,49 @@ public class ProductBattleGridCellView : MonoBehaviour
         button.interactable = true;
         button.onClick.RemoveListener(HandleClicked);
         button.onClick.AddListener(HandleClicked);
+    }
+
+    private void EnsureResonanceText()
+    {
+        if (resonanceText == null)
+        {
+            Transform existing = transform.Find("ResonanceText");
+            if (existing != null)
+            {
+                resonanceText = existing.GetComponent<TMP_Text>();
+            }
+        }
+
+        if (resonanceText == null)
+        {
+            GameObject textObject = new GameObject("ResonanceText", typeof(RectTransform), typeof(TextMeshProUGUI));
+            textObject.transform.SetParent(transform, false);
+            resonanceText = textObject.GetComponent<TMP_Text>();
+        }
+
+        RectTransform rect = resonanceText.transform as RectTransform;
+        if (rect != null)
+        {
+            rect.anchorMin = new Vector2(0.04f, 0.02f);
+            rect.anchorMax = new Vector2(0.96f, 0.18f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        resonanceText.fontSize = 10f;
+        resonanceText.color = new Color(0.5f, 1f, 0.85f, 1f);
+        resonanceText.alignment = TextAlignmentOptions.Center;
+        resonanceText.enableWordWrapping = false;
+        resonanceText.overflowMode = TextOverflowModes.Overflow;
+        resonanceText.raycastTarget = false;
+        Shadow shadow = resonanceText.GetComponent<Shadow>();
+        if (shadow == null)
+        {
+            shadow = resonanceText.gameObject.AddComponent<Shadow>();
+        }
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.75f);
+        shadow.effectDistance = new Vector2(1f, -1f);
+        resonanceText.transform.SetAsLastSibling();
     }
 
     private void HandleClicked()
