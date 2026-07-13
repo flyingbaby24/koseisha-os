@@ -1,16 +1,21 @@
 from pathlib import Path
 import hashlib
-import html
+import logging
+import os
 import re
 import json
 import zipfile
 import tempfile
 import io
-import urllib.request
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 import numpy as np
 import pandas as pd
 import streamlit as st
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_matplotlib_pyplot():
@@ -37,6 +42,7 @@ def require_umap():
     try:
         from umap import UMAP
     except Exception as exc:
+        logger.exception("Failed to import umap-learn for ThoughtMap layout.")
         raise RuntimeError(
             "umap-learn is required only for the local Thought Composition app. "
             f"Import failed: {exc}"
@@ -72,377 +78,15 @@ st.set_page_config(
     layout="wide"
 )
 
-
-def inject_custom_css():
-    st.markdown(
-        """
-        <style>
-        :root {
-            --tm-bg: #050914;
-            --tm-panel: rgba(10, 18, 38, 0.78);
-            --tm-panel-strong: rgba(14, 26, 56, 0.94);
-            --tm-border: rgba(99, 242, 255, 0.26);
-            --tm-cyan: #38e8ff;
-            --tm-blue: #6da8ff;
-            --tm-violet: #9a7cff;
-            --tm-pink: #ff4fd8;
-            --tm-green: #5dffb3;
-            --tm-text: #e9f7ff;
-            --tm-muted: #91a4c4;
-        }
-
-        .stApp {
-            background:
-                radial-gradient(circle at 12% 8%, rgba(56, 232, 255, 0.18), transparent 28%),
-                radial-gradient(circle at 86% 0%, rgba(154, 124, 255, 0.16), transparent 26%),
-                linear-gradient(135deg, #040712 0%, #081123 48%, #090718 100%);
-            color: var(--tm-text);
-        }
-
-        .stApp::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            background-image:
-                linear-gradient(rgba(99, 242, 255, 0.055) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(99, 242, 255, 0.045) 1px, transparent 1px);
-            background-size: 42px 42px;
-            mask-image: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.12));
-        }
-
-        .block-container {
-            padding-top: 1.6rem;
-            padding-bottom: 3rem;
-            max-width: 1440px;
-        }
-
-        [data-testid="stSidebar"] {
-            background:
-                linear-gradient(180deg, rgba(5, 10, 24, 0.98), rgba(10, 18, 38, 0.95)),
-                linear-gradient(90deg, rgba(56,232,255,0.13), transparent);
-            border-right: 1px solid var(--tm-border);
-        }
-
-        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2,
-        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 {
-            color: var(--tm-cyan);
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-        }
-
-        [data-testid="stSidebar"] .stButton > button {
-            width: 100%;
-            border: 1px solid rgba(56, 232, 255, 0.72);
-            background: linear-gradient(90deg, #09a8ff, #8f5dff);
-            color: white;
-            font-weight: 800;
-            letter-spacing: 0.06em;
-            box-shadow: 0 0 24px rgba(56, 232, 255, 0.28);
-        }
-
-        .tm-hero {
-            position: relative;
-            overflow: hidden;
-            padding: 2.1rem 2.2rem;
-            border: 1px solid var(--tm-border);
-            border-radius: 18px;
-            background:
-                linear-gradient(135deg, rgba(12, 23, 52, 0.96), rgba(8, 12, 30, 0.86)),
-                radial-gradient(circle at 88% 24%, rgba(56,232,255,0.24), transparent 20%);
-            box-shadow: 0 18px 60px rgba(0,0,0,0.34), inset 0 0 50px rgba(56,232,255,0.055);
-            margin-bottom: 1.15rem;
-        }
-
-        .tm-hero::after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(120deg, transparent 0%, rgba(56,232,255,0.10) 45%, transparent 58%);
-            transform: translateX(-35%);
-        }
-
-        .tm-kicker {
-            color: var(--tm-green);
-            font-size: 0.78rem;
-            font-weight: 800;
-            letter-spacing: 0.18em;
-            text-transform: uppercase;
-            margin-bottom: 0.4rem;
-        }
-
-        .tm-hero h1 {
-            position: relative;
-            margin: 0;
-            color: var(--tm-text);
-            font-size: clamp(2.1rem, 5vw, 4.4rem);
-            line-height: 1;
-            letter-spacing: 0;
-            text-shadow: 0 0 32px rgba(56,232,255,0.42);
-            z-index: 1;
-        }
-
-        .tm-hero p {
-            position: relative;
-            max-width: 820px;
-            color: #bcd3f4;
-            margin: 0.85rem 0 0;
-            font-size: 1.04rem;
-            z-index: 1;
-        }
-
-        .tm-hero-strip {
-            position: relative;
-            display: flex;
-            gap: 0.65rem;
-            flex-wrap: wrap;
-            margin-top: 1.25rem;
-            z-index: 1;
-        }
-
-        .tm-chip {
-            border: 1px solid rgba(56, 232, 255, 0.36);
-            color: #dffbff;
-            background: rgba(56, 232, 255, 0.08);
-            border-radius: 999px;
-            padding: 0.35rem 0.72rem;
-            font-size: 0.82rem;
-            font-weight: 700;
-        }
-
-        .tm-section-title {
-            color: var(--tm-text);
-            font-weight: 850;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            margin: 1.1rem 0 0.7rem;
-        }
-
-        .tm-overview-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 0.9rem;
-            margin-bottom: 1.2rem;
-        }
-
-        .tm-card, .tm-stat-card, .tm-search-shell, .tm-doc-shell, .tm-status-frame {
-            border: 1px solid var(--tm-border);
-            border-radius: 14px;
-            background: linear-gradient(180deg, rgba(12, 23, 52, 0.92), rgba(7, 12, 28, 0.86));
-            box-shadow: 0 14px 44px rgba(0,0,0,0.28), inset 0 0 28px rgba(56,232,255,0.04);
-        }
-
-        .tm-stat-card {
-            padding: 1rem;
-            min-height: 118px;
-        }
-
-        .tm-stat-label {
-            color: var(--tm-muted);
-            font-size: 0.72rem;
-            text-transform: uppercase;
-            letter-spacing: 0.12em;
-            margin-bottom: 0.45rem;
-        }
-
-        .tm-stat-value {
-            color: var(--tm-text);
-            font-size: 1.85rem;
-            line-height: 1.1;
-            font-weight: 850;
-            overflow-wrap: anywhere;
-        }
-
-        .tm-stat-note {
-            color: var(--tm-cyan);
-            margin-top: 0.45rem;
-            font-size: 0.78rem;
-        }
-
-        .tm-status-frame {
-            padding: 1.1rem;
-            margin-bottom: 1rem;
-        }
-
-        .tm-status-title {
-            color: var(--tm-green);
-            font-size: 0.78rem;
-            font-weight: 850;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-        }
-
-        .tm-status-class {
-            color: var(--tm-text);
-            font-size: clamp(1.8rem, 4vw, 3.2rem);
-            font-weight: 900;
-            line-height: 1.05;
-            text-shadow: 0 0 28px rgba(93,255,179,0.22);
-        }
-
-        .tm-status-desc {
-            color: #b7c8e8;
-            margin-top: 0.45rem;
-        }
-
-        .tm-rank-card {
-            padding: 0.85rem;
-            border-radius: 12px;
-            border: 1px solid rgba(154,124,255,0.28);
-            background: rgba(154,124,255,0.09);
-            margin-bottom: 0.65rem;
-        }
-
-        .tm-rank-name {
-            color: var(--tm-muted);
-            font-size: 0.78rem;
-            overflow-wrap: anywhere;
-        }
-
-        .tm-rank-value {
-            color: var(--tm-text);
-            font-size: 1.55rem;
-            font-weight: 850;
-        }
-
-        .tm-search-shell, .tm-doc-shell {
-            padding: 1rem 1.1rem;
-            margin-bottom: 1rem;
-        }
-
-        .tm-result-card {
-            padding: 0.95rem 1rem;
-            border: 1px solid rgba(56,232,255,0.22);
-            border-radius: 12px;
-            background: rgba(7, 12, 28, 0.78);
-            margin: 0.7rem 0;
-        }
-
-        .tm-result-title {
-            color: var(--tm-text);
-            font-weight: 850;
-            font-size: 1rem;
-            overflow-wrap: anywhere;
-        }
-
-        .tm-result-meta {
-            color: var(--tm-cyan);
-            font-size: 0.78rem;
-            font-weight: 750;
-            margin: 0.28rem 0;
-        }
-
-        .tm-result-preview {
-            color: #b9c7df;
-            font-size: 0.9rem;
-            line-height: 1.55;
-        }
-
-        div[data-testid="stTabs"] button {
-            border-radius: 999px;
-            color: #bcd3f4;
-            font-weight: 750;
-        }
-
-        div[data-testid="stTabs"] button[aria-selected="true"] {
-            color: var(--tm-text);
-            background: linear-gradient(90deg, rgba(56,232,255,0.2), rgba(154,124,255,0.18));
-            border: 1px solid rgba(56,232,255,0.34);
-        }
-
-        div[data-testid="stTabs"] [data-baseweb="tab-list"] {
-            gap: 0.35rem;
-            overflow-x: auto;
-            scrollbar-width: thin;
-            padding-bottom: 0.35rem;
-        }
-
-        [data-testid="stExpander"] {
-            border: 1px solid rgba(56,232,255,0.20);
-            border-radius: 12px;
-            background: rgba(5, 9, 20, 0.30);
-        }
-
-        [data-testid="stExpander"] summary,
-        [data-testid="stExpander"] summary * {
-            color: var(--tm-text) !important;
-            font-weight: 750 !important;
-        }
-
-        .stButton > button,
-        .stDownloadButton > button {
-            min-height: 2.75rem;
-            border-radius: 12px !important;
-            font-weight: 800 !important;
-        }
-
-        [data-testid="stMetric"] {
-            border: 1px solid rgba(56,232,255,0.18);
-            border-radius: 12px;
-            padding: 0.8rem;
-            background: rgba(7, 12, 28, 0.58);
-        }
-
-        .stDataFrame, [data-testid="stTable"] {
-            border: 1px solid rgba(56,232,255,0.16);
-            border-radius: 12px;
-            overflow: hidden;
-        }
-
-        textarea, input, .stTextInput input {
-            border-color: rgba(56,232,255,0.34) !important;
-        }
-
-        @media (max-width: 900px) {
-            .block-container {
-                padding: 0.85rem 0.85rem 2rem;
-            }
-            .tm-overview-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-            .tm-hero {
-                padding: 1.45rem;
-            }
-            .tm-hero h1 {
-                font-size: 2.35rem;
-            }
-        }
-
-        @media (max-width: 560px) {
-            .tm-overview-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
-
-inject_custom_css()
-
-st.markdown(
-    """
-    <section class="tm-hero">
-        <div class="tm-kicker">Semantic Intelligence Console</div>
-        <h1>ThoughtMap Web v0.2</h1>
-        <p>Upload texts, visualize thought clusters, search by meaning, and apply JSON thought filters through a cybernetic analysis cockpit.</p>
-        <div class="tm-hero-strip">
-            <span class="tm-chip">AI Embedding</span>
-            <span class="tm-chip">Thought Continent</span>
-            <span class="tm-chip">Composition HUD</span>
-            <span class="tm-chip">Semantic Search</span>
-        </div>
-    </section>
-    """,
-    unsafe_allow_html=True
-)
+st.title("ThoughtMap Web v0.2")
+st.caption("Upload texts, visualize thought clusters, search by meaning, and apply JSON thought filters.")
 
 MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 BASE_DIR = Path(__file__).resolve().parent
 FILTER_DIR = BASE_DIR / "filters"
 USER_DATA_DIR = BASE_DIR / "user_data"
 USER_ID_LENGTH = 16
+DEFAULT_FASTAPI_BASE_URL = "https://koseisha-os.onrender.com"
 
 DEFAULT_FILTERS = {
     "basic_thought": {
@@ -494,6 +138,109 @@ def user_embedding_dir(user_id: str) -> Path:
     if not safe_user_id:
         raise ValueError("A registered email address is required before saving user embeddings.")
     return USER_DATA_DIR / safe_user_id
+
+
+def get_secret_or_env(name: str, default: str = "") -> str:
+    try:
+        value = st.secrets.get(name, "")
+    except Exception:
+        value = ""
+    return str(value or os.getenv(name, default) or "")
+
+
+def normalize_api_base_url(value: str) -> str:
+    text = str(value or "").strip().rstrip("/")
+    return text or DEFAULT_FASTAPI_BASE_URL
+
+
+def build_api_url(api_base_url: str, path: str) -> str:
+    base = normalize_api_base_url(api_base_url)
+    clean_path = str(path or "").strip()
+    if not clean_path.startswith("/"):
+        clean_path = "/" + clean_path
+    return base + clean_path
+
+
+def parameter_rows_from_embedding_row(row: pd.Series) -> list[dict[str, object]] | None:
+    parameter_keys = [
+        "philosophy",
+        "psychology",
+        "science",
+        "economy",
+        "economics",
+        "karma",
+        "emotion",
+        "moral",
+        "morality",
+        "ideal",
+        "individual",
+        "community",
+    ]
+    out = []
+    for key in parameter_keys:
+        if key not in row:
+            continue
+        value = row.get(key)
+        if value is None or str(value).strip() == "":
+            continue
+        try:
+            out.append({"key": key, "value": float(value)})
+        except (TypeError, ValueError):
+            continue
+    return out or None
+
+
+def post_save_document_by_email(api_base_url: str, email: str, doc_id: str, parameters=None) -> dict[str, object]:
+    url = build_api_url(api_base_url, "/users/by-email/save")
+    payload = {
+        "email": normalize_registered_email(email),
+        "doc_id": str(doc_id or "").strip(),
+    }
+    if parameters:
+        payload["parameters"] = parameters
+
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    request = Request(
+        url,
+        data=body,
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+
+    logger.info("Posting personal save request to %s", url)
+    try:
+        with urlopen(request, timeout=30) as response:
+            response_body = response.read().decode("utf-8", errors="replace")
+            logger.info("Personal save response status=%s body=%s", response.status, response_body[:1000])
+            return {
+                "ok": 200 <= int(response.status) < 300,
+                "url": url,
+                "status_code": int(response.status),
+                "response_text": response_body,
+                "request_json": payload,
+            }
+    except HTTPError as exc:
+        response_body = exc.read().decode("utf-8", errors="replace")
+        logger.warning("Personal save HTTP error url=%s status=%s body=%s", url, exc.code, response_body[:1000])
+        return {
+            "ok": False,
+            "url": url,
+            "status_code": int(exc.code),
+            "response_text": response_body,
+            "request_json": payload,
+        }
+    except URLError as exc:
+        logger.warning("Personal save URL error url=%s reason=%s", url, exc.reason)
+        return {
+            "ok": False,
+            "url": url,
+            "status_code": None,
+            "response_text": str(exc.reason),
+            "request_json": payload,
+        }
 
 
 def build_embedding_export_frame(
@@ -583,23 +330,29 @@ def read_uploaded_files(uploaded_files):
         name = uploaded.name
 
         if name.lower().endswith(".zip"):
-            with tempfile.TemporaryDirectory() as tmpdir:
-                zip_path = Path(tmpdir) / name
-                zip_path.write_bytes(uploaded.getvalue())
+            try:
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    zip_path = Path(tmpdir) / name
+                    zip_path.write_bytes(uploaded.getvalue())
 
-                with zipfile.ZipFile(zip_path, "r") as z:
-                    for info in z.infolist():
-                        if info.is_dir():
-                            continue
+                    with zipfile.ZipFile(zip_path, "r") as z:
+                        for info in z.infolist():
+                            if info.is_dir():
+                                continue
 
-                        if not info.filename.lower().endswith((".txt", ".md")):
-                            continue
+                            if not info.filename.lower().endswith((".txt", ".md")):
+                                continue
 
-                        raw = z.read(info.filename)
-                        text = raw.decode("utf-8", errors="ignore").strip()
+                            raw = z.read(info.filename)
+                            text = raw.decode("utf-8", errors="ignore").strip()
 
-                        if text:
-                            docs.append({"title": clean_filename(info.filename), "text": text, "source": "zip"})
+                            if text:
+                                docs.append({"title": clean_filename(info.filename), "text": text, "source": "zip"})
+            except zipfile.BadZipFile:
+                st.warning(f"Could not read ZIP file: {name}")
+            except Exception as exc:
+                logger.exception("Failed to read uploaded ZIP file.")
+                st.warning(f"Could not read ZIP file: {name}. {exc}")
 
         elif name.lower().endswith((".txt", ".md")):
             text = uploaded.getvalue().decode("utf-8", errors="ignore").strip()
@@ -608,6 +361,29 @@ def read_uploaded_files(uploaded_files):
                 docs.append({"title": clean_filename(name), "text": text, "source": "file"})
 
     return docs
+
+
+def make_layout_points(embeddings, min_dist: float):
+    document_count = len(embeddings)
+
+    if document_count <= 0:
+        return np.empty((0, 2))
+
+    if document_count == 1:
+        return np.array([[0.0, 0.0]])
+
+    if document_count == 2:
+        return np.array([[-0.5, 0.0], [0.5, 0.0]])
+
+    UMAP = require_umap()
+    safe_n_neighbors = min(15, max(2, document_count - 1))
+    reducer = UMAP(
+        n_neighbors=safe_n_neighbors,
+        min_dist=min_dist,
+        metric="cosine",
+        random_state=42,
+    )
+    return reducer.fit_transform(embeddings)
 
 
 def split_pasted_text(text: str, mode: str):
@@ -672,7 +448,6 @@ def auto_label_clusters(df, filter_score_df):
 
 
 def analyze(docs, cluster_count: int, n_neighbors: int, min_dist: float, categories):
-    UMAP = require_umap()
     KMeans = require_kmeans()
     make_filter_scores, _make_parameter_scores = require_thought_composition()
     model = load_model()
@@ -680,9 +455,10 @@ def analyze(docs, cluster_count: int, n_neighbors: int, min_dist: float, categor
     texts = [d["text"] for d in docs]
     embeddings = model.encode(texts, show_progress_bar=False)
 
-    reducer = UMAP(n_neighbors=n_neighbors, min_dist=min_dist, metric="cosine", random_state=42)
-    points = reducer.fit_transform(embeddings)
+    points = make_layout_points(embeddings, min_dist)
 
+    document_count = len(docs)
+    cluster_count = min(max(1, cluster_count), document_count)
     kmeans = KMeans(n_clusters=cluster_count, random_state=42, n_init=10)
     clusters = kmeans.fit_predict(embeddings)
 
@@ -709,39 +485,10 @@ def analyze(docs, cluster_count: int, n_neighbors: int, min_dist: float, categor
     return df, embeddings, filter_score_df, labels
 
 
-CYBER_BG = "#050914"
-CYBER_PANEL = "#081123"
-CYBER_TEXT = "#e9f7ff"
-CYBER_MUTED = "#91a4c4"
-CYBER_GRID = "#245a73"
-CYBER_CYAN = "#38e8ff"
-CYBER_BLUE = "#6da8ff"
-CYBER_VIOLET = "#9a7cff"
-CYBER_GREEN = "#5dffb3"
-
-
-def apply_cyber_chart_theme(fig, ax, grid=True):
-    fig.patch.set_facecolor(CYBER_BG)
-    ax.set_facecolor(CYBER_PANEL)
-
-    ax.title.set_color(CYBER_TEXT)
-    ax.xaxis.label.set_color(CYBER_MUTED)
-    ax.yaxis.label.set_color(CYBER_MUTED)
-    ax.tick_params(colors=CYBER_MUTED)
-
-    for spine in ax.spines.values():
-        spine.set_color(CYBER_GRID)
-        spine.set_alpha(0.65)
-
-    if grid:
-        ax.grid(color=CYBER_GRID, alpha=0.24, linewidth=0.8)
-
-
 def plot_map(df, labels):
     plt = get_matplotlib_pyplot()
     fig, ax = plt.subplots(figsize=(12, 8))
-    apply_cyber_chart_theme(fig, ax)
-    ax.scatter(df["x"], df["y"], s=34, alpha=0.48, color=CYBER_BLUE, edgecolors=CYBER_CYAN, linewidths=0.4)
+    ax.scatter(df["x"], df["y"], s=30, alpha=0.35)
 
     for cluster_id in sorted(df["cluster"].unique()):
         cdf = df[df["cluster"] == cluster_id]
@@ -749,8 +496,8 @@ def plot_map(df, labels):
         center_y = cdf["y"].mean()
         label = labels.get(str(cluster_id), f"Cluster {cluster_id}")
         count = len(cdf)
-        ax.scatter(center_x, center_y, s=760, alpha=0.9, color=CYBER_VIOLET, edgecolors=CYBER_CYAN, linewidths=1.4)
-        ax.text(center_x, center_y, f"{label}\n{count}", ha="center", va="center", fontsize=9, color=CYBER_TEXT, fontweight="bold")
+        ax.scatter(center_x, center_y, s=700, alpha=0.85)
+        ax.text(center_x, center_y, f"{label}\n{count}", ha="center", va="center", fontsize=9)
 
     ax.set_title("Thought Continent")
     ax.set_xlabel("Axis 1")
@@ -765,16 +512,15 @@ def plot_profile(df, labels):
     names = [labels.get(str(cluster_id), f"Cluster {cluster_id}") for cluster_id in counts.index]
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    apply_cyber_chart_theme(fig, ax)
-    bars = ax.barh(names[::-1], counts.values[::-1], color=CYBER_CYAN, edgecolor=CYBER_BLUE, alpha=0.88)
+    bars = ax.bar(names, counts.values)
 
     for bar in bars:
-        width = bar.get_width()
-        ax.text(width + max(counts.values) * 0.02, bar.get_y() + bar.get_height() / 2, str(int(width)), ha="left", va="center", color=CYBER_TEXT)
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width() / 2, height, str(int(height)), ha="center", va="bottom")
 
     ax.set_title("Thought Profile")
-    ax.set_xlabel("Number of Documents")
-    ax.grid(axis="x", color=CYBER_GRID, alpha=0.38)
+    ax.set_ylabel("Number of Documents")
+    ax.tick_params(axis="x", rotation=30)
     fig.tight_layout()
     return fig
 
@@ -785,19 +531,7 @@ def plot_pie(df, labels):
     names = [labels.get(str(cluster_id), f"Cluster {cluster_id}") for cluster_id in counts.index]
 
     fig, ax = plt.subplots(figsize=(7, 7))
-    apply_cyber_chart_theme(fig, ax, grid=False)
-    colors = [CYBER_CYAN, CYBER_BLUE, CYBER_VIOLET, CYBER_GREEN, "#ff4fd8", "#f97316", "#eab308", "#22c55e"]
-    wedges, texts, autotexts = ax.pie(
-        counts.values,
-        labels=names,
-        autopct="%1.0f%%",
-        colors=colors[:len(counts)],
-        textprops={"color": CYBER_TEXT},
-        wedgeprops={"edgecolor": CYBER_BG, "linewidth": 1.2},
-    )
-    for text in autotexts:
-        text.set_color(CYBER_BG)
-        text.set_fontweight("bold")
+    ax.pie(counts.values, labels=names, autopct="%1.0f%%")
     ax.set_title("Thought Distribution")
     fig.tight_layout()
     return fig
@@ -807,18 +541,15 @@ def plot_filter_profile(filter_score_df):
     plt = get_matplotlib_pyplot()
     summary = filter_score_df.mean().sort_values(ascending=False)
     fig, ax = plt.subplots(figsize=(12, 5))
-    apply_cyber_chart_theme(fig, ax)
-    ordered = summary.iloc[::-1]
-    bars = ax.barh(ordered.index, ordered.values, color=CYBER_CYAN, edgecolor=CYBER_BLUE, alpha=0.9)
+    bars = ax.bar(summary.index, summary.values)
 
-    x_max = float(summary.max()) if len(summary) else 1.0
     for bar in bars:
-        width = bar.get_width()
-        ax.text(width + x_max * 0.015, bar.get_y() + bar.get_height() / 2, f"{width:.2f}", ha="left", va="center", fontsize=8, color=CYBER_TEXT)
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width() / 2, height, f"{height:.2f}", ha="center", va="bottom", fontsize=8)
 
     ax.set_title("Average Thought Filter Profile")
-    ax.set_xlabel("Normalized score")
-    ax.grid(axis="x", color=CYBER_GRID, alpha=0.38)
+    ax.set_ylabel("Normalized score")
+    ax.tick_params(axis="x", rotation=35)
     fig.tight_layout()
     return fig
 
@@ -827,16 +558,10 @@ def plot_single_filter_scores(score_series):
     plt = get_matplotlib_pyplot()
     score_series = score_series.sort_values(ascending=False)
     fig, ax = plt.subplots(figsize=(12, 5))
-    apply_cyber_chart_theme(fig, ax)
-    ordered = score_series.iloc[::-1]
-    bars = ax.barh(ordered.index, ordered.values, color=CYBER_VIOLET, edgecolor=CYBER_CYAN, alpha=0.9)
-    x_max = float(score_series.max()) if len(score_series) else 1.0
-    for bar in bars:
-        width = bar.get_width()
-        ax.text(width + x_max * 0.015, bar.get_y() + bar.get_height() / 2, f"{width:.2f}", ha="left", va="center", fontsize=8, color=CYBER_TEXT)
+    ax.bar(score_series.index, score_series.values)
     ax.set_title("Document Thought Filter Scores")
-    ax.set_xlabel("Normalized score")
-    ax.grid(axis="x", color=CYBER_GRID, alpha=0.38)
+    ax.set_ylabel("Normalized score")
+    ax.tick_params(axis="x", rotation=35)
     fig.tight_layout()
     return fig
 
@@ -951,7 +676,6 @@ def plot_status_bar(status_df, title=None):
     )
 
     fig, ax = plt.subplots(figsize=(11, 6))
-    apply_cyber_chart_theme(fig, ax)
 
     bars = ax.barh(
         ordered["parameter"].astype(str),
@@ -971,9 +695,7 @@ def plot_status_bar(status_df, title=None):
             bar.get_y() + bar.get_height() / 2,
             f"{score:.1f}%   {rank}",
             va="center",
-            fontsize=10,
-            color=CYBER_TEXT,
-            fontweight="bold"
+            fontsize=10
         )
 
     ax.set_xlim(0, x_limit)
@@ -994,63 +716,12 @@ def plot_status_bar(status_df, title=None):
 
     ax.grid(
         axis="x",
-        color=CYBER_GRID,
-        alpha=0.38
+        alpha=0.25
     )
 
     fig.tight_layout()
 
     return fig
-
-
-def plot_status_pie(status_df):
-    plt = get_matplotlib_pyplot()
-
-    positive = (
-        status_df[status_df["share_%"] > 0]
-        .sort_values("share_%", ascending=False)
-        .copy()
-    )
-
-    if positive.empty:
-        fig, ax = plt.subplots(figsize=(7, 4))
-        apply_cyber_chart_theme(fig, ax, grid=False)
-        ax.text(0.5, 0.5, "Pie chart needs at least one positive parameter.", ha="center", va="center", color=CYBER_TEXT)
-        ax.axis("off")
-        return fig
-
-    colors = [rank_color(rank) for rank in positive["rank"]]
-
-    fig, ax = plt.subplots(figsize=(7, 6))
-    apply_cyber_chart_theme(fig, ax, grid=False)
-    wedges, texts, autotexts = ax.pie(
-        positive["share_%"],
-        labels=positive["parameter"].astype(str),
-        colors=colors,
-        startangle=90,
-        counterclock=False,
-        autopct="%1.1f%%",
-        pctdistance=0.72,
-        labeldistance=1.08,
-        wedgeprops={
-            "edgecolor": CYBER_BG,
-            "linewidth": 1.2,
-            "alpha": 0.92,
-        },
-        textprops={"color": CYBER_TEXT, "fontsize": 9},
-    )
-
-    for text in texts:
-        text.set_color(CYBER_MUTED)
-    for text in autotexts:
-        text.set_color(CYBER_BG)
-        text.set_fontweight("bold")
-
-    ax.set_title("Thought Composition Pie", color=CYBER_TEXT, fontweight="bold")
-    fig.tight_layout()
-    return fig
-
-
 def plot_status_radar(status_df):
     plt = get_matplotlib_pyplot()
     labels = status_df["parameter"].astype(str).tolist()
@@ -1059,8 +730,7 @@ def plot_status_radar(status_df):
 
     if len(labels) < 3:
         fig, ax = plt.subplots(figsize=(8, 4))
-        apply_cyber_chart_theme(fig, ax, grid=False)
-        ax.text(0.5, 0.5, "Radar chart needs at least 3 parameters.", ha="center", va="center", color=CYBER_TEXT)
+        ax.text(0.5, 0.5, "Radar chart needs at least 3 parameters.", ha="center", va="center")
         ax.axis("off")
         return fig
 
@@ -1069,25 +739,20 @@ def plot_status_radar(status_df):
     angles_closed = angles + angles[:1]
 
     fig = plt.figure(figsize=(7, 7))
-    fig.patch.set_facecolor(CYBER_BG)
     ax = fig.add_subplot(111, polar=True)
-    ax.set_facecolor(CYBER_PANEL)
 
-    ax.plot(angles_closed, values_closed, linewidth=2.4, color=CYBER_CYAN)
-    ax.fill(angles_closed, values_closed, alpha=0.24, color=CYBER_VIOLET)
+    ax.plot(angles_closed, values_closed, linewidth=2)
+    ax.fill(angles_closed, values_closed, alpha=0.25)
 
     ax.set_xticks(angles)
-    ax.set_xticklabels(labels, color=CYBER_TEXT)
+    ax.set_xticklabels(labels)
     ax.set_ylim(0, y_limit)
 
     tick_step = 5 if y_limit <= 30 else 10
     ticks = list(range(0, y_limit + 1, tick_step))
     ax.set_yticks(ticks)
-    ax.set_yticklabels([f"{t}%" for t in ticks], color=CYBER_MUTED)
-    ax.tick_params(colors=CYBER_MUTED)
-    ax.grid(color=CYBER_GRID, alpha=0.45)
-    ax.spines["polar"].set_color(CYBER_GRID)
-    ax.set_title("Thought Composition Radar", pad=20, color=CYBER_TEXT, fontweight="bold")
+    ax.set_yticklabels([f"{t}%" for t in ticks])
+    ax.set_title("Thought Composition Radar", pad=20)
 
     fig.tight_layout()
     return fig
@@ -1134,13 +799,32 @@ def infer_profile_class(status_df):
     return profile_class, description
 
 
-st.sidebar.markdown("### Control Deck")
-st.sidebar.caption("Load text, tune the analysis field, then launch the scan.")
-
-st.sidebar.markdown("#### 01 Input")
+st.sidebar.header("Input")
 
 uploaded_files = st.sidebar.file_uploader("Upload .txt / .md / .zip", type=["txt", "md", "zip"], accept_multiple_files=True)
 pasted_text = st.sidebar.text_area("Or paste text", height=180)
+
+st.sidebar.header("Public User Storage")
+registered_email = st.sidebar.text_input(
+    "Registered email",
+    value="",
+    help="Used only to create a stable private folder hash. The email itself is not used as a folder name.",
+)
+personal_api_base_url = st.sidebar.text_input(
+    "Personal API Base URL",
+    value=normalize_api_base_url(
+        get_secret_or_env(
+            "THOUGHTMAP_API_BASE_URL",
+            get_secret_or_env("API_BASE_URL", DEFAULT_FASTAPI_BASE_URL),
+        )
+    ),
+    help="FastAPI endpoint for saving Personal Library data.",
+)
+user_id = make_user_id_from_email(registered_email)
+if user_id:
+    st.sidebar.caption(f"user_id: `{user_id}`")
+else:
+    st.sidebar.caption("Enter an email to enable saving thoughtmap_embeddings.csv after Analyze.")
 
 split_mode_label = st.sidebar.selectbox(
     "Paste split mode",
@@ -1154,12 +838,12 @@ split_mode_map = {
     "Split by blank blocks": "blank_blocks"
 }
 
-st.sidebar.markdown("#### 02 Analysis")
+st.sidebar.header("Analysis Settings")
 cluster_count = st.sidebar.slider("Cluster count", min_value=2, max_value=20, value=8)
 n_neighbors = st.sidebar.slider("UMAP n_neighbors", min_value=3, max_value=50, value=10)
 min_dist = st.sidebar.slider("UMAP min_dist", min_value=0.0, max_value=0.9, value=0.2, step=0.05)
 
-st.sidebar.markdown("#### 03 Thought Filters")
+st.sidebar.header("Thought Filters")
 filter_sets = load_filter_sets()
 
 if filter_sets:
@@ -1175,8 +859,7 @@ else:
     st.sidebar.info("No JSON filters found.")
 
 categories = merge_selected_filters(filter_sets, selected_filter_names)
-st.sidebar.markdown("---")
-run = st.sidebar.button("Analyze", type="primary")
+run = st.sidebar.button("Analyze")
 
 if run:
     docs = []
@@ -1277,36 +960,15 @@ labels = st.session_state["labels"]
 filter_score_df = st.session_state.get("filter_score_df")
 categories = st.session_state.get("categories", {})
 
-st.markdown('<div class="tm-section-title">Overview</div>', unsafe_allow_html=True)
-st.markdown(
-    f"""
-    <div class="tm-overview-grid">
-        <div class="tm-stat-card">
-            <div class="tm-stat-label">Documents</div>
-            <div class="tm-stat-value">{len(df)}</div>
-            <div class="tm-stat-note">Loaded text units</div>
-        </div>
-        <div class="tm-stat-card">
-            <div class="tm-stat-label">Clusters</div>
-            <div class="tm-stat-value">{df["cluster"].nunique()}</div>
-            <div class="tm-stat-note">Detected thought zones</div>
-        </div>
-        <div class="tm-stat-card">
-            <div class="tm-stat-label">Filters</div>
-            <div class="tm-stat-value">{len(categories)}</div>
-            <div class="tm-stat-note">Active lenses</div>
-        </div>
-        <div class="tm-stat-card">
-            <div class="tm-stat-label">Model</div>
-            <div class="tm-stat-value" style="font-size:1rem;line-height:1.35;">{MODEL_NAME}</div>
-            <div class="tm-stat-note">Embedding engine</div>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+st.subheader("Overview")
 
-tab1, tab2, tab_status, tab3, tab4, tab5, tab6 = st.tabs(["Map", "Profile", "Composition", "Search", "Documents", "Filters", "Export"])
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Documents", len(df))
+col2.metric("Clusters", df["cluster"].nunique())
+col3.metric("Filters", len(categories))
+col4.metric("Model", MODEL_NAME)
+
+tab1, tab2, tab_status, tab3, tab4, tab5, tab6 = st.tabs(["Thought Continent", "Profile", "Composition", "Search", "Documents", "Filters", "Export"])
 
 with tab1:
 
@@ -1330,7 +992,7 @@ with tab2:
     st.dataframe(df["cluster"].value_counts().sort_index().rename("count"), use_container_width=True)
 
 with tab_status:
-    st.markdown('<div class="tm-section-title">Composition Status</div>', unsafe_allow_html=True)
+    st.subheader("Thought Composition")
 
     if filter_score_df is None:
         st.info("No filters selected or no filters loaded.")
@@ -1338,41 +1000,52 @@ with tab_status:
     else:
         status_df = make_status_profile(filter_score_df)
         profile_class, profile_description = infer_profile_class(status_df)
-        document_title = (
-            docs[0]["title"]
-            if len(docs) == 1
-            else f"{len(docs)} Documents"
-        )
 
-        top3 = (
-            status_df
-            .sort_values("share_%", ascending=False)
-            .head(3)
-        )
+        # =====================================================
+        # Document Information
+        # =====================================================
+        if len(docs) == 1:
 
-        top_chips = "".join(
-            f"<span class='tm-chip'>{html.escape(str(row['parameter']))} {row['share_%']:.1f}% / Rank {html.escape(str(row['rank']))}</span>"
-            for _, row in top3.iterrows()
-        )
+            st.markdown(
+                f"## 📄 {docs[0]['title']}"
+            )
 
-        st.markdown(
-            f"""
-            <div class="tm-status-frame">
-                <div class="tm-status-title">Player Profile / Thought Composition</div>
-                <div class="tm-status-class">{html.escape(str(profile_class))}</div>
-                <div class="tm-status-desc">{html.escape(profile_description)}</div>
-                <div class="tm-hero-strip">
-                    <span class="tm-chip">Source: {html.escape(document_title)}</span>
-                    {top_chips}
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+            top3 = (
+                status_df
+                .sort_values("share_%", ascending=False)
+                .head(3)
+            )
 
-        col_s1, col_s2 = st.columns([0.9, 2.1], gap="large")
+            st.caption(
+                " | ".join(
+                    f"{row['parameter']} {row['share_%']:.1f}%"
+                    for _, row in top3.iterrows()
+                )
+            )
+
+        else:
+
+            st.markdown(
+                f"## 📚 {len(docs)} Documents"
+            )
+
+        col_s1, col_s2 = st.columns([1, 2])
 
         with col_s1:
+
+            if len(docs) == 1:
+                st.caption(
+                    f"Source: {docs[0]['title']}"
+                )
+
+            st.metric(
+                "Primary class",
+                profile_class
+            )
+
+            st.caption(
+                profile_description
+            )
 
             top_groups = get_top_composition_groups(
                 status_df
@@ -1380,20 +1053,24 @@ with tab_status:
 
             if top_groups:
 
-                st.markdown("**Top Slots**")
+                st.write(
+                    "Top composition groups"
+                )
 
-                for label, share in top_groups:
-                    st.markdown(
-                        f"""
-                        <div class="tm-rank-card">
-                            <div class="tm-rank-name">{html.escape(str(label))}</div>
-                            <div class="tm-rank-value">{share:.1f}%</div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
+                card_cols = st.columns(
+                    min(3, len(top_groups))
+                )
+
+                for card_col, (label, share) in zip(
+                    card_cols,
+                    top_groups
+                ):
+                    card_col.metric(
+                        label,
+                        f"{share:.1f}%"
                     )
 
-            st.markdown("**Status Matrix**")
+            st.write("Composition table")
 
             table_df = status_df.copy()
 
@@ -1404,6 +1081,13 @@ with tab_status:
             )
 
         with col_s2:
+
+            document_title = (
+                docs[0]["title"]
+                if len(docs) == 1
+                else f"{len(docs)} Documents"
+            )
+
             st.pyplot(
                 plot_status_bar(
                     status_df,
@@ -1412,18 +1096,10 @@ with tab_status:
                 use_container_width=True
             )
 
-            st.markdown("**Composition Pie**")
-            st.pyplot(
-                plot_status_pie(status_df),
-                use_container_width=True
-            )
-
-        with st.container():
-            st.markdown("**Radar Field**")
-            st.pyplot(
-                plot_status_radar(status_df),
-                use_container_width=True
-            )
+        st.pyplot(
+            plot_status_radar(status_df),
+            use_container_width=True
+        )
 
         st.caption(
             "Composition shares add up to 100%. "
@@ -1434,24 +1110,8 @@ with tab_status:
 
 
 with tab3:
-    st.markdown(
-        """
-        <div class="tm-search-shell">
-            <div class="tm-status-title">Semantic Search Gateway</div>
-            <div class="tm-status-desc">Search across the uploaded corpus by meaning, theme, and conceptual gravity.</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    search_col, limit_col = st.columns([3, 1])
-    with search_col:
-        query = st.text_input(
-            "Search by idea / theme",
-            placeholder="Example: causality, subjectivity, capitalism criticism"
-        )
-    with limit_col:
-        top_n = st.slider("Top N", 3, 30, 10)
+    query = st.text_input("Search by idea / theme", placeholder="例: 因果, subjectivity, capitalism criticism")
+    top_n = st.slider("Top N", 3, 30, 10)
 
     if query:
         cosine_similarity = require_cosine_similarity()
@@ -1478,83 +1138,13 @@ with tab3:
 
             results.append(row)
 
-        st.markdown(f"**Search results for:** `{query}`")
-
-        for row in results:
-            extra_filter = ""
-            if "top_filter" in row:
-                extra_filter = (
-                    f" | top filter {html.escape(str(row['top_filter']))}"
-                    f" ({row['top_filter_score']:.3f})"
-                )
-
-            st.markdown(
-                f"""
-                <div class="tm-result-card">
-                    <div class="tm-result-title">#{row['rank']} {html.escape(str(row['title']))}</div>
-                    <div class="tm-result-meta">
-                        similarity {row['similarity']:.3f} | cluster {row['cluster']} / {html.escape(str(row['cluster_label']))}{extra_filter}
-                    </div>
-                    <div class="tm-result-preview">{html.escape(str(row['preview']))}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        with st.expander("Raw result table"):
-            st.dataframe(pd.DataFrame(results), use_container_width=True)
+        st.dataframe(pd.DataFrame(results), use_container_width=True)
 
 with tab4:
-    st.markdown(
-        """
-        <div class="tm-doc-shell">
-            <div class="tm-status-title">Document Browser</div>
-            <div class="tm-status-desc">Select a document, inspect its metadata, and read the full text in a wider viewer.</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    browser_col, reader_col = st.columns([0.9, 2.1], gap="large")
-
-    with browser_col:
-        selected = st.selectbox("Read document", df["title"].tolist())
-
+    st.dataframe(df, use_container_width=True)
+    selected = st.selectbox("Read document", df["title"].tolist())
     idx = df.index[df["title"] == selected][0]
-    selected_cluster = int(df.loc[idx, "cluster"])
-    selected_label = labels.get(str(selected_cluster), f"Cluster {selected_cluster}")
-
-    with browser_col:
-        st.markdown(
-            f"""
-            <div class="tm-rank-card">
-                <div class="tm-rank-name">Cluster</div>
-                <div class="tm-rank-value">{selected_cluster}</div>
-            </div>
-            <div class="tm-rank-card">
-                <div class="tm-rank-name">Label</div>
-                <div class="tm-rank-value" style="font-size:1.1rem;">{html.escape(str(selected_label))}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-        if "top_filter" in df.columns:
-            st.markdown(
-                f"""
-                <div class="tm-rank-card">
-                    <div class="tm-rank-name">Top Filter</div>
-                    <div class="tm-rank-value" style="font-size:1.1rem;">{html.escape(str(df.loc[idx, "top_filter"]))}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-    with reader_col:
-        st.text_area("Text", docs[idx]["text"], height=520)
-
-    with st.expander("Document index"):
-        st.dataframe(df, use_container_width=True)
+    st.text_area("Text", docs[idx]["text"], height=350)
 
 with tab5:
     st.subheader("Thought Filters")
@@ -1574,13 +1164,16 @@ with tab5:
 
 with tab6:
 
+        # -------------------------
+    # Embeddings CSV
+    # -------------------------
+
     embedding_df = build_embedding_export_frame(
         df=df,
         embeddings=embeddings,
         docs=docs,
         labels=labels,
     )
-
     embedding_csv = embedding_df.to_csv(
         index=False,
         encoding="utf-8-sig"
@@ -1593,44 +1186,52 @@ with tab6:
         mime="text/csv"
     )
 
-    st.markdown("---")
-    st.subheader("Save to Personal Library")
+    if user_id:
+        if st.button("Save embeddings to Personal Library"):
+            save_url = build_api_url(personal_api_base_url, "/users/by-email/save")
+            st.caption(f"POST URL: `{save_url}`")
 
-    save_email = st.text_input(
-        "Registered e-mail",
-        placeholder="example@example.com",
-        help="Only required when saving to your personal library.",
-        key="save_email_export",
-    )
+            results = []
+            for _, row in embedding_df.iterrows():
+                doc_id = str(row.get("doc_id", "") or "").strip()
+                if not doc_id:
+                    continue
+                result = post_save_document_by_email(
+                    api_base_url=personal_api_base_url,
+                    email=registered_email,
+                    doc_id=doc_id,
+                    parameters=parameter_rows_from_embedding_row(row),
+                )
+                results.append(result)
 
-    if st.button(
-        "Save embeddings to Personal Library",
-        key="save_embeddings_button",
-    ):
-        if not save_email.strip():
-            st.error("Please enter your registered e-mail.")
-        else:
-            payload = {
-                "email": save_email.strip(),
-                "rows": embedding_df.to_dict(orient="records"),
-            }
+            success_count = sum(1 for item in results if item.get("ok"))
+            failure_count = len(results) - success_count
+            if failure_count == 0:
+                st.success(f"Saved {success_count} document(s) to Personal Library.")
+            else:
+                st.error(f"Saved {success_count} document(s), failed {failure_count}.")
 
-            request = urllib.request.Request(
-                "https://koseisha-os.onrender.com/users/by-email/save-embeddings",
-                data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-                headers={"Content-Type": "application/json"},
-                method="POST",
-            )
+            debug_rows = [
+                {
+                    "url": item.get("url"),
+                    "status_code": item.get("status_code"),
+                    "response_text": item.get("response_text"),
+                    "request_json": {
+                        key: value
+                        for key, value in dict(item.get("request_json") or {}).items()
+                        if key != "email"
+                    },
+                }
+                for item in results
+            ]
+            with st.expander("Personal save debug"):
+                st.write(debug_rows)
+    else:
+        st.info("Enter a registered email in the sidebar to save to the Personal Library.")
 
-            try:
-                with urllib.request.urlopen(request, timeout=120) as response:
-                    result = json.loads(response.read().decode("utf-8"))
-
-                st.success(f"Saved {result.get('count', 0)} works to Personal Library.")
-
-            except Exception as exc:
-                st.error(f"Save failed: {exc}")
-
+    # -------------------------
+    # Cluster CSV
+    # -------------------------
     csv_bytes = df.to_csv(
         index=False,
         encoding="utf-8-sig"
@@ -1643,6 +1244,9 @@ with tab6:
         mime="text/csv"
     )
 
+    # -------------------------
+    # Cluster Labels
+    # -------------------------
     label_bytes = json.dumps(
         labels,
         ensure_ascii=False,
@@ -1656,7 +1260,11 @@ with tab6:
         mime="application/json"
     )
 
+    # -------------------------
+    # Filter Scores
+    # -------------------------
     if filter_score_df is not None:
+
         filter_bytes = filter_score_df.to_csv(
             index=False,
             encoding="utf-8-sig"
@@ -1666,5 +1274,116 @@ with tab6:
             "Download filter scores CSV",
             filter_bytes,
             file_name="thoughtmap_filter_scores.csv",
+            mime="text/csv"
+        )
+
+        try:
+            _make_filter_scores, make_parameter_scores = require_thought_composition()
+            parameter_score_df = make_parameter_scores(df, filter_score_df)
+        except ValueError:
+            parameter_score_df = None
+
+        if parameter_score_df is not None:
+            parameter_score_bytes = parameter_score_df.to_csv(
+                index=False,
+                encoding="utf-8-sig"
+            ).encode("utf-8-sig")
+
+            st.download_button(
+                "Download parameter scores CSV",
+                parameter_score_bytes,
+                file_name="parameter_scores.csv",
+                mime="text/csv"
+            )
+
+    # -------------------------
+    # Selected Filters
+    # -------------------------
+    category_bytes = json.dumps(
+        categories,
+        ensure_ascii=False,
+        indent=2
+    ).encode("utf-8")
+
+    st.download_button(
+        "Download selected filters JSON",
+        category_bytes,
+        file_name="selected_filters.json",
+        mime="application/json"
+    )
+
+    # ==========================================================
+    # Thought Composition Export
+    # ==========================================================
+    if filter_score_df is not None:
+
+        status_df = make_status_profile(filter_score_df)
+
+        st.markdown("---")
+        st.subheader("Thought Composition Export")
+
+        # -------------------------
+        # Composition PNG
+        # -------------------------
+        document_title = (
+            docs[0]["title"]
+            if len(docs) == 1
+            else f"{len(docs)} Documents"
+        )
+
+        fig = plot_status_bar(
+            status_df,
+            title=document_title
+        )
+
+        png_buffer = io.BytesIO()
+
+        fig.savefig(
+            png_buffer,
+            format="png",
+            dpi=300,
+            bbox_inches="tight"
+        )
+
+        png_buffer.seek(0)
+
+        safe_title = (
+            docs[0]["title"]
+            .replace(" ", "_")
+            .replace("/", "_")
+            .replace("\\", "_")
+            if len(docs) == 1
+            else "multi_document"
+        )
+
+        st.download_button(
+            "Download Composition Chart PNG",
+            png_buffer,
+            file_name=f"{safe_title}_thought_composition.png",
+            mime="image/png"
+        )
+
+        # -------------------------
+        # Composition Profile CSV
+        # -------------------------
+        profile_df = pd.DataFrame([
+            {
+                "profile_class": infer_profile_class(status_df)[0],
+                **{
+                    row["parameter"]: row["share_%"]
+                    for _, row in status_df.iterrows()
+                }
+            }
+        ])
+
+        profile_csv = profile_df.to_csv(
+            index=False,
+            encoding="utf-8-sig"
+        ).encode("utf-8-sig")
+
+        st.download_button(
+            "Download Composition Profile CSV",
+            profile_csv,
+            file_name=f"{safe_title}_thought_composition_profile.csv",
             mime="text/csv"
         )
