@@ -12,6 +12,14 @@ def _split_csv(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def normalize_database_url(value: str) -> str:
+    """Force SQLAlchemy to use psycopg 3 for Render-style Postgres URLs."""
+    url = str(value or "").strip()
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg://" + url[len("postgresql://") :]
+    return url
+
+
 @dataclass(frozen=True)
 class ApiSettings:
     backend: str = "csv"
@@ -32,5 +40,5 @@ def get_settings() -> ApiSettings:
         model_name=os.getenv("THOUGHTMAP_MODEL_NAME", DEFAULT_MODEL_NAME),
         allowed_origins=tuple(_split_csv(origins_text) or ["*"]),
         personal_backend=os.getenv("THOUGHTMAP_PERSONAL_BACKEND", "local").strip().lower() or "local",
-        database_url=os.getenv("DATABASE_URL", "").strip(),
+        database_url=normalize_database_url(os.getenv("DATABASE_URL", "")),
     )
