@@ -6,6 +6,7 @@ import re
 import json
 import socket
 import time
+import uuid
 import zipfile
 import tempfile
 import io
@@ -224,6 +225,17 @@ def post_save_document_by_email(
     api_base_url: str,
     email: str,
     doc_id: str,
+    title: str = "",
+    author: str = "",
+    source: str = "upload",
+    category: str = "",
+    url: str = "",
+    source_url: str = "",
+    original_doc_id: str = "",
+    embedding=None,
+    text: str = "",
+    text_preview: str = "",
+    model_name: str = MODEL_NAME,
     parameters=None,
     timeout_seconds: int = 90,
 ) -> dict[str, object]:
@@ -231,6 +243,18 @@ def post_save_document_by_email(
     payload = {
         "email": normalize_registered_email(email),
         "doc_id": str(doc_id or "").strip(),
+        "title": str(title or doc_id or "").strip(),
+        "author": str(author or "").strip(),
+        "source": str(source or "upload").strip(),
+        "category": str(category or "").strip(),
+        "url": str(url or source_url or "").strip(),
+        "source_url": str(source_url or url or "").strip(),
+        "original_doc_id": str(original_doc_id or doc_id or "").strip(),
+        "embedding": embedding,
+        "text": str(text or ""),
+        "text_preview": str(text_preview or text or "")[:500],
+        "model_name": str(model_name or MODEL_NAME),
+        "source_type": "upload",
     }
     if parameters:
         payload["parameters"] = parameters
@@ -332,16 +356,30 @@ def build_embedding_export_frame(
     embeddings,
     docs: list[dict],
     labels: dict,
+    upload_session_id: str = "",
 ) -> pd.DataFrame:
     docs = docs or []
+    upload_session_id = upload_session_id or f"upload_{int(time.time())}_{uuid.uuid4().hex[:8]}"
     text_by_index = {
         i: str(doc.get("text", "") or "")
         for i, doc in enumerate(docs)
         if isinstance(doc, dict)
     }
+    source_id_by_index = {
+        i: str(doc.get("doc_id", "") or "")
+        for i, doc in enumerate(docs)
+        if isinstance(doc, dict)
+    }
 
     frame = pd.DataFrame({
-        "doc_id": df["doc_id"] if "doc_id" in df.columns else [f"doc_{i:06d}" for i in range(len(df))],
+        "doc_id": [
+            source_id_by_index.get(i) or f"{upload_session_id}_{i:06d}"
+            for i in range(len(df))
+        ],
+        "original_doc_id": [
+            source_id_by_index.get(i) or f"{upload_session_id}_{i:06d}"
+            for i in range(len(df))
+        ],
         "title": df["title"],
         "source": df["source"],
         "cluster": df["cluster"],
@@ -1039,6 +1077,7 @@ if run:
     st.session_state["filter_score_df"] = filter_score_df
     st.session_state["categories"] = categories
     st.session_state["selected_filter_names"] = selected_filter_names
+    st.session_state["upload_session_id"] = f"upload_{int(time.time())}_{uuid.uuid4().hex[:8]}"
 
 if "df" not in st.session_state:
     st.info("Upload text files or paste text, then click Analyze.")
@@ -1264,6 +1303,7 @@ with tab6:
         embeddings=embeddings,
         docs=docs,
         labels=labels,
+        upload_session_id=st.session_state.get("upload_session_id", ""),
     )
     embedding_csv = embedding_df.to_csv(
         index=False,
@@ -1306,6 +1346,17 @@ with tab6:
                     api_base_url=personal_api_base_url,
                     email=registered_email,
                     doc_id=doc_id,
+                    title=str(row.get("title", "") or doc_id),
+                    author=str(row.get("author", "") or ""),
+                    source=str(row.get("source", "") or "upload"),
+                    category=str(row.get("category", "") or ""),
+                    url=str(row.get("url", "") or row.get("source_url", "") or ""),
+                    source_url=str(row.get("source_url", "") or row.get("url", "") or ""),
+                    original_doc_id=str(row.get("original_doc_id", "") or doc_id),
+                    embedding=row.get("embedding", None),
+                    text=str(row.get("text", "") or ""),
+                    text_preview=str(row.get("text", "") or "")[:500],
+                    model_name=MODEL_NAME,
                     parameters=parameter_rows_from_embedding_row(row),
                     timeout_seconds=int(personal_api_timeout_seconds),
                 )

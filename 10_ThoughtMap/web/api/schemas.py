@@ -27,6 +27,18 @@ class SearchResponse(BaseModel):
 
 class SaveDocumentRequest(BaseModel):
     doc_id: str
+    title: str = ""
+    author: str = ""
+    source: str = ""
+    category: str = ""
+    url: str | None = None
+    source_url: str | None = None
+    original_doc_id: str = ""
+    embedding: Any | None = None
+    text: str = ""
+    text_preview: str = ""
+    model_name: str = ""
+    source_type: str = "upload"
     parameters: Any | None = None
 
 

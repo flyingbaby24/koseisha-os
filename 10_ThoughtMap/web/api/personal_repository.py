@@ -46,7 +46,7 @@ class PersonalRepository(Protocol):
     def save_document(
         self,
         email_hash: str,
-        row: pd.Series,
+        row: pd.Series | dict[str, object],
         saved_at: str,
         parameters: object | None,
     ) -> SaveDocumentResponse:
@@ -141,7 +141,7 @@ def row_text(row: pd.Series | dict[str, object], key: str, default: object = "")
 
 
 def build_saved_item(
-    row: pd.Series,
+    row: pd.Series | dict[str, object],
     saved_at: str,
     parameters: object | None,
 ) -> dict[str, object]:
@@ -149,7 +149,7 @@ def build_saved_item(
     source_url = row_text(row, "source_url", row_text(row, "url"))
     return {
         "doc_id": doc_id,
-        "original_doc_id": doc_id,
+        "original_doc_id": row_text(row, "original_doc_id", doc_id) or doc_id,
         "title": row_text(row, "title"),
         "author": row_text(row, "author"),
         "source": row_text(row, "source"),
@@ -174,7 +174,7 @@ class LocalFilePersonalRepository:
     def save_document(
         self,
         email_hash: str,
-        row: pd.Series,
+        row: pd.Series | dict[str, object],
         saved_at: str,
         parameters: object | None,
     ) -> SaveDocumentResponse:

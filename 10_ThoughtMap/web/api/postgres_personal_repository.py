@@ -95,7 +95,7 @@ class PostgresPersonalRepository:
     def save_document(
         self,
         email_hash: str,
-        row: pd.Series,
+        row: pd.Series | dict[str, object],
         saved_at: str,
         parameters: object | None,
     ) -> SaveDocumentResponse:

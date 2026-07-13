@@ -224,10 +224,32 @@ Request:
 ```json
 {
   "email": "user@example.com",
-  "doc_id": "gutendex:12345",
+  "doc_id": "upload_12345678_abcd0001_000000",
+  "title": "Uploaded Work",
+  "author": "Uploader",
+  "source": "upload",
+  "category": "",
+  "url": "",
+  "source_url": "",
+  "original_doc_id": "upload_12345678_abcd0001_000000",
+  "embedding": [0.1, 0.2, 0.3],
+  "source_type": "upload",
   "parameters": [
     { "key": "philosophy", "value": 42.0 }
   ]
+}
+```
+
+For uploaded or user-generated documents, clients must send the metadata to
+save. The server stores the submitted metadata as-is and does not look up the
+same `doc_id` in the official database.
+
+Official database lookup is allowed only when the request explicitly sets:
+
+```json
+{
+  "source_type": "official",
+  "doc_id": "gutendex:12345"
 }
 ```
 

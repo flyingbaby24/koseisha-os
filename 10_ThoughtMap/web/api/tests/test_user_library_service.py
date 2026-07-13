@@ -14,6 +14,7 @@ from api.user_library_service import UserLibraryService
 
 class FakeSearchRepository:
     def __init__(self) -> None:
+        self.load_count = 0
         self.frame = pd.DataFrame(
             [
                 {
@@ -36,6 +37,7 @@ class FakeSearchRepository:
         )
 
     def load_index(self) -> pd.DataFrame:
+        self.load_count += 1
         return self.frame
 
 
@@ -80,10 +82,10 @@ class InMemoryPersonalRepository:
         return DeleteSavedDocumentResponse(deleted=deleted, doc_id=doc_id)
 
 
-def make_service(personal_repository=None) -> UserLibraryService:
+def make_service(personal_repository=None, repository=None) -> UserLibraryService:
     return UserLibraryService(
         ApiSettings(),
-        repository=FakeSearchRepository(),
+        repository=repository or FakeSearchRepository(),
         personal_repository=personal_repository or InMemoryPersonalRepository(),
     )
 
@@ -181,6 +183,48 @@ class UserLibraryServiceTests(unittest.TestCase):
             logger.removeHandler(handler)
 
         self.assertNotIn("private@example.com", stream.getvalue())
+
+    def test_uploaded_document_metadata_is_not_replaced_by_official_db(self) -> None:
+        repository = FakeSearchRepository()
+        service = make_service(repository=repository)
+
+        service.save_document_by_email(
+            "user@example.com",
+            SaveDocumentRequest(
+                doc_id="doc:1",
+                title="Uploaded Original Title",
+                author="Uploader",
+                source="upload",
+                embedding="[0.9, 0.8]",
+            ),
+        )
+
+        saved = service.list_saved_by_email("user@example.com").items[0]
+        self.assertEqual(saved.title, "Uploaded Original Title")
+        self.assertEqual(saved.author, "Uploader")
+        self.assertEqual(saved.source, "upload")
+        self.assertEqual(repository.load_count, 0)
+
+    def test_official_source_type_uses_official_lookup(self) -> None:
+        repository = FakeSearchRepository()
+        service = make_service(repository=repository)
+
+        service.save_document_by_email(
+            "user@example.com",
+            SaveDocumentRequest(doc_id="doc:1", source_type="official"),
+        )
+
+        saved = service.list_saved_by_email("user@example.com").items[0]
+        self.assertEqual(saved.title, "First Work")
+        self.assertEqual(repository.load_count, 1)
+
+    def test_upload_doc_ids_are_unique_for_ten_documents(self) -> None:
+        upload_session_id = "upload_12345678_deadbeef"
+        doc_ids = [f"{upload_session_id}_{i:06d}" for i in range(10)]
+
+        self.assertEqual(len(doc_ids), 10)
+        self.assertEqual(len(set(doc_ids)), 10)
+        self.assertTrue(all(not doc_id.startswith("doc_") for doc_id in doc_ids))
 
 
 if __name__ == "__main__":

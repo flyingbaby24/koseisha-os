@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import logging
 import time
+import json
 
 import pandas as pd
 
@@ -63,9 +64,15 @@ class UserLibraryService:
         if not doc_id:
             raise ValueError("doc_id is required")
 
-        logger.info("Personal service official lookup started doc_id=%s", doc_id)
-        row = self._find_source_row(doc_id)
-        logger.info("Personal service official lookup finished doc_id=%s elapsed=%.3fs", doc_id, time.perf_counter() - started)
+        if self._should_use_official_lookup(request):
+            lookup_doc_id = str(request.original_doc_id or request.doc_id or "").strip()
+            logger.info("Personal service official lookup started doc_id=%s", lookup_doc_id)
+            row = self._find_source_row(lookup_doc_id)
+            logger.info("Personal service official lookup finished doc_id=%s elapsed=%.3fs", lookup_doc_id, time.perf_counter() - started)
+        else:
+            row = self._build_request_row(request)
+            logger.info("Personal service using request metadata doc_id=%s", doc_id)
+
         saved_at = datetime.now(timezone.utc).isoformat()
         logger.info("Personal service repository save started doc_id=%s", doc_id)
         response = self.personal_repository.save_document(
@@ -82,6 +89,40 @@ class UserLibraryService:
             time.perf_counter() - started,
         )
         return response
+
+    def _should_use_official_lookup(self, request: SaveDocumentRequest) -> bool:
+        source_type = str(getattr(request, "source_type", "") or "").strip().lower()
+        return source_type == "official"
+
+    def _build_request_row(self, request: SaveDocumentRequest) -> dict[str, object]:
+        doc_id = str(request.doc_id or "").strip()
+        source_url = str(request.source_url or request.url or "").strip()
+        return {
+            "doc_id": doc_id,
+            "original_doc_id": str(request.original_doc_id or doc_id).strip(),
+            "title": str(request.title or doc_id).strip(),
+            "author": str(request.author or "").strip(),
+            "source": str(request.source or "upload").strip(),
+            "category": str(request.category or "").strip(),
+            "url": source_url,
+            "source_url": source_url,
+            "embedding": self._embedding_to_json(request.embedding),
+            "model_name": str(request.model_name or "").strip(),
+            "text": str(request.text or "").strip(),
+            "text_preview": str(request.text_preview or "").strip(),
+        }
+
+    def _embedding_to_json(self, embedding: object | None) -> str:
+        if embedding is None:
+            return ""
+        if isinstance(embedding, str):
+            return embedding
+        if hasattr(embedding, "tolist"):
+            embedding = embedding.tolist()
+        try:
+            return json.dumps(embedding, ensure_ascii=False)
+        except TypeError:
+            return ""
 
     def list_saved_by_email(self, email: str) -> SavedDocumentsResponse:
         return self.personal_repository.list_saved(email_hash_for(email))
