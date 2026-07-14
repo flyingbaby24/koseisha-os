@@ -4,12 +4,17 @@ toggle?.addEventListener('click',()=>{const open=nav.classList.toggle('open');to
 
 const slides=[...document.querySelectorAll('.hero-slide')],tabs=[...document.querySelectorAll('[data-slide]')],pause=document.querySelector('.slide-pause');let current=0,paused=false,timer;function showSlide(index){current=(index+slides.length)%slides.length;slides.forEach((slide,i)=>{const active=i===current;slide.classList.toggle('active',active);slide.setAttribute('aria-hidden',String(!active))});tabs.forEach((tab,i)=>{tab.classList.toggle('active',i===current);tab.setAttribute('aria-selected',String(i===current))})}function autoplay(){clearInterval(timer);if(!paused&&!matchMedia('(prefers-reduced-motion: reduce)').matches)timer=setInterval(()=>showSlide(current+1),6500)}tabs.forEach(tab=>tab.addEventListener('click',()=>{showSlide(Number(tab.dataset.slide));autoplay()}));pause?.addEventListener('click',()=>{paused=!paused;pause.textContent=paused?'▶':'Ⅱ';pause.setAttribute('aria-label',paused?'Play slideshow':'Pause slideshow');autoplay()});autoplay();
 
-const development=[
- {date:'2026.07.13',type:'SOURCE OF THOUGHT',title:'Making Every Grid Position Matter',href:'research/source-of-thought/devblog/articles/resonance-and-formation.html'},
- {date:'2026.07.12',type:'SOURCE OF THOUGHT',title:'Skills Generated from Meaning',href:'research/source-of-thought/devblog/articles/generated-skills.html'},
- {date:'2026.07.10',type:'THOUGHTMAP',title:'Growing the Semantic Research Database',href:'https://github.com/flyingbaby24/koseisha-os/tree/main/10_ThoughtMap'},
- {date:'2026.07.06',type:'RESEARCH',title:'Why Build a Game from Thought?',href:'research/source-of-thought/devblog/articles/why-thought-becomes-a-game.html'}
-];const latest=document.querySelector('#latest-development');if(latest)latest.innerHTML=development.map(item=>`<a class="development-item" href="${item.href}"><time>${item.date}</time><span>${item.type}</span><h3>${item.title}</h3><b>READ →</b></a>`).join('');
+const isJapanese=document.documentElement.lang==='ja';const development=isJapanese?[
+ {date:'2026.07.14',type:'SOURCE OF THOUGHT',title:'作品の意味を失わないSkill Generation',href:'research/source-of-thought/devblog/articles/skill-generation-pipeline-ja.html'},
+ {date:'2026.07.13',type:'SOURCE OF THOUGHT',title:'Hate System：配置をターゲット優先度へ変える',href:'research/source-of-thought/devblog/articles/hate-targeting-system-ja.html'},
+ {date:'2026.07.12',type:'SOURCE OF THOUGHT',title:'Resonance：隣接する思想に意味を持たせる',href:'research/source-of-thought/devblog/articles/resonance-system-ja.html'},
+ {date:'2026.07.06',type:'SOURCE OF THOUGHT',title:'なぜ思想からゲームを作るのか',href:'research/source-of-thought/devblog/articles/why-build-a-game-from-thought-ja.html'}
+]:[
+ {date:'2026.07.14',type:'SOURCE OF THOUGHT',title:'Skill Generation Without Losing the Source Work',href:'research/source-of-thought/devblog/articles/skill-generation-pipeline.html'},
+ {date:'2026.07.13',type:'SOURCE OF THOUGHT',title:'Hate System: Turning Formation into Target Priority',href:'research/source-of-thought/devblog/articles/hate-targeting-system.html'},
+ {date:'2026.07.12',type:'SOURCE OF THOUGHT',title:'Resonance: Making Adjacent Ideas Matter',href:'research/source-of-thought/devblog/articles/resonance-system.html'},
+ {date:'2026.07.06',type:'SOURCE OF THOUGHT',title:'Why Build a Game from Thought?',href:'research/source-of-thought/devblog/articles/why-build-a-game-from-thought.html'}
+];const latest=document.querySelector('#latest-development');if(latest)latest.innerHTML=development.map(item=>`<a class="development-item" href="${item.href}"><time>${item.date}</time><span>${item.type}</span><h3>${item.title}</h3><b>${isJapanese?'読む':'READ'} →</b></a>`).join('');
 
 const revealObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('visible');revealObserver.unobserve(entry.target)}}),{threshold:.12});document.querySelectorAll('.reveal').forEach(el=>revealObserver.observe(el));
 const counterObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(!entry.isIntersecting)return;const el=entry.target,end=Number(el.dataset.counter),suffix=el.dataset.suffix||'',start=performance.now(),duration=1200;function tick(now){const progress=Math.min((now-start)/duration,1),value=Math.floor(end*(1-Math.pow(1-progress,3)));el.textContent=value.toLocaleString()+suffix;if(progress<1)requestAnimationFrame(tick)}requestAnimationFrame(tick);counterObserver.unobserve(el)}),{threshold:.5});document.querySelectorAll('[data-counter]').forEach(el=>counterObserver.observe(el));

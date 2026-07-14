@@ -184,6 +184,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
         cjkFontAsset = resolved;
         ThoughtMapTmpFontResolver.ApplyToChildren(gameObject, resolved);
+        Debug.Log($"[SourceOfThought Font] BattlePrep resolved FontAsset='{resolved.name}' runtimeGenerationAttempted={ThoughtMapTmpFontResolver.RuntimeGenerationAttempted}", this);
         if (cardDetailPanel != null)
         {
             cardDetailPanel.SetFontAsset(resolved);
@@ -261,8 +262,17 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
     private void ApplyPersonalLibraryResponse(PersonalLibraryResponse response)
     {
-        SavedDocument[] works = response == null ? new SavedDocument[0] : response.WorksOrItems;
-        Debug.Log($"[Personal Load Response] API response count={works.Length}. Clearing existing card caches before redraw.", this);
+        if (response == null)
+        {
+            WriteStatus("Personal Library JSON parse failure: response object is null.");
+            Debug.LogError("[Personal Load Response] JSON parse failure: response object is null.", this);
+            return;
+        }
+
+        SavedDocument[] works = response.WorksOrItems;
+        bool worksPropertyNull = response.works == null;
+        bool itemsPropertyNull = response.items == null;
+        Debug.Log($"[Personal Load Response] API response count={works.Length}. works_null={worksPropertyNull} items_null={itemsPropertyNull} parse_status='{response.parse_status}'. Clearing existing card caches before redraw.", this);
 
         loadedCards.Clear();
         deckCards.Clear();
@@ -311,9 +321,17 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
         RenderAll();
         RenderGeneratedSkills();
-        WriteStatus(personalCards.Count == 0
-            ? "Personal Library is empty."
-            : $"Loaded {personalCards.Count} Personal Library cards.");
+        if (personalCards.Count == 0)
+        {
+            string status = string.Equals(response.parse_status, "actual_empty", System.StringComparison.OrdinalIgnoreCase)
+                ? "Personal Library is actually empty."
+                : $"Personal Library returned {works.Length} works, but 0 cards were converted. Check Console logs.";
+            WriteStatus(status);
+        }
+        else
+        {
+            WriteStatus($"Loaded {personalCards.Count} Personal Library cards.");
+        }
     }
 
     private void LogPersonalCardConversion(ThoughtMapBattleCardData card)
@@ -446,7 +464,9 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
     private void HandlePersonalLibraryError(string message)
     {
-        WriteStatus("Could not load Personal Library. " + ShortStatusText(message, "API request failed."));
+        string reason = string.IsNullOrWhiteSpace(message) ? "HTTP failure or JSON parse failure." : message;
+        WriteStatus("Could not load Personal Library. " + ShortStatusText(reason, "HTTP failure or JSON parse failure."));
+        Debug.LogWarning("[Personal Load Error] " + reason, this);
         if (fallbackToSampleCardsOnApiError && loadedCards.Count == 0)
         {
             LoadCards();

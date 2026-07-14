@@ -31,14 +31,19 @@ public class ThoughtMapPersonalLibraryApiClient : MonoBehaviour
         }
 
         string url = $"{BaseUrl}/users/by-email/saved?email={UnityWebRequest.EscapeURL(email.Trim())}";
+        Debug.Log($"[PersonalLibraryApi] Request URL={url}", this);
+        Debug.Log($"[PersonalLibraryApi] Request email={email.Trim()}", this);
         using (UnityWebRequest request = UnityWebRequest.Get(url))
         {
             request.timeout = Mathf.Max(1, timeoutSeconds);
             yield return request.SendWebRequest();
+            int statusCode = (int)request.responseCode;
+            Debug.Log($"[PersonalLibraryApi] HTTP status code={statusCode}", this);
 
             if (request.result != UnityWebRequest.Result.Success)
             {
                 string body = request.downloadHandler == null ? "" : request.downloadHandler.text;
+                Debug.LogWarning($"[PersonalLibraryApi] HTTP failure status={statusCode} body_preview={ShortPreview(body, 2000)}", this);
                 onError?.Invoke(string.IsNullOrWhiteSpace(body) ? request.error : body);
                 yield break;
             }
@@ -46,23 +51,28 @@ public class ThoughtMapPersonalLibraryApiClient : MonoBehaviour
             string json = request.downloadHandler == null ? "" : request.downloadHandler.text;
             if (string.IsNullOrWhiteSpace(json))
             {
-                Debug.Log("[PersonalLibraryApi] Raw response was empty. DTO works=0.", this);
-                onSuccess?.Invoke(new PersonalLibraryResponse { works = new SavedDocument[0] });
+                Debug.LogWarning("[PersonalLibraryApi] Raw response was empty. actual empty response.", this);
+                onSuccess?.Invoke(new PersonalLibraryResponse { works = new SavedDocument[0], parse_status = "actual_empty" });
                 yield break;
             }
 
             try
             {
                 Debug.Log(
-                    "[PersonalLibraryApi] Raw response length=" + json.Length +
-                    " firstWork=" + PreviewFirstWorkObject(json),
+                    "[PersonalLibraryApi] Raw response length=" + json.Length + 
+                    " raw preview=" + ShortPreview(json, 2000),
                     this
                 );
+                Debug.Log("[PersonalLibraryApi] Raw firstWork=" + PreviewFirstWorkObject(json), this);
 
                 if (json.TrimStart().StartsWith("[", StringComparison.Ordinal))
                 {
                     json = "{\"works\":" + json + "}";
                 }
+
+                int rawWorksCount = CountArrayItems(json, "works");
+                int rawItemsCount = CountArrayItems(json, "items");
+                Debug.Log($"[PersonalLibraryApi] JSON works count={FormatJsonCount(rawWorksCount)} items count={FormatJsonCount(rawItemsCount)}", this);
 
                 json = NormalizeParameterObjects(json);
                 Debug.Log(
@@ -70,14 +80,15 @@ public class ThoughtMapPersonalLibraryApiClient : MonoBehaviour
                     this
                 );
 
-                PersonalLibraryResponse response = JsonUtility.FromJson<PersonalLibraryResponse>(json);
+                PersonalLibraryResponse response = ParsePersonalLibraryResponse(json, rawWorksCount, rawItemsCount);
                 if (response == null)
                 {
-                    response = new PersonalLibraryResponse { works = new SavedDocument[0] };
+                    onError?.Invoke("JSON parse failure: Personal Library response could not be converted.");
+                    yield break;
                 }
 
                 SavedDocument[] works = response.WorksOrItems;
-                Debug.Log($"[PersonalLibraryApi] DTO works={works.Length}.", this);
+                Debug.Log($"[PersonalLibraryApi] DTO works null={response.works == null} items null={response.items == null} DTO works count={works.Length} parse_status={response.parse_status}.", this);
                 for (int i = 0; i < works.Length; i++)
                 {
                     SavedDocument item = works[i];
@@ -91,9 +102,101 @@ public class ThoughtMapPersonalLibraryApiClient : MonoBehaviour
             }
             catch (Exception ex)
             {
-                onError?.Invoke("Could not parse Personal Library response: " + ex.Message);
+                Debug.LogError($"[PersonalLibraryApi] DTO parse exception {ex.GetType().Name}: {ex.Message}", this);
+                onError?.Invoke("JSON parse failure: " + ex.Message);
             }
         }
+    }
+
+    private static PersonalLibraryResponse ParsePersonalLibraryResponse(string normalizedJson, int rawWorksCount, int rawItemsCount)
+    {
+        PersonalLibraryResponse response = null;
+        Exception wholeParseException = null;
+        try
+        {
+            response = JsonUtility.FromJson<PersonalLibraryResponse>(normalizedJson);
+        }
+        catch (Exception ex)
+        {
+            wholeParseException = ex;
+        }
+
+        SavedDocument[] wholeWorks = response == null ? null : response.WorksOrItems;
+        if (wholeWorks != null && wholeWorks.Length > 0)
+        {
+            response.parse_status = "whole_response";
+            return response;
+        }
+
+        if (wholeParseException != null)
+        {
+            Debug.LogWarning("[PersonalLibraryApi] Whole response JsonUtility parse failed. Trying per-work parse. " + wholeParseException.GetType().Name + ": " + wholeParseException.Message);
+        }
+        else
+        {
+            Debug.LogWarning($"[PersonalLibraryApi] Whole response parse produced zero works. Trying per-work parse. rawWorks={FormatJsonCount(rawWorksCount)} rawItems={FormatJsonCount(rawItemsCount)}");
+        }
+
+        string arrayName = rawWorksCount >= 0 ? "works" : rawItemsCount >= 0 ? "items" : "";
+        string[] objects = string.IsNullOrWhiteSpace(arrayName)
+            ? new string[0]
+            : ExtractArrayObjects(normalizedJson, arrayName);
+
+        SavedDocument[] parsed = ParseWorkObjects(objects);
+        if (parsed.Length > 0)
+        {
+            return new PersonalLibraryResponse
+            {
+                works = parsed,
+                parse_status = "per_work"
+            };
+        }
+
+        int rawCount = rawWorksCount >= 0 ? rawWorksCount : rawItemsCount;
+        if (rawCount > 0)
+        {
+            Debug.LogError($"[PersonalLibraryApi] JSON parse failure. Raw {arrayName} count={rawCount}, but DTO count=0.");
+            return null;
+        }
+
+        return new PersonalLibraryResponse
+        {
+            works = new SavedDocument[0],
+            parse_status = "actual_empty"
+        };
+    }
+
+    private static SavedDocument[] ParseWorkObjects(string[] objects)
+    {
+        if (objects == null || objects.Length == 0)
+        {
+            return new SavedDocument[0];
+        }
+
+        System.Collections.Generic.List<SavedDocument> parsed = new System.Collections.Generic.List<SavedDocument>();
+        for (int i = 0; i < objects.Length; i++)
+        {
+            string wrapper = "{\"works\":[" + NormalizeParameterObjects(objects[i]) + "]}";
+            try
+            {
+                PersonalLibraryResponse one = JsonUtility.FromJson<PersonalLibraryResponse>(wrapper);
+                SavedDocument[] items = one == null ? null : one.WorksOrItems;
+                if (items != null && items.Length > 0 && items[0] != null)
+                {
+                    parsed.Add(items[0]);
+                }
+                else
+                {
+                    Debug.LogWarning($"[PersonalLibraryApi] Per-work parse returned no item at index={i} object_preview={ShortPreview(objects[i], 600)}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[PersonalLibraryApi] Per-work parse failed index={i} {ex.GetType().Name}: {ex.Message} object_preview={ShortPreview(objects[i], 600)}");
+            }
+        }
+
+        return parsed.ToArray();
     }
 
     private static string NormalizeParameterObjects(string json)
@@ -193,6 +296,11 @@ public class ThoughtMapPersonalLibraryApiClient : MonoBehaviour
 
     private static string ShortPreview(string value)
     {
+        return ShortPreview(value, 1200);
+    }
+
+    private static string ShortPreview(string value, int maxLength)
+    {
         if (string.IsNullOrEmpty(value))
         {
             return "<empty>";
@@ -203,7 +311,133 @@ public class ThoughtMapPersonalLibraryApiClient : MonoBehaviour
             .Replace("\\n", " ")
             .Replace("\r", " ")
             .Replace("\n", " ");
-        return preview.Length > 1200 ? preview.Substring(0, 1200) + "..." : preview;
+        return preview.Length > maxLength ? preview.Substring(0, maxLength) + "..." : preview;
+    }
+
+    private static string FormatJsonCount(int count)
+    {
+        return count < 0 ? "null" : count.ToString(CultureInfo.InvariantCulture);
+    }
+
+    private static int CountArrayItems(string json, string propertyName)
+    {
+        string[] objects = ExtractArrayObjects(json, propertyName);
+        return objects == null ? -1 : objects.Length;
+    }
+
+    private static string[] ExtractArrayObjects(string json, string propertyName)
+    {
+        if (string.IsNullOrWhiteSpace(json) || string.IsNullOrWhiteSpace(propertyName))
+        {
+            return null;
+        }
+
+        int propertyIndex = json.IndexOf("\"" + propertyName + "\"", StringComparison.Ordinal);
+        if (propertyIndex < 0)
+        {
+            return null;
+        }
+
+        int colonIndex = json.IndexOf(':', propertyIndex);
+        if (colonIndex < 0)
+        {
+            return null;
+        }
+
+        int arrayStart = colonIndex + 1;
+        while (arrayStart < json.Length && char.IsWhiteSpace(json[arrayStart]))
+        {
+            arrayStart++;
+        }
+
+        if (arrayStart >= json.Length || json[arrayStart] != '[')
+        {
+            return null;
+        }
+
+        if (!TryFindArrayEnd(json, arrayStart, out int arrayEnd))
+        {
+            return null;
+        }
+
+        System.Collections.Generic.List<string> objects = new System.Collections.Generic.List<string>();
+        int cursor = arrayStart + 1;
+        while (cursor < arrayEnd)
+        {
+            while (cursor < arrayEnd && (char.IsWhiteSpace(json[cursor]) || json[cursor] == ','))
+            {
+                cursor++;
+            }
+
+            if (cursor >= arrayEnd)
+            {
+                break;
+            }
+
+            if (json[cursor] != '{')
+            {
+                cursor++;
+                continue;
+            }
+
+            if (!TryFindObjectEnd(json, cursor, out int objectEnd))
+            {
+                break;
+            }
+
+            objects.Add(json.Substring(cursor, objectEnd - cursor + 1));
+            cursor = objectEnd + 1;
+        }
+
+        return objects.ToArray();
+    }
+
+    private static bool TryFindArrayEnd(string json, int arrayStart, out int arrayEnd)
+    {
+        bool inString = false;
+        bool escaped = false;
+        int depth = 0;
+        for (int i = arrayStart; i < json.Length; i++)
+        {
+            char ch = json[i];
+            if (inString)
+            {
+                if (escaped)
+                {
+                    escaped = false;
+                }
+                else if (ch == '\\')
+                {
+                    escaped = true;
+                }
+                else if (ch == '"')
+                {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (ch == '"')
+            {
+                inString = true;
+            }
+            else if (ch == '[')
+            {
+                depth++;
+            }
+            else if (ch == ']')
+            {
+                depth--;
+                if (depth == 0)
+                {
+                    arrayEnd = i;
+                    return true;
+                }
+            }
+        }
+
+        arrayEnd = -1;
+        return false;
     }
 
     private static int CountParameters(SavedDocument document)

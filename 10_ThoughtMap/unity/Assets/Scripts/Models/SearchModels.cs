@@ -101,6 +101,7 @@ public class PersonalLibraryResponse
 {
     public SavedDocument[] works;
     public SavedDocument[] items;
+    public string parse_status;
 
     public SavedDocument[] WorksOrItems
     {

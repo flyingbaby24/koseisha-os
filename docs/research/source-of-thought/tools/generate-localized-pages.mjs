@@ -51,6 +51,8 @@ function cleanGenerated(html){
   html=html.replace(/<link rel="canonical"[\s\S]*?<meta name="twitter:description" content="[^"]*">/,"");
   html=html.replace(/<div class="language-switch"[\s\S]*?<\/div>/,"");
   html=html.replace(/<script src="[^\"]*i18n\/routes\.js"><\/script>/,"");
+  html=html.replace(/<link rel="stylesheet" href="[^\"]*i18n\/language-switch\.css">/,"");
+  html=html.replace(/<script src="[^\"]*i18n\/language-switch\.js"><\/script>/,"");
   return html;
 }
 function seo(html,rel,lang,title,desc,pair){
@@ -63,11 +65,12 @@ function seo(html,rel,lang,title,desc,pair){
   return html;
 }
 function controls(html,current,pair,depth){
-  const prefix="../".repeat(depth),script=`${prefix}i18n/routes.js`;
+  const shared="../".repeat(depth+2)+"i18n/";
   const en=current.endsWith("-ja.html")?pair:current,ja=current.endsWith("-ja.html")?current:pair;
   const switcher=`<div class="language-switch" aria-label="Language"><span aria-hidden="true">🌐</span><a lang="en" hreflang="en" href="${path.basename(en)}"${current===en?' aria-current="true"':''}>EN</a><span aria-hidden="true">|</span><a lang="ja" hreflang="ja" href="${path.basename(ja)}"${current===ja?' aria-current="true"':''}>JP</a></div>`;
   html=html.replace("</header>",switcher+"</header>");
-  html=html.replace(/<script src="([^"]*script\.js)"><\/script>/,`<script src="${script}"></script><script src="$1"></script>`);
+  html=html.replace("</head>",`<link rel="stylesheet" href="${shared}language-switch.css"></head>`);
+  html=html.replace(/<script src="([^"]*script\.js)"><\/script>/,`<script src="${shared}language-switch.js"></script><script src="$1"></script>`);
   return html;
 }
 
@@ -87,6 +90,6 @@ for(const page of pages){
 }
 
 const urls=pages.flatMap(p=>[p.src,p.ja]);
-const sitemap=`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${pages.map(p=>`  <url><loc>${origin+p.src}</loc><xhtml:link rel="alternate" hreflang="en" href="${origin+p.src}"/><xhtml:link rel="alternate" hreflang="ja" href="${origin+p.ja}"/></url>\n  <url><loc>${origin+p.ja}</loc><xhtml:link rel="alternate" hreflang="en" href="${origin+p.src}"/><xhtml:link rel="alternate" hreflang="ja" href="${origin+p.ja}"/></url>`).join("\n")}\n</urlset>\n`;
+const sitemap=`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n  <url><loc>https://www.jinn-project.com/index.html</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.jinn-project.com/index.html"/><xhtml:link rel="alternate" hreflang="ja" href="https://www.jinn-project.com/index-ja.html"/></url>\n  <url><loc>https://www.jinn-project.com/index-ja.html</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.jinn-project.com/index.html"/><xhtml:link rel="alternate" hreflang="ja" href="https://www.jinn-project.com/index-ja.html"/></url>\n${pages.map(p=>`  <url><loc>${origin+p.src}</loc><xhtml:link rel="alternate" hreflang="en" href="${origin+p.src}"/><xhtml:link rel="alternate" hreflang="ja" href="${origin+p.ja}"/></url>\n  <url><loc>${origin+p.ja}</loc><xhtml:link rel="alternate" hreflang="en" href="${origin+p.src}"/><xhtml:link rel="alternate" hreflang="ja" href="${origin+p.ja}"/></url>`).join("\n")}\n</urlset>\n`;
 fs.writeFileSync(path.resolve(root,"../../sitemap.xml"),sitemap);
 console.log(`Generated ${urls.length} localized pages and sitemap.xml`);

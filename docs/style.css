@@ -14,3 +14,5 @@ footer{padding:80px max(5vw,24px) 28px;border-top:1px solid var(--line);backgrou
 .stats{grid-template-columns:repeat(5,1fr)}
 @media(max-width:1000px){.stats{grid-template-columns:repeat(3,1fr)}.stats div:nth-child(2){border-right:1px solid var(--line)}.stats div:nth-child(3){border-right:0}}
 @media(max-width:780px){.stats{grid-template-columns:1fr}.stats div:nth-child(2){border-right:0}}
+.lang-ja,.lang-ja button{font-family:Inter,"Noto Sans JP","Yu Gothic UI","Hiragino Kaku Gothic ProN",Meiryo,sans-serif}.lang-ja .hero-copy h1,.lang-ja .section-head h2{letter-spacing:-.035em;line-height:1.14}.lang-ja .hero-copy>p:not(.eyebrow),.lang-ja .section-head>p,.lang-ja .research-card p,.lang-ja .project-card p{line-height:1.85}.lang-ja .site-nav a{letter-spacing:.05em}
+@media(max-width:1000px){.site-header .language-switch{margin-right:10px}.site-nav{gap:14px}}

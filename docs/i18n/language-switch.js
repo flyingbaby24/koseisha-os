@@ -1,0 +1,1 @@
+document.querySelectorAll('.language-switch a').forEach(link=>link.addEventListener('click',event=>{const target=new URL(link.href,location.href);target.hash=location.hash;if(target.href!==link.href){event.preventDefault();location.href=target.href}}));
