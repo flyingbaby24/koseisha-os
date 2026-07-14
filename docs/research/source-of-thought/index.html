@@ -1,72 +1,66 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>36 Stratagems Cognitive Bias Atlas | Jinn Project</title>
-  <meta name="description" content="A cognitive bias reinterpretation of the Thirty-Six Stratagems through behavioral economics and modern decision theory." />
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Source of Thought is a strategy card game where works of human thought become playable cards.">
+  <title>Source of Thought — Ideas Become Cards</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
-    <a class="brand" href="../../"><span class="mark">品</span><span>Jinn Project</span></a>
-    <nav><a href="#concept" data-i18n="navConcept">Concept</a><a href="#atlas" data-i18n="navAtlas">Atlas</a><a href="#categories" data-i18n="navCategories">Categories</a><a href="#notes" data-i18n="navNotes">Notes</a></nav>
-    <div class="language-switcher" role="group" aria-label="Language">
-      <button id="languageJa" class="language-button" type="button" data-language="ja" aria-pressed="false">JA</button>
-      <button id="languageEn" class="language-button" type="button" data-language="en" aria-pressed="false">EN</button>
-    </div>
+    <a class="brand" href="index.html"><span class="brand-mark">S/T</span><span>SOURCE OF THOUGHT<small>IN DEVELOPMENT</small></span></a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">MENU</button>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="#game">Game</a><a href="#systems">Systems</a><a href="devblog/index.html">Dev Blog</a><a href="roadmap.html">Roadmap</a><a href="changelog.html">Changelog</a>
+    </nav>
   </header>
-  <main>
-    <section class="hero">
-      <p class="eyebrow" data-i18n="heroEyebrow">Ancient Strategy / Cognitive Science / Behavioral Economics</p>
-      <h1 data-i18n-html="heroTitle">36 Stratagems<br><span>Cognitive Bias Atlas</span></h1>
-      <p class="lead" data-i18n="heroLead">三十六計を「兵法」だけでなく、人間の判断ミス・認知バイアス・行動経済学の実践的ケーススタディとして読み直す実験的マップ。</p>
-      <div class="hero-actions"><a class="button primary" href="#atlas" data-i18n="openAtlas">Open Atlas</a><a class="button secondary" href="#categories" data-i18n="viewCategories">View Categories</a></div>
-    </section>
-    <section id="concept" class="panel concept"><div><p class="eyebrow" data-i18n="conceptEyebrow">Concept</p><h2 data-i18n="conceptTitle">兵法は、認知仕様書としても読める。</h2></div><p data-i18n="conceptBody">三十六計は、敵を欺くための戦略集として知られる。しかしそれぞれの計略が成立する理由を分解すると、「人は何を信じやすいのか」「どこで判断を誤るのか」「どの条件で注意が逸れるのか」という認知パターンが見えてくる。このページは、古代兵法を現代の認知科学・行動経済学の言葉で再配置する試みである。</p></section>
-    <section class="stats"><div><strong>36</strong><span data-i18n="stratagems">計略</span></div><div><strong id="categoryCount">0</strong><span data-i18n="categories">認知カテゴリ</span></div><div><strong>1</strong><span data-i18n="humanFirmware">Human Firmware</span></div></section>
-    <section id="categories" class="section"><p class="eyebrow" data-i18n="categories">認知カテゴリ</p><h2 data-i18n="categoriesTitle">36個の計略を、認知原理として再分類する。</h2><div id="categoryCards" class="category-grid"></div></section>
-    <section id="atlas" class="section atlas-section">
-      <p class="eyebrow" data-i18n="atlasEyebrow">Interactive Atlas</p>
-      <h2 data-i18n="atlasTitle">Search / Filter / Compare</h2>
-      <div class="toolbar">
-        <input id="search" type="search" placeholder="計略・概念・バイアスを検索" />
-        <select id="category"><option value="all">All Categories</option></select>
-        <div class="view-toggle" role="group" aria-label="Atlas view">
-          <button id="treeViewButton" class="toggle-button active" type="button">認知体系ツリー</button>
-          <button id="listViewButton" class="toggle-button" type="button">三十六計一覧</button>
-        </div>
-      </div>
-      <div class="stratagem-workspace">
-        <aside class="stratagem-navigation" aria-label="Stratagem navigation">
-          <div id="cards" class="stratagem-list"></div>
-        </aside>
-        <section id="detailPane" class="stratagem-detail-pane" aria-live="polite"></section>
-      </div>
-      <div id="mobileDetailDrawer" class="mobile-detail-drawer" aria-hidden="true">
-        <div class="mobile-detail-scrim" data-close-detail></div>
-        <article class="mobile-detail-panel" role="dialog" aria-modal="true" aria-labelledby="mobileDetailTitle">
-          <div class="mobile-detail-bar">
-            <button id="closeDetailButton" class="drawer-close" type="button">← 一覧へ戻る</button>
-            <span id="mobileDetailNumber" class="drawer-number">#01</span>
-          </div>
-          <div id="mobileDetailContent" class="mobile-detail-content"></div>
-        </article>
-      </div>
-    </section>
-    <section id="notes" class="panel notes"><p class="eyebrow" data-i18n="notesEyebrow">Research Note</p><h2 data-i18n="notesTitle">これは歴史的断定ではなく、現代的な再解釈である。</h2><p data-i18n="notesBody">この対応表は「三十六計が当時から認知科学として作られた」と主張するものではない。あくまで、現代の認知科学・行動経済学・情報設計の視点から読むと、古典兵法が人間の認知バイアスの実践例集としても見える、という仮説的マッピングである。</p></section>
-  </main>
-  <footer><span>© Jinn Project</span><span>Visualizing hidden structures in thought and behavior.</span></footer>
-  <script src="stratagems-en.js"></script>
-  <script src="i18n.js"></script>
-  <script src="stratagems.js"></script>
 
-  <!-- Cloudflare Web Analytics -->
-<script defer
-src="https://static.cloudflareinsights.com/beacon.min.js"
-data-cf-beacon='{"token":"7da53f8ef3544cf0967279ebd140ff89"}'>
-</script>
-<!-- End Cloudflare Web Analytics -->
-  
+  <main id="main">
+    <section class="hero">
+      <div class="hero-grid"></div>
+      <div class="hero-copy">
+        <p class="eyebrow">A STRATEGY CARD GAME BUILT FROM HUMAN THOUGHT</p>
+        <h1>IDEAS<br><span>BECOME CARDS.</span></h1>
+        <p class="hero-lead">Collect literature, philosophy, science, and history. Build a deck from the works that shaped humanity—and place them on a battlefield where ideas resonate, conflict, and evolve.</p>
+        <div class="actions"><a class="button primary" href="#game">Explore the game</a><a class="button" href="devblog/index.html">Read development log</a></div>
+        <dl class="status-strip"><div><dt>Status</dt><dd><i></i>Active Development</dd></div><div><dt>Platform</dt><dd>PC / Steam planned</dd></div><div><dt>Developer</dt><dd>Jinn Project</dd></div></dl>
+      </div>
+      <div class="hero-card" aria-label="Concept card preview">
+        <div class="card-top"><span>THOUGHT / 001</span><span class="rarity">ORIGIN</span></div>
+        <div class="card-art"><div class="orb"></div><span>CONCEPTUAL RESONANCE</span></div>
+        <div class="card-body"><p class="card-type">PHILOSOPHY · MIND</p><h2>THE REPUBLIC</h2><p>Ideas gain force through their relationship to adjacent works.</p><div class="stats"><span>ATK <b>72</b></span><span>DEF <b>64</b></span><span>SP <b>81</b></span></div></div>
+      </div>
+    </section>
+
+    <section class="section intro" id="game">
+      <div><p class="eyebrow">THE PREMISE</p><h2>Build a deck from<br>the history of ideas.</h2></div>
+      <div><p>Source of Thought turns works—not heroes or monsters—into playable cards. A book, theory, discovery, or philosophy receives a distinct thought profile through ThoughtMap.</p><p>Your deck is more than a stack of strong cards. It is a composition of ideas. Their position, affinity, and conceptual distance determine how they act together.</p></div>
+    </section>
+
+    <section class="section" id="systems">
+      <div class="section-heading"><div><p class="eyebrow">CORE SYSTEMS</p><h2>Strategy before spectacle.</h2></div><p>Every system asks the same question: what changes when thought becomes playable?</p></div>
+      <div class="feature-grid">
+        <article class="feature featured"><span class="number">01</span><p class="eyebrow">BATTLE SYSTEM</p><h3>5 × 5 formation combat</h3><p>Deploy five cards from a ten-card deck. Front and back rows change attack, defense, and target priority. Adjacent works create resonance bonuses or penalties.</p><ul><li>5 vs 5 auto battle</li><li>Position-based hate and defense</li><li>Mind / Human / System affinities</li></ul><div class="mini-grid" aria-hidden="true">● ● · · ·<br>· ◎ ● · ·<br>· · · · ·<br>· · · · ·<br>· · · · ·</div></article>
+        <article class="feature"><span class="number">02</span><p class="eyebrow">CARD SYSTEM</p><h3>One work. One card.</h3><p>Ten parameters translate each work into combat stats. Generated skills reflect the concepts contained within the source instead of relying on fixed character classes.</p><div class="chip-row"><span>PHILOSOPHY</span><span>SCIENCE</span><span>EMOTION</span></div></article>
+        <article class="feature"><span class="number">03</span><p class="eyebrow">THOUGHTMAP INTEGRATION</p><h3>A research engine beneath the game.</h3><p>Semantic embeddings locate works within a shared space of ideas. Search, collect, compare, then bring saved works into Battle Prep.</p><a class="text-link" href="devblog/articles/why-thought-becomes-a-game.html">How the systems connect <span>→</span></a></article>
+        <article class="feature"><span class="number">04</span><p class="eyebrow">AI DEVELOPMENT</p><h3>Human direction, accelerated implementation.</h3><p>AI supports coding, refactoring, testing, and iteration. The game’s concepts, architecture, rules, and final decisions remain human-driven.</p><div class="terminal"><span>&gt; direction: HUMAN</span><span>&gt; implementation: COLLABORATIVE</span><span>&gt; status: ITERATING_</span></div></article>
+      </div>
+    </section>
+
+    <section class="section latest">
+      <div class="section-heading"><div><p class="eyebrow">LATEST DEVELOPMENT</p><h2>Build notes from the frontier.</h2></div><a class="button" href="devblog/index.html">View all articles</a></div>
+      <div class="post-grid">
+        <a class="post-card" href="devblog/articles/resonance-and-formation.html"><div class="post-visual grid-visual"><span>FORMATION / 5×5</span></div><div class="post-content"><time datetime="2026-07-13">JUL 13, 2026</time><h3>Making Every Grid Position Matter</h3><p>How vertical depth, lateral roles, and resonance turn placement into strategy.</p><span class="tag">BATTLE SYSTEM</span></div></a>
+        <a class="post-card" href="devblog/articles/generated-skills.html"><div class="post-visual skill-visual"><span>SKILL_GEN / WIP</span></div><div class="post-content"><time datetime="2026-07-12">JUL 12, 2026</time><h3>Skills Generated from Meaning</h3><p>Building active effects from embeddings without losing the identity of the work.</p><span class="tag">SKILL GENERATION</span></div></a>
+        <a class="post-card" href="devblog/articles/why-thought-becomes-a-game.html"><div class="post-visual map-visual"><span>ORIGIN / CONCEPT</span></div><div class="post-content"><time datetime="2026-07-06">JUL 06, 2026</time><h3>Why Build a Game from Thought?</h3><p>The design question that connected ThoughtMap research to a playable system.</p><span class="tag">CONCEPT</span></div></a>
+      </div>
+    </section>
+
+    <section class="cta"><p class="eyebrow">FOLLOW THE BUILD</p><h2>The game is being made in public.</h2><p>Read the decisions, experiments, failures, and system changes behind Source of Thought.</p><div class="actions"><a class="button primary" href="devblog/index.html">Development Blog</a><a class="button" href="https://github.com/flyingbaby24/koseisha-os" target="_blank" rel="noopener">View on GitHub ↗</a></div></section>
+  </main>
+  <footer><a class="brand" href="index.html"><span class="brand-mark">S/T</span><span>SOURCE OF THOUGHT</span></a><p>Ideas are not static. Neither is this game.</p><div><a href="devblog/index.html">Dev Blog</a><a href="roadmap.html">Roadmap</a><a href="changelog.html">Changelog</a></div><small>© 2026 Jinn Project. Work in progress.</small></footer>
+  <script src="script.js"></script>
 </body>
 </html>
