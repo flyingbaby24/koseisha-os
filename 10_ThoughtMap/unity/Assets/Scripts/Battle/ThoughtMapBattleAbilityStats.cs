@@ -13,10 +13,10 @@ public static class ThoughtMapBattleAbilityStats
         new ThoughtMapBattleAbilityDefinition("P.ATK", "Physical Attack", "philosophy", new Color(0.15f, 0.42f, 1f, 1f), "philosophy", "\u54F2\u5B66"),
         new ThoughtMapBattleAbilityDefinition("S.ATK", "Skill Attack", "psychology", new Color(1f, 0.82f, 0.18f, 1f), "psychology", "\u5FC3\u7406"),
         new ThoughtMapBattleAbilityDefinition("P.DEF", "Physical Defense", "science", new Color(0.25f, 0.78f, 0.32f, 1f), "science", "\u79D1\u5B66"),
-        new ThoughtMapBattleAbilityDefinition("S.DEF", "Skill Defense", "moral", new Color(0.62f, 0.28f, 0.92f, 1f), "moral", "morality", "\u30E2\u30E9\u30EB"),
+        new ThoughtMapBattleAbilityDefinition("S.DEF", "Skill Defense", "morality", new Color(0.62f, 0.28f, 0.92f, 1f), "morality", "moral", "\u30E2\u30E9\u30EB"),
         new ThoughtMapBattleAbilityDefinition("SPD", "Speed", "economy", new Color(1f, 0.50f, 0.12f, 1f), "economy", "economics", "\u7D4C\u6E08"),
         new ThoughtMapBattleAbilityDefinition("EVA", "Evasion", "emotion", new Color(1f, 0.42f, 0.72f, 1f), "emotion", "\u611F\u60C5"),
-        new ThoughtMapBattleAbilityDefinition("ACC", "Accuracy", "ideal", new Color(0.95f, 0.18f, 0.18f, 1f), "ideal", "\u7406\u5FF5"),
+        new ThoughtMapBattleAbilityDefinition("ACC", "Accuracy", "ideology", new Color(0.95f, 0.18f, 0.18f, 1f), "ideology", "ideal", "\u7406\u5FF5"),
         new ThoughtMapBattleAbilityDefinition("LUCK", "Luck", "karma", new Color(1f, 0.88f, 0.42f, 1f), "karma", "\u30AB\u30EB\u30DE")
     };
 
@@ -161,10 +161,10 @@ public static class ThoughtMapBattleAbilityStats
             case "philosophy": return card.statPhysicalAttack;
             case "psychology": return card.statSkillAttack;
             case "science": return card.statPhysicalDefense;
-            case "moral": return card.statSkillDefense;
+            case "morality": return card.statSkillDefense;
             case "economy": return card.statSpeed;
             case "emotion": return card.statEvasion;
-            case "ideal": return card.statAccuracy;
+            case "ideology": return card.statAccuracy;
             case "karma": return card.statLuck;
             default: return 0f;
         }
@@ -177,10 +177,10 @@ public static class ThoughtMapBattleAbilityStats
             case "philosophy":
             case "psychology":
             case "science":
-            case "moral":
+            case "morality":
             case "economy":
             case "emotion":
-            case "ideal":
+            case "ideology":
             case "karma":
                 return true;
             default:
@@ -197,13 +197,13 @@ public static class ThoughtMapBattleAbilityStats
             case "psychology":
                 return bonus.attackMultiplier;
             case "science":
-            case "moral":
+            case "morality":
                 return bonus.defenseMultiplier;
             case "economy":
                 return bonus.speedMultiplier;
             case "emotion":
                 return bonus.evasionMultiplier;
-            case "ideal":
+            case "ideology":
                 return bonus.accuracyMultiplier;
             default:
                 return 1f;
@@ -227,9 +227,10 @@ public static class ThoughtMapBattleAbilityStats
             case "economics": return "economy";
             case "\u30AB\u30EB\u30DE": return "karma";
             case "\u611F\u60C5": return "emotion";
-            case "\u30E2\u30E9\u30EB": return "moral";
-            case "morality": return "moral";
-            case "\u7406\u5FF5": return "ideal";
+            case "\u30E2\u30E9\u30EB": return "morality";
+            case "moral": return "morality";
+            case "\u7406\u5FF5": return "ideology";
+            case "ideal": return "ideology";
             case "\u500B\u4EBA": return "individual";
             case "\u5171\u540C\u4F53": return "community";
             default: return key;

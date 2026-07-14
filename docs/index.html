@@ -1,146 +1,92 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Jinn Project</title>
-  <meta name="description" content="Jinn Project visualizes hidden structures across thought, body, and materials." />
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Jinn Project is an independent research and development ecosystem connecting open research, ThoughtMap, and the strategy game Source of Thought.">
+  <meta name="theme-color" content="#070b10">
+  <title>Jinn Project — Research, OSS & Game Development</title>
+  <link rel="preload" href="images/logo.png" as="image">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
-    <a class="logo" href="#top">
-  <img src="images/logo.png" alt="Jinn Project logo">
-  <span>Jinn Project</span>
-</a>
-    <nav>
-      <a href="#projects">Projects</a>
-      <a href="#about">About</a>
-      <a href="https://github.com/flyingbaby24/koseisha-os/tree/main/10_ThoughtMap" target="_blank" rel="noreferrer">GitHub</a>
+    <a class="logo" href="#top" aria-label="Jinn Project home"><img src="images/logo.png" alt=""><span>JINN PROJECT<small>RESEARCH & DEVELOPMENT</small></span></a>
+    <button class="nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false"><span></span><span></span></button>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="#top">Home</a><a href="#research">Research</a><a href="research/source-of-thought/">Source of Thought</a><a href="research/source-of-thought/devblog/">Development Blog</a><a href="#publications">Publications</a><a href="https://github.com/flyingbaby24/koseisha-os" target="_blank" rel="noopener">GitHub ↗</a><a href="#contact">Contact</a>
     </nav>
   </header>
 
-  <main id="top">
-    <section class="hero">
-      <div class="hero-copy">
-        <p class="eyebrow">Thought / Body / Material</p>
-        <h1>We visualize hidden structures.</h1>
-        <p class="lead">
-          Jinn Project explores invisible patterns behind ideas, movement, materials,
-          and infrastructure — turning vague structures into readable forms.
-        </p>
-        <div class="actions">
-  <a class="button primary"
-     href="https://thoughtmap.streamlit.app/"
-     target="_blank">
-     Launch ThoughtMap
-  </a>
-
-  <a class="button secondary"
-     href="https://github.com/flyingbaby24/koseisha-os/tree/main/10_ThoughtMap"
-     target="_blank">
-     View Repository
-  </a>
-
-  <a class="button secondary"
-     href="https://linktr.ee/Jinn_project"
-     target="_blank">
-     All Links
-  </a>
-          
-</div>
-
-<div class="thoughtmap-caption">
-  <strong>AI-powered thought composition analysis</strong><br>
-  Compare your writing with philosophers, authors,
-  and other thinkers.
-</div>
+  <main id="main">
+    <section class="hero" id="top" aria-label="Featured projects">
+      <div class="hero-noise"></div>
+      <div class="hero-slides">
+        <article class="hero-slide active" data-theme="cyan" aria-hidden="false">
+          <div class="hero-copy"><p class="eyebrow">01 / FEATURED PROJECT</p><h1>Source of<br><em>Thought.</em></h1><p>Ideas become cards. Literature, philosophy, science, and history enter a 5×5 battlefield shaped by meaning, affinity, and resonance.</p><div class="actions"><a class="button primary" href="research/source-of-thought/">Enter the game site</a><a class="button ghost" href="research/source-of-thought/devblog/">Development Blog</a></div></div>
+          <a class="hero-visual game-visual" href="research/source-of-thought/" aria-label="Open Source of Thought"><div class="visual-ui"><span>ACTIVE DEVELOPMENT / UNITY / PC</span><strong>BATTLE PREP</strong><small>10 CARD DECK · 5 CARD FORMATION · 5×5 GRID</small></div></a>
+        </article>
+        <article class="hero-slide" data-theme="blue" aria-hidden="true">
+          <div class="hero-copy"><p class="eyebrow">02 / RESEARCH PLATFORM</p><h1>Thought<em>Map.</em></h1><p>Search by meaning, compare thought composition, and turn a growing research database into a navigable semantic landscape.</p><div class="actions"><a class="button primary" href="https://thoughtmap.streamlit.app/" target="_blank" rel="noopener">Launch ThoughtMap ↗</a><a class="button ghost" href="https://github.com/flyingbaby24/koseisha-os/tree/main/10_ThoughtMap" target="_blank" rel="noopener">View OSS</a></div></div>
+          <div class="hero-visual map-visual" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><div class="visual-ui"><span>SEMANTIC RESEARCH ENGINE</span><strong>32,695+ WORKS</strong><small>EMBEDDING · SEARCH · COMPARISON</small></div></div>
+        </article>
+        <article class="hero-slide" data-theme="gold" aria-hidden="true">
+          <div class="hero-copy"><p class="eyebrow">03 / COGNITIVE RESEARCH</p><h1>Stratagems<br><em>Atlas.</em></h1><p>The Thirty-Six Stratagems reinterpreted through cognitive bias, behavioral economics, and modern decision-making.</p><div class="actions"><a class="button primary" href="research/stratagems/">Explore the Atlas</a></div></div>
+          <a class="hero-visual atlas-visual" href="research/stratagems/" aria-label="Open Stratagems Atlas"><span class="atlas-number">36</span><div class="visual-ui"><span>COGNITIVE STRATEGY ATLAS</span><strong>ANCIENT PATTERNS</strong><small>MODERN COGNITIVE READING</small></div></a>
+        </article>
+        <article class="hero-slide" data-theme="violet" aria-hidden="true">
+          <div class="hero-copy"><p class="eyebrow">04 / OPEN EXPLORATION</p><h1>AI<br><em>Research.</em></h1><p>Human-directed systems for semantic analysis, knowledge composition, development acceleration, and explainable creative tools.</p><div class="actions"><a class="button primary" href="#research">View research</a><a class="button ghost" href="#publications">Publications</a></div></div>
+          <div class="hero-visual ai-visual" aria-hidden="true"><div class="ai-core">J</div><div class="visual-ui"><span>HUMAN DIRECTION</span><strong>AI SYSTEMS</strong><small>ANALYSIS · IMPLEMENTATION · ITERATION</small></div></div>
+        </article>
       </div>
-      <div class="hero-logo" aria-hidden="true">
-        <img src="images/logo.png" alt="">
+      <div class="hero-controls"><div class="slide-tabs" role="tablist" aria-label="Featured project"><button class="active" data-slide="0" role="tab"><b>01</b> Source of Thought</button><button data-slide="1" role="tab"><b>02</b> ThoughtMap</button><button data-slide="2" role="tab"><b>03</b> Stratagems</button><button data-slide="3" role="tab"><b>04</b> AI Research</button></div><button class="slide-pause" type="button" aria-label="Pause slideshow">Ⅱ</button></div>
+    </section>
+
+    <section class="section game-feature reveal" id="source-of-thought">
+      <div class="section-head"><div><p class="eyebrow">FLAGSHIP PROJECT</p><h2>Thought becomes<br>playable strategy.</h2></div><p>Source of Thought is where Jinn Project’s research becomes a game system. ThoughtMap transforms works into profiles; the game transforms those relationships into cards, skills, and formation choices.</p></div>
+      <div class="game-showcase parallax-card">
+        <div class="game-screen"><span>DEVELOPMENT BUILD</span><div class="formation" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><strong>BATTLE PREP / SCREENSHOT PLACEHOLDER</strong></div>
+        <div class="game-links"><a href="research/source-of-thought/#screenshots"><span>Latest Screenshots</span><b>View build visuals →</b></a><a href="research/source-of-thought/roadmap.html"><span>Roadmap</span><b>Development progress →</b></a><a href="research/source-of-thought/devblog/"><span>Development Blog</span><b>Read the build log →</b></a><a href="research/source-of-thought/gallery.html"><span>Gallery</span><b>Browse all artwork →</b></a></div>
       </div>
     </section>
 
-    <section id="projects" class="section">
-      <p class="eyebrow">Projects</p>
-      <h2>Three directions, one principle.</h2>
-      <div class="cards">
-        <article class="card featured">
-          <span class="tag">Live demo</span>
-          <h3>ThoughtMap</h3>
-          <p>
-            Paste or upload text, generate a thought composition profile,
-            visualize clusters, and search by meaning instead of keywords.
-          </p>
-          <a href="https://thoughtmap.streamlit.app/" target="_blank" rel="noreferrer">Open app →</a>
-        </article>
-        <article class="card">
-          <span class="tag">Prototype</span>
-          <h3>Carbon TPU Sole</h3>
-          <p>
-            Conductive TPU sole research for grounding, movement feedback,
-            and everyday body-interface infrastructure.
-          </p>
-          <a href="https://www.patreon.com/cw/JinnProject" target="_blank" rel="noreferrer">Follow development →</a>
-        </article>
-        <article class="card">
-          <span class="tag">Material</span>
-          <h3>Jinn Fabric</h3>
-          <p>
-            ePTFE × TPU laminated material experiments for flexible,
-            durable, and functional fabric systems.
-          </p>
-        </article>
+    <section class="section ecosystem reveal" id="ecosystem">
+      <div class="section-head"><div><p class="eyebrow">JINN PROJECT ECOSYSTEM</p><h2>One research loop.<br>Multiple expressions.</h2></div><p>ThoughtMap is not just a game tool. It is the shared semantic layer connecting the research database, cognitive studies, open systems, and Source of Thought.</p></div>
+      <div class="ecosystem-map">
+        <a class="eco-node eco-jinn" href="#top"><span>ORCHESTRATOR</span><strong>Jinn Project</strong><small>Direction · Research · Development</small></a>
+        <div class="eco-flow" aria-hidden="true"><i></i><span>RESEARCH BECOMES SYSTEM</span></div>
+        <div class="eco-layer"><a class="eco-node" href="research/source-of-thought/"><span>GAME</span><strong>Source of Thought</strong><small>Playable ideas</small></a><a class="eco-node" href="https://thoughtmap.streamlit.app/" target="_blank" rel="noopener"><span>SEMANTIC LAYER</span><strong>ThoughtMap</strong><small>Meaning and relationships</small></a><a class="eco-node" href="#research"><span>FOUNDATION</span><strong>Research DB</strong><small>Works and embeddings</small></a><a class="eco-node" href="research/stratagems/"><span>APPLIED STUDY</span><strong>Stratagems Atlas</strong><small>Cognitive strategy</small></a></div>
       </div>
-  <div class="cards">
-    <article class="card featured">
-      <span class="tag">Research</span>
-      <h3>ORCID</h3>
-      <p>
-        Public record of research, datasets, and experimental work
-        exploring hidden structures across thought, body,
-        materials, and infrastructure.
-      </p>
-      <a href="https://orcid.org/0009-0008-6292-2429"
-         target="_blank"
-         rel="noreferrer">
-         Research →
-      </a>
-    </article>
-    <article class="card featured">
-      <span class="tag">Research</span>
-      <h3>Thirty-Six Stratagems × Cognitive Bias</h3>
-      <p>
-        Reinterpreting the Thirty-Six Stratagems through
-        cognitive science and behavioral economics.
-      </p>
+    </section>
 
-      <a href="research/stratagems/">
-        Explore →
-      </a>
-    </article>
-  </div>
-</section>
+    <section class="section reveal" id="research">
+      <div class="section-head"><div><p class="eyebrow">RESEARCH</p><h2>Explore the hidden<br>structure.</h2></div><p>Independent research across semantics, cognition, artificial intelligence, and the systems that connect them.</p></div>
+      <div class="research-grid">
+        <a class="research-card featured" href="https://thoughtmap.streamlit.app/" target="_blank" rel="noopener"><span>01 / SEMANTIC SYSTEM</span><h3>ThoughtMap</h3><p>Embedding-based thought composition, semantic search, and comparison across a growing corpus.</p><b>Launch platform ↗</b></a>
+        <a class="research-card" href="research/stratagems/"><span>02 / COGNITIVE ATLAS</span><h3>Stratagems Atlas</h3><p>Thirty-Six Stratagems through cognitive science and behavioral economics.</p><b>Open research →</b></a>
+        <a class="research-card" href="https://orcid.org/0009-0008-6292-2429" target="_blank" rel="noopener"><span>03 / COGNITION</span><h3>Cognitive Research</h3><p>Public studies, datasets, and frameworks for revealing patterns in thought and behavior.</p><b>View ORCID ↗</b></a>
+        <a class="research-card" href="https://github.com/flyingbaby24/koseisha-os" target="_blank" rel="noopener"><span>04 / OPEN SYSTEMS</span><h3>AI Systems</h3><p>Human-directed analysis and development tools built as inspectable, reusable systems.</p><b>Explore GitHub ↗</b></a>
+      </div>
+    </section>
 
-<section id="about" class="section split">
-  <div>
-    <p class="eyebrow">About</p>
-    <h2>Not just products. Structure discovery.</h2>
-  </div>
+    <section class="section reveal" id="development">
+      <div class="section-head compact"><div><p class="eyebrow">LATEST DEVELOPMENT</p><h2>From the build log.</h2></div><a class="text-link" href="research/source-of-thought/devblog/">All development articles →</a></div>
+      <div class="development-list" id="latest-development" aria-live="polite"></div>
+    </section>
 
-  <p>
-    From AI text analysis to wearable material experiments, Jinn Project treats
-    technology as a way to expose patterns that normally remain unseen.
-    The goal is not only optimization, but recognition: making hidden relations
-    easier to sense, compare, and discuss.
-  </p>
-</section>
+    <section class="section reveal" id="projects">
+      <div class="section-head compact"><div><p class="eyebrow">FEATURED PROJECTS</p><h2>Three entry points.</h2></div><p>Game, platform, and applied cognitive research—each usable on its own, connected by the same research base.</p></div>
+      <div class="project-grid"><a class="project-card project-game" href="research/source-of-thought/"><span>GAME / UNITY / PC</span><h3>Source of Thought</h3><p>Strategy card game built from the history of ideas.</p><b>Official game site →</b></a><a class="project-card project-map" href="https://thoughtmap.streamlit.app/" target="_blank" rel="noopener"><span>OSS / RESEARCH PLATFORM</span><h3>ThoughtMap</h3><p>Search and compare works by meaning rather than keywords.</p><b>Launch ThoughtMap ↗</b></a><a class="project-card project-atlas" href="research/stratagems/"><span>COGNITIVE RESEARCH</span><h3>Stratagems Atlas</h3><p>Ancient strategic patterns, read through modern cognition.</p><b>Explore Atlas →</b></a></div>
+    </section>
+
+    <section class="stats reveal" aria-label="Project statistics"><div><strong data-counter="4">0</strong><span>Research Areas</span></div><div><strong data-counter="32695" data-suffix="+">0</strong><span>ThoughtMap Entries</span></div><div><strong data-counter="65" data-suffix="%">0</strong><span>Source of Thought</span></div><div><strong data-counter="36">0</strong><span>Stratagems</span></div><div><strong data-counter="1200" data-suffix="+">0</strong><span>GitHub Commits</span></div></section>
+
+    <section class="section publications reveal" id="publications"><div class="section-head"><div><p class="eyebrow">PUBLICATIONS & OPEN WORK</p><h2>Research should<br>remain inspectable.</h2></div><div class="publication-links"><a href="https://orcid.org/0009-0008-6292-2429" target="_blank" rel="noopener"><span>Research record</span><b>ORCID ↗</b></a><a href="https://github.com/flyingbaby24/koseisha-os" target="_blank" rel="noopener"><span>Source and documentation</span><b>GitHub ↗</b></a><a href="research/stratagems/"><span>Interactive publication</span><b>Stratagems Atlas →</b></a></div></div></section>
   </main>
 
-  <footer>
-    <span>© Jinn Project</span>
-    <span>Search thought patterns, not keywords.</span>
-  </footer>
-  <!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "7da53f8ef3544cf0967279ebd140ff89"}'></script><!-- End Cloudflare Web Analytics -->
+  <footer id="contact"><div class="footer-brand"><a class="logo" href="#top"><img src="images/logo.png" alt=""><span>JINN PROJECT</span></a><p>Independent research, open systems, and games built to make hidden structures visible.</p></div><div class="footer-links"><div><strong>PROJECT</strong><a href="research/source-of-thought/">Source of Thought</a><a href="research/source-of-thought/devblog/">Dev Blog</a><a href="https://thoughtmap.streamlit.app/" target="_blank" rel="noopener">ThoughtMap ↗</a></div><div><strong>RESEARCH</strong><a href="#publications">Publications</a><a href="research/stratagems/">Stratagems Atlas</a><a href="https://github.com/flyingbaby24/koseisha-os" target="_blank" rel="noopener">GitHub ↗</a></div><div><strong>CONTACT</strong><a href="https://linktr.ee/Jinn_project" target="_blank" rel="noopener">All Links ↗</a><a href="https://www.patreon.com/cw/JinnProject" target="_blank" rel="noopener">Patreon ↗</a></div></div><div class="footer-bottom"><span>© 2026 Jinn Project</span><span>Thought / Body / Material / System</span></div></footer>
+  <script src="script.js"></script>
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"7da53f8ef3544cf0967279ebd140ff89"}'></script>
 </body>
 </html>

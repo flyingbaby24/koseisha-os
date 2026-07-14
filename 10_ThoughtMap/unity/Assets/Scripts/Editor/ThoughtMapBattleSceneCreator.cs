@@ -17,7 +17,7 @@ public static class ThoughtMapBattleSceneCreator
     private static readonly string[] ExpectedCardTemplateNames =
     {
         "philosophy", "psychology", "science", "economy", "karma",
-        "emotion", "moral", "ideal", "individual", "community"
+        "emotion", "morality", "ideology", "individual", "community"
     };
     private const float ProductListRowSpacing = 4f;
 
@@ -1556,12 +1556,28 @@ public static class ThoughtMapBattleSceneCreator
 
         foreach (Sprite sprite in sprites)
         {
-            if (sprite != null && sprite.name.Trim().ToLowerInvariant() == expectedName)
+            if (sprite != null && NormalizeTemplateName(sprite.name) == NormalizeTemplateName(expectedName))
             {
                 return true;
             }
         }
         return false;
+    }
+
+    private static string NormalizeTemplateName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "";
+        }
+
+        string key = value.Trim().ToLowerInvariant();
+        switch (key)
+        {
+            case "moral": return "morality";
+            case "ideal": return "ideology";
+            default: return key;
+        }
     }
 
     private static RectTransform EnsureScrollablePanelStructure(RectTransform panel, int columns, Vector2 cellSize)

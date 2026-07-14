@@ -83,6 +83,7 @@ public class SavedDocument
     public float moral;
     public float morality;
     public float ideal;
+    public float ideology;
     public float individual;
     public float community;
     public float[] embedding;

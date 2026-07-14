@@ -7,7 +7,7 @@ public static class ThoughtMapBattleCardFactory
     private static readonly string[] ThoughtOrder =
     {
         "philosophy", "psychology", "science", "economy", "karma",
-        "emotion", "moral", "ideal", "individual", "community"
+        "emotion", "morality", "ideology", "individual", "community"
     };
 
     public static ThoughtMapBattleCardData FromSavedDocument(SavedDocument document, string dataScope)
@@ -44,6 +44,7 @@ public static class ThoughtMapBattleCardFactory
         CopyDirectParameters(card, document);
         ApplyExplicitStats(card, document);
         ApplyParameterStats(card);
+        LogPersonalConversion(card);
         return card;
     }
 
@@ -78,8 +79,8 @@ public static class ThoughtMapBattleCardFactory
         SetParameterIfPresent(card, "economy", document.economy != 0f ? document.economy : document.economics);
         SetParameterIfPresent(card, "karma", document.karma);
         SetParameterIfPresent(card, "emotion", document.emotion);
-        SetParameterIfPresent(card, "moral", document.moral != 0f ? document.moral : document.morality);
-        SetParameterIfPresent(card, "ideal", document.ideal);
+        SetParameterIfPresent(card, "morality", FirstNonZero(document.morality, document.moral));
+        SetParameterIfPresent(card, "ideology", FirstNonZero(document.ideology, document.ideal));
         SetParameterIfPresent(card, "individual", document.individual);
         SetParameterIfPresent(card, "community", document.community);
     }
@@ -119,8 +120,8 @@ public static class ThoughtMapBattleCardFactory
         float economy = GetParameter(card, "economy", "economics");
         float karma = GetParameter(card, "karma");
         float emotion = GetParameter(card, "emotion");
-        float moral = GetParameter(card, "moral", "morality");
-        float ideal = GetParameter(card, "ideal");
+        float moral = GetParameter(card, "morality", "moral");
+        float ideal = GetParameter(card, "ideology", "ideal");
         float individual = GetParameter(card, "individual");
         float community = GetParameter(card, "community");
 
@@ -135,11 +136,11 @@ public static class ThoughtMapBattleCardFactory
         if (card.statHp == 0) card.statHp = ToStat(individual);
         if (card.statSp == 0) card.statSp = ToStat(community);
 
-        if (string.IsNullOrWhiteSpace(card.primaryAttribute))
+        if (string.IsNullOrWhiteSpace(card.primaryAttribute) || IsPlaceholderAttribute(card.primaryAttribute))
         {
             card.primaryAttribute = DominantParameter(card);
         }
-        if (string.IsNullOrWhiteSpace(card.secondaryAttribute))
+        if (string.IsNullOrWhiteSpace(card.secondaryAttribute) || IsPlaceholderAttribute(card.secondaryAttribute))
         {
             card.secondaryAttribute = SecondaryParameter(card, card.primaryAttribute);
         }
@@ -249,6 +250,16 @@ public static class ThoughtMapBattleCardFactory
         return false;
     }
 
+    private static bool IsPlaceholderAttribute(string value)
+    {
+        string key = NormalizeKey(value);
+        return string.IsNullOrWhiteSpace(key) ||
+            key == "card" ||
+            key == "unknown" ||
+            key == "none" ||
+            key == "-";
+    }
+
     private static string NormalizeKey(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -260,19 +271,54 @@ public static class ThoughtMapBattleCardFactory
         switch (key)
         {
             case "economics": return "economy";
-            case "morality": return "moral";
+            case "moral": return "morality";
+            case "ideal": return "ideology";
             case "\u54F2\u5B66": return "philosophy";
             case "\u5FC3\u7406": return "psychology";
             case "\u79D1\u5B66": return "science";
             case "\u7D4C\u6E08": return "economy";
             case "\u30AB\u30EB\u30DE": return "karma";
             case "\u611F\u60C5": return "emotion";
-            case "\u30E2\u30E9\u30EB": return "moral";
-            case "\u7406\u5FF5": return "ideal";
+            case "\u30E2\u30E9\u30EB": return "morality";
+            case "\u7406\u5FF5": return "ideology";
             case "\u500B\u4EBA": return "individual";
             case "\u5171\u540C\u4F53": return "community";
             default: return key;
         }
+    }
+
+    private static float FirstNonZero(params float[] values)
+    {
+        if (values == null)
+        {
+            return 0f;
+        }
+
+        foreach (float value in values)
+        {
+            if (Mathf.Abs(value) > 0.000001f)
+            {
+                return value;
+            }
+        }
+
+        return 0f;
+    }
+
+    private static void LogPersonalConversion(ThoughtMapBattleCardData card)
+    {
+        if (card == null || !string.Equals(card.dataScope, "personal", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        Debug.Log(
+            "[PersonalLibrary CardData] " +
+            $"doc_id='{card.docId}' parameters={card.parameterScores.Count} " +
+            $"values=[philosophy:{GetParameter(card, "philosophy"):0.###}, psychology:{GetParameter(card, "psychology"):0.###}, science:{GetParameter(card, "science"):0.###}, economy:{GetParameter(card, "economy"):0.###}, karma:{GetParameter(card, "karma"):0.###}, emotion:{GetParameter(card, "emotion"):0.###}, morality:{GetParameter(card, "morality"):0.###}, ideology:{GetParameter(card, "ideology"):0.###}, individual:{GetParameter(card, "individual"):0.###}, community:{GetParameter(card, "community"):0.###}] " +
+            $"dominant='{card.primaryAttribute}' " +
+            $"stats=[HP:{card.statHp}, SP:{card.statSp}, P_ATK:{card.statPhysicalAttack}, S_ATK:{card.statSkillAttack}, P_DEF:{card.statPhysicalDefense}, S_DEF:{card.statSkillDefense}, SPD:{card.statSpeed}, EVA:{card.statEvasion}, ACC:{card.statAccuracy}, LUCK:{card.statLuck}]"
+        );
     }
 
     private static string BuildCardId(string scope, string docId)

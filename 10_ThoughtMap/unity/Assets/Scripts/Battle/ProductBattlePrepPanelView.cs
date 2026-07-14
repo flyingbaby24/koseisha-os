@@ -14,7 +14,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     private static readonly string[] ExpectedTemplateKeys =
     {
         "philosophy", "psychology", "science", "economy", "karma",
-        "emotion", "moral", "ideal", "individual", "community"
+        "emotion", "morality", "ideology", "individual", "community"
     };
     private static readonly ThoughtParameterDefinition[] ThoughtParameterOrder =
     {
@@ -24,8 +24,8 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         new ThoughtParameterDefinition("economy", "economy", "economics", "\u7D4C\u6E08"),
         new ThoughtParameterDefinition("karma", "karma", "\u30AB\u30EB\u30DE"),
         new ThoughtParameterDefinition("emotion", "emotion", "\u611F\u60C5"),
-        new ThoughtParameterDefinition("moral", "moral", "morality", "\u30E2\u30E9\u30EB"),
-        new ThoughtParameterDefinition("ideal", "ideal", "\u7406\u5FF5"),
+        new ThoughtParameterDefinition("morality", "morality", "moral", "\u30E2\u30E9\u30EB"),
+        new ThoughtParameterDefinition("ideology", "ideology", "ideal", "\u7406\u5FF5"),
         new ThoughtParameterDefinition("individual", "individual", "\u500B\u4EBA"),
         new ThoughtParameterDefinition("community", "community", "\u5171\u540C\u4F53")
     };
@@ -1347,13 +1347,13 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         Sprite sprite = ResolveCardArt(card, index);
         string thoughtAttribute = ResolveDominantThoughtAttributeKey(card);
         Debug.Log(
-            $"[ProductBattlePrep Art] {target}: card title='{CardName(card)}' battle attribute='{AttributeName(card)}' resolved thought attribute='{FormatThoughtAttributeForLog(thoughtAttribute)}' assigned sprite name='{SpriteName(sprite)}'",
+            $"[ProductBattlePrep Art] {target}: doc_id='{(card == null ? "" : card.docId)}' card title='{CardName(card)}' battle attribute='{AttributeName(card)}' resolved thought attribute='{FormatThoughtAttributeForLog(thoughtAttribute)}' requested sprite key='{NormalizeAttributeKey(thoughtAttribute)}' assigned sprite name='{SpriteName(sprite)}'",
             this
         );
         if (sprite == null)
         {
             Debug.LogWarning(
-                $"[ProductBattlePrep Art] Missing: card template/default art for target={target}, card='{CardName(card)}', battle attribute='{AttributeName(card)}', resolved thought attribute='{FormatThoughtAttributeForLog(thoughtAttribute)}'.",
+                $"[ProductBattlePrep Art] Missing: card template/default art for target={target}, doc_id='{(card == null ? "" : card.docId)}', card='{CardName(card)}', battle attribute='{AttributeName(card)}', dominant='{FormatThoughtAttributeForLog(thoughtAttribute)}', requested sprite key='{NormalizeAttributeKey(thoughtAttribute)}'.",
                 this
             );
         }
@@ -1813,7 +1813,15 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         {
             foreach (AttributeSpriteMap map in maps)
             {
-                if (!string.IsNullOrWhiteSpace(map.attribute) && NormalizeAttributeKey(map.attribute) == key)
+                if (map == null || map.sprite == null)
+                {
+                    continue;
+                }
+
+                string mapKey = !string.IsNullOrWhiteSpace(map.attribute)
+                    ? NormalizeAttributeKey(map.attribute)
+                    : NormalizeAttributeKey(map.sprite.name);
+                if (mapKey == key)
                 {
                     return map.sprite;
                 }
@@ -1839,9 +1847,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             case "economics": return "economy";
             case "\u30AB\u30EB\u30DE": return "karma";
             case "\u611F\u60C5": return "emotion";
-            case "\u30E2\u30E9\u30EB": return "moral";
-            case "morality": return "moral";
-            case "\u7406\u5FF5": return "ideal";
+            case "\u30E2\u30E9\u30EB": return "morality";
+            case "moral": return "morality";
+            case "\u7406\u5FF5": return "ideology";
+            case "ideal": return "ideology";
             case "\u500B\u4EBA": return "individual";
             case "\u5171\u540C\u4F53": return "community";
             default: return key;
