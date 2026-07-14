@@ -46,27 +46,45 @@ public class ThoughtMapPersonalLibraryApiClient : MonoBehaviour
             string json = request.downloadHandler == null ? "" : request.downloadHandler.text;
             if (string.IsNullOrWhiteSpace(json))
             {
+                Debug.Log("[PersonalLibraryApi] Raw response was empty. DTO works=0.", this);
                 onSuccess?.Invoke(new PersonalLibraryResponse { works = new SavedDocument[0] });
                 yield break;
             }
 
             try
             {
+                Debug.Log(
+                    "[PersonalLibraryApi] Raw response length=" + json.Length +
+                    " firstWork=" + PreviewFirstWorkObject(json),
+                    this
+                );
+
                 if (json.TrimStart().StartsWith("[", StringComparison.Ordinal))
                 {
                     json = "{\"works\":" + json + "}";
                 }
 
                 json = NormalizeParameterObjects(json);
+                Debug.Log(
+                    "[PersonalLibraryApi] Normalized firstWork=" + PreviewFirstWorkObject(json),
+                    this
+                );
+
                 PersonalLibraryResponse response = JsonUtility.FromJson<PersonalLibraryResponse>(json);
                 if (response == null)
                 {
                     response = new PersonalLibraryResponse { works = new SavedDocument[0] };
                 }
 
-                if (debugResponses)
+                SavedDocument[] works = response.WorksOrItems;
+                Debug.Log($"[PersonalLibraryApi] DTO works={works.Length}.", this);
+                for (int i = 0; i < works.Length; i++)
                 {
-                    Debug.Log($"[PersonalLibraryApi] Loaded works={response.WorksOrItems.Length}.", this);
+                    SavedDocument item = works[i];
+                    Debug.Log(
+                        $"[PersonalLibraryApi] DTO item index={i} doc_id='{item?.doc_id}' title='{item?.title}' parameters_count={CountParameters(item)} direct_parameters={FormatDirectParameters(item)}",
+                        this
+                    );
                 }
 
                 onSuccess?.Invoke(response);
@@ -131,6 +149,92 @@ public class ThoughtMapPersonalLibraryApiClient : MonoBehaviour
         }
 
         return builder.ToString();
+    }
+
+    private static string PreviewFirstWorkObject(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return "<empty>";
+        }
+
+        string trimmed = json.TrimStart();
+        int start = -1;
+        if (trimmed.StartsWith("[", StringComparison.Ordinal))
+        {
+            start = json.IndexOf('{');
+        }
+        else
+        {
+            int worksIndex = json.IndexOf("\"works\"", StringComparison.Ordinal);
+            int itemsIndex = json.IndexOf("\"items\"", StringComparison.Ordinal);
+            int arrayIndex = -1;
+            if (worksIndex >= 0)
+            {
+                arrayIndex = json.IndexOf('[', worksIndex);
+            }
+            if (arrayIndex < 0 && itemsIndex >= 0)
+            {
+                arrayIndex = json.IndexOf('[', itemsIndex);
+            }
+            if (arrayIndex >= 0)
+            {
+                start = json.IndexOf('{', arrayIndex);
+            }
+        }
+
+        if (start < 0 || !TryFindObjectEnd(json, start, out int end))
+        {
+            return ShortPreview(json);
+        }
+
+        return ShortPreview(json.Substring(start, end - start + 1));
+    }
+
+    private static string ShortPreview(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "<empty>";
+        }
+
+        string preview = value
+            .Replace("\\r", " ")
+            .Replace("\\n", " ")
+            .Replace("\r", " ")
+            .Replace("\n", " ");
+        return preview.Length > 1200 ? preview.Substring(0, 1200) + "..." : preview;
+    }
+
+    private static int CountParameters(SavedDocument document)
+    {
+        if (document == null)
+        {
+            return 0;
+        }
+
+        int count = document.parameters == null ? 0 : document.parameters.Length;
+        if (Mathf.Abs(document.philosophy) > 0.000001f) count++;
+        if (Mathf.Abs(document.psychology) > 0.000001f) count++;
+        if (Mathf.Abs(document.science) > 0.000001f) count++;
+        if (Mathf.Abs(document.economy) > 0.000001f || Mathf.Abs(document.economics) > 0.000001f) count++;
+        if (Mathf.Abs(document.karma) > 0.000001f) count++;
+        if (Mathf.Abs(document.emotion) > 0.000001f) count++;
+        if (Mathf.Abs(document.morality) > 0.000001f || Mathf.Abs(document.moral) > 0.000001f) count++;
+        if (Mathf.Abs(document.ideology) > 0.000001f || Mathf.Abs(document.ideal) > 0.000001f) count++;
+        if (Mathf.Abs(document.individual) > 0.000001f) count++;
+        if (Mathf.Abs(document.community) > 0.000001f) count++;
+        return count;
+    }
+
+    private static string FormatDirectParameters(SavedDocument document)
+    {
+        if (document == null)
+        {
+            return "<null>";
+        }
+
+        return $"philosophy:{document.philosophy:0.###}, psychology:{document.psychology:0.###}, science:{document.science:0.###}, economy:{(document.economy != 0f ? document.economy : document.economics):0.###}, karma:{document.karma:0.###}, emotion:{document.emotion:0.###}, morality:{(document.morality != 0f ? document.morality : document.moral):0.###}, ideology:{(document.ideology != 0f ? document.ideology : document.ideal):0.###}, individual:{document.individual:0.###}, community:{document.community:0.###}";
     }
 
     private static bool TryFindObjectEnd(string json, int objectStart, out int objectEnd)

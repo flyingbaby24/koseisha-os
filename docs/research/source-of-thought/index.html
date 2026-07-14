@@ -6,31 +6,40 @@
   <meta name="description" content="Source of Thought is a strategy card game where works of human thought become playable cards.">
   <title>Source of Thought — Ideas Become Cards</title>
   <link rel="stylesheet" href="style.css">
-</head>
+<link rel="canonical" href="https://www.jinn-project.com/research/source-of-thought/index.html"><link rel="alternate" hreflang="en" href="https://www.jinn-project.com/research/source-of-thought/index.html"><link rel="alternate" hreflang="ja" href="https://www.jinn-project.com/research/source-of-thought/index-ja.html"><link rel="alternate" hreflang="x-default" href="https://www.jinn-project.com/research/source-of-thought/index.html"><meta property="og:type" content="website"><meta property="og:site_name" content="Source of Thought"><meta property="og:locale" content="en_US"><meta property="og:title" content="Source of Thought — Ideas Become Cards"><meta property="og:description" content="Source of Thought is a strategy card game where works of human thought become playable cards."><meta property="og:url" content="https://www.jinn-project.com/research/source-of-thought/index.html"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Source of Thought — Ideas Become Cards"><meta name="twitter:description" content="Source of Thought is a strategy card game where works of human thought become playable cards."></head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
     <a class="brand" href="index.html"><span class="brand-mark">S/T</span><span>SOURCE OF THOUGHT<small>IN DEVELOPMENT</small></span></a>
     <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">MENU</button>
     <nav class="site-nav" aria-label="Main navigation">
-      <a href="#game">Game</a><a href="#systems">Systems</a><a href="devblog/index.html">Dev Blog</a><a href="roadmap.html">Roadmap</a><a href="changelog.html">Changelog</a>
+      <a href="#game">Game</a><a href="#screenshots">Screenshots</a><a href="gallery.html">Gallery</a><a href="devblog/index.html">Dev Blog</a><a href="roadmap.html">Roadmap</a>
     </nav>
-  </header>
+  <div class="language-switch" aria-label="Language"><span aria-hidden="true">🌐</span><a lang="en" hreflang="en" href="index.html" aria-current="true">EN</a><span aria-hidden="true">|</span><a lang="ja" hreflang="ja" href="index-ja.html">JP</a></div></header>
 
   <main id="main">
-    <section class="hero">
+    <section class="hero hero-store">
       <div class="hero-grid"></div>
       <div class="hero-copy">
         <p class="eyebrow">A STRATEGY CARD GAME BUILT FROM HUMAN THOUGHT</p>
         <h1>IDEAS<br><span>BECOME CARDS.</span></h1>
         <p class="hero-lead">Collect literature, philosophy, science, and history. Build a deck from the works that shaped humanity—and place them on a battlefield where ideas resonate, conflict, and evolve.</p>
-        <div class="actions"><a class="button primary" href="#game">Explore the game</a><a class="button" href="devblog/index.html">Read development log</a></div>
-        <dl class="status-strip"><div><dt>Status</dt><dd><i></i>Active Development</dd></div><div><dt>Platform</dt><dd>PC / Steam planned</dd></div><div><dt>Developer</dt><dd>Jinn Project</dd></div></dl>
+        <div class="actions"><span class="button primary disabled" aria-disabled="true">Wishlist on Steam <small>Coming Soon</small></span><a class="button" href="#screenshots">View Screenshots</a></div>
+        <dl class="store-facts"><div><dt>Status</dt><dd><i></i>Active Development</dd></div><div><dt>Engine</dt><dd>Unity</dd></div><div><dt>Platform</dt><dd>PC</dd></div><div><dt>Developer</dt><dd>Jinn Project</dd></div></dl>
       </div>
-      <div class="hero-card" aria-label="Concept card preview">
-        <div class="card-top"><span>THOUGHT / 001</span><span class="rarity">ORIGIN</span></div>
-        <div class="card-art"><div class="orb"></div><span>CONCEPTUAL RESONANCE</span></div>
-        <div class="card-body"><p class="card-type">PHILOSOPHY · MIND</p><h2>THE REPUBLIC</h2><p>Ideas gain force through their relationship to adjacent works.</p><div class="stats"><span>ATK <b>72</b></span><span>DEF <b>64</b></span><span>SP <b>81</b></span></div></div>
+      <div class="hero-media">
+        <div class="screen-placeholder screen-large"><span class="screen-label">GAMEPLAY SCREENSHOT</span><strong>BATTLE PREP</strong><small>1920 × 1080 image placeholder</small></div>
+        <div class="hero-thumbs"><div class="screen-placeholder"><strong>BATTLE</strong></div><div class="screen-placeholder"><strong>CARD DETAIL</strong></div><div class="screen-placeholder"><strong>THOUGHTMAP</strong></div></div>
+      </div>
+    </section>
+
+    <section class="section screenshots-section" id="screenshots">
+      <div class="section-heading"><div><p class="eyebrow">IN-GAME</p><h2>Screenshots</h2></div><a class="button" href="gallery.html">Open Gallery</a></div>
+      <div class="screenshot-grid">
+        <a href="gallery.html#screenshots" class="shot shot-wide"><div class="screen-placeholder"><span class="screen-label">01 / GAME UI</span><strong>BATTLE PREP</strong><small>Deck building and 5×5 formation</small></div></a>
+        <a href="gallery.html#battle" class="shot"><div class="screen-placeholder"><span class="screen-label">02 / COMBAT</span><strong>BATTLE</strong><small>5 vs 5 automatic battle</small></div></a>
+        <a href="gallery.html#ui" class="shot"><div class="screen-placeholder"><span class="screen-label">03 / SEARCH</span><strong>THOUGHTMAP SEARCH</strong><small>Find and collect works</small></div></a>
+        <a href="gallery.html#cards" class="shot shot-wide"><div class="screen-placeholder"><span class="screen-label">04 / CARD UI</span><strong>CARD DETAIL</strong><small>Thought profile and generated skill</small></div></a>
       </div>
     </section>
 
@@ -44,7 +53,7 @@
       <div class="feature-grid">
         <article class="feature featured"><span class="number">01</span><p class="eyebrow">BATTLE SYSTEM</p><h3>5 × 5 formation combat</h3><p>Deploy five cards from a ten-card deck. Front and back rows change attack, defense, and target priority. Adjacent works create resonance bonuses or penalties.</p><ul><li>5 vs 5 auto battle</li><li>Position-based hate and defense</li><li>Mind / Human / System affinities</li></ul><div class="mini-grid" aria-hidden="true">● ● · · ·<br>· ◎ ● · ·<br>· · · · ·<br>· · · · ·<br>· · · · ·</div></article>
         <article class="feature"><span class="number">02</span><p class="eyebrow">CARD SYSTEM</p><h3>One work. One card.</h3><p>Ten parameters translate each work into combat stats. Generated skills reflect the concepts contained within the source instead of relying on fixed character classes.</p><div class="chip-row"><span>PHILOSOPHY</span><span>SCIENCE</span><span>EMOTION</span></div></article>
-        <article class="feature"><span class="number">03</span><p class="eyebrow">THOUGHTMAP INTEGRATION</p><h3>A research engine beneath the game.</h3><p>Semantic embeddings locate works within a shared space of ideas. Search, collect, compare, then bring saved works into Battle Prep.</p><a class="text-link" href="devblog/articles/why-thought-becomes-a-game.html">How the systems connect <span>→</span></a></article>
+        <article class="feature"><span class="number">03</span><p class="eyebrow">THOUGHTMAP INTEGRATION</p><h3>A research engine beneath the game.</h3><p>Semantic embeddings locate works within a shared space of ideas. Search, collect, compare, then bring saved works into Battle Prep.</p><a class="text-link" href="devblog/articles/why-build-a-game-from-thought.html">Why ThoughtMap becomes a game <span>→</span></a></article>
         <article class="feature"><span class="number">04</span><p class="eyebrow">AI DEVELOPMENT</p><h3>Human direction, accelerated implementation.</h3><p>AI supports coding, refactoring, testing, and iteration. The game’s concepts, architecture, rules, and final decisions remain human-driven.</p><div class="terminal"><span>&gt; direction: HUMAN</span><span>&gt; implementation: COLLABORATIVE</span><span>&gt; status: ITERATING_</span></div></article>
       </div>
     </section>
@@ -52,15 +61,15 @@
     <section class="section latest">
       <div class="section-heading"><div><p class="eyebrow">LATEST DEVELOPMENT</p><h2>Build notes from the frontier.</h2></div><a class="button" href="devblog/index.html">View all articles</a></div>
       <div class="post-grid">
-        <a class="post-card" href="devblog/articles/resonance-and-formation.html"><div class="post-visual grid-visual"><span>FORMATION / 5×5</span></div><div class="post-content"><time datetime="2026-07-13">JUL 13, 2026</time><h3>Making Every Grid Position Matter</h3><p>How vertical depth, lateral roles, and resonance turn placement into strategy.</p><span class="tag">BATTLE SYSTEM</span></div></a>
-        <a class="post-card" href="devblog/articles/generated-skills.html"><div class="post-visual skill-visual"><span>SKILL_GEN / WIP</span></div><div class="post-content"><time datetime="2026-07-12">JUL 12, 2026</time><h3>Skills Generated from Meaning</h3><p>Building active effects from embeddings without losing the identity of the work.</p><span class="tag">SKILL GENERATION</span></div></a>
-        <a class="post-card" href="devblog/articles/why-thought-becomes-a-game.html"><div class="post-visual map-visual"><span>ORIGIN / CONCEPT</span></div><div class="post-content"><time datetime="2026-07-06">JUL 06, 2026</time><h3>Why Build a Game from Thought?</h3><p>The design question that connected ThoughtMap research to a playable system.</p><span class="tag">CONCEPT</span></div></a>
+        <a class="post-card" href="devblog/articles/skill-generation-pipeline.html"><div class="post-visual skill-visual"><span>SKILL_GEN / IN PROGRESS</span></div><div class="post-content"><time datetime="2026-07-14">JUL 14, 2026</time><h3>Skill Generation Without Losing the Source Work</h3><p>How semantic concepts enter a controlled vocabulary of triggers, costs, and effects.</p><span class="tag">SKILL GENERATION</span></div></a>
+        <a class="post-card" href="devblog/articles/hate-targeting-system.html"><div class="post-visual grid-visual"><span>HATE / IMPLEMENTED</span></div><div class="post-content"><time datetime="2026-07-13">JUL 13, 2026</time><h3>Turning Formation into Target Priority</h3><p>The multiplicative hate score connecting placement, resonance, threat, and targeting.</p><span class="tag">HATE SYSTEM</span></div></a>
+        <a class="post-card" href="devblog/articles/resonance-system.html"><div class="post-visual map-visual"><span>RESONANCE / IMPLEMENTED</span></div><div class="post-content"><time datetime="2026-07-12">JUL 12, 2026</time><h3>Making Adjacent Ideas Matter</h3><p>Orthogonal adjacency, parameter differences, clamps, and Battle Prep previews.</p><span class="tag">RESONANCE</span></div></a>
       </div>
     </section>
 
     <section class="cta"><p class="eyebrow">FOLLOW THE BUILD</p><h2>The game is being made in public.</h2><p>Read the decisions, experiments, failures, and system changes behind Source of Thought.</p><div class="actions"><a class="button primary" href="devblog/index.html">Development Blog</a><a class="button" href="https://github.com/flyingbaby24/koseisha-os" target="_blank" rel="noopener">View on GitHub ↗</a></div></section>
   </main>
-  <footer><a class="brand" href="index.html"><span class="brand-mark">S/T</span><span>SOURCE OF THOUGHT</span></a><p>Ideas are not static. Neither is this game.</p><div><a href="devblog/index.html">Dev Blog</a><a href="roadmap.html">Roadmap</a><a href="changelog.html">Changelog</a></div><small>© 2026 Jinn Project. Work in progress.</small></footer>
-  <script src="script.js"></script>
+  <footer><a class="brand" href="index.html"><span class="brand-mark">S/T</span><span>SOURCE OF THOUGHT</span></a><p>Ideas are not static. Neither is this game.</p><div><a href="https://github.com/flyingbaby24/koseisha-os" target="_blank" rel="noopener">GitHub ↗</a><a href="devblog/index.html">Dev Blog</a><a href="roadmap.html">Roadmap</a><a href="changelog.html">Changelog</a></div><small>© 2026 Jinn Project. Work in progress.</small></footer>
+  <script src="i18n/routes.js"></script><script src="script.js"></script>
 </body>
 </html>

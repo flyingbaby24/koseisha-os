@@ -233,10 +233,12 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     [ContextMenu("Load Personal Library")]
     public void LoadPersonalLibrary()
     {
+        Debug.Log("[Personal Load Start] Load Personal Library requested.", this);
         EnsurePersonalLibraryApiClient();
         if (personalLibraryApiClient == null)
         {
             WriteStatus("Personal Library API client is not assigned.");
+            Debug.LogWarning("[Personal Load Start] Personal Library API client is not assigned.", this);
             return;
         }
 
@@ -244,9 +246,11 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         if (string.IsNullOrWhiteSpace(email))
         {
             WriteStatus("Enter a registered email address first.");
+            Debug.LogWarning("[Personal Load Start] Email field is empty.", this);
             return;
         }
 
+        Debug.Log("[Personal Load Start] API request will start. Email is configured; value is intentionally not logged.", this);
         WriteStatus("Loading Personal Library...");
         StartCoroutine(personalLibraryApiClient.GetSavedByEmail(
             email,
@@ -258,26 +262,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     private void ApplyPersonalLibraryResponse(PersonalLibraryResponse response)
     {
         SavedDocument[] works = response == null ? new SavedDocument[0] : response.WorksOrItems;
-        List<ThoughtMapBattleCardData> personalCards = new List<ThoughtMapBattleCardData>();
-        HashSet<string> seenIds = new HashSet<string>();
-
-        foreach (SavedDocument work in works)
-        {
-            ThoughtMapBattleCardData card = ThoughtMapBattleCardFactory.FromSavedDocument(work, "personal");
-            if (card == null)
-            {
-                continue;
-            }
-
-            string id = GetCardId(card);
-            if (string.IsNullOrWhiteSpace(id) || !seenIds.Add(id))
-            {
-                continue;
-            }
-
-            personalCards.Add(card);
-            LogPersonalCardConversion(card);
-        }
+        Debug.Log($"[Personal Load Response] API response count={works.Length}. Clearing existing card caches before redraw.", this);
 
         loadedCards.Clear();
         deckCards.Clear();
@@ -286,7 +271,43 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         selectedDeckIndex = -1;
         selectedLibraryIndex = -1;
         selectedGeneratedSkillId = "";
+
+        List<ThoughtMapBattleCardData> personalCards = new List<ThoughtMapBattleCardData>();
+        HashSet<string> seenIds = new HashSet<string>();
+
+        for (int i = 0; i < works.Length; i++)
+        {
+            SavedDocument work = works[i];
+            Debug.Log(
+                $"[Personal Load SavedDocument] index={i} doc_id='{work?.doc_id}' title='{work?.title}' parameters_count={CountSavedDocumentParameters(work)} raw_parameters={FormatSavedDocumentParameters(work)}",
+                this
+            );
+            Debug.Log("[Personal Load Route] Calling ThoughtMapBattleCardFactory.FromSavedDocument().", this);
+            ThoughtMapBattleCardData card = ThoughtMapBattleCardFactory.FromSavedDocument(work, "personal");
+            if (card == null)
+            {
+                Debug.LogWarning($"[Personal Load Route] FromSavedDocument returned null for index={i}.", this);
+                continue;
+            }
+
+            Debug.Log(
+                $"[Personal Load CardData] index={i} doc_id='{card.docId}' title='{CardName(card)}' parameters={FormatCardParameterValues(card)} primaryAttribute='{card.primaryAttribute}' dominant='{ResolveDominantThoughtAttributeKey(card)}' spriteKey='{NormalizeAttributeKey(ResolveDominantThoughtAttributeKey(card))}' stats=[HP:{card.statHp}, SP:{card.statSp}, P_ATK:{card.statPhysicalAttack}, S_ATK:{card.statSkillAttack}, P_DEF:{card.statPhysicalDefense}, S_DEF:{card.statSkillDefense}, SPD:{card.statSpeed}, EVA:{card.statEvasion}, ACC:{card.statAccuracy}, LUCK:{card.statLuck}]",
+                this
+            );
+
+            string id = GetCardId(card);
+            if (string.IsNullOrWhiteSpace(id) || !seenIds.Add(id))
+            {
+                Debug.LogWarning($"[Personal Load CardData] Skipping duplicate or empty card id='{id}' title='{CardName(card)}'.", this);
+                continue;
+            }
+
+            personalCards.Add(card);
+            LogPersonalCardConversion(card);
+        }
+
         loadedCards.AddRange(personalCards);
+        Debug.Log($"[Personal Load Complete] loadedCards={loadedCards.Count} deckCards={deckCards.Count} placement={placement.Count}. Rendering Card List now.", this);
 
         RenderAll();
         RenderGeneratedSkills();
@@ -297,7 +318,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
     private void LogPersonalCardConversion(ThoughtMapBattleCardData card)
     {
-        if (!debugGeneratedSkills || card == null)
+        if (card == null)
         {
             return;
         }
@@ -307,6 +328,120 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             $"[PersonalLibrary] CardData title='{CardName(card)}' doc_id='{card.docId}' parameters={card.parameterScores.Count} dominant='{dominant}' artKey='{FormatThoughtAttributeForLog(dominant)}' scope='{card.dataScope}'",
             this
         );
+    }
+
+    private int CountSavedDocumentParameters(SavedDocument document)
+    {
+        if (document == null)
+        {
+            return 0;
+        }
+
+        int count = document.parameters == null ? 0 : document.parameters.Length;
+        foreach (ThoughtParameterDefinition definition in ThoughtParameterOrder)
+        {
+            if (GetSavedDocumentParameter(document, definition, out _))
+            {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private string FormatSavedDocumentParameters(SavedDocument document)
+    {
+        if (document == null)
+        {
+            return "<null>";
+        }
+
+        StringBuilder builder = new StringBuilder();
+        builder.Append("array=[");
+        if (document.parameters != null)
+        {
+            for (int i = 0; i < document.parameters.Length; i++)
+            {
+                ThoughtMapParameterScore parameter = document.parameters[i];
+                if (i > 0)
+                {
+                    builder.Append(", ");
+                }
+                builder.Append(parameter == null ? "<null>" : $"{parameter.key}:{parameter.value:0.###}");
+            }
+        }
+        builder.Append("] direct=[");
+        for (int i = 0; i < ThoughtParameterOrder.Length; i++)
+        {
+            ThoughtParameterDefinition definition = ThoughtParameterOrder[i];
+            if (i > 0)
+            {
+                builder.Append(", ");
+            }
+            builder.Append(definition.key);
+            builder.Append(':');
+            builder.Append(GetSavedDocumentParameter(document, definition, out float value) ? value.ToString("0.###") : "missing");
+        }
+        builder.Append(']');
+        return builder.ToString();
+    }
+
+    private bool GetSavedDocumentParameter(SavedDocument document, ThoughtParameterDefinition definition, out float value)
+    {
+        value = 0f;
+        if (document == null || definition.aliases == null)
+        {
+            return false;
+        }
+
+        foreach (string alias in definition.aliases)
+        {
+            string key = NormalizeAttributeKey(alias);
+            switch (key)
+            {
+                case "philosophy": value = document.philosophy; break;
+                case "psychology": value = document.psychology; break;
+                case "science": value = document.science; break;
+                case "economy": value = document.economy != 0f ? document.economy : document.economics; break;
+                case "karma": value = document.karma; break;
+                case "emotion": value = document.emotion; break;
+                case "morality": value = document.morality != 0f ? document.morality : document.moral; break;
+                case "ideology": value = document.ideology != 0f ? document.ideology : document.ideal; break;
+                case "individual": value = document.individual; break;
+                case "community": value = document.community; break;
+                default: continue;
+            }
+
+            if (Mathf.Abs(value) > 0.000001f)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private string FormatCardParameterValues(ThoughtMapBattleCardData card)
+    {
+        if (card == null)
+        {
+            return "<null>";
+        }
+
+        StringBuilder builder = new StringBuilder();
+        builder.Append('[');
+        for (int i = 0; i < ThoughtParameterOrder.Length; i++)
+        {
+            ThoughtParameterDefinition definition = ThoughtParameterOrder[i];
+            if (i > 0)
+            {
+                builder.Append(", ");
+            }
+            builder.Append(definition.key);
+            builder.Append(':');
+            builder.Append(TryGetThoughtParameterScore(card, definition, out float score) ? score.ToString("0.###") : "missing");
+        }
+        builder.Append(']');
+        return builder.ToString();
     }
 
     private void HandlePersonalLibraryError(string message)

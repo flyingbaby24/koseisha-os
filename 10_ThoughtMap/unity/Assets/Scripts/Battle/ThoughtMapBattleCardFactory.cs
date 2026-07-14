@@ -20,6 +20,12 @@ public static class ThoughtMapBattleCardFactory
         string docId = FirstNonEmpty(document.doc_id, document.original_doc_id, document.source_doc_id, document.title, "unknown");
         string scope = string.IsNullOrWhiteSpace(dataScope) ? "personal" : dataScope.Trim().ToLowerInvariant();
         string title = FirstNonEmpty(document.title, document.source_title, document.doc_id, "Untitled");
+        if (string.Equals(scope, "personal", StringComparison.OrdinalIgnoreCase))
+        {
+            Debug.Log(
+                $"[PersonalLibrary Route] FromSavedDocument called doc_id='{docId}' title='{title}' parameters_array_count={(document.parameters == null ? 0 : document.parameters.Length)}"
+            );
+        }
 
         ThoughtMapBattleCardData card = new ThoughtMapBattleCardData
         {
@@ -45,6 +51,12 @@ public static class ThoughtMapBattleCardFactory
         ApplyExplicitStats(card, document);
         ApplyParameterStats(card);
         LogPersonalConversion(card);
+        if (string.Equals(scope, "personal", StringComparison.OrdinalIgnoreCase))
+        {
+            Debug.Log(
+                $"[PersonalLibrary Route] FromSavedDocument completed doc_id='{card.docId}' cardId='{card.cardId}' primaryAttribute='{card.primaryAttribute}' parameter_count={card.parameterScores.Count}"
+            );
+        }
         return card;
     }
 

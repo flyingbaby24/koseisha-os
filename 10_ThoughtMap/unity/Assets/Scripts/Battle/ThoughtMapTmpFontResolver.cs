@@ -4,6 +4,10 @@ using UnityEngine.TextCore.LowLevel;
 
 public static class ThoughtMapTmpFontResolver
 {
+    private const string RequiredCharacters =
+        "+-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,;:!?()[]{}_/\\'\"%→" +
+        "探求封印孤立回復浸食発動率効果時間味方敵思想共鳴";
+
     private static readonly string[] PreferredOsFonts =
     {
         "Yu Gothic UI", "Yu Gothic", "Meiryo", "Microsoft YaHei UI",
@@ -43,6 +47,7 @@ public static class ThoughtMapTmpFontResolver
 
                 asset.name = "SourceOfThoughtRuntimeCJK SDF";
                 asset.atlasPopulationMode = AtlasPopulationMode.Dynamic;
+                WarmUpRequiredCharacters(asset);
                 cachedRuntimeFont = asset;
                 return cachedRuntimeFont;
             }
@@ -70,6 +75,12 @@ public static class ThoughtMapTmpFontResolver
 
         try
         {
+            if (!string.IsNullOrEmpty(fontAsset.name) &&
+                fontAsset.name.ToUpperInvariant().Contains("ARIALUNI"))
+            {
+                return false;
+            }
+
             if (fontAsset.atlasTextures == null || fontAsset.atlasTextures.Length == 0)
             {
                 return false;
@@ -88,6 +99,23 @@ public static class ThoughtMapTmpFontResolver
         catch
         {
             return false;
+        }
+    }
+
+    private static void WarmUpRequiredCharacters(TMP_FontAsset fontAsset)
+    {
+        if (fontAsset == null)
+        {
+            return;
+        }
+
+        try
+        {
+            fontAsset.TryAddCharacters(RequiredCharacters, out _);
+        }
+        catch
+        {
+            // Runtime font creation is best-effort; Editor repair handles persistent refs.
         }
     }
 

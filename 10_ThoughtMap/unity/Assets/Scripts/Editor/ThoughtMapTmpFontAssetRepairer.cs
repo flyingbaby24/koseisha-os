@@ -13,6 +13,9 @@ public static class ThoughtMapTmpFontAssetRepairer
 {
     private const string FontFolder = "Assets/Fonts";
     private const string RepairFontPath = "Assets/Fonts/ThoughtMapJapanese SDF.asset";
+    private const string RequiredWarmupCharacters =
+        "+-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,;:!?()[]{}_/\\'\"%→" +
+        "探求封印孤立回復浸食発動率効果時間味方敵思想共鳴";
     private static readonly string[] PreferredOsFonts =
     {
         "Yu Gothic UI",
@@ -44,6 +47,7 @@ public static class ThoughtMapTmpFontAssetRepairer
 
         RegisterTmpSettings(repairFont);
         RepairOpenScenes(repairFont, report);
+        RepairAllSceneAssets(repairFont, report);
         RepairAllPrefabs(repairFont, report);
 
         AssetDatabase.SaveAssets();
@@ -53,6 +57,7 @@ public static class ThoughtMapTmpFontAssetRepairer
             "[ThoughtMap TMP Repair] Complete\n" +
             $"FontAsset: {report.fontPath}\n" +
             $"Open scenes checked: {report.scenesChecked}, scenes saved: {report.scenesSaved}\n" +
+            $"Scene assets checked: {report.sceneAssetsChecked}, scene assets saved: {report.sceneAssetsSaved}\n" +
             $"Prefabs checked: {report.prefabsChecked}, prefabs saved: {report.prefabsSaved}\n" +
             $"TMP_Text replaced: {report.replacedTextCount}\n" +
             $"atlasTextures: {report.atlasCount}, material: {(report.hasMaterial ? "yes" : "no")}"
@@ -67,6 +72,7 @@ public static class ThoughtMapTmpFontAssetRepairer
         if (IsUsableFontAssetSerialized(existing))
         {
             existing.atlasPopulationMode = AtlasPopulationMode.Dynamic;
+            TryWarmUpRequiredGlyphs(existing);
             EditorUtility.SetDirty(existing);
             return existing;
         }
@@ -87,6 +93,7 @@ public static class ThoughtMapTmpFontAssetRepairer
             AssetDatabase.ImportAsset(RepairFontPath, ImportAssetOptions.ForceUpdate);
 
             TMP_FontAsset saved = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(RepairFontPath);
+            TryWarmUpRequiredGlyphs(saved);
             if (ValidateCreatedRepairFont(saved))
             {
                 Debug.Log(
@@ -308,8 +315,14 @@ public static class ThoughtMapTmpFontAssetRepairer
             }
 
             TMP_FontAsset asset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(path);
+            if (asset != null && asset.name.IndexOf("ARIALUNI", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                continue;
+            }
+
             if (IsUsableFontAssetSerialized(asset))
             {
+                TryWarmUpRequiredGlyphs(asset);
                 return asset;
             }
         }
@@ -367,6 +380,59 @@ public static class ThoughtMapTmpFontAssetRepairer
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene);
                 report.scenesSaved++;
+            }
+        }
+    }
+
+    private static void RepairAllSceneAssets(TMP_FontAsset repairFont, RepairReport report)
+    {
+        SceneSetup[] originalSetup = EditorSceneManager.GetSceneManagerSetup();
+        string[] sceneGuids = AssetDatabase.FindAssets("t:Scene", new[] { "Assets" });
+        try
+        {
+            foreach (string guid in sceneGuids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    continue;
+                }
+
+                report.sceneAssetsChecked++;
+                try
+                {
+                    Scene scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+                    bool sceneChanged = false;
+                    foreach (GameObject root in scene.GetRootGameObjects())
+                    {
+                        sceneChanged |= RepairTmpTextsInRoot(root, repairFont, report, true);
+                    }
+
+                    if (sceneChanged)
+                    {
+                        EditorSceneManager.MarkSceneDirty(scene);
+                        EditorSceneManager.SaveScene(scene);
+                        report.sceneAssetsSaved++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[ThoughtMap TMP Repair] Failed to repair scene asset '{path}': {ex.GetType().Name}: {ex.Message}");
+                }
+            }
+        }
+        finally
+        {
+            try
+            {
+                if (originalSetup != null && originalSetup.Length > 0)
+                {
+                    EditorSceneManager.RestoreSceneManagerSetup(originalSetup);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[ThoughtMap TMP Repair] Could not restore previous open scene setup: " + ex.GetType().Name + ": " + ex.Message);
             }
         }
     }
@@ -540,6 +606,32 @@ public static class ThoughtMapTmpFontAssetRepairer
         return true;
     }
 
+    private static void TryWarmUpRequiredGlyphs(TMP_FontAsset fontAsset)
+    {
+        if (fontAsset == null)
+        {
+            return;
+        }
+
+        try
+        {
+            fontAsset.atlasPopulationMode = AtlasPopulationMode.Dynamic;
+            bool success = fontAsset.TryAddCharacters(RequiredWarmupCharacters, out string missingCharacters);
+            if (!success && !string.IsNullOrEmpty(missingCharacters))
+            {
+                Debug.LogWarning(
+                    "[ThoughtMap TMP Repair] Repair font could not preload some glyphs. " +
+                    "The font is still assigned, but these characters may need another OS font: " + missingCharacters
+                );
+            }
+            EditorUtility.SetDirty(fontAsset);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[ThoughtMap TMP Repair] Required glyph warmup failed for '{fontAsset.name}': {ex.GetType().Name}: {ex.Message}");
+        }
+    }
+
     private static bool IsUsableFontAssetSerialized(TMP_FontAsset fontAsset)
     {
         if (fontAsset == null)
@@ -694,6 +786,8 @@ public static class ThoughtMapTmpFontAssetRepairer
         public string fontPath;
         public int scenesChecked;
         public int scenesSaved;
+        public int sceneAssetsChecked;
+        public int sceneAssetsSaved;
         public int prefabsChecked;
         public int prefabsSaved;
         public int replacedTextCount;
