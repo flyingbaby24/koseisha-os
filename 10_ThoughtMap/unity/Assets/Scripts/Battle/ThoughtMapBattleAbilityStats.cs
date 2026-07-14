@@ -62,6 +62,44 @@ public static class ThoughtMapBattleAbilityStats
         return values;
     }
 
+    public static ThoughtMapBattleAbilityValue[] BuildCombatPreviewValues(
+        ThoughtMapBattleCardData card,
+        ThoughtMapGridBonus positionBonus,
+        bool hasPositionBonus,
+        float resonanceModifier,
+        bool showResonance
+    )
+    {
+        ThoughtMapBattleAbilityValue[] values = new ThoughtMapBattleAbilityValue[DisplayOrder.Length];
+        for (int i = 0; i < DisplayOrder.Length; i++)
+        {
+            ThoughtMapBattleAbilityDefinition definition = DisplayOrder[i];
+            float baseValue = GetCombatValue(card, definition.thoughtKey);
+            float positionMultiplier = hasPositionBonus ? GetPositionMultiplier(definition.thoughtKey, positionBonus) : 1f;
+            float positionedValue = Mathf.Max(0f, Mathf.Round(baseValue * positionMultiplier));
+            bool positionApplies = hasPositionBonus && Mathf.Abs(positionMultiplier - 1f) >= 0.0001f;
+            bool resonanceApplies = showResonance && ResonanceApplies(definition.thoughtKey);
+            float finalValue = resonanceApplies
+                ? Mathf.Max(1f, Mathf.Round(positionedValue * (1f + resonanceModifier)))
+                : positionedValue;
+            float normalizedValue = NormalizeValue(finalValue);
+            values[i] = new ThoughtMapBattleAbilityValue(
+                definition,
+                baseValue,
+                normalizedValue,
+                Mathf.Clamp01(normalizedValue),
+                positionMultiplier,
+                positionedValue - baseValue,
+                resonanceModifier,
+                finalValue - positionedValue,
+                finalValue,
+                positionApplies,
+                resonanceApplies
+            );
+        }
+        return values;
+    }
+
     public static float NormalizeFill(float value)
     {
         return Mathf.Clamp01(NormalizeValue(value));
@@ -150,6 +188,28 @@ public static class ThoughtMapBattleAbilityStats
         }
     }
 
+    private static float GetPositionMultiplier(string thoughtKey, ThoughtMapGridBonus bonus)
+    {
+        switch (NormalizeKey(thoughtKey))
+        {
+            case "individual": return bonus.hpMultiplier;
+            case "philosophy":
+            case "psychology":
+                return bonus.attackMultiplier;
+            case "science":
+            case "moral":
+                return bonus.defenseMultiplier;
+            case "economy":
+                return bonus.speedMultiplier;
+            case "emotion":
+                return bonus.evasionMultiplier;
+            case "ideal":
+                return bonus.accuracyMultiplier;
+            default:
+                return 1f;
+        }
+    }
+
     private static string NormalizeKey(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -201,12 +261,16 @@ public struct ThoughtMapBattleAbilityValue
     public readonly float rawValue;
     public readonly float normalizedValue;
     public readonly float fillAmount;
+    public readonly float positionMultiplier;
+    public readonly float positionDelta;
     public readonly float resonanceModifier;
+    public readonly float resonanceDelta;
     public readonly float finalValue;
+    public readonly bool positionApplies;
     public readonly bool resonanceApplies;
 
     public ThoughtMapBattleAbilityValue(ThoughtMapBattleAbilityDefinition definition, float rawValue, float normalizedValue, float fillAmount)
-        : this(definition, rawValue, normalizedValue, fillAmount, 0f, rawValue, false)
+        : this(definition, rawValue, normalizedValue, fillAmount, 1f, 0f, 0f, 0f, rawValue, false, false)
     {
     }
 
@@ -219,13 +283,46 @@ public struct ThoughtMapBattleAbilityValue
         float finalValue,
         bool resonanceApplies
     )
+        : this(
+            definition,
+            rawValue,
+            normalizedValue,
+            fillAmount,
+            1f,
+            0f,
+            resonanceModifier,
+            finalValue - rawValue,
+            finalValue,
+            false,
+            resonanceApplies
+        )
+    {
+    }
+
+    public ThoughtMapBattleAbilityValue(
+        ThoughtMapBattleAbilityDefinition definition,
+        float rawValue,
+        float normalizedValue,
+        float fillAmount,
+        float positionMultiplier,
+        float positionDelta,
+        float resonanceModifier,
+        float resonanceDelta,
+        float finalValue,
+        bool positionApplies,
+        bool resonanceApplies
+    )
     {
         this.definition = definition;
         this.rawValue = rawValue;
         this.normalizedValue = normalizedValue;
         this.fillAmount = fillAmount;
+        this.positionMultiplier = positionMultiplier;
+        this.positionDelta = positionDelta;
         this.resonanceModifier = resonanceModifier;
+        this.resonanceDelta = resonanceDelta;
         this.finalValue = finalValue;
+        this.positionApplies = positionApplies;
         this.resonanceApplies = resonanceApplies;
     }
 }

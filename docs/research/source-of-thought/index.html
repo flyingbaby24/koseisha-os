@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>36 Stratagems Cognitive Bias Atlas | Jinn Project</title>
+  <meta name="description" content="A cognitive bias reinterpretation of the Thirty-Six Stratagems through behavioral economics and modern decision theory." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="../../"><span class="mark">品</span><span>Jinn Project</span></a>
+    <nav><a href="#concept" data-i18n="navConcept">Concept</a><a href="#atlas" data-i18n="navAtlas">Atlas</a><a href="#categories" data-i18n="navCategories">Categories</a><a href="#notes" data-i18n="navNotes">Notes</a></nav>
+    <div class="language-switcher" role="group" aria-label="Language">
+      <button id="languageJa" class="language-button" type="button" data-language="ja" aria-pressed="false">JA</button>
+      <button id="languageEn" class="language-button" type="button" data-language="en" aria-pressed="false">EN</button>
+    </div>
+  </header>
+  <main>
+    <section class="hero">
+      <p class="eyebrow" data-i18n="heroEyebrow">Ancient Strategy / Cognitive Science / Behavioral Economics</p>
+      <h1 data-i18n-html="heroTitle">36 Stratagems<br><span>Cognitive Bias Atlas</span></h1>
+      <p class="lead" data-i18n="heroLead">三十六計を「兵法」だけでなく、人間の判断ミス・認知バイアス・行動経済学の実践的ケーススタディとして読み直す実験的マップ。</p>
+      <div class="hero-actions"><a class="button primary" href="#atlas" data-i18n="openAtlas">Open Atlas</a><a class="button secondary" href="#categories" data-i18n="viewCategories">View Categories</a></div>
+    </section>
+    <section id="concept" class="panel concept"><div><p class="eyebrow" data-i18n="conceptEyebrow">Concept</p><h2 data-i18n="conceptTitle">兵法は、認知仕様書としても読める。</h2></div><p data-i18n="conceptBody">三十六計は、敵を欺くための戦略集として知られる。しかしそれぞれの計略が成立する理由を分解すると、「人は何を信じやすいのか」「どこで判断を誤るのか」「どの条件で注意が逸れるのか」という認知パターンが見えてくる。このページは、古代兵法を現代の認知科学・行動経済学の言葉で再配置する試みである。</p></section>
+    <section class="stats"><div><strong>36</strong><span data-i18n="stratagems">計略</span></div><div><strong id="categoryCount">0</strong><span data-i18n="categories">認知カテゴリ</span></div><div><strong>1</strong><span data-i18n="humanFirmware">Human Firmware</span></div></section>
+    <section id="categories" class="section"><p class="eyebrow" data-i18n="categories">認知カテゴリ</p><h2 data-i18n="categoriesTitle">36個の計略を、認知原理として再分類する。</h2><div id="categoryCards" class="category-grid"></div></section>
+    <section id="atlas" class="section atlas-section">
+      <p class="eyebrow" data-i18n="atlasEyebrow">Interactive Atlas</p>
+      <h2 data-i18n="atlasTitle">Search / Filter / Compare</h2>
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="計略・概念・バイアスを検索" />
+        <select id="category"><option value="all">All Categories</option></select>
+        <div class="view-toggle" role="group" aria-label="Atlas view">
+          <button id="treeViewButton" class="toggle-button active" type="button">認知体系ツリー</button>
+          <button id="listViewButton" class="toggle-button" type="button">三十六計一覧</button>
+        </div>
+      </div>
+      <div class="stratagem-workspace">
+        <aside class="stratagem-navigation" aria-label="Stratagem navigation">
+          <div id="cards" class="stratagem-list"></div>
+        </aside>
+        <section id="detailPane" class="stratagem-detail-pane" aria-live="polite"></section>
+      </div>
+      <div id="mobileDetailDrawer" class="mobile-detail-drawer" aria-hidden="true">
+        <div class="mobile-detail-scrim" data-close-detail></div>
+        <article class="mobile-detail-panel" role="dialog" aria-modal="true" aria-labelledby="mobileDetailTitle">
+          <div class="mobile-detail-bar">
+            <button id="closeDetailButton" class="drawer-close" type="button">← 一覧へ戻る</button>
+            <span id="mobileDetailNumber" class="drawer-number">#01</span>
+          </div>
+          <div id="mobileDetailContent" class="mobile-detail-content"></div>
+        </article>
+      </div>
+    </section>
+    <section id="notes" class="panel notes"><p class="eyebrow" data-i18n="notesEyebrow">Research Note</p><h2 data-i18n="notesTitle">これは歴史的断定ではなく、現代的な再解釈である。</h2><p data-i18n="notesBody">この対応表は「三十六計が当時から認知科学として作られた」と主張するものではない。あくまで、現代の認知科学・行動経済学・情報設計の視点から読むと、古典兵法が人間の認知バイアスの実践例集としても見える、という仮説的マッピングである。</p></section>
+  </main>
+  <footer><span>© Jinn Project</span><span>Visualizing hidden structures in thought and behavior.</span></footer>
+  <script src="stratagems-en.js"></script>
+  <script src="i18n.js"></script>
+  <script src="stratagems.js"></script>
+
+  <!-- Cloudflare Web Analytics -->
+<script defer
+src="https://static.cloudflareinsights.com/beacon.min.js"
+data-cf-beacon='{"token":"7da53f8ef3544cf0967279ebd140ff89"}'>
+</script>
+<!-- End Cloudflare Web Analytics -->
+  
+</body>
+</html>

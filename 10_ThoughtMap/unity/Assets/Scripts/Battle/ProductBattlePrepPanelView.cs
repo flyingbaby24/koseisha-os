@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -18,18 +18,17 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     };
     private static readonly ThoughtParameterDefinition[] ThoughtParameterOrder =
     {
-        new ThoughtParameterDefinition("philosophy", "philosophy", "哲学"),
-        new ThoughtParameterDefinition("psychology", "psychology", "心理"),
-        new ThoughtParameterDefinition("science", "science", "科学"),
-        new ThoughtParameterDefinition("economy", "economy", "economics", "経済"),
-        new ThoughtParameterDefinition("karma", "karma", "カルマ"),
-        new ThoughtParameterDefinition("emotion", "emotion", "感情"),
-        new ThoughtParameterDefinition("moral", "moral", "morality", "モラル"),
-        new ThoughtParameterDefinition("ideal", "ideal", "理念"),
-        new ThoughtParameterDefinition("individual", "individual", "個人"),
-        new ThoughtParameterDefinition("community", "community", "共同体")
+        new ThoughtParameterDefinition("philosophy", "philosophy", "\u54F2\u5B66"),
+        new ThoughtParameterDefinition("psychology", "psychology", "\u5FC3\u7406"),
+        new ThoughtParameterDefinition("science", "science", "\u79D1\u5B66"),
+        new ThoughtParameterDefinition("economy", "economy", "economics", "\u7D4C\u6E08"),
+        new ThoughtParameterDefinition("karma", "karma", "\u30AB\u30EB\u30DE"),
+        new ThoughtParameterDefinition("emotion", "emotion", "\u611F\u60C5"),
+        new ThoughtParameterDefinition("moral", "moral", "morality", "\u30E2\u30E9\u30EB"),
+        new ThoughtParameterDefinition("ideal", "ideal", "\u7406\u5FF5"),
+        new ThoughtParameterDefinition("individual", "individual", "\u500B\u4EBA"),
+        new ThoughtParameterDefinition("community", "community", "\u5171\u540C\u4F53")
     };
-
     [Header("Input")]
     [SerializeField] private TextAsset cardsCsvAsset;
     [SerializeField] private string streamingAssetsCsvPath = "cards.csv";
@@ -84,6 +83,9 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     [SerializeField] private AttributeSpriteMap[] attributeSprites;
     [SerializeField] private AttributeSpriteMap[] cardTemplateSprites;
 
+    [Header("Fonts")]
+    [SerializeField] private TMP_FontAsset cjkFontAsset;
+
     [Header("Rules")]
     [SerializeField] private int deckLimit = 10;
     [SerializeField] private int deployLimit = 5;
@@ -114,6 +116,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         EnsureBattlePrepBackground();
         EnsurePanelTransparency();
         EnsureReadableTextEffects();
+        ApplyResolvedFontToBattlePrepTexts();
         EnsureListContentReferences();
         if (cardListContent != null)
         {
@@ -169,6 +172,26 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         AddClick(startBattleButton, StartBattleScene);
         AddClick(simulateButton, SimulatePreview);
         AddClick(clearButton, ClearPlacement);
+    }
+
+    private void ApplyResolvedFontToBattlePrepTexts()
+    {
+        TMP_FontAsset resolved = ThoughtMapTmpFontResolver.Resolve(cjkFontAsset);
+        if (resolved == null)
+        {
+            return;
+        }
+
+        cjkFontAsset = resolved;
+        ThoughtMapTmpFontResolver.ApplyToChildren(gameObject, resolved);
+        if (cardDetailPanel != null)
+        {
+            cardDetailPanel.SetFontAsset(resolved);
+        }
+        if (generatedSkillsPanel != null)
+        {
+            generatedSkillsPanel.SetFontAsset(resolved);
+        }
     }
 
     [ContextMenu("Load Cards")]
@@ -253,6 +276,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             }
 
             personalCards.Add(card);
+            LogPersonalCardConversion(card);
         }
 
         loadedCards.Clear();
@@ -269,6 +293,20 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         WriteStatus(personalCards.Count == 0
             ? "Personal Library is empty."
             : $"Loaded {personalCards.Count} Personal Library cards.");
+    }
+
+    private void LogPersonalCardConversion(ThoughtMapBattleCardData card)
+    {
+        if (!debugGeneratedSkills || card == null)
+        {
+            return;
+        }
+
+        string dominant = ResolveDominantThoughtAttributeKey(card);
+        Debug.Log(
+            $"[PersonalLibrary] CardData title='{CardName(card)}' doc_id='{card.docId}' parameters={card.parameterScores.Count} dominant='{dominant}' artKey='{FormatThoughtAttributeForLog(dominant)}' scope='{card.dataScope}'",
+            this
+        );
     }
 
     private void HandlePersonalLibraryError(string message)
@@ -329,6 +367,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         RenderGrid();
         ShowSelectedDetail();
         RenderGeneratedSkills();
+        ApplyResolvedFontToBattlePrepTexts();
     }
 
     private void RenderCardLibrary()
@@ -951,13 +990,19 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         List<GeneratedSkillDto> deckAssignedSkills = GetAssignedSkillsForCard(card);
         LogSelectedCardSkillState(card, deckAssignedSkills);
         ThoughtMapResonanceResult resonanceResult = GetSelectedCardResonanceResult(card) ?? new ThoughtMapResonanceResult(null);
+        bool hasPositionBonus = TryGetPlacedPosition(card, out ThoughtMapGridPosition selectedPosition);
+        ThoughtMapGridBonus positionBonus = hasPositionBonus
+            ? ThoughtMapGridBonusCalculator.GetBonus(selectedPosition, "Player")
+            : default(ThoughtMapGridBonus);
         cardDetailPanel.Show(
             card,
             ResolveCardArtForTarget(card, selectedDeckIndex, "Detail Panel"),
             ResolveAttributeIconForTarget(card, "Detail Panel"),
             ResolveDominantThoughtAttributeKey(card),
             deckAssignedSkills,
-            resonanceResult
+            resonanceResult,
+            hasPositionBonus,
+            positionBonus
         );
     }
 
@@ -1007,6 +1052,21 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         return null;
+    }
+
+    private bool TryGetPlacedPosition(ThoughtMapBattleCardData card, out ThoughtMapGridPosition position)
+    {
+        foreach (KeyValuePair<int, ThoughtMapBattleCardData> pair in placement)
+        {
+            if (pair.Value == card)
+            {
+                position = new ThoughtMapGridPosition(pair.Key % 5, pair.Key / 5);
+                return true;
+            }
+        }
+
+        position = new ThoughtMapGridPosition(0, 0);
+        return false;
     }
 
     private List<ThoughtMapBattleUnit> BuildPlacedBattleUnits()
@@ -1772,22 +1832,21 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         string key = value.Trim().ToLowerInvariant();
         switch (key)
         {
-            case "哲学": return "philosophy";
-            case "心理": return "psychology";
-            case "科学": return "science";
-            case "経済": return "economy";
+            case "\u54F2\u5B66": return "philosophy";
+            case "\u5FC3\u7406": return "psychology";
+            case "\u79D1\u5B66": return "science";
+            case "\u7D4C\u6E08": return "economy";
             case "economics": return "economy";
-            case "カルマ": return "karma";
-            case "感情": return "emotion";
-            case "モラル": return "moral";
+            case "\u30AB\u30EB\u30DE": return "karma";
+            case "\u611F\u60C5": return "emotion";
+            case "\u30E2\u30E9\u30EB": return "moral";
             case "morality": return "moral";
-            case "理念": return "ideal";
-            case "個人": return "individual";
-            case "共同体": return "community";
+            case "\u7406\u5FF5": return "ideal";
+            case "\u500B\u4EBA": return "individual";
+            case "\u5171\u540C\u4F53": return "community";
             default: return key;
         }
     }
-
     private string GetSpriteWarning()
     {
         bool cardPoolEmpty = cardArtPool == null || cardArtPool.Length == 0;
@@ -2305,3 +2364,5 @@ public struct ThoughtParameterDefinition
         this.aliases = aliases;
     }
 }
+
+

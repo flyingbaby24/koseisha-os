@@ -47,13 +47,45 @@ public class SavedDocument
 {
     public string doc_id;
     public string title;
+    public string source_title;
     public string author;
     public string source;
     public string category;
     public string url;
     public string source_url;
+    public string text;
+    public string body;
+    public string summary;
     public string saved_at;
     public string original_doc_id;
+    public string source_doc_id;
+    public string primary_attribute;
+    public string secondary_attribute;
+    public int stat_physical_attack;
+    public int stat_skill_attack;
+    public int stat_physical_defense;
+    public int stat_speed;
+    public int stat_luck;
+    public int stat_evasion;
+    public int stat_skill_defense;
+    public int stat_accuracy;
+    public int stat_hp;
+    public int stat_sp;
+    public int rarity_seed;
+    public int skill_seed;
+    public float philosophy;
+    public float psychology;
+    public float science;
+    public float economy;
+    public float economics;
+    public float karma;
+    public float emotion;
+    public float moral;
+    public float morality;
+    public float ideal;
+    public float individual;
+    public float community;
+    public float[] embedding;
     public ThoughtMapParameterScore[] parameters;
 }
 

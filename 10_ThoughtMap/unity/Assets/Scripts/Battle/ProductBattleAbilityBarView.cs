@@ -8,13 +8,16 @@ public class ProductBattleAbilityBarView : MonoBehaviour
     private const float LabelWidth = 44f;
     private const float BarMinWidth = 34f;
     private const float BaseValueWidth = 28f;
-    private const float ModifierWidth = 34f;
+    private const float PositionWidth = 42f;
+    private const float ResonanceWidth = 42f;
     private const float ArrowWidth = 12f;
     private const float FinalValueWidth = 32f;
     private static Sprite generatedSolidSprite;
 
     [SerializeField] private TMP_Text labelText;
     [SerializeField] private TMP_Text baseValueText;
+    [SerializeField] private TMP_Text positionText;
+    [SerializeField] private TMP_Text resonanceText;
     [SerializeField] private TMP_Text modifierText;
     [SerializeField] private TMP_Text arrowText;
     [SerializeField] private TMP_Text finalValueText;
@@ -60,6 +63,8 @@ public class ProductBattleAbilityBarView : MonoBehaviour
         EnsureVisuals();
         SetText(labelText, "");
         SetText(baseValueText, "");
+        SetText(positionText, "");
+        SetText(resonanceText, "");
         SetText(modifierText, "");
         SetText(arrowText, "");
         SetText(finalValueText, "");
@@ -106,7 +111,28 @@ public class ProductBattleAbilityBarView : MonoBehaviour
 
         if (modifierText == null)
         {
-            modifierText = GetOrCreateText(root, "ModifierText", "", 13, TextAlignmentOptions.MidlineRight);
+            modifierText = GetOrCreateText(root, "ModifierText", "", 12, TextAlignmentOptions.MidlineRight);
+        }
+
+        if (positionText == null)
+        {
+            Transform existing = root.Find("PositionText");
+            positionText = existing == null ? null : existing.GetComponent<TMP_Text>();
+            if (positionText == null)
+            {
+                positionText = GetOrCreateText(root, "PositionText", "", 12, TextAlignmentOptions.MidlineRight);
+            }
+        }
+
+        if (resonanceText == null)
+        {
+            Transform existing = root.Find("ResonanceText");
+            resonanceText = existing == null ? null : existing.GetComponent<TMP_Text>();
+            if (resonanceText == null)
+            {
+                resonanceText = modifierText;
+                resonanceText.gameObject.name = "ResonanceText";
+            }
         }
 
         if (arrowText == null)
@@ -149,19 +175,23 @@ public class ProductBattleAbilityBarView : MonoBehaviour
         ConfigureLayout(labelText == null ? null : labelText.gameObject, LabelWidth, RowHeight, 0f);
         ConfigureLayout(baseValueText == null ? null : baseValueText.gameObject, BaseValueWidth, RowHeight, 0f);
         ConfigureLayout(barContainer == null ? null : barContainer.gameObject, BarMinWidth, 14f, 1f);
-        ConfigureLayout(modifierText == null ? null : modifierText.gameObject, ModifierWidth, RowHeight, 0f);
+        ConfigureLayout(positionText == null ? null : positionText.gameObject, PositionWidth, RowHeight, 0f);
+        ConfigureLayout(resonanceText == null ? null : resonanceText.gameObject, ResonanceWidth, RowHeight, 0f);
         ConfigureLayout(arrowText == null ? null : arrowText.gameObject, ArrowWidth, RowHeight, 0f);
         ConfigureLayout(finalValueText == null ? null : finalValueText.gameObject, FinalValueWidth, RowHeight, 0f);
         if (labelText != null) labelText.transform.SetSiblingIndex(0);
         if (baseValueText != null) baseValueText.transform.SetSiblingIndex(1);
         if (barContainer != null) barContainer.transform.SetSiblingIndex(2);
-        if (modifierText != null) modifierText.transform.SetSiblingIndex(3);
-        if (arrowText != null) arrowText.transform.SetSiblingIndex(4);
-        if (finalValueText != null) finalValueText.transform.SetSiblingIndex(5);
+        if (positionText != null) positionText.transform.SetSiblingIndex(3);
+        if (resonanceText != null) resonanceText.transform.SetSiblingIndex(4);
+        if (arrowText != null) arrowText.transform.SetSiblingIndex(5);
+        if (finalValueText != null) finalValueText.transform.SetSiblingIndex(6);
 
         ConfigureText(labelText, 14);
         ConfigureText(baseValueText, 13);
-        ConfigureText(modifierText, 13);
+        ConfigureText(positionText, 12);
+        ConfigureText(resonanceText, 12);
+        ConfigureText(modifierText, 12);
         ConfigureText(arrowText, 13);
         ConfigureText(finalValueText, 13);
 
@@ -197,9 +227,16 @@ public class ProductBattleAbilityBarView : MonoBehaviour
     private void SetValueTexts(ThoughtMapBattleAbilityValue value)
     {
         SetText(baseValueText, FormatValue(value.rawValue));
-        if (value.resonanceApplies && Mathf.Abs(value.resonanceModifier) >= 0.0001f)
+        bool hasPosition = value.positionApplies && Mathf.Abs(value.positionDelta) >= 0.01f;
+        bool hasResonance = value.resonanceApplies && Mathf.Abs(value.resonanceDelta) >= 0.01f;
+        SetText(positionText, hasPosition ? $"Pos {FormatDelta(value.positionDelta)}" : "");
+        SetText(resonanceText, hasResonance ? $"Res {FormatDelta(value.resonanceDelta)}" : "");
+        if (hasPosition || hasResonance)
         {
-            SetText(modifierText, FormatModifier(value.resonanceModifier));
+            if (modifierText != resonanceText)
+            {
+                SetText(modifierText, "");
+            }
             SetText(arrowText, "->");
             SetText(finalValueText, FormatValue(value.finalValue));
         }
@@ -410,6 +447,12 @@ public class ProductBattleAbilityBarView : MonoBehaviour
     {
         float percent = modifier * 100f;
         return percent >= 0f ? $"+{percent:0}%" : $"{percent:0}%";
+    }
+
+    private static string FormatDelta(float value)
+    {
+        string formatted = FormatValue(Mathf.Abs(value));
+        return value >= 0f ? $"+{formatted}" : $"-{formatted}";
     }
 
     private static void SetText(TMP_Text text, string value)

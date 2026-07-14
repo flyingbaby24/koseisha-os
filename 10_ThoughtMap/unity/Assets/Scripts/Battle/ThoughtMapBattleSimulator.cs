@@ -55,7 +55,7 @@ public class ThoughtMapBattleSimulator
             List<ThoughtMapBattleUnit> turnOrder = playerUnits
                 .Concat(enemyUnits)
                 .Where(unit => unit.IsAlive)
-                .OrderByDescending(unit => GetFinalStat(unit, GetAllies(unit, playerUnits, enemyUnits), unit.card.statSpeed))
+                .OrderByDescending(unit => GetFinalPositionStat(unit, GetAllies(unit, playerUnits, enemyUnits), unit.card.statSpeed, ThoughtMapPositionStat.Speed))
                 .ThenByDescending(unit => GetFinalStat(unit, GetAllies(unit, playerUnits, enemyUnits), unit.card.statLuck))
                 .ToList();
 
@@ -133,8 +133,8 @@ public class ThoughtMapBattleSimulator
         ThoughtMapGridBonus attackerGrid = ThoughtMapGridBonusCalculator.GetBonus(attacker.position, attacker.team);
         ThoughtMapGridBonus targetGrid = ThoughtMapGridBonusCalculator.GetBonus(target.position, target.team);
         ThoughtMapSupportBonus support = GetSupportBonus(attacker, allies);
-        int accuracy = GetFinalStat(attacker, allies, attacker.card.statAccuracy);
-        int evasion = GetFinalStat(target, targetAllies, target.card.statEvasion);
+        int accuracy = GetFinalPositionStat(attacker, allies, attacker.card.statAccuracy, ThoughtMapPositionStat.Accuracy);
+        int evasion = GetFinalPositionStat(target, targetAllies, target.card.statEvasion, ThoughtMapPositionStat.Evasion);
         float hitChance = Mathf.Clamp01(0.72f + ((accuracy - evasion) / 220f));
         float roll = ((attacker.card.raritySeed + target.card.skillSeed + report.rounds * 13) % 100) / 100f;
 
@@ -183,7 +183,8 @@ public class ThoughtMapBattleSimulator
             $"Turn {round}: {DescribeUnit(attacker)} -> {DescribeUnit(target)} | {method} | " +
             $"damage {damage} | HP {target.hp}/{target.maxHp} " +
             $"| {DescribeAffinity(affinity)} x{affinity:0.00} | " +
-            $"Position Bonus ATK {FormatPercent(attackerGrid.attackMultiplier)} DEF {FormatPercent(targetGrid.defenseMultiplier)} HP {FormatPercent(attackerGrid.hpMultiplier)} | " +
+            $"Position Bonus ATK {FormatPercent(attackerGrid.attackMultiplier)} DEF {FormatPercent(targetGrid.defenseMultiplier)} HP {FormatPercent(attackerGrid.hpMultiplier)} " +
+            $"SPD {FormatPercent(attackerGrid.speedMultiplier)} ACC {FormatPercent(attackerGrid.accuracyMultiplier)} EVA {FormatPercent(targetGrid.evasionMultiplier)} | " +
             $"Resonance ATK {FormatPercent(1f + attackerResonance.totalModifier)} DEF {FormatPercent(1f + targetResonance.totalModifier)} | " +
             $"Support Bonus {FormatPercent(support.multiplier)} Similarity {support.similarity:0.00}"
         );
@@ -248,6 +249,29 @@ public class ThoughtMapBattleSimulator
         return Mathf.Max(1, Mathf.RoundToInt(baseValue * (1f + resonance.totalModifier)));
     }
 
+    private int GetFinalPositionStat(ThoughtMapBattleUnit unit, List<ThoughtMapBattleUnit> allies, int baseValue, ThoughtMapPositionStat stat)
+    {
+        ThoughtMapResonanceResult resonance = resonanceCalculator.CalculateTotalModifier(unit, allies);
+        return Mathf.Max(1, Mathf.RoundToInt(baseValue * GetPositionMultiplier(unit, stat) * (1f + resonance.totalModifier)));
+    }
+
+    private float GetPositionMultiplier(ThoughtMapBattleUnit unit, ThoughtMapPositionStat stat)
+    {
+        if (unit == null)
+        {
+            return 1f;
+        }
+
+        ThoughtMapGridBonus bonus = ThoughtMapGridBonusCalculator.GetBonus(unit.position, unit.team);
+        switch (stat)
+        {
+            case ThoughtMapPositionStat.Speed: return bonus.speedMultiplier;
+            case ThoughtMapPositionStat.Evasion: return bonus.evasionMultiplier;
+            case ThoughtMapPositionStat.Accuracy: return bonus.accuracyMultiplier;
+            default: return 1f;
+        }
+    }
+
     private string DescribeUnit(ThoughtMapBattleUnit unit)
     {
         if (unit == null || unit.card == null)
@@ -266,7 +290,9 @@ public class ThoughtMapBattleSimulator
             report.logLines.Add(
                 $"Position Bonus | {DescribeUnit(unit)} @{unit.position} | " +
                 $"ATK {FormatPercent(bonus.attackMultiplier)} DEF {FormatPercent(bonus.defenseMultiplier)} " +
-                $"HP {FormatPercent(bonus.hpMultiplier)} Hate {FormatPercent(bonus.hateMultiplier)}"
+                $"HP {FormatPercent(bonus.hpMultiplier)} SPD {FormatPercent(bonus.speedMultiplier)} " +
+                $"EVA {FormatPercent(bonus.evasionMultiplier)} ACC {FormatPercent(bonus.accuracyMultiplier)} " +
+                $"HatePreview {FormatPercent(bonus.hateMultiplier)}"
             );
         }
     }
@@ -330,6 +356,13 @@ public class ThoughtMapBattleSimulator
         }
 
         return $"{unit.team}:{unit.card.cardId}:{unit.position}";
+    }
+
+    private enum ThoughtMapPositionStat
+    {
+        Speed,
+        Evasion,
+        Accuracy
     }
 
     private struct ThoughtMapSupportBonus

@@ -17,27 +17,32 @@ public static class ThoughtMapBattleCardFactory
             return null;
         }
 
-        string docId = FirstNonEmpty(document.doc_id, document.original_doc_id, document.title, "unknown");
+        string docId = FirstNonEmpty(document.doc_id, document.original_doc_id, document.source_doc_id, document.title, "unknown");
         string scope = string.IsNullOrWhiteSpace(dataScope) ? "personal" : dataScope.Trim().ToLowerInvariant();
+        string title = FirstNonEmpty(document.title, document.source_title, document.doc_id, "Untitled");
 
         ThoughtMapBattleCardData card = new ThoughtMapBattleCardData
         {
             docId = docId,
-            sourceDocId = FirstNonEmpty(document.original_doc_id, document.doc_id, docId),
+            sourceDocId = FirstNonEmpty(document.source_doc_id, document.original_doc_id, document.doc_id, docId),
             cardId = BuildCardId(scope, docId),
-            cardName = FirstNonEmpty(document.title, document.doc_id, "Untitled"),
-            sourceTitle = document.title ?? "",
+            cardName = title,
+            sourceTitle = FirstNonEmpty(document.source_title, document.title, ""),
             author = document.author ?? "",
             source = document.source ?? "",
             category = document.category ?? "",
             url = FirstNonEmpty(document.url, document.source_url),
             dataScope = scope,
-            raritySeed = StableSeed(docId, 17),
-            skillSeed = StableSeed(docId, 31),
+            primaryAttribute = NormalizeKey(document.primary_attribute),
+            secondaryAttribute = NormalizeKey(document.secondary_attribute),
+            raritySeed = document.rarity_seed != 0 ? document.rarity_seed : StableSeed(docId, 17),
+            skillSeed = document.skill_seed != 0 ? document.skill_seed : StableSeed(docId, 31),
             resonance = 0.5f
         };
 
         CopyParameters(card, document.parameters);
+        CopyDirectParameters(card, document);
+        ApplyExplicitStats(card, document);
         ApplyParameterStats(card);
         return card;
     }
@@ -60,6 +65,52 @@ public static class ThoughtMapBattleCardFactory
         }
     }
 
+    private static void CopyDirectParameters(ThoughtMapBattleCardData card, SavedDocument document)
+    {
+        if (card == null || document == null)
+        {
+            return;
+        }
+
+        SetParameterIfPresent(card, "philosophy", document.philosophy);
+        SetParameterIfPresent(card, "psychology", document.psychology);
+        SetParameterIfPresent(card, "science", document.science);
+        SetParameterIfPresent(card, "economy", document.economy != 0f ? document.economy : document.economics);
+        SetParameterIfPresent(card, "karma", document.karma);
+        SetParameterIfPresent(card, "emotion", document.emotion);
+        SetParameterIfPresent(card, "moral", document.moral != 0f ? document.moral : document.morality);
+        SetParameterIfPresent(card, "ideal", document.ideal);
+        SetParameterIfPresent(card, "individual", document.individual);
+        SetParameterIfPresent(card, "community", document.community);
+    }
+
+    private static void SetParameterIfPresent(ThoughtMapBattleCardData card, string key, float value)
+    {
+        if (Mathf.Abs(value) > 0.000001f)
+        {
+            card.parameterScores[key] = value;
+        }
+    }
+
+    private static void ApplyExplicitStats(ThoughtMapBattleCardData card, SavedDocument document)
+    {
+        if (card == null || document == null)
+        {
+            return;
+        }
+
+        card.statPhysicalAttack = document.stat_physical_attack;
+        card.statSkillAttack = document.stat_skill_attack;
+        card.statPhysicalDefense = document.stat_physical_defense;
+        card.statSpeed = document.stat_speed;
+        card.statLuck = document.stat_luck;
+        card.statEvasion = document.stat_evasion;
+        card.statSkillDefense = document.stat_skill_defense;
+        card.statAccuracy = document.stat_accuracy;
+        card.statHp = document.stat_hp;
+        card.statSp = document.stat_sp;
+    }
+
     private static void ApplyParameterStats(ThoughtMapBattleCardData card)
     {
         float philosophy = GetParameter(card, "philosophy");
@@ -73,18 +124,25 @@ public static class ThoughtMapBattleCardFactory
         float individual = GetParameter(card, "individual");
         float community = GetParameter(card, "community");
 
-        card.statPhysicalAttack = ToStat(philosophy);
-        card.statSkillAttack = ToStat(psychology);
-        card.statPhysicalDefense = ToStat(science);
-        card.statSpeed = ToStat(economy);
-        card.statLuck = ToStat(karma);
-        card.statEvasion = ToStat(emotion);
-        card.statSkillDefense = ToStat(moral);
-        card.statAccuracy = ToStat(ideal);
-        card.statHp = ToStat(individual);
-        card.statSp = ToStat(community);
-        card.primaryAttribute = DominantParameter(card);
-        card.secondaryAttribute = SecondaryParameter(card, card.primaryAttribute);
+        if (card.statPhysicalAttack == 0) card.statPhysicalAttack = ToStat(philosophy);
+        if (card.statSkillAttack == 0) card.statSkillAttack = ToStat(psychology);
+        if (card.statPhysicalDefense == 0) card.statPhysicalDefense = ToStat(science);
+        if (card.statSpeed == 0) card.statSpeed = ToStat(economy);
+        if (card.statLuck == 0) card.statLuck = ToStat(karma);
+        if (card.statEvasion == 0) card.statEvasion = ToStat(emotion);
+        if (card.statSkillDefense == 0) card.statSkillDefense = ToStat(moral);
+        if (card.statAccuracy == 0) card.statAccuracy = ToStat(ideal);
+        if (card.statHp == 0) card.statHp = ToStat(individual);
+        if (card.statSp == 0) card.statSp = ToStat(community);
+
+        if (string.IsNullOrWhiteSpace(card.primaryAttribute))
+        {
+            card.primaryAttribute = DominantParameter(card);
+        }
+        if (string.IsNullOrWhiteSpace(card.secondaryAttribute))
+        {
+            card.secondaryAttribute = SecondaryParameter(card, card.primaryAttribute);
+        }
 
         float sum = NormalizeScore01(philosophy) + NormalizeScore01(psychology) + NormalizeScore01(science)
             + NormalizeScore01(economy) + NormalizeScore01(karma) + NormalizeScore01(emotion)
@@ -128,6 +186,11 @@ public static class ThoughtMapBattleCardFactory
 
     private static string DominantParameter(ThoughtMapBattleCardData card)
     {
+        if (!HasAnyParameter(card))
+        {
+            return "";
+        }
+
         string bestKey = "";
         float bestValue = float.NegativeInfinity;
         foreach (string key in ThoughtOrder)
@@ -144,6 +207,11 @@ public static class ThoughtMapBattleCardFactory
 
     private static string SecondaryParameter(ThoughtMapBattleCardData card, string primary)
     {
+        if (!HasAnyParameter(card))
+        {
+            return "";
+        }
+
         string bestKey = "";
         float bestValue = float.NegativeInfinity;
         foreach (string key in ThoughtOrder)
@@ -163,6 +231,24 @@ public static class ThoughtMapBattleCardFactory
         return bestKey;
     }
 
+    private static bool HasAnyParameter(ThoughtMapBattleCardData card)
+    {
+        if (card == null || card.parameterScores == null)
+        {
+            return false;
+        }
+
+        foreach (string key in ThoughtOrder)
+        {
+            if (Mathf.Abs(GetParameter(card, key)) > 0.000001f)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static string NormalizeKey(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -175,16 +261,16 @@ public static class ThoughtMapBattleCardFactory
         {
             case "economics": return "economy";
             case "morality": return "moral";
-            case "哲学": return "philosophy";
-            case "心理": return "psychology";
-            case "科学": return "science";
-            case "経済": return "economy";
-            case "カルマ": return "karma";
-            case "感情": return "emotion";
-            case "モラル": return "moral";
-            case "理念": return "ideal";
-            case "個人": return "individual";
-            case "共同体": return "community";
+            case "\u54F2\u5B66": return "philosophy";
+            case "\u5FC3\u7406": return "psychology";
+            case "\u79D1\u5B66": return "science";
+            case "\u7D4C\u6E08": return "economy";
+            case "\u30AB\u30EB\u30DE": return "karma";
+            case "\u611F\u60C5": return "emotion";
+            case "\u30E2\u30E9\u30EB": return "moral";
+            case "\u7406\u5FF5": return "ideal";
+            case "\u500B\u4EBA": return "individual";
+            case "\u5171\u540C\u4F53": return "community";
             default: return key;
         }
     }

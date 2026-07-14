@@ -18,6 +18,7 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
     [SerializeField] private TMP_Text enText;
     [SerializeField] private TMP_Text skillText;
     [SerializeField] private TMP_Text rarityText;
+    [SerializeField] private TMP_Text abilityLegendText;
     [SerializeField] private Transform abilityBarRoot;
     [SerializeField] private ProductBattleAbilityBarView abilityBarPrefab;
     [SerializeField] private ProductBattleAbilityBarView[] abilityBars;
@@ -93,6 +94,19 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         System.Collections.Generic.IReadOnlyList<GeneratedSkillDto> assignedSkills,
         ThoughtMapResonanceResult resonanceResult)
     {
+        Show(card, artSprite, attributeSprite, resolvedThoughtAttribute, assignedSkills, resonanceResult, false, default(ThoughtMapGridBonus));
+    }
+
+    public void Show(
+        ThoughtMapBattleCardData card,
+        Sprite artSprite,
+        Sprite attributeSprite,
+        string resolvedThoughtAttribute,
+        System.Collections.Generic.IReadOnlyList<GeneratedSkillDto> assignedSkills,
+        ThoughtMapResonanceResult resonanceResult,
+        bool hasPositionBonus,
+        ThoughtMapGridBonus positionBonus)
+    {
         if (card == null)
         {
             Clear();
@@ -106,7 +120,7 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         SetText(atkText, $"ATK {Mathf.Max(card.statPhysicalAttack, card.statSkillAttack)}");
         SetText(defenseText, $"DEF {Mathf.Max(card.statPhysicalDefense, card.statSkillDefense)}");
         SetText(enText, $"EN {card.MaxSp}");
-        SetText(skillText, $"Skill Seed {card.skillSeed}");
+        SetText(skillText, FormatSkillAndHateText(card, hasPositionBonus, positionBonus));
         SetText(rarityText, $"R{1 + Mathf.Abs(card.raritySeed % 5)}");
 
         if (artImage != null)
@@ -136,7 +150,7 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
             );
         }
 
-        RenderAbilityBars(card, resonanceResult);
+        RenderAbilityBars(card, resonanceResult, hasPositionBonus, positionBonus);
         SetAssignedSkills(assignedSkills);
         ApplyFontToGeneratedTexts();
     }
@@ -183,18 +197,35 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
 
     private void RenderAbilityBars(ThoughtMapBattleCardData card)
     {
-        RenderAbilityBars(card, null);
+        RenderAbilityBars(card, null, false, default(ThoughtMapGridBonus));
     }
 
     private void RenderAbilityBars(ThoughtMapBattleCardData card, ThoughtMapResonanceResult resonanceResult)
     {
+        RenderAbilityBars(card, resonanceResult, false, default(ThoughtMapGridBonus));
+    }
+
+    private void RenderAbilityBars(
+        ThoughtMapBattleCardData card,
+        ThoughtMapResonanceResult resonanceResult,
+        bool hasPositionBonus,
+        ThoughtMapGridBonus positionBonus)
+    {
         EnsureAbilityBars();
+        EnsureAbilityLegend();
         if (abilityBars == null || abilityBars.Length == 0)
         {
             return;
         }
 
-        ThoughtMapBattleAbilityValue[] values = resonanceResult == null
+        ThoughtMapBattleAbilityValue[] values = hasPositionBonus
+            ? ThoughtMapBattleAbilityStats.BuildCombatPreviewValues(
+                card,
+                positionBonus,
+                true,
+                resonanceResult == null ? 0f : resonanceResult.totalModifier,
+                resonanceResult != null)
+            : resonanceResult == null
             ? ThoughtMapBattleAbilityStats.BuildValues(card)
             : ThoughtMapBattleAbilityStats.BuildCombatValues(card, resonanceResult.totalModifier, true);
         int count = Mathf.Min(abilityBars.Length, values.Length);
@@ -245,6 +276,7 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         }
 
         ConfigureAbilityRoot(abilityBarRoot);
+        EnsureAbilityLegend();
         Transform leftColumn = GetOrCreateAbilityColumn("LeftColumn");
         Transform rightColumn = GetOrCreateAbilityColumn("RightColumn");
 
@@ -269,6 +301,46 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
             abilityBars[i].transform.SetSiblingIndex(i % AbilityRowsPerColumn);
             abilityBars[i].EnsureVisuals();
         }
+    }
+
+    private void EnsureAbilityLegend()
+    {
+        if (abilityLegendText == null)
+        {
+            Transform existing = transform.Find("AbilityLegendText");
+            if (existing == null)
+            {
+                GameObject textObject = new GameObject("AbilityLegendText", typeof(RectTransform), typeof(TextMeshProUGUI));
+                textObject.transform.SetParent(transform, false);
+                RectTransform rect = textObject.GetComponent<RectTransform>();
+                rect.anchorMin = new Vector2(0.42f, 0.76f);
+                rect.anchorMax = new Vector2(0.99f, 0.82f);
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+                abilityLegendText = textObject.GetComponent<TMP_Text>();
+            }
+            else
+            {
+                abilityLegendText = existing.GetComponent<TMP_Text>();
+            }
+        }
+
+        if (abilityLegendText == null)
+        {
+            return;
+        }
+
+        if (overrideFontAsset != null)
+        {
+            abilityLegendText.font = overrideFontAsset;
+        }
+        abilityLegendText.text = "Base / Position / Resonance / Final";
+        abilityLegendText.fontSize = 11f;
+        abilityLegendText.color = new Color(0.70f, 0.96f, 1f, 0.92f);
+        abilityLegendText.alignment = TextAlignmentOptions.Left;
+        abilityLegendText.enableWordWrapping = false;
+        abilityLegendText.overflowMode = TextOverflowModes.Overflow;
+        abilityLegendText.raycastTarget = false;
     }
 
     [ContextMenu("Ensure Assigned Skills Area")]
@@ -517,6 +589,24 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
     private string FormatThoughtAttribute(string value)
     {
         return string.IsNullOrWhiteSpace(value) ? "none" : value;
+    }
+
+    private string FormatSkillAndHateText(ThoughtMapBattleCardData card, bool hasPositionBonus, ThoughtMapGridBonus positionBonus)
+    {
+        string text = $"Skill Seed {card.skillSeed}";
+        if (!hasPositionBonus)
+        {
+            return text;
+        }
+
+        float hatePercent = (positionBonus.hateMultiplier - 1f) * 100f;
+        if (Mathf.Abs(hatePercent) < 0.01f)
+        {
+            return text;
+        }
+
+        string hateText = hatePercent >= 0f ? $"+{hatePercent:0}%" : $"{hatePercent:0}%";
+        return $"{text}\nHate Position Preview {hateText} (not target score)";
     }
 
     private void SetText(TMP_Text text, string value)
