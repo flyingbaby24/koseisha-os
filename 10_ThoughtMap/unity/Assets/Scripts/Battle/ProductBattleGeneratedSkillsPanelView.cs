@@ -35,6 +35,7 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
         onSelected = selectedHandler;
         onAssign = assignHandler;
         onRemove = removeHandler;
+        Debug.Log($"[GeneratedSkill] Panel.SetHandlers selectedNull={onSelected == null} assignNull={onAssign == null} removeNull={onRemove == null}", this);
     }
 
     public void SetSelectedSkill(string skillId)
@@ -77,6 +78,8 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
         {
             bool assignedAnywhere = assignmentLabels.TryGetValue(skill.skill_id, out string assignedLabel);
             bool assignedToSelected = assigned.Contains(skill.skill_id);
+            bool canAssign = selectedCardIsDeckCard && selectedCardCanReceiveSkill && !assignedAnywhere;
+            bool canRemove = assignedToSelected;
             ProductBattleGeneratedSkillRowView row = CreateRow();
             row.Bind(
                 skill,
@@ -84,11 +87,11 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
                 assignedAnywhere,
                 assignedAnywhere ? assignedLabel : "",
                 !string.IsNullOrWhiteSpace(selectedCardDocId) && skill.doc_id == selectedCardDocId,
-                selectedCardIsDeckCard && selectedCardCanReceiveSkill && !assignedAnywhere,
-                assignedToSelected,
+                canAssign,
+                canRemove,
                 HandleSelected,
-                onAssign,
-                onRemove
+                HandleAssign,
+                HandleRemove
             );
             rows.Add(row);
         }
@@ -307,7 +310,20 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
     private void HandleSelected(GeneratedSkillDto skill)
     {
         selectedSkillId = skill == null ? "" : skill.skill_id;
+        Debug.Log($"[GeneratedSkill] Panel.Select skill_id={selectedSkillId} onSelectedNull={onSelected == null}", this);
         onSelected?.Invoke(skill);
+    }
+
+    private void HandleAssign(GeneratedSkillDto skill)
+    {
+        Debug.Log($"[GeneratedSkill] Panel.Assign skill_id={(skill == null ? "" : skill.skill_id)} onAssignNull={onAssign == null}", this);
+        onAssign?.Invoke(skill);
+    }
+
+    private void HandleRemove(GeneratedSkillDto skill)
+    {
+        Debug.Log($"[GeneratedSkill] Panel.Remove skill_id={(skill == null ? "" : skill.skill_id)} onRemoveNull={onRemove == null}", this);
+        onRemove?.Invoke(skill);
     }
 
     private void ClearRows()

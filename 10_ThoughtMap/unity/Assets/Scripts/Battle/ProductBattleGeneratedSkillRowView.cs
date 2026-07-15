@@ -59,12 +59,16 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour
         WireButtons();
         if (assignButton != null)
         {
-            assignButton.interactable = canAssign;
+            assignButton.interactable = true;
         }
         if (removeButton != null)
         {
-            removeButton.interactable = canRemove;
+            removeButton.interactable = true;
         }
+        Debug.Log(
+            $"[GeneratedSkill] Row.Bind skill_id={(sourceSkill == null ? "" : sourceSkill.skill_id)} canAssign={canAssign} canRemove={canRemove} assigned={assigned} selected={selected}",
+            this
+        );
         ApplyFontToGeneratedTexts();
     }
 
@@ -93,16 +97,19 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour
 
     private void HandleSelect()
     {
+        Debug.Log($"[GeneratedSkill] Row.Select skill_id={(skill == null ? "" : skill.skill_id)}", this);
         onSelected?.Invoke(skill);
     }
 
     private void HandleAssign()
     {
+        Debug.Log($"[GeneratedSkill] Row.AssignClick skill_id={(skill == null ? "" : skill.skill_id)} onAssignNull={onAssign == null}", this);
         onAssign?.Invoke(skill);
     }
 
     private void HandleRemove()
     {
+        Debug.Log($"[GeneratedSkill] Row.RemoveClick skill_id={(skill == null ? "" : skill.skill_id)} onRemoveNull={onRemove == null}", this);
         onRemove?.Invoke(skill);
     }
 
@@ -125,7 +132,7 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour
         if (backgroundImage == null) backgroundImage = gameObject.AddComponent<Image>();
         backgroundImage.raycastTarget = true;
 
-        selectButton = selectButton == null ? GetComponent<Button>() : selectButton;
+        selectButton = selectButton == null || selectButton.gameObject != gameObject ? GetComponent<Button>() : selectButton;
         if (selectButton == null) selectButton = gameObject.AddComponent<Button>();
         selectButton.targetGraphic = backgroundImage;
 
@@ -133,8 +140,10 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour
         metaText = metaText == null ? CreateText("MetaText", new Vector2(0.03f, 0.50f), new Vector2(0.70f, 0.74f), 12f, TextAlignmentOptions.Left) : metaText;
         effectText = effectText == null ? CreateText("EffectText", new Vector2(0.03f, 0.12f), new Vector2(0.70f, 0.50f), 12f, TextAlignmentOptions.Left) : effectText;
         stateText = stateText == null ? CreateText("StateText", new Vector2(0.72f, 0.66f), new Vector2(0.97f, 0.95f), 11f, TextAlignmentOptions.Right) : stateText;
-        assignButton = assignButton == null ? CreateButton("AssignButton", "Assign", new Vector2(0.72f, 0.34f), new Vector2(0.845f, 0.58f)) : assignButton;
-        removeButton = removeButton == null ? CreateButton("RemoveButton", "Remove", new Vector2(0.855f, 0.34f), new Vector2(0.98f, 0.58f)) : removeButton;
+        assignButton = ResolveChildButton(assignButton, "AssignButton", "Assign", new Vector2(0.72f, 0.34f), new Vector2(0.845f, 0.58f));
+        removeButton = ResolveChildButton(removeButton, "RemoveButton", "Remove", new Vector2(0.855f, 0.34f), new Vector2(0.98f, 0.58f));
+        if (assignButton != null) assignButton.transform.SetAsLastSibling();
+        if (removeButton != null) removeButton.transform.SetAsLastSibling();
         AnchorText(nameText, new Vector2(0.03f, 0.74f), new Vector2(0.70f, 0.96f));
         AnchorText(metaText, new Vector2(0.03f, 0.50f), new Vector2(0.70f, 0.74f));
         AnchorText(effectText, new Vector2(0.03f, 0.12f), new Vector2(0.70f, 0.50f));
@@ -147,6 +156,29 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour
         ConfigureExistingText(stateText, 11f, TextOverflowModes.Overflow);
         ConfigureButtonLabel(assignButton, 11f);
         ConfigureButtonLabel(removeButton, 11f);
+    }
+
+    private Button ResolveChildButton(Button current, string objectName, string label, Vector2 min, Vector2 max)
+    {
+        bool invalidReference = current == null
+            || current.gameObject == gameObject
+            || current.transform.parent != transform
+            || current.gameObject.name != objectName;
+
+        if (invalidReference)
+        {
+            Transform existing = transform.Find(objectName);
+            current = existing == null ? null : existing.GetComponent<Button>();
+        }
+
+        if (current == null)
+        {
+            current = CreateButton(objectName, label, min, max);
+            Debug.Log($"[GeneratedSkill] Row.RepairButton created={objectName}", this);
+        }
+
+        current.gameObject.name = objectName;
+        return current;
     }
 
     private TMP_Text CreateText(string objectName, Vector2 min, Vector2 max, float fontSize, TextAlignmentOptions alignment)
@@ -275,18 +307,32 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour
     {
         if (selectButton != null)
         {
-            selectButton.onClick.RemoveListener(HandleSelect);
+            selectButton.onClick.RemoveAllListeners();
             selectButton.onClick.AddListener(HandleSelect);
         }
         if (assignButton != null)
         {
-            assignButton.onClick.RemoveListener(HandleAssign);
+            Image image = assignButton.GetComponent<Image>();
+            if (image != null)
+            {
+                image.raycastTarget = true;
+                assignButton.targetGraphic = image;
+            }
+            assignButton.onClick.RemoveAllListeners();
             assignButton.onClick.AddListener(HandleAssign);
+            Debug.Log($"[GeneratedSkill] Row.WireAssign button={assignButton.gameObject.name} skill_id={(skill == null ? "" : skill.skill_id)}", this);
         }
         if (removeButton != null)
         {
-            removeButton.onClick.RemoveListener(HandleRemove);
+            Image image = removeButton.GetComponent<Image>();
+            if (image != null)
+            {
+                image.raycastTarget = true;
+                removeButton.targetGraphic = image;
+            }
+            removeButton.onClick.RemoveAllListeners();
             removeButton.onClick.AddListener(HandleRemove);
+            Debug.Log($"[GeneratedSkill] Row.WireRemove button={removeButton.gameObject.name} skill_id={(skill == null ? "" : skill.skill_id)}", this);
         }
     }
 

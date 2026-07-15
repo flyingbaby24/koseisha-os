@@ -528,7 +528,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         int count = Mathf.Min(loadedCards.Count, cardListRenderLimit);
         for (int i = 0; i < count; i++)
         {
-            ProductBattleCardListRowView view = CreateListRow(cardListContent, cardListRowPrefab, "CardListRow");
+            ProductBattleCardListRowView view = CreateListRow(cardListContent, GetSharedCardRowPrefab(), "CardListRow");
             string state = FormatCardListState(loadedCards[i], deckCards.Contains(loadedCards[i]) ? "In Deck" : "");
             Sprite artSprite = ResolveCardArtForTarget(loadedCards[i], i, "Card List");
             view.Bind(loadedCards[i], i, $"C{i + 1}", i == selectedLibraryIndex, deckCards.Contains(loadedCards[i]), state, artSprite);
@@ -556,7 +556,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
         for (int i = 0; i < deckCards.Count; i++)
         {
-            ProductBattleCardListRowView view = CreateListRow(deckListContent, deckListRowPrefab, "DeckListRow");
+            ProductBattleCardListRowView view = CreateListRow(deckListContent, GetSharedCardRowPrefab(), "DeckListRow");
             string state = FormatCardListState(deckCards[i], placement.ContainsValue(deckCards[i]) ? "Placed" : "Ready");
             Sprite artSprite = ResolveCardArtForTarget(deckCards[i], i, "Deck List");
             view.Bind(deckCards[i], i, $"P{i + 1}", i == selectedDeckIndex, placement.ContainsValue(deckCards[i]), state, artSprite);
@@ -828,6 +828,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
     public void AssignGeneratedSkill(GeneratedSkillDto skill)
     {
+        Debug.Log(
+            $"[GeneratedSkill] Prep.AssignEntry skill_id={(skill == null ? "" : skill.skill_id)} selectedDeckIndex={selectedDeckIndex} deckCount={deckCards.Count} selectedLibraryIndex={selectedLibraryIndex}",
+            this
+        );
         if (skill == null || string.IsNullOrWhiteSpace(skill.skill_id))
         {
             WriteStatus("Select a generated skill first.");
@@ -835,6 +839,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         ThoughtMapBattleCardData card = GetSelectedDeckCard();
+        Debug.Log(
+            $"[GeneratedSkill] Prep.AssignSelectedCard cardNull={card == null} cardId='{GetCardId(card)}' cardName='{(card == null ? "" : card.cardName)}'",
+            this
+        );
         if (card == null)
         {
             WriteStatus("Select a deck card first.");
@@ -873,14 +881,17 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
         skillIds.Add(skill.skill_id);
         selectedGeneratedSkillId = skill.skill_id;
-        Debug.Log($"[GeneratedSkill] assign=success skill_id={skill.skill_id} targetCard={cardId}", this);
+        Debug.Log($"[GeneratedSkill] Prep.AssignDeckDataUpdated skill_id={skill.skill_id} targetCard={cardId} assignedCount={skillIds.Count}", this);
         WriteStatus($"Assigned {skill.DisplayName} to P{selectedDeckIndex + 1}.");
-        RenderGeneratedSkills();
-        ShowSelectedDetail();
+        RefreshAfterSkillAssignment();
     }
 
     public void RemoveGeneratedSkill(GeneratedSkillDto skill)
     {
+        Debug.Log(
+            $"[GeneratedSkill] Prep.RemoveEntry skill_id={(skill == null ? "" : skill.skill_id)} selectedDeckIndex={selectedDeckIndex} deckCount={deckCards.Count}",
+            this
+        );
         if (skill == null || string.IsNullOrWhiteSpace(skill.skill_id))
         {
             WriteStatus("Select an assigned skill to remove.");
@@ -895,19 +906,30 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         string cardId = GetCardId(card);
+        Debug.Log($"[GeneratedSkill] Prep.RemoveSelectedCard cardId='{cardId}' cardName='{card.cardName}'", this);
         if (!assignedSkillIdsByCardId.TryGetValue(cardId, out List<string> skillIds) || !skillIds.Remove(skill.skill_id))
         {
             WriteStatus("That skill is not assigned to the selected card.");
+            Debug.Log($"[GeneratedSkill] Prep.RemoveBlocked reason=NotAssigned skill_id={skill.skill_id} cardId={cardId}", this);
             return;
         }
 
-        if (debugGeneratedSkills)
-        {
-            Debug.Log($"[GeneratedSkill] remove=success skill_id={skill.skill_id} cardId={cardId}", this);
-        }
+        Debug.Log($"[GeneratedSkill] Prep.RemoveDeckDataUpdated skill_id={skill.skill_id} cardId={cardId} remaining={skillIds.Count}", this);
         WriteStatus($"Removed {skill.DisplayName} from P{selectedDeckIndex + 1}.");
+        RefreshAfterSkillAssignment();
+    }
+
+    private void RefreshAfterSkillAssignment()
+    {
+        Debug.Log(
+            $"[GeneratedSkill] Prep.RefreshUI selectedDeckIndex={selectedDeckIndex} selectedSkillId={selectedGeneratedSkillId} assignedCardCount={assignedSkillIdsByCardId.Count}",
+            this
+        );
+        RenderDeck();
+        RenderCardLibrary();
         RenderGeneratedSkills();
         ShowSelectedDetail();
+        UpdateBattleButtonState(false);
     }
 
     private void OnGeneratedSkillSelected(GeneratedSkillDto skill)
@@ -2175,6 +2197,11 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
         view.NormalizeForList(LightweightRowHeight);
         return view;
+    }
+
+    private ProductBattleCardListRowView GetSharedCardRowPrefab()
+    {
+        return cardListRowPrefab != null ? cardListRowPrefab : deckListRowPrefab;
     }
 
     [ContextMenu("Ensure Generated Skills Panel")]
