@@ -29,6 +29,7 @@ public static class ThoughtMapBattleAbilityStats
             float rawValue = GetParameterValue(card, definition.aliases);
             float normalizedValue = NormalizeValue(rawValue);
             values[i] = new ThoughtMapBattleAbilityValue(definition, rawValue, normalizedValue, Mathf.Clamp01(normalizedValue));
+            LogAbilityValue("BuildValues", card, values[i]);
         }
         return values;
     }
@@ -58,6 +59,7 @@ public static class ThoughtMapBattleAbilityStats
                 finalValue,
                 resonanceApplies
             );
+            LogAbilityValue("BuildCombatValues", card, values[i]);
         }
         return values;
     }
@@ -96,6 +98,7 @@ public static class ThoughtMapBattleAbilityStats
                 positionApplies,
                 resonanceApplies
             );
+            LogAbilityValue("BuildCombatPreviewValues", card, values[i]);
         }
         return values;
     }
@@ -235,6 +238,14 @@ public static class ThoughtMapBattleAbilityStats
             case "\u5171\u540C\u4F53": return "community";
             default: return key;
         }
+    }
+
+    private static void LogAbilityValue(string context, ThoughtMapBattleCardData card, ThoughtMapBattleAbilityValue value)
+    {
+        Debug.Log(
+            $"[Battle AbilityStats] {context} card='{(card == null ? "" : card.cardName)}' doc_id='{(card == null ? "" : card.docId)}' " +
+            $"ability={value.definition.shortName} base={value.rawValue:0.###} normalized={value.normalizedValue:0.###} fill={value.fillAmount:0.###} final={value.finalValue:0.###}"
+        );
     }
 }
 

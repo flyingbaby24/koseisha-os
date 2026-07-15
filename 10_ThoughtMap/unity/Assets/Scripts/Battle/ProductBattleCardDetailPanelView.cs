@@ -233,6 +233,11 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         {
             if (abilityBars[i] != null)
             {
+                Debug.Log(
+                    $"[Battle Ability UI] DetailPanel card='{card.cardName}' doc_id='{card.docId}' " +
+                    $"ability={values[i].definition.shortName} uiBase={values[i].rawValue:0.###} uiPositionDelta={values[i].positionDelta:0.###} uiResonanceDelta={values[i].resonanceDelta:0.###} uiFinal={values[i].finalValue:0.###} fill={values[i].fillAmount:0.###}",
+                    this
+                );
                 abilityBars[i].Bind(values[i]);
             }
         }

@@ -85,6 +85,8 @@ public static class ThoughtMapCardsCsvLoader
             }
         }
 
+        ThoughtMapBattleCardFactory.NormalizeAndApplyParameterStats(card, "CSV Load", false);
+
         return card;
     }
 

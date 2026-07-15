@@ -49,7 +49,7 @@ public static class ThoughtMapBattleCardFactory
         CopyParameters(card, document.parameters);
         CopyDirectParameters(card, document);
         ApplyExplicitStats(card, document);
-        ApplyParameterStats(card);
+        NormalizeAndApplyParameterStats(card, "PersonalLibrary FromSavedDocument", string.Equals(scope, "personal", StringComparison.OrdinalIgnoreCase));
         LogPersonalConversion(card);
         if (string.Equals(scope, "personal", StringComparison.OrdinalIgnoreCase))
         {
@@ -58,6 +58,25 @@ public static class ThoughtMapBattleCardFactory
             );
         }
         return card;
+    }
+
+    public static void NormalizeAndApplyParameterStats(ThoughtMapBattleCardData card, string context, bool log)
+    {
+        if (card == null)
+        {
+            return;
+        }
+
+        ThoughtMapBattleParameterScale.NormalizeInPlace(card, context, log);
+        ApplyParameterStats(card);
+        if (log)
+        {
+            Debug.Log(
+                $"[Battle CardData Scale] {context} card='{card.cardName}' doc_id='{card.docId}' " +
+                $"cardDataParameters={ThoughtMapBattleParameterScale.FormatCardParameters(card)} " +
+                $"baseStats=[HP:{card.statHp}, SP:{card.statSp}, P_ATK:{card.statPhysicalAttack}, S_ATK:{card.statSkillAttack}, P_DEF:{card.statPhysicalDefense}, S_DEF:{card.statSkillDefense}, SPD:{card.statSpeed}, EVA:{card.statEvasion}, ACC:{card.statAccuracy}, LUCK:{card.statLuck}]"
+            );
+        }
     }
 
     private static void CopyParameters(ThoughtMapBattleCardData card, ThoughtMapParameterScore[] parameters)
@@ -137,16 +156,16 @@ public static class ThoughtMapBattleCardFactory
         float individual = GetParameter(card, "individual");
         float community = GetParameter(card, "community");
 
-        if (card.statPhysicalAttack == 0) card.statPhysicalAttack = ToStat(philosophy);
-        if (card.statSkillAttack == 0) card.statSkillAttack = ToStat(psychology);
-        if (card.statPhysicalDefense == 0) card.statPhysicalDefense = ToStat(science);
-        if (card.statSpeed == 0) card.statSpeed = ToStat(economy);
-        if (card.statLuck == 0) card.statLuck = ToStat(karma);
-        if (card.statEvasion == 0) card.statEvasion = ToStat(emotion);
-        if (card.statSkillDefense == 0) card.statSkillDefense = ToStat(moral);
-        if (card.statAccuracy == 0) card.statAccuracy = ToStat(ideal);
-        if (card.statHp == 0) card.statHp = ToStat(individual);
-        if (card.statSp == 0) card.statSp = ToStat(community);
+        if (card.statPhysicalAttack == 0) card.statPhysicalAttack = ThoughtMapBattleParameterScale.ToStat(philosophy);
+        if (card.statSkillAttack == 0) card.statSkillAttack = ThoughtMapBattleParameterScale.ToStat(psychology);
+        if (card.statPhysicalDefense == 0) card.statPhysicalDefense = ThoughtMapBattleParameterScale.ToStat(science);
+        if (card.statSpeed == 0) card.statSpeed = ThoughtMapBattleParameterScale.ToStat(economy);
+        if (card.statLuck == 0) card.statLuck = ThoughtMapBattleParameterScale.ToStat(karma);
+        if (card.statEvasion == 0) card.statEvasion = ThoughtMapBattleParameterScale.ToStat(emotion);
+        if (card.statSkillDefense == 0) card.statSkillDefense = ThoughtMapBattleParameterScale.ToStat(moral);
+        if (card.statAccuracy == 0) card.statAccuracy = ThoughtMapBattleParameterScale.ToStat(ideal);
+        if (card.statHp == 0) card.statHp = ThoughtMapBattleParameterScale.ToStat(individual);
+        if (card.statSp == 0) card.statSp = ThoughtMapBattleParameterScale.ToStat(community);
 
         if (string.IsNullOrWhiteSpace(card.primaryAttribute) || IsPlaceholderAttribute(card.primaryAttribute))
         {
@@ -157,26 +176,11 @@ public static class ThoughtMapBattleCardFactory
             card.secondaryAttribute = SecondaryParameter(card, card.primaryAttribute);
         }
 
-        float sum = NormalizeScore01(philosophy) + NormalizeScore01(psychology) + NormalizeScore01(science)
-            + NormalizeScore01(economy) + NormalizeScore01(karma) + NormalizeScore01(emotion)
-            + NormalizeScore01(moral) + NormalizeScore01(ideal) + NormalizeScore01(individual)
-            + NormalizeScore01(community);
+        float sum = ThoughtMapBattleParameterScale.ToUnitScale(philosophy) + ThoughtMapBattleParameterScale.ToUnitScale(psychology) + ThoughtMapBattleParameterScale.ToUnitScale(science)
+            + ThoughtMapBattleParameterScale.ToUnitScale(economy) + ThoughtMapBattleParameterScale.ToUnitScale(karma) + ThoughtMapBattleParameterScale.ToUnitScale(emotion)
+            + ThoughtMapBattleParameterScale.ToUnitScale(moral) + ThoughtMapBattleParameterScale.ToUnitScale(ideal) + ThoughtMapBattleParameterScale.ToUnitScale(individual)
+            + ThoughtMapBattleParameterScale.ToUnitScale(community);
         card.resonance = Mathf.Clamp01(sum / ThoughtOrder.Length);
-    }
-
-    private static int ToStat(float value)
-    {
-        if (value <= 1f)
-        {
-            value *= 100f;
-        }
-
-        return Mathf.Clamp(Mathf.RoundToInt(value), 0, 100);
-    }
-
-    private static float NormalizeScore01(float value)
-    {
-        return value <= 1f ? Mathf.Clamp01(value) : Mathf.Clamp01(value / 100f);
     }
 
     private static float GetParameter(ThoughtMapBattleCardData card, params string[] aliases)
@@ -282,20 +286,7 @@ public static class ThoughtMapBattleCardFactory
         string key = value.Trim().ToLowerInvariant();
         switch (key)
         {
-            case "economics": return "economy";
-            case "moral": return "morality";
-            case "ideal": return "ideology";
-            case "\u54F2\u5B66": return "philosophy";
-            case "\u5FC3\u7406": return "psychology";
-            case "\u79D1\u5B66": return "science";
-            case "\u7D4C\u6E08": return "economy";
-            case "\u30AB\u30EB\u30DE": return "karma";
-            case "\u611F\u60C5": return "emotion";
-            case "\u30E2\u30E9\u30EB": return "morality";
-            case "\u7406\u5FF5": return "ideology";
-            case "\u500B\u4EBA": return "individual";
-            case "\u5171\u540C\u4F53": return "community";
-            default: return key;
+            default: return ThoughtMapBattleParameterScale.NormalizeKey(key);
         }
     }
 
