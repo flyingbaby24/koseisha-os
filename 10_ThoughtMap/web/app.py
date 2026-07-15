@@ -131,6 +131,18 @@ THOUGHT_PARAMETER_ALIASES = {
     "moral": "morality",
     "ideal": "ideology",
 }
+SOURCE_OF_THOUGHT_PARAMETER_DEFINITIONS = {
+    "philosophy": "truth, existence, meaning, reality, wisdom, being, knowledge",
+    "psychology": "mind, emotion, memory, desire, behavior, motivation",
+    "science": "science, logic, experiment, evidence, observation, theory",
+    "economy": "economy, exchange, value, labor, market, resource, wealth",
+    "karma": "karma, consequence, fate, cause, responsibility, return",
+    "emotion": "emotion, feeling, passion, grief, joy, anger, empathy",
+    "morality": "morality, ethics, justice, virtue, duty, good, evil",
+    "ideology": "ideal, ideology, belief, vision, principle, hope, purpose",
+    "individual": "individual, self, identity, agency, solitude, personal life",
+    "community": "community, society, relation, cooperation, family, collective",
+}
 
 DEFAULT_FILTERS = {
     "basic_thought": {
@@ -233,22 +245,29 @@ def normalize_parameter_score_frame(parameter_score_df: pd.DataFrame | None) -> 
 
 def build_parameter_score_frame(
     df: pd.DataFrame,
-    filter_score_df: pd.DataFrame | None,
-) -> tuple[pd.DataFrame | None, str]:
-    if filter_score_df is None or filter_score_df.empty:
-        return None, "No filter scores are available."
-
+    embeddings,
+    model,
+) -> tuple[pd.DataFrame | None, str, pd.DataFrame | None]:
     try:
-        _make_filter_scores, make_parameter_scores = require_thought_composition()
-        parameter_score_df = make_parameter_scores(df, filter_score_df)
+        make_filter_scores, make_parameter_scores = require_thought_composition()
+        source_filter_score_df = make_filter_scores(
+            embeddings,
+            SOURCE_OF_THOUGHT_PARAMETER_DEFINITIONS,
+            model,
+        )
+        parameter_score_df = make_parameter_scores(
+            df,
+            source_filter_score_df,
+            parameters=THOUGHT_PARAMETER_KEYS,
+        )
     except ValueError as exc:
         logger.warning("Thought parameter score generation failed: %s", exc)
-        return None, str(exc)
+        return None, str(exc), None
 
     normalized = normalize_parameter_score_frame(parameter_score_df)
     if normalized is None:
-        return None, "The selected filters do not contain all 10 Source of Thought parameters."
-    return normalized, ""
+        return None, "The Source of Thought fixed parameter definitions did not produce all 10 parameters.", source_filter_score_df
+    return normalized, "", source_filter_score_df
 
 
 def parameter_rows_from_embedding_row(row: pd.Series) -> list[dict[str, object]] | None:
@@ -720,7 +739,11 @@ def analyze(docs, cluster_count: int, n_neighbors: int, min_dist: float, categor
     ]
 
     filter_score_df = make_filter_scores(embeddings, categories, model)
-    parameter_score_df, parameter_warning = build_parameter_score_frame(df, filter_score_df)
+    parameter_score_df, parameter_warning, source_of_thought_score_df = build_parameter_score_frame(
+        df,
+        embeddings,
+        model,
+    )
     if parameter_warning:
         logger.warning("Source of Thought parameter preview unavailable: %s", parameter_warning)
 
@@ -729,7 +752,7 @@ def analyze(docs, cluster_count: int, n_neighbors: int, min_dist: float, categor
         df["top_filter_score"] = filter_score_df.max(axis=1).values
 
     labels = auto_label_clusters(df, filter_score_df)
-    return df, embeddings, filter_score_df, parameter_score_df, labels
+    return df, embeddings, filter_score_df, parameter_score_df, source_of_thought_score_df, labels
 
 
 def plot_map(df, labels):
@@ -1183,7 +1206,11 @@ if run:
             categories,
             model
         )
-        parameter_score_df, parameter_warning = build_parameter_score_frame(df, filter_score_df)
+        parameter_score_df, parameter_warning, source_of_thought_score_df = build_parameter_score_frame(
+            df,
+            embeddings,
+            model,
+        )
         if parameter_warning:
             st.warning(f"Source of Thought parameter scores are unavailable: {parameter_warning}")
 
@@ -1200,7 +1227,7 @@ if run:
 
         with st.spinner("Analyzing..."):
             try:
-                df, embeddings, filter_score_df, parameter_score_df, labels = analyze(
+                df, embeddings, filter_score_df, parameter_score_df, source_of_thought_score_df, labels = analyze(
                     docs,
                     cluster_count,
                     min(n_neighbors, doc_count - 1),
@@ -1217,6 +1244,7 @@ if run:
     st.session_state["labels"] = labels
     st.session_state["filter_score_df"] = filter_score_df
     st.session_state["parameter_score_df"] = parameter_score_df
+    st.session_state["source_of_thought_score_df"] = source_of_thought_score_df
     st.session_state["categories"] = categories
     st.session_state["selected_filter_names"] = selected_filter_names
     st.session_state["upload_session_id"] = f"upload_{int(time.time())}_{uuid.uuid4().hex[:8]}"
@@ -1231,6 +1259,7 @@ docs = st.session_state["docs"]
 labels = st.session_state["labels"]
 filter_score_df = st.session_state.get("filter_score_df")
 parameter_score_df = st.session_state.get("parameter_score_df")
+source_of_thought_score_df = st.session_state.get("source_of_thought_score_df")
 categories = st.session_state.get("categories", {})
 
 st.subheader("Overview")
@@ -1240,6 +1269,27 @@ col1.metric("Documents", len(df))
 col2.metric("Clusters", df["cluster"].nunique())
 col3.metric("Filters", len(categories))
 col4.metric("Model", MODEL_NAME)
+
+with st.expander("Source of Thought parameter debug"):
+    parameter_counts = []
+    if parameter_score_df is not None:
+        for _, row in parameter_score_df.iterrows():
+            count = sum(
+                1
+                for key in THOUGHT_PARAMETER_KEYS
+                if key in row and pd.notna(row.get(key))
+            )
+            parameter_counts.append({
+                "doc_id": row.get("doc_id", ""),
+                "title": row.get("title", ""),
+                "parameters_count": count,
+            })
+    st.write({
+        "selected_filter_columns": list(filter_score_df.columns) if filter_score_df is not None else [],
+        "source_of_thought_source_columns": list(source_of_thought_score_df.columns) if source_of_thought_score_df is not None else [],
+        "parameter_score_df_columns": list(parameter_score_df.columns) if parameter_score_df is not None else [],
+        "document_parameter_counts": parameter_counts,
+    })
 
 tab1, tab2, tab_status, tab3, tab4, tab5, tab6 = st.tabs(["Thought Continent", "Profile", "Composition", "Search", "Documents", "Filters", "Export"])
 
@@ -1609,12 +1659,7 @@ with tab6:
             mime="text/csv"
         )
 
-        try:
-            current_parameter_score_df, parameter_warning = build_parameter_score_frame(df, filter_score_df)
-            if parameter_warning:
-                st.warning(f"Source of Thought parameter scores are unavailable: {parameter_warning}")
-        except ValueError:
-            current_parameter_score_df = None
+        current_parameter_score_df = parameter_score_df
 
         if current_parameter_score_df is not None:
             parameter_score_bytes = current_parameter_score_df.to_csv(
