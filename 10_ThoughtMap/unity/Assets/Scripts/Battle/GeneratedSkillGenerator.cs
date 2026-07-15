@@ -24,9 +24,10 @@ public static class GeneratedSkillGenerator
         {
             foreach (ThoughtMapBattleCardData card in placement.Values)
             {
-                if (card != null && !string.IsNullOrWhiteSpace(card.cardId))
+                string placedId = GetStableCardId(card);
+                if (!string.IsNullOrWhiteSpace(placedId))
                 {
-                    placedIds.Add(card.cardId);
+                    placedIds.Add(placedId);
                 }
             }
         }
@@ -39,10 +40,11 @@ public static class GeneratedSkillGenerator
                 continue;
             }
 
+            string cardId = GetStableCardId(card);
             string thought = string.IsNullOrWhiteSpace(card.primaryAttribute) ? "thought" : card.primaryAttribute;
             string trigger = Triggers[StableIndex(card.docId, Triggers.Length)];
-            bool placed = placedIds.Contains(card.cardId);
-            int baseValue = 8 + StableIndex(card.cardId + ":value", 8);
+            bool placed = placedIds.Contains(cardId);
+            int baseValue = 8 + StableIndex(cardId + ":value", 8);
 
             GeneratedSkillDto skill = new GeneratedSkillDto
             {
@@ -98,6 +100,27 @@ public static class GeneratedSkillGenerator
     {
         string label = string.IsNullOrWhiteSpace(thought) ? "Thought" : char.ToUpperInvariant(thought[0]) + thought.Substring(1);
         return placed ? $"{label} Formation" : $"{label} Guard";
+    }
+
+    private static string GetStableCardId(ThoughtMapBattleCardData card)
+    {
+        if (card == null)
+        {
+            return "";
+        }
+        if (!string.IsNullOrWhiteSpace(card.cardId))
+        {
+            return card.cardId.Trim();
+        }
+        if (!string.IsNullOrWhiteSpace(card.docId))
+        {
+            return card.docId.Trim();
+        }
+        if (!string.IsNullOrWhiteSpace(card.sourceDocId))
+        {
+            return card.sourceDocId.Trim();
+        }
+        return string.IsNullOrWhiteSpace(card.cardName) ? "" : $"runtime:{Sanitize(card.cardName)}";
     }
 
     private static int StableIndex(string value, int modulo)

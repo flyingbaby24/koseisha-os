@@ -851,6 +851,12 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         string cardId = GetCardId(card);
+        if (string.IsNullOrWhiteSpace(cardId))
+        {
+            WriteStatus("Selected deck card has no stable card id.");
+            Debug.LogWarning($"[GeneratedSkill] assign=blocked reason=EmptyCardId skill_id={skill.skill_id} selectedDeckIndex={selectedDeckIndex}", this);
+            return;
+        }
         string alreadyAssignedCardId = FindAssignedCardIdForSkill(skill.skill_id);
         if (!string.IsNullOrWhiteSpace(alreadyAssignedCardId) && alreadyAssignedCardId != cardId)
         {
@@ -906,6 +912,12 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         string cardId = GetCardId(card);
+        if (string.IsNullOrWhiteSpace(cardId))
+        {
+            WriteStatus("Selected deck card has no stable card id.");
+            Debug.LogWarning($"[GeneratedSkill] remove=blocked reason=EmptyCardId skill_id={skill.skill_id} selectedDeckIndex={selectedDeckIndex}", this);
+            return;
+        }
         Debug.Log($"[GeneratedSkill] Prep.RemoveSelectedCard cardId='{cardId}' cardName='{card.cardName}'", this);
         if (!assignedSkillIdsByCardId.TryGetValue(cardId, out List<string> skillIds) || !skillIds.Remove(skill.skill_id))
         {
@@ -935,6 +947,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     private void OnGeneratedSkillSelected(GeneratedSkillDto skill)
     {
         selectedGeneratedSkillId = skill == null ? "" : skill.skill_id;
+        Debug.Log(
+            $"[GeneratedSkill] Prep.SelectedSkillChanged skill_id={selectedGeneratedSkillId} selectedDeckIndex={selectedDeckIndex} selectedLibraryIndex={selectedLibraryIndex}",
+            this
+        );
         if (generatedSkillsPanel != null)
         {
             generatedSkillsPanel.SetSelectedSkill(selectedGeneratedSkillId);
@@ -2622,7 +2638,37 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         {
             return "";
         }
-        return !string.IsNullOrWhiteSpace(card.cardId) ? card.cardId : card.docId;
+        if (!string.IsNullOrWhiteSpace(card.cardId))
+        {
+            return card.cardId.Trim();
+        }
+        if (!string.IsNullOrWhiteSpace(card.docId))
+        {
+            return card.docId.Trim();
+        }
+        if (!string.IsNullOrWhiteSpace(card.sourceDocId))
+        {
+            return card.sourceDocId.Trim();
+        }
+        return string.IsNullOrWhiteSpace(card.cardName) ? "" : $"runtime:{SanitizeForRuntimeId(card.cardName)}";
+    }
+
+    private string SanitizeForRuntimeId(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "card";
+        }
+
+        char[] chars = value.Trim().ToCharArray();
+        for (int i = 0; i < chars.Length; i++)
+        {
+            if (!char.IsLetterOrDigit(chars[i]))
+            {
+                chars[i] = '_';
+            }
+        }
+        return new string(chars);
     }
 
     private void ClearChildren(Transform root)

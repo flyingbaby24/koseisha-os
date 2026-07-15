@@ -1,9 +1,10 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
-public class ProductBattleGeneratedSkillRowView : MonoBehaviour
+public class ProductBattleGeneratedSkillRowView : MonoBehaviour, IPointerDownHandler, IPointerClickHandler
 {
     [SerializeField] private TMP_FontAsset overrideFontAsset;
     [SerializeField] private TMP_Text nameText;
@@ -19,6 +20,7 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour
     private UnityAction<GeneratedSkillDto> onSelected;
     private UnityAction<GeneratedSkillDto> onAssign;
     private UnityAction<GeneratedSkillDto> onRemove;
+    private int lastSelectFrame = -1;
 
     public GeneratedSkillDto Skill => skill;
 
@@ -66,7 +68,7 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour
             removeButton.interactable = true;
         }
         Debug.Log(
-            $"[GeneratedSkill] Row.Bind skill_id={(sourceSkill == null ? "" : sourceSkill.skill_id)} canAssign={canAssign} canRemove={canRemove} assigned={assigned} selected={selected}",
+            $"[GeneratedSkill] Row.Bind skill_id={(sourceSkill == null ? "" : sourceSkill.skill_id)} canAssign={canAssign} canRemove={canRemove} assigned={assigned} selected={selected} {DescribeRaycastState()}",
             this
         );
         ApplyFontToGeneratedTexts();
@@ -97,8 +99,39 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour
 
     private void HandleSelect()
     {
-        Debug.Log($"[GeneratedSkill] Row.Select skill_id={(skill == null ? "" : skill.skill_id)}", this);
+        SelectSkillOnce("Button");
+    }
+
+    private void SelectSkillOnce(string source)
+    {
+        if (lastSelectFrame == Time.frameCount)
+        {
+            return;
+        }
+
+        lastSelectFrame = Time.frameCount;
+        Debug.Log($"[GeneratedSkill] Row.SelectClick source={source} skill_id={(skill == null ? "" : skill.skill_id)} onSelectedNull={onSelected == null}", this);
         onSelected?.Invoke(skill);
+    }
+
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        Debug.Log(
+            $"[GeneratedSkill] Row.PointerDown skill_id={(skill == null ? "" : skill.skill_id)} currentRaycast={RaycastName(eventData)} pointerPress={(eventData == null || eventData.pointerPress == null ? "" : eventData.pointerPress.name)}",
+            this
+        );
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        Debug.Log(
+            $"[GeneratedSkill] Row.PointerClick skill_id={(skill == null ? "" : skill.skill_id)} currentRaycast={RaycastName(eventData)} pointerPress={(eventData == null || eventData.pointerPress == null ? "" : eventData.pointerPress.name)}",
+            this
+        );
+        if (eventData != null && eventData.pointerPress == gameObject)
+        {
+            SelectSkillOnce("PointerClick");
+        }
     }
 
     private void HandleAssign()
@@ -307,8 +340,11 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour
     {
         if (selectButton != null)
         {
+            selectButton.interactable = true;
+            selectButton.targetGraphic = backgroundImage;
             selectButton.onClick.RemoveAllListeners();
             selectButton.onClick.AddListener(HandleSelect);
+            Debug.Log($"[GeneratedSkill] Row.WireSelect button={selectButton.gameObject.name} skill_id={(skill == null ? "" : skill.skill_id)} interactable={selectButton.interactable} targetGraphic={(selectButton.targetGraphic == null ? "" : selectButton.targetGraphic.name)}", this);
         }
         if (assignButton != null)
         {
@@ -342,5 +378,40 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour
         {
             target.text = value;
         }
+    }
+
+    private string DescribeRaycastState()
+    {
+        string rootRaycast = backgroundImage == null ? "rootRaycast=null" : $"rootRaycast={backgroundImage.raycastTarget}";
+        string selectState = selectButton == null ? "selectButton=null" : $"selectButton={selectButton.gameObject.name},interactable={selectButton.interactable}";
+        CanvasGroup[] groups = GetComponentsInParent<CanvasGroup>(true);
+        if (groups == null || groups.Length == 0)
+        {
+            return $"{rootRaycast} {selectState} canvasGroups=none";
+        }
+
+        string groupState = "";
+        foreach (CanvasGroup group in groups)
+        {
+            if (group == null)
+            {
+                continue;
+            }
+            if (groupState.Length > 0)
+            {
+                groupState += "|";
+            }
+            groupState += $"{group.gameObject.name}:blocks={group.blocksRaycasts},interactable={group.interactable},alpha={group.alpha:0.##}";
+        }
+        return $"{rootRaycast} {selectState} canvasGroups={groupState}";
+    }
+
+    private static string RaycastName(PointerEventData eventData)
+    {
+        if (eventData == null || eventData.pointerCurrentRaycast.gameObject == null)
+        {
+            return "";
+        }
+        return eventData.pointerCurrentRaycast.gameObject.name;
     }
 }

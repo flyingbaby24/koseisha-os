@@ -93,6 +93,7 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
                 HandleAssign,
                 HandleRemove
             );
+            Debug.Log($"[GeneratedSkill] Panel.RenderRow skill_id={skill.skill_id} selected={skill.skill_id == selectedSkillId}", this);
             rows.Add(row);
         }
 
@@ -202,7 +203,7 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
 
         Image image = viewportObject.GetComponent<Image>();
         image.color = new Color(0f, 0f, 0f, 0.08f);
-        image.raycastTarget = true;
+        image.raycastTarget = false;
 
         Mask mask = viewportObject.GetComponent<Mask>();
         mask.showMaskGraphic = false;
