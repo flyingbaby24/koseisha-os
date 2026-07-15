@@ -16,6 +16,7 @@ public class ProductBattleLogPanelView : MonoBehaviour
 
     private void Awake()
     {
+        ConfigureRaycastTargets();
         if (toggleButton != null)
         {
             toggleButton.onClick.RemoveListener(Toggle);
@@ -76,6 +77,36 @@ public class ProductBattleLogPanelView : MonoBehaviour
         if (toggleButtonText != null)
         {
             toggleButtonText.text = collapsed ? "Show Debug" : "Hide Debug";
+        }
+    }
+
+    public void ConfigureRaycastTargets()
+    {
+        Image rootImage = GetComponent<Image>();
+        if (rootImage != null)
+        {
+            rootImage.raycastTarget = false;
+        }
+
+        TMP_Text[] texts = GetComponentsInChildren<TMP_Text>(true);
+        foreach (TMP_Text text in texts)
+        {
+            if (text != null)
+            {
+                text.raycastTarget = false;
+            }
+        }
+
+        Image[] images = GetComponentsInChildren<Image>(true);
+        foreach (Image image in images)
+        {
+            if (image == null || image == rootImage)
+            {
+                continue;
+            }
+
+            Button ownerButton = image.GetComponentInParent<Button>();
+            image.raycastTarget = ownerButton != null && ownerButton.targetGraphic == image;
         }
     }
 }

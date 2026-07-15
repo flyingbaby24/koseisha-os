@@ -205,6 +205,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         {
             generatedSkillsPanel.SetFontAsset(resolved);
         }
+        if (debugLogPanel != null)
+        {
+            debugLogPanel.ConfigureRaycastTargets();
+        }
     }
 
     [ContextMenu("Load Cards")]
@@ -1855,6 +1859,15 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             Color color = image.color;
             color.a = Mathf.Clamp(panelBackgroundAlpha, 0.55f, 0.70f);
             image.color = color;
+            if (panelName == "DebugLogPanel")
+            {
+                image.raycastTarget = false;
+                ProductBattleLogPanelView logPanel = panel.GetComponent<ProductBattleLogPanelView>();
+                if (logPanel != null)
+                {
+                    logPanel.ConfigureRaycastTargets();
+                }
+            }
             if (debugBattlePrepLayout)
             {
                 Debug.Log($"[Battle] panelAlpha panel={panelName} alpha={color.a}", image);
