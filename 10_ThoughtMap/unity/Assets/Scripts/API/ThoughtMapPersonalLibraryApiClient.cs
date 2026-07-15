@@ -31,19 +31,24 @@ public class ThoughtMapPersonalLibraryApiClient : MonoBehaviour
         }
 
         string url = $"{BaseUrl}/users/by-email/saved?email={UnityWebRequest.EscapeURL(email.Trim())}";
-        Debug.Log($"[PersonalLibraryApi] Request URL={url}", this);
-        Debug.Log($"[PersonalLibraryApi] Request email={email.Trim()}", this);
+        if (debugResponses)
+        {
+            Debug.Log($"[Battle] Personal Library request URL={url}", this);
+        }
         using (UnityWebRequest request = UnityWebRequest.Get(url))
         {
             request.timeout = Mathf.Max(1, timeoutSeconds);
             yield return request.SendWebRequest();
             int statusCode = (int)request.responseCode;
-            Debug.Log($"[PersonalLibraryApi] HTTP status code={statusCode}", this);
+            if (debugResponses)
+            {
+                Debug.Log($"[Battle] Personal Library HTTP status={statusCode}", this);
+            }
 
             if (request.result != UnityWebRequest.Result.Success)
             {
                 string body = request.downloadHandler == null ? "" : request.downloadHandler.text;
-                Debug.LogWarning($"[PersonalLibraryApi] HTTP failure status={statusCode} body_preview={ShortPreview(body, 2000)}", this);
+                Debug.LogWarning($"[Battle] Personal Library HTTP failure status={statusCode} body_preview={ShortPreview(body, 2000)}", this);
                 onError?.Invoke(string.IsNullOrWhiteSpace(body) ? request.error : body);
                 yield break;
             }
@@ -51,19 +56,22 @@ public class ThoughtMapPersonalLibraryApiClient : MonoBehaviour
             string json = request.downloadHandler == null ? "" : request.downloadHandler.text;
             if (string.IsNullOrWhiteSpace(json))
             {
-                Debug.LogWarning("[PersonalLibraryApi] Raw response was empty. actual empty response.", this);
+                Debug.LogWarning("[Battle] Personal Library raw response was empty.", this);
                 onSuccess?.Invoke(new PersonalLibraryResponse { works = new SavedDocument[0], parse_status = "actual_empty" });
                 yield break;
             }
 
             try
             {
-                Debug.Log(
-                    "[PersonalLibraryApi] Raw response length=" + json.Length + 
-                    " raw preview=" + ShortPreview(json, 2000),
-                    this
-                );
-                Debug.Log("[PersonalLibraryApi] Raw firstWork=" + PreviewFirstWorkObject(json), this);
+                if (debugResponses)
+                {
+                    Debug.Log(
+                        "[Battle] Personal Library raw response length=" + json.Length + 
+                        " raw preview=" + ShortPreview(json, 2000),
+                        this
+                    );
+                    Debug.Log("[Battle] Personal Library raw firstWork=" + PreviewFirstWorkObject(json), this);
+                }
 
                 if (json.TrimStart().StartsWith("[", StringComparison.Ordinal))
                 {
@@ -72,13 +80,16 @@ public class ThoughtMapPersonalLibraryApiClient : MonoBehaviour
 
                 int rawWorksCount = CountArrayItems(json, "works");
                 int rawItemsCount = CountArrayItems(json, "items");
-                Debug.Log($"[PersonalLibraryApi] JSON works count={FormatJsonCount(rawWorksCount)} items count={FormatJsonCount(rawItemsCount)}", this);
+                if (debugResponses)
+                {
+                    Debug.Log($"[Battle] Personal Library JSON works count={FormatJsonCount(rawWorksCount)} items count={FormatJsonCount(rawItemsCount)}", this);
+                }
 
                 json = NormalizeParameterObjects(json);
-                Debug.Log(
-                    "[PersonalLibraryApi] Normalized firstWork=" + PreviewFirstWorkObject(json),
-                    this
-                );
+                if (debugResponses)
+                {
+                    Debug.Log("[Battle] Personal Library normalized firstWork=" + PreviewFirstWorkObject(json), this);
+                }
 
                 PersonalLibraryResponse response = ParsePersonalLibraryResponse(json, rawWorksCount, rawItemsCount);
                 if (response == null)
@@ -88,21 +99,24 @@ public class ThoughtMapPersonalLibraryApiClient : MonoBehaviour
                 }
 
                 SavedDocument[] works = response.WorksOrItems;
-                Debug.Log($"[PersonalLibraryApi] DTO works null={response.works == null} items null={response.items == null} DTO works count={works.Length} parse_status={response.parse_status}.", this);
-                for (int i = 0; i < works.Length; i++)
+                if (debugResponses)
                 {
-                    SavedDocument item = works[i];
-                    Debug.Log(
-                        $"[PersonalLibraryApi] DTO item index={i} doc_id='{item?.doc_id}' title='{item?.title}' parameters_count={CountParameters(item)} direct_parameters={FormatDirectParameters(item)}",
-                        this
-                    );
+                    Debug.Log($"[Battle] Personal Library DTO works count={works.Length} parse_status={response.parse_status}.", this);
+                    for (int i = 0; i < works.Length; i++)
+                    {
+                        SavedDocument item = works[i];
+                        Debug.Log(
+                            $"[Battle] Personal Library DTO item index={i} doc_id='{item?.doc_id}' title='{item?.title}' parameters_count={CountParameters(item)} direct_parameters={FormatDirectParameters(item)}",
+                            this
+                        );
+                    }
                 }
 
                 onSuccess?.Invoke(response);
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[PersonalLibraryApi] DTO parse exception {ex.GetType().Name}: {ex.Message}", this);
+                Debug.LogError($"[Battle] Personal Library DTO parse exception {ex.GetType().Name}: {ex.Message}", this);
                 onError?.Invoke("JSON parse failure: " + ex.Message);
             }
         }
@@ -130,11 +144,11 @@ public class ThoughtMapPersonalLibraryApiClient : MonoBehaviour
 
         if (wholeParseException != null)
         {
-            Debug.LogWarning("[PersonalLibraryApi] Whole response JsonUtility parse failed. Trying per-work parse. " + wholeParseException.GetType().Name + ": " + wholeParseException.Message);
+            Debug.LogWarning("[Battle] Personal Library whole response parse failed. Trying per-work parse. " + wholeParseException.GetType().Name + ": " + wholeParseException.Message);
         }
         else
         {
-            Debug.LogWarning($"[PersonalLibraryApi] Whole response parse produced zero works. Trying per-work parse. rawWorks={FormatJsonCount(rawWorksCount)} rawItems={FormatJsonCount(rawItemsCount)}");
+            Debug.LogWarning($"[Battle] Personal Library whole response parse produced zero works. Trying per-work parse. rawWorks={FormatJsonCount(rawWorksCount)} rawItems={FormatJsonCount(rawItemsCount)}");
         }
 
         string arrayName = rawWorksCount >= 0 ? "works" : rawItemsCount >= 0 ? "items" : "";
@@ -155,7 +169,7 @@ public class ThoughtMapPersonalLibraryApiClient : MonoBehaviour
         int rawCount = rawWorksCount >= 0 ? rawWorksCount : rawItemsCount;
         if (rawCount > 0)
         {
-            Debug.LogError($"[PersonalLibraryApi] JSON parse failure. Raw {arrayName} count={rawCount}, but DTO count=0.");
+            Debug.LogError($"[Battle] Personal Library JSON parse failure. Raw {arrayName} count={rawCount}, but DTO count=0.");
             return null;
         }
 
@@ -187,12 +201,12 @@ public class ThoughtMapPersonalLibraryApiClient : MonoBehaviour
                 }
                 else
                 {
-                    Debug.LogWarning($"[PersonalLibraryApi] Per-work parse returned no item at index={i} object_preview={ShortPreview(objects[i], 600)}");
+                    Debug.LogWarning($"[Battle] Personal Library per-work parse returned no item at index={i} object_preview={ShortPreview(objects[i], 600)}");
                 }
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[PersonalLibraryApi] Per-work parse failed index={i} {ex.GetType().Name}: {ex.Message} object_preview={ShortPreview(objects[i], 600)}");
+                Debug.LogWarning($"[Battle] Personal Library per-work parse failed index={i} {ex.GetType().Name}: {ex.Message} object_preview={ShortPreview(objects[i], 600)}");
             }
         }
 

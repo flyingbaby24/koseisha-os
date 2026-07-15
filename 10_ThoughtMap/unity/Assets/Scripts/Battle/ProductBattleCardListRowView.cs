@@ -57,17 +57,6 @@ public class ProductBattleCardListRowView : MonoBehaviour
         {
             templateImage.sprite = templateSprite;
             templateImage.enabled = templateSprite != null;
-            Debug.Log(
-                $"[ProductBattlePrep Art] List Row Image.sprite assigned={(templateSprite == null ? "null" : templateSprite.name)} row='{slotLabel}' card='{(sourceCard == null ? "null" : sourceCard.cardName)}'",
-                this
-            );
-        }
-        else
-        {
-            Debug.LogWarning(
-                $"[ProductBattlePrep Art] List Row templateImage is null row='{slotLabel}' card='{(sourceCard == null ? "null" : sourceCard.cardName)}'",
-                this
-            );
         }
 
         if (backgroundImage != null)

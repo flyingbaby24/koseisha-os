@@ -11,7 +11,7 @@ public static class GeneratedSkillLibrary
         string path = Path.Combine(Application.streamingAssetsPath, string.IsNullOrWhiteSpace(relativePath) ? DefaultRelativePath : relativePath);
         if (!File.Exists(path))
         {
-            Debug.LogWarning("[GeneratedSkills] JSON file not found: " + path);
+            Debug.LogWarning("[GeneratedSkill] JSON file not found: " + path);
             return new List<GeneratedSkillDto>();
         }
 
@@ -19,7 +19,7 @@ public static class GeneratedSkillLibrary
         List<GeneratedSkillDto> skills = Parse(json);
         if (debugLog)
         {
-            Debug.Log($"[GeneratedSkills] Loaded {skills.Count} skills from {path}");
+            Debug.Log($"[GeneratedSkill] loadedFromJson={skills.Count} path={path}");
         }
         return skills;
     }
@@ -124,4 +124,3 @@ public static class GeneratedSkillLibrary
         return value.Replace("_", " ");
     }
 }
-

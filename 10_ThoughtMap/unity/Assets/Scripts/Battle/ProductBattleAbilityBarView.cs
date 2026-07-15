@@ -5,13 +5,13 @@ using UnityEngine.UI;
 public class ProductBattleAbilityBarView : MonoBehaviour
 {
     private const float RowHeight = 26f;
-    private const float LabelWidth = 44f;
-    private const float BarMinWidth = 34f;
-    private const float BaseValueWidth = 28f;
+    private const float LabelWidth = 48f;
+    private const float BarMinWidth = 72f;
+    private const float BaseValueWidth = 34f;
     private const float PositionWidth = 42f;
     private const float ResonanceWidth = 42f;
-    private const float ArrowWidth = 12f;
-    private const float FinalValueWidth = 32f;
+    private const float ArrowWidth = 20f;
+    private const float FinalValueWidth = 36f;
     private static Sprite generatedSolidSprite;
 
     [SerializeField] private TMP_Text labelText;
@@ -50,12 +50,6 @@ public class ProductBattleAbilityBarView : MonoBehaviour
             fillImage.preserveAspect = false;
         }
 
-        RectTransform fillRect = fillImage == null ? null : fillImage.rectTransform;
-        RectTransform backgroundRect = backgroundImage == null ? null : backgroundImage.rectTransform;
-        Debug.Log(
-            $"[ProductBattlePrep Ability] ability={value.definition.shortName} raw={value.rawValue:0.###} normalized={value.normalizedValue:0.###} fill={value.fillAmount:0.###} fillImageName={value.definition.shortName}_Fill actualFillObject={(fillImage == null ? "null" : fillImage.name)} imageType={(fillImage == null ? "null" : fillImage.type.ToString())} fillAmountAfterAssign={(fillImage == null ? 0f : fillImage.fillAmount):0.###} fillRectWidth={(fillRect == null ? 0f : fillRect.rect.width):0.##} backgroundRectWidth={(backgroundRect == null ? 0f : backgroundRect.rect.width):0.##}",
-            this
-        );
     }
 
     public void Clear()
@@ -130,8 +124,7 @@ public class ProductBattleAbilityBarView : MonoBehaviour
             resonanceText = existing == null ? null : existing.GetComponent<TMP_Text>();
             if (resonanceText == null)
             {
-                resonanceText = modifierText;
-                resonanceText.gameObject.name = "ResonanceText";
+                resonanceText = GetOrCreateText(root, "ResonanceText", "", 12, TextAlignmentOptions.MidlineRight);
             }
         }
 
@@ -174,7 +167,7 @@ public class ProductBattleAbilityBarView : MonoBehaviour
 
         ConfigureLayout(labelText == null ? null : labelText.gameObject, LabelWidth, RowHeight, 0f);
         ConfigureLayout(baseValueText == null ? null : baseValueText.gameObject, BaseValueWidth, RowHeight, 0f);
-        ConfigureLayout(barContainer == null ? null : barContainer.gameObject, BarMinWidth, 14f, 1f);
+        ConfigureLayout(barContainer == null ? null : barContainer.gameObject, BarMinWidth, RowHeight, 1f);
         ConfigureLayout(positionText == null ? null : positionText.gameObject, PositionWidth, RowHeight, 0f);
         ConfigureLayout(resonanceText == null ? null : resonanceText.gameObject, ResonanceWidth, RowHeight, 0f);
         ConfigureLayout(arrowText == null ? null : arrowText.gameObject, ArrowWidth, RowHeight, 0f);
@@ -194,6 +187,11 @@ public class ProductBattleAbilityBarView : MonoBehaviour
         ConfigureText(modifierText, 12);
         ConfigureText(arrowText, 13);
         ConfigureText(finalValueText, 13);
+        if (modifierText != null && modifierText != resonanceText)
+        {
+            modifierText.text = "";
+            modifierText.gameObject.SetActive(false);
+        }
 
         if (fillImage != null)
         {
@@ -206,6 +204,7 @@ public class ProductBattleAbilityBarView : MonoBehaviour
             fillImage.raycastTarget = false;
             fillImage.color = new Color(fillImage.color.r, fillImage.color.g, fillImage.color.b, 0.95f);
             Stretch(fillImage.rectTransform);
+            fillImage.transform.SetAsLastSibling();
             RemoveLayoutComponents(fillImage.gameObject);
         }
 
@@ -215,12 +214,14 @@ public class ProductBattleAbilityBarView : MonoBehaviour
             backgroundImage.color = new Color(0f, 0f, 0f, 0.50f);
             backgroundImage.raycastTarget = false;
             Stretch(backgroundImage.rectTransform);
+            backgroundImage.transform.SetAsFirstSibling();
             RemoveLayoutComponents(backgroundImage.gameObject);
         }
 
         if (barContainer != null)
         {
             Stretch(barContainer);
+            barContainer.gameObject.SetActive(true);
         }
     }
 
@@ -229,23 +230,15 @@ public class ProductBattleAbilityBarView : MonoBehaviour
         SetText(baseValueText, FormatValue(value.rawValue));
         bool hasPosition = value.positionApplies && Mathf.Abs(value.positionDelta) >= 0.01f;
         bool hasResonance = value.resonanceApplies && Mathf.Abs(value.resonanceDelta) >= 0.01f;
-        SetText(positionText, hasPosition ? $"Pos {FormatDelta(value.positionDelta)}" : "");
-        SetText(resonanceText, hasResonance ? $"Res {FormatDelta(value.resonanceDelta)}" : "");
-        if (hasPosition || hasResonance)
-        {
-            if (modifierText != resonanceText)
-            {
-                SetText(modifierText, "");
-            }
-            SetText(arrowText, "->");
-            SetText(finalValueText, FormatValue(value.finalValue));
-        }
-        else
+        bool hasFinalChange = Mathf.Abs(value.finalValue - value.rawValue) >= 0.01f;
+        SetText(positionText, hasPosition ? FormatDelta(value.positionDelta) : "");
+        SetText(resonanceText, hasResonance ? FormatDelta(value.resonanceDelta) : "");
+        if (modifierText != null && modifierText != resonanceText)
         {
             SetText(modifierText, "");
-            SetText(arrowText, "");
-            SetText(finalValueText, "");
         }
+        SetText(arrowText, hasFinalChange ? "->" : "");
+        SetText(finalValueText, FormatValue(value.finalValue));
 
         SetText(valueText, "");
     }

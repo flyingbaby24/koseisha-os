@@ -38,6 +38,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     [SerializeField] private bool loadCardsOnStart = true;
     [SerializeField] private bool autoFillDeckOnLoad;
     [SerializeField] private bool debugGeneratedSkills;
+    [SerializeField] private bool debugBattlePrepLayout;
     [SerializeField] private bool showAllGeneratedSkillsWhenNoDeckMatch = true;
 
     [Header("Personal Library API")]
@@ -97,6 +98,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     private readonly List<ThoughtMapBattleCardData> loadedCards = new List<ThoughtMapBattleCardData>();
     private readonly List<ThoughtMapBattleCardData> deckCards = new List<ThoughtMapBattleCardData>();
     private readonly Dictionary<int, ThoughtMapBattleCardData> placement = new Dictionary<int, ThoughtMapBattleCardData>();
+    private readonly List<GeneratedSkillDto> loadedGeneratedSkills = new List<GeneratedSkillDto>();
     private readonly List<GeneratedSkillDto> generatedSkills = new List<GeneratedSkillDto>();
     private readonly Dictionary<string, GeneratedSkillDto> generatedSkillById = new Dictionary<string, GeneratedSkillDto>();
     private readonly Dictionary<string, List<string>> assignedSkillIdsByCardId = new Dictionary<string, List<string>>();
@@ -148,14 +150,20 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     {
         if (playerRows != 5)
         {
-            Debug.Log($"[ProductBattlePrep Grid] playerRows changed from {playerRows} to 5 so all 5x5 formation cells are placeable.", this);
+            if (debugBattlePrepLayout)
+            {
+                Debug.Log($"[Battle] playerRows changed from {playerRows} to 5 so all 5x5 formation cells are placeable.", this);
+            }
             playerRows = 5;
         }
     }
 
     private void Start()
     {
-        LogRuntimeSpriteState();
+        if (debugBattlePrepLayout)
+        {
+            LogRuntimeSpriteState();
+        }
         if (loadCardsOnStart)
         {
             LoadCards();
@@ -176,15 +184,18 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
     private void ApplyResolvedFontToBattlePrepTexts()
     {
-        TMP_FontAsset resolved = ThoughtMapTmpFontResolver.Resolve(cjkFontAsset);
+        TMP_FontAsset resolved = ThoughtMapTmpFontResolver.Resolve(null);
+        if (resolved == null)
+        {
+            resolved = ThoughtMapTmpFontResolver.Resolve(cjkFontAsset);
+        }
         if (resolved == null)
         {
             return;
         }
 
         cjkFontAsset = resolved;
-        ThoughtMapTmpFontResolver.ApplyToChildren(gameObject, resolved);
-        Debug.Log($"[SourceOfThought Font] BattlePrep resolved FontAsset='{resolved.name}' runtimeGenerationAttempted={ThoughtMapTmpFontResolver.RuntimeGenerationAttempted}", this);
+        ThoughtMapTmpFontResolver.ApplyToChildren(gameObject, resolved, true);
         if (cardDetailPanel != null)
         {
             cardDetailPanel.SetFontAsset(resolved);
@@ -227,19 +238,18 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             WriteStatus("Could not load cards.csv: " + exc.Message);
         }
 
+        RefreshGeneratedSkills("Load Cards");
         RenderAll();
-        RenderGeneratedSkills();
     }
 
     [ContextMenu("Load Personal Library")]
     public void LoadPersonalLibrary()
     {
-        Debug.Log("[Personal Load Start] Load Personal Library requested.", this);
         EnsurePersonalLibraryApiClient();
         if (personalLibraryApiClient == null)
         {
             WriteStatus("Personal Library API client is not assigned.");
-            Debug.LogWarning("[Personal Load Start] Personal Library API client is not assigned.", this);
+            Debug.LogWarning("[Battle] Personal Library API client is not assigned.", this);
             return;
         }
 
@@ -247,11 +257,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         if (string.IsNullOrWhiteSpace(email))
         {
             WriteStatus("Enter a registered email address first.");
-            Debug.LogWarning("[Personal Load Start] Email field is empty.", this);
+            Debug.LogWarning("[Battle] Personal Library email field is empty.", this);
             return;
         }
 
-        Debug.Log("[Personal Load Start] API request will start. Email is configured; value is intentionally not logged.", this);
         WriteStatus("Loading Personal Library...");
         StartCoroutine(personalLibraryApiClient.GetSavedByEmail(
             email,
@@ -265,14 +274,11 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         if (response == null)
         {
             WriteStatus("Personal Library JSON parse failure: response object is null.");
-            Debug.LogError("[Personal Load Response] JSON parse failure: response object is null.", this);
+            Debug.LogError("[Battle] Personal Library JSON parse failure: response object is null.", this);
             return;
         }
 
         SavedDocument[] works = response.WorksOrItems;
-        bool worksPropertyNull = response.works == null;
-        bool itemsPropertyNull = response.items == null;
-        Debug.Log($"[Personal Load Response] API response count={works.Length}. works_null={worksPropertyNull} items_null={itemsPropertyNull} parse_status='{response.parse_status}'. Clearing existing card caches before redraw.", this);
 
         loadedCards.Clear();
         deckCards.Clear();
@@ -288,39 +294,27 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         for (int i = 0; i < works.Length; i++)
         {
             SavedDocument work = works[i];
-            Debug.Log(
-                $"[Personal Load SavedDocument] index={i} doc_id='{work?.doc_id}' title='{work?.title}' parameters_count={CountSavedDocumentParameters(work)} raw_parameters={FormatSavedDocumentParameters(work)}",
-                this
-            );
-            Debug.Log("[Personal Load Route] Calling ThoughtMapBattleCardFactory.FromSavedDocument().", this);
             ThoughtMapBattleCardData card = ThoughtMapBattleCardFactory.FromSavedDocument(work, "personal");
             if (card == null)
             {
-                Debug.LogWarning($"[Personal Load Route] FromSavedDocument returned null for index={i}.", this);
+                Debug.LogWarning($"[Battle] Personal card conversion returned null for index={i}.", this);
                 continue;
             }
-
-            Debug.Log(
-                $"[Personal Load CardData] index={i} doc_id='{card.docId}' title='{CardName(card)}' parameters={FormatCardParameterValues(card)} primaryAttribute='{card.primaryAttribute}' dominant='{ResolveDominantThoughtAttributeKey(card)}' spriteKey='{NormalizeAttributeKey(ResolveDominantThoughtAttributeKey(card))}' stats=[HP:{card.statHp}, SP:{card.statSp}, P_ATK:{card.statPhysicalAttack}, S_ATK:{card.statSkillAttack}, P_DEF:{card.statPhysicalDefense}, S_DEF:{card.statSkillDefense}, SPD:{card.statSpeed}, EVA:{card.statEvasion}, ACC:{card.statAccuracy}, LUCK:{card.statLuck}]",
-                this
-            );
 
             string id = GetCardId(card);
             if (string.IsNullOrWhiteSpace(id) || !seenIds.Add(id))
             {
-                Debug.LogWarning($"[Personal Load CardData] Skipping duplicate or empty card id='{id}' title='{CardName(card)}'.", this);
+                Debug.LogWarning($"[Battle] Skipping duplicate or empty Personal card id='{id}' title='{CardName(card)}'.", this);
                 continue;
             }
 
             personalCards.Add(card);
-            LogPersonalCardConversion(card);
         }
 
         loadedCards.AddRange(personalCards);
-        Debug.Log($"[Personal Load Complete] loadedCards={loadedCards.Count} deckCards={deckCards.Count} placement={placement.Count}. Rendering Card List now.", this);
 
+        RefreshGeneratedSkills("Load Personal");
         RenderAll();
-        RenderGeneratedSkills();
         if (personalCards.Count == 0)
         {
             string status = string.Equals(response.parse_status, "actual_empty", System.StringComparison.OrdinalIgnoreCase)
@@ -332,20 +326,6 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         {
             WriteStatus($"Loaded {personalCards.Count} Personal Library cards.");
         }
-    }
-
-    private void LogPersonalCardConversion(ThoughtMapBattleCardData card)
-    {
-        if (card == null)
-        {
-            return;
-        }
-
-        string dominant = ResolveDominantThoughtAttributeKey(card);
-        Debug.Log(
-            $"[PersonalLibrary] CardData title='{CardName(card)}' doc_id='{card.docId}' parameters={card.parameterScores.Count} dominant='{dominant}' artKey='{FormatThoughtAttributeForLog(dominant)}' scope='{card.dataScope}'",
-            this
-        );
     }
 
     private int CountSavedDocumentParameters(SavedDocument document)
@@ -466,7 +446,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     {
         string reason = string.IsNullOrWhiteSpace(message) ? "HTTP failure or JSON parse failure." : message;
         WriteStatus("Could not load Personal Library. " + ShortStatusText(reason, "HTTP failure or JSON parse failure."));
-        Debug.LogWarning("[Personal Load Error] " + reason, this);
+        Debug.LogWarning("[Battle] Personal Library load error: " + reason, this);
         if (fallbackToSampleCardsOnApiError && loadedCards.Count == 0)
         {
             LoadCards();
@@ -479,6 +459,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         placement.Clear();
         selectedDeckIndex = -1;
         selectedLibraryIndex = -1;
+        RefreshGeneratedSkills("Clear Placement");
         RenderAll();
         WriteStatus("Cleared formation.");
     }
@@ -511,6 +492,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         deckCards.Add(selected);
         selectedDeckIndex = deckCards.Count - 1;
         selectedLibraryIndex = -1;
+        RefreshGeneratedSkills("Add Deck");
         RenderAll();
         WriteStatus($"Added P{selectedDeckIndex + 1} to Deck.");
     }
@@ -523,6 +505,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         ShowSelectedDetail();
         RenderGeneratedSkills();
         ApplyResolvedFontToBattlePrepTexts();
+        UpdateBattleButtonState(false);
     }
 
     private void RenderCardLibrary()
@@ -548,7 +531,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             ProductBattleCardListRowView view = CreateListRow(cardListContent, cardListRowPrefab, "CardListRow");
             string state = FormatCardListState(loadedCards[i], deckCards.Contains(loadedCards[i]) ? "In Deck" : "");
             Sprite artSprite = ResolveCardArtForTarget(loadedCards[i], i, "Card List");
-            view.Bind(loadedCards[i], i, GetCardId(loadedCards[i]), i == selectedLibraryIndex, deckCards.Contains(loadedCards[i]), state, artSprite);
+            view.Bind(loadedCards[i], i, $"C{i + 1}", i == selectedLibraryIndex, deckCards.Contains(loadedCards[i]), state, artSprite);
             view.SetClickHandler(OnLibraryCardClicked);
         }
         RestoreScrollPosition(scroll, scrollPosition);
@@ -615,7 +598,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             gridCells[index].SetClickHandler(OnGridCellClicked);
             if (logFormationGridCells)
             {
-                Debug.Log($"[ProductBattlePrep Grid] cell index={index} x={x} y={y} available={available} hasCard={placement.ContainsKey(index)}", gridCells[index]);
+                if (debugBattlePrepLayout)
+                {
+                    Debug.Log($"[Battle] gridCell index={index} x={x} y={y} available={available} hasCard={placement.ContainsKey(index)}", gridCells[index]);
+                }
             }
         }
     }
@@ -629,7 +615,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[ProductBattlePrep Grid] Rebuilding Formation Grid cells. Existing count={gridCells.Count}, required=25.", this);
+        if (debugBattlePrepLayout)
+        {
+            Debug.Log($"[Battle] rebuilding formation grid cells. existing={gridCells.Count} required=25", this);
+        }
         ClearChildrenImmediate(formationGridContent);
         gridCells.Clear();
         for (int i = 0; i < 25; i++)
@@ -723,10 +712,14 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         int index = cell.Y * 5 + cell.X;
-        Debug.Log($"[ProductBattlePrep Grid] clicked cell index={index} x={cell.X} y={cell.Y} available={IsFormationCellAvailable(cell.Y)} hasCard={placement.ContainsKey(index)}", cell);
+        if (debugBattlePrepLayout)
+        {
+            Debug.Log($"[Battle] clicked grid cell index={index} x={cell.X} y={cell.Y} available={IsFormationCellAvailable(cell.Y)} hasCard={placement.ContainsKey(index)}", cell);
+        }
         if (placement.ContainsKey(index))
         {
             placement.Remove(index);
+            RefreshGeneratedSkills("Remove Placement");
             RenderAll();
             WriteStatus("Removed card from formation.");
             return;
@@ -757,6 +750,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         placement[index] = selected;
+        RefreshGeneratedSkills("Place Card");
         RenderAll();
         WriteStatus($"Placed P{selectedDeckIndex + 1} at ({cell.X + 1},{cell.Y + 1}).");
     }
@@ -769,23 +763,17 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     [ContextMenu("Load Generated Skills")]
     public void LoadGeneratedSkills()
     {
+        loadedGeneratedSkills.Clear();
         generatedSkills.Clear();
         generatedSkillById.Clear();
 
         List<GeneratedSkillDto> loaded = GeneratedSkillLibrary.LoadFromStreamingAssets(generatedSkillsRelativePath, debugGeneratedSkills);
-        generatedSkills.AddRange(loaded);
-        foreach (GeneratedSkillDto skill in loaded)
-        {
-            if (skill == null || string.IsNullOrWhiteSpace(skill.skill_id))
-            {
-                continue;
-            }
-            generatedSkillById[skill.skill_id] = skill;
-        }
+        loadedGeneratedSkills.AddRange(loaded);
+        RefreshGeneratedSkills("Load Generated Skills");
 
         if (debugGeneratedSkills)
         {
-            Debug.Log($"[GeneratedSkills] Runtime skill count={generatedSkills.Count} path={generatedSkillsRelativePath}", this);
+            Debug.Log($"[GeneratedSkill] loadedFromJson={loadedGeneratedSkills.Count} total={generatedSkills.Count} path={generatedSkillsRelativePath}", this);
         }
         if (generatedSkills.Count == 0)
         {
@@ -794,6 +782,48 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
         RenderGeneratedSkills();
         ShowSelectedDetail();
+    }
+
+    private void RefreshGeneratedSkills(string reason)
+    {
+        int deckCount = deckCards.Count;
+        int placedCount = placement.Count;
+        List<GeneratedSkillDto> runtimeGenerated = GeneratedSkillGenerator.GenerateForBattlePrep(deckCards, placement, 1);
+        int candidateCount = deckCount + loadedGeneratedSkills.Count;
+
+        generatedSkills.Clear();
+        generatedSkillById.Clear();
+        AddGeneratedSkills(loadedGeneratedSkills);
+        AddGeneratedSkills(runtimeGenerated);
+
+        Debug.Log(
+            $"[GeneratedSkill] deckCount={deckCount} placedCount={placedCount} candidateCount={candidateCount} generatedCount={generatedSkills.Count} reason={reason}",
+            this
+        );
+    }
+
+    private void AddGeneratedSkills(IEnumerable<GeneratedSkillDto> skills)
+    {
+        if (skills == null)
+        {
+            return;
+        }
+
+        foreach (GeneratedSkillDto skill in skills)
+        {
+            if (skill == null || string.IsNullOrWhiteSpace(skill.skill_id))
+            {
+                continue;
+            }
+
+            if (generatedSkillById.ContainsKey(skill.skill_id))
+            {
+                continue;
+            }
+
+            generatedSkillById[skill.skill_id] = skill;
+            generatedSkills.Add(skill);
+        }
     }
 
     public void AssignGeneratedSkill(GeneratedSkillDto skill)
@@ -808,7 +838,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         if (card == null)
         {
             WriteStatus("Select a deck card first.");
-            Debug.Log($"[GeneratedSkills] Assign result=Blocked reason=SelectDeckCard skill_id={skill.skill_id}", this);
+            Debug.Log($"[GeneratedSkill] assign=blocked reason=SelectDeckCard skill_id={skill.skill_id}", this);
             return;
         }
 
@@ -817,7 +847,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         if (!string.IsNullOrWhiteSpace(alreadyAssignedCardId) && alreadyAssignedCardId != cardId)
         {
             WriteStatus("Skill already assigned to another deck card.");
-            Debug.Log($"[GeneratedSkills] Assign skill_id={skill.skill_id} target card={cardId} already assigned card={alreadyAssignedCardId} result=BlockedOtherCard", this);
+            Debug.Log($"[GeneratedSkill] assign=blocked reason=OtherCard skill_id={skill.skill_id} targetCard={cardId} assignedCard={alreadyAssignedCardId}", this);
             return;
         }
 
@@ -830,20 +860,20 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         if (skillIds.Contains(skill.skill_id))
         {
             WriteStatus("Skill already assigned to this card.");
-            Debug.Log($"[GeneratedSkills] Assign skill_id={skill.skill_id} target card={cardId} already assigned card={cardId} result=BlockedSameCard", this);
+            Debug.Log($"[GeneratedSkill] assign=blocked reason=SameCard skill_id={skill.skill_id} targetCard={cardId}", this);
             return;
         }
 
         if (skillIds.Count >= 1)
         {
             WriteStatus("This card already has an assigned skill.");
-            Debug.Log($"[GeneratedSkills] Assign skill_id={skill.skill_id} target card={cardId} already assigned card= result=BlockedLimit", this);
+            Debug.Log($"[GeneratedSkill] assign=blocked reason=AlreadyHasSkill skill_id={skill.skill_id} targetCard={cardId}", this);
             return;
         }
 
         skillIds.Add(skill.skill_id);
         selectedGeneratedSkillId = skill.skill_id;
-        Debug.Log($"[GeneratedSkills] Assign skill_id={skill.skill_id} target card={cardId} already assigned card= result=Assigned", this);
+        Debug.Log($"[GeneratedSkill] assign=success skill_id={skill.skill_id} targetCard={cardId}", this);
         WriteStatus($"Assigned {skill.DisplayName} to P{selectedDeckIndex + 1}.");
         RenderGeneratedSkills();
         ShowSelectedDetail();
@@ -873,7 +903,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
         if (debugGeneratedSkills)
         {
-            Debug.Log($"[GeneratedSkills] Removed skill_id={skill.skill_id} cardId={cardId}", this);
+            Debug.Log($"[GeneratedSkill] remove=success skill_id={skill.skill_id} cardId={cardId}", this);
         }
         WriteStatus($"Removed {skill.DisplayName} from P{selectedDeckIndex + 1}.");
         RenderGeneratedSkills();
@@ -926,7 +956,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
         if (debugGeneratedSkills || usedDebugFallback)
         {
-            Debug.Log($"[GeneratedSkills] Deck matched skill count={GetDeckMatchedGeneratedSkills().Count} displayed={deckMatchedSkills.Count} deck cards={deckCards.Count} fallbackAll={usedDebugFallback}", this);
+            Debug.Log($"[GeneratedSkill] deckMatched={GetDeckMatchedGeneratedSkills().Count} displayed={deckMatchedSkills.Count} deckCount={deckCards.Count} fallbackAll={usedDebugFallback}", this);
             LogGeneratedSkillDocIdMatching();
         }
     }
@@ -969,10 +999,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
     private void LogGeneratedSkillDocIdMatching()
     {
-        Debug.Log($"[GeneratedSkills] Matching debug: deckCardCount={deckCards.Count} skillCount={generatedSkills.Count}", this);
+        Debug.Log($"[GeneratedSkill] matching deckCardCount={deckCards.Count} skillCount={generatedSkills.Count}", this);
         foreach (ThoughtMapBattleCardData card in deckCards)
         {
-            Debug.Log($"[GeneratedSkills] Deck card: title='{(card == null ? "null" : card.cardName)}' doc_id='{(card == null ? "" : card.docId)}'", this);
+            Debug.Log($"[GeneratedSkill] deckCard title='{(card == null ? "null" : card.cardName)}' doc_id='{(card == null ? "" : card.docId)}'", this);
         }
 
         int matchCount = 0;
@@ -990,9 +1020,9 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             {
                 matchCount++;
             }
-            Debug.Log($"[GeneratedSkills] Skill: name='{skill.DisplayName}' doc_id='{skill.doc_id}' Matched: {matched}", this);
+            Debug.Log($"[GeneratedSkill] candidate name='{skill.DisplayName}' doc_id='{skill.doc_id}' matched={matched}", this);
         }
-        Debug.Log($"[GeneratedSkills] Matching debug complete. matchCount={matchCount}", this);
+        Debug.Log($"[GeneratedSkill] matchingComplete matchCount={matchCount}", this);
     }
 
     private string NormalizeDocId(string value)
@@ -1253,31 +1283,58 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         List<string> assignedIds = GetAssignedSkillIdsForCard(card);
-        Debug.Log($"[GeneratedSkills] Selected card: title='{(card == null ? "null" : card.cardName)}' cardId='{GetCardId(card)}'", this);
-        Debug.Log($"[GeneratedSkills] Assigned skill IDs: {string.Join(", ", assignedIds)}", this);
-        Debug.Log($"[GeneratedSkills] Resolved assigned skills: {string.Join(", ", (resolvedSkills ?? new List<GeneratedSkillDto>()).Select(skill => skill == null ? "null" : skill.DisplayName))}", this);
-        Debug.Log($"[GeneratedSkills] Detail panel rendered skill count={(resolvedSkills == null ? 0 : resolvedSkills.Count)}", this);
+        Debug.Log($"[GeneratedSkill] selectedCard='{(card == null ? "null" : card.cardName)}' cardId='{GetCardId(card)}' assignedIds='{string.Join(", ", assignedIds)}' renderedCount={(resolvedSkills == null ? 0 : resolvedSkills.Count)}", this);
     }
 
     public void SimulatePreview()
     {
         StringBuilder builder = new StringBuilder();
+        RefreshGeneratedSkills("Preview");
+        RenderGeneratedSkills();
+        ShowSelectedDetail();
+        EnsureResonanceCalculator();
+
         builder.AppendLine("=== Battle Prep Preview ===");
         builder.AppendLine($"Deck Cards: {deckCards.Count}");
         builder.AppendLine($"Placed Cards: {placement.Count}/{deployLimit}");
+        builder.AppendLine($"Generated Skills: {GetDeckMatchedGeneratedSkills().Count}");
+        builder.AppendLine();
+        builder.AppendLine("Final status at battle start:");
+        Dictionary<int, ThoughtMapResonanceResult> resonanceResults = CalculatePlacementResonanceByCell();
         foreach (KeyValuePair<int, ThoughtMapBattleCardData> pair in placement.OrderBy(pair => pair.Key))
         {
             int x = pair.Key % 5;
             int y = pair.Key / 5;
-            builder.AppendLine($"P{deckCards.IndexOf(pair.Value) + 1} {pair.Value.cardName} @({x + 1},{y + 1})");
+            ThoughtMapBattleCardData card = pair.Value;
+            ThoughtMapGridBonus positionBonus = ThoughtMapGridBonusCalculator.GetBonus(new ThoughtMapGridPosition(x, y), "Player");
+            float resonance = resonanceResults.TryGetValue(pair.Key, out ThoughtMapResonanceResult result) ? result.totalModifier : 0f;
+            List<GeneratedSkillDto> cardSkills = GetAssignedSkillsForCard(card);
+            builder.AppendLine(
+                $"P{deckCards.IndexOf(card) + 1} {card.cardName} @({x + 1},{y + 1}) " +
+                $"Final HP {PreviewFinal(card.MaxHp, positionBonus.hpMultiplier, 0f)} " +
+                $"ATK {PreviewFinal(Mathf.Max(card.statPhysicalAttack, card.statSkillAttack), positionBonus.attackMultiplier, resonance)} " +
+                $"DEF {PreviewFinal(Mathf.Max(card.statPhysicalDefense, card.statSkillDefense), positionBonus.defenseMultiplier, resonance)} " +
+                $"HatePreview {positionBonus.hateMultiplier:0.00}x " +
+                $"Resonance {FormatSignedPercent(resonance)} " +
+                $"Skills {cardSkills.Count}"
+            );
+        }
+        builder.AppendLine();
+        builder.AppendLine("Generated skill candidates:");
+        foreach (GeneratedSkillDto skill in GetDeckMatchedGeneratedSkills())
+        {
+            builder.AppendLine($"- {skill.DisplayName} | {skill.trigger} | {GeneratedSkillLibrary.EffectSummary(skill)} | {GeneratedSkillLibrary.CostSummary(skill)} | CT {skill.cooldown}");
         }
         debugLogPanel?.SetCollapsed(false);
         debugLogPanel?.SetLog(builder.ToString());
+        Debug.Log($"[Preview] deckCount={deckCards.Count} placedCount={placement.Count} generatedCount={GetDeckMatchedGeneratedSkills().Count}", this);
         WriteStatus("Preview updated.");
+        UpdateBattleButtonState(false);
     }
 
     public void SaveDeckJson()
     {
+        RefreshGeneratedSkills("Save Deck");
         ThoughtMapBattleDeckConfig config = new ThoughtMapBattleDeckConfig();
         config.deckCardIds = deckCards.Select(GetCardId).ToList();
         config.assignedSkills = BuildAssignedSkillSaveData();
@@ -1294,7 +1351,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         if (debugGeneratedSkills)
         {
             int count = config.assignedSkills == null ? 0 : config.assignedSkills.Sum(item => item.skillIds == null ? 0 : item.skillIds.Count);
-            Debug.Log($"[GeneratedSkills] Saved assigned skill count={count} path={path}", this);
+            Debug.Log($"[GeneratedSkill] savedAssignedSkillCount={count} path={path}", this);
         }
         WriteStatus("Saved deck: " + path);
     }
@@ -1305,7 +1362,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         string path = Path.Combine(Application.persistentDataPath, deckFileName);
         if (!File.Exists(path))
         {
-            Debug.LogWarning("[GeneratedSkills] deck.json not found for assigned skill restore: " + path, this);
+            Debug.LogWarning("[GeneratedSkill] deck.json not found for assigned skill restore: " + path, this);
             return;
         }
 
@@ -1361,6 +1418,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         RestoreAssignedSkills(config);
         selectedDeckIndex = deckCards.Count > 0 ? 0 : -1;
         selectedLibraryIndex = -1;
+        RefreshGeneratedSkills("Load Deck");
         RenderAll();
         WriteStatus("Loaded deck: " + path);
     }
@@ -1382,12 +1440,12 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             {
                 if (savedSkillIds.Contains(skillId))
                 {
-                    Debug.LogWarning($"[GeneratedSkills] Duplicate assigned skill ignored during save. skill_id={skillId} cardId={cardId}", this);
+                    Debug.LogWarning($"[GeneratedSkill] duplicate assigned skill ignored during save. skill_id={skillId} cardId={cardId}", this);
                     continue;
                 }
                 if (validIds.Count >= 1)
                 {
-                    Debug.LogWarning($"[GeneratedSkills] Extra assigned skill ignored during save because each card can have only one skill. skill_id={skillId} cardId={cardId}", this);
+                    Debug.LogWarning($"[GeneratedSkill] extra assigned skill ignored during save because each card can have only one skill. skill_id={skillId} cardId={cardId}", this);
                     break;
                 }
 
@@ -1421,7 +1479,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             }
             if (!deckCardIds.Contains(item.cardId))
             {
-                Debug.LogWarning($"[GeneratedSkills] Saved assigned skill entry ignored because card is not in current deck. cardId={item.cardId}", this);
+                Debug.LogWarning($"[GeneratedSkill] saved assigned skill entry ignored because card is not in current deck. cardId={item.cardId}", this);
                 continue;
             }
 
@@ -1434,17 +1492,17 @@ public class ProductBattlePrepPanelView : MonoBehaviour
                 }
                 if (!generatedSkillById.ContainsKey(skillId))
                 {
-                    Debug.LogWarning($"[GeneratedSkills] Saved skill_id not found in generated skill JSON: {skillId}", this);
+                    Debug.LogWarning($"[GeneratedSkill] saved skill_id not found in generated skill list: {skillId}", this);
                     continue;
                 }
                 if (restoredSkillIds.Contains(skillId))
                 {
-                    Debug.LogWarning($"[GeneratedSkills] Duplicate assigned skill ignored during restore. skill_id={skillId} cardId={item.cardId}", this);
+                    Debug.LogWarning($"[GeneratedSkill] duplicate assigned skill ignored during restore. skill_id={skillId} cardId={item.cardId}", this);
                     continue;
                 }
                 if (valid.Count >= 1)
                 {
-                    Debug.LogWarning($"[GeneratedSkills] Extra assigned skill ignored during restore because each card can have only one skill. skill_id={skillId} cardId={item.cardId}", this);
+                    Debug.LogWarning($"[GeneratedSkill] extra assigned skill ignored during restore because each card can have only one skill. skill_id={skillId} cardId={item.cardId}", this);
                     continue;
                 }
                 if (!valid.Contains(skillId))
@@ -1463,15 +1521,72 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
         if (debugGeneratedSkills)
         {
-            Debug.Log($"[GeneratedSkills] Restored assigned skill count={restored}", this);
+            Debug.Log($"[GeneratedSkill] restoredAssignedSkillCount={restored}", this);
         }
     }
 
     public void StartBattleScene()
     {
+        if (!CanStartBattle(out string reason))
+        {
+            WriteStatus(reason);
+            UpdateBattleButtonState(true);
+            return;
+        }
+
         SaveDeckJson();
         WriteStatus("Opening BattleScene: " + battleSceneName);
         SceneManager.LoadScene(battleSceneName);
+    }
+
+    private bool CanStartBattle(out string reason)
+    {
+        if (deckCards.Count < deckLimit)
+        {
+            reason = "Need 10 deck cards.";
+            return false;
+        }
+
+        if (placement.Count < deployLimit)
+        {
+            reason = "Need 5 deployed cards.";
+            return false;
+        }
+
+        if (GetDeckMatchedGeneratedSkills().Count == 0)
+        {
+            reason = "Generate skills first.";
+            return false;
+        }
+
+        reason = "";
+        return true;
+    }
+
+    private void UpdateBattleButtonState(bool showReason)
+    {
+        if (startBattleButton == null)
+        {
+            return;
+        }
+
+        bool canStart = CanStartBattle(out string reason);
+        startBattleButton.interactable = canStart;
+        if (showReason && !canStart)
+        {
+            WriteStatus(reason);
+        }
+    }
+
+    private int PreviewFinal(int baseValue, float positionMultiplier, float resonanceModifier)
+    {
+        return Mathf.Max(0, Mathf.RoundToInt(baseValue * positionMultiplier * (1f + resonanceModifier)));
+    }
+
+    private string FormatSignedPercent(float modifier)
+    {
+        float percent = modifier * 100f;
+        return percent >= 0f ? $"+{percent:0}%" : $"{percent:0}%";
     }
 
     private Sprite ResolveCardArt(ThoughtMapBattleCardData card, int index)
@@ -1500,15 +1615,11 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     private Sprite ResolveCardArtForTarget(ThoughtMapBattleCardData card, int index, string target)
     {
         Sprite sprite = ResolveCardArt(card, index);
-        string thoughtAttribute = ResolveDominantThoughtAttributeKey(card);
-        Debug.Log(
-            $"[ProductBattlePrep Art] {target}: doc_id='{(card == null ? "" : card.docId)}' card title='{CardName(card)}' battle attribute='{AttributeName(card)}' resolved thought attribute='{FormatThoughtAttributeForLog(thoughtAttribute)}' requested sprite key='{NormalizeAttributeKey(thoughtAttribute)}' assigned sprite name='{SpriteName(sprite)}'",
-            this
-        );
         if (sprite == null)
         {
+            string thoughtAttribute = ResolveDominantThoughtAttributeKey(card);
             Debug.LogWarning(
-                $"[ProductBattlePrep Art] Missing: card template/default art for target={target}, doc_id='{(card == null ? "" : card.docId)}', card='{CardName(card)}', battle attribute='{AttributeName(card)}', dominant='{FormatThoughtAttributeForLog(thoughtAttribute)}', requested sprite key='{NormalizeAttributeKey(thoughtAttribute)}'.",
+                $"[Battle] Missing card template/default art for target={target}, doc_id='{(card == null ? "" : card.docId)}', card='{CardName(card)}', battleAttribute='{AttributeName(card)}', dominant='{FormatThoughtAttributeForLog(thoughtAttribute)}', spriteKey='{NormalizeAttributeKey(thoughtAttribute)}'.",
                 this
             );
         }
@@ -1518,11 +1629,6 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     private Sprite ResolveAttributeIconForTarget(ThoughtMapBattleCardData card, string target)
     {
         Sprite sprite = ResolveAttributeIcon(card);
-        string thoughtAttribute = ResolveDominantThoughtAttributeKey(card);
-        Debug.Log(
-            $"[ProductBattlePrep Art] {target}: Attribute Image.sprite candidate={SpriteName(sprite)} card title='{CardName(card)}' battle attribute='{AttributeName(card)}' resolved thought attribute='{FormatThoughtAttributeForLog(thoughtAttribute)}'",
-            this
-        );
         return sprite;
     }
 
@@ -1589,7 +1695,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         if (battlePrepBackground == null)
         {
             Debug.LogWarning(
-                "[ProductBattlePrep Art] Missing: battle_prep_bg.png / battlePrepBackground Inspector reference is null. Runtime uses Inspector references; Resources.Load is not used.",
+                "[Battle] Missing battle_prep_bg.png / battlePrepBackground Inspector reference is null. Runtime uses Inspector references; Resources.Load is not used.",
                 this
             );
             return;
@@ -1626,10 +1732,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         backgroundImage.enabled = true;
         backgroundImage.preserveAspect = false;
         backgroundImage.raycastTarget = false;
-        Debug.Log(
-            $"[ProductBattlePrep Art] Background Image.sprite assigned={SpriteName(backgroundImage.sprite)} method=Inspector/serialized reference",
-            this
-        );
+        if (debugBattlePrepLayout)
+        {
+            Debug.Log($"[Battle] backgroundSprite={SpriteName(backgroundImage.sprite)} method=Inspector", this);
+        }
 
         if (darkOverlayImage == null)
         {
@@ -1654,7 +1760,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         darkOverlayColor.a = Mathf.Clamp(battlePrepOverlayAlpha, 0.20f, 0.30f);
         darkOverlayImage.color = darkOverlayColor;
         darkOverlayImage.raycastTarget = false;
-        Debug.Log($"[ProductBattlePrep Art] Dark Overlay configured above background alpha={darkOverlayImage.color.a}.", this);
+        if (debugBattlePrepLayout)
+        {
+            Debug.Log($"[Battle] darkOverlayAlpha={darkOverlayImage.color.a}", this);
+        }
 
         root.SetAsLastSibling();
 
@@ -1703,7 +1812,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             Color color = image.color;
             color.a = Mathf.Clamp(panelBackgroundAlpha, 0.55f, 0.70f);
             image.color = color;
-            Debug.Log($"[ProductBattlePrep Art] Panel alpha normalized: {panelName} alpha={color.a}", image);
+            if (debugBattlePrepLayout)
+            {
+                Debug.Log($"[Battle] panelAlpha panel={panelName} alpha={color.a}", image);
+            }
         }
     }
 
@@ -1843,25 +1955,19 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
     private void LogRuntimeSpriteState()
     {
-        Debug.Log(
-            "[ProductBattlePrep Art] Runtime loading method: Inspector serialized Sprite references. AssetDatabase is Editor/Repair only. Resources.Load is not used.",
-            this
-        );
-        Debug.Log($"[ProductBattlePrep Art] Start: Battle Prep Background == null ? {battlePrepBackground == null}", this);
-        Debug.Log($"[ProductBattlePrep Art] Start: Card Template Sprite Count = {CountNonNullTemplateSprites()}", this);
-        Debug.Log($"[ProductBattlePrep Art] Start: Card Art Pool Count = {(cardArtPool == null ? 0 : cardArtPool.Count(sprite => sprite != null))}", this);
-        Debug.Log($"[ProductBattlePrep Art] Start: Attribute Sprite Count = {CountNonNullAttributeSprites(attributeSprites)}", this);
+        Debug.Log("[Battle] spriteLoading=InspectorSerializedReferences resourcesLoad=false", this);
+        Debug.Log($"[Battle] spriteState backgroundNull={battlePrepBackground == null} templateCount={CountNonNullTemplateSprites()} cardArtPoolCount={(cardArtPool == null ? 0 : cardArtPool.Count(sprite => sprite != null))} attributeIconCount={CountNonNullAttributeSprites(attributeSprites)}", this);
 
         if (battlePrepBackground == null)
         {
-            Debug.LogWarning("[ProductBattlePrep Art] Missing: battle_prep_bg.png", this);
+            Debug.LogWarning("[Battle] Missing battle_prep_bg.png reference.", this);
         }
 
         foreach (string expected in ExpectedTemplateKeys)
         {
             if (!HasTemplateSprite(expected))
             {
-                Debug.LogWarning($"[ProductBattlePrep Art] Missing template: {expected}", this);
+                Debug.LogWarning($"[Battle] Missing card template sprite: {expected}", this);
             }
         }
 
@@ -1869,7 +1975,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         {
             foreach (AttributeSpriteMap map in cardTemplateSprites)
             {
-                Debug.Log($"[ProductBattlePrep Art] Template runtime ref: {map.attribute} => {SpriteName(map.sprite)}", this);
+                Debug.Log($"[Battle] templateSprite {map.attribute}={SpriteName(map.sprite)}", this);
             }
         }
     }
@@ -2187,34 +2293,34 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         {
             statusText.text = message;
         }
-        Debug.LogWarning("[ProductBattlePrep] " + message, this);
+        Debug.LogWarning("[Battle] " + message, this);
     }
 
     private void NormalizeLightweightListScrollArea(Transform content)
     {
         if (content == null)
         {
-            Debug.LogWarning("[ProductBattlePrep] Cannot normalize lightweight list because Content is null.", this);
+            Debug.LogWarning("[Battle] Cannot normalize lightweight list because Content is null.", this);
             return;
         }
 
         if (IsUnderPanel(content, "FormationGridPanel"))
         {
-            Debug.LogWarning($"[ProductBattlePrep] Skipped lightweight list normalization for {content.name} because it belongs to FormationGridPanel.", this);
+            Debug.LogWarning($"[Battle] Skipped lightweight list normalization for {content.name} because it belongs to FormationGridPanel.", this);
             return;
         }
 
         RectTransform contentRect = content as RectTransform;
         if (contentRect == null)
         {
-            Debug.LogWarning($"[ProductBattlePrep] Cannot normalize lightweight list because {content.name} is not a RectTransform.", this);
+            Debug.LogWarning($"[Battle] Cannot normalize lightweight list because {content.name} is not a RectTransform.", this);
             return;
         }
 
         RectTransform viewport = EnsureRuntimeViewportContent(contentRect);
         if (viewport == null)
         {
-            Debug.LogWarning($"[ProductBattlePrep] Cannot normalize lightweight list because Viewport is missing for {content.name}.", this);
+            Debug.LogWarning($"[Battle] Cannot normalize lightweight list because Viewport is missing for {content.name}.", this);
             return;
         }
 
@@ -2235,7 +2341,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
         if (vertical == null)
         {
-            Debug.LogWarning($"[ProductBattlePrep] Could not create VerticalLayoutGroup on {content.name}.", this);
+            Debug.LogWarning($"[Battle] Could not create VerticalLayoutGroup on {content.name}.", this);
             return;
         }
         vertical.padding = new RectOffset(6, 6, 6, 6);
@@ -2253,7 +2359,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
         if (fitter == null)
         {
-            Debug.LogWarning($"[ProductBattlePrep] Could not create ContentSizeFitter on {content.name}.", this);
+            Debug.LogWarning($"[Battle] Could not create ContentSizeFitter on {content.name}.", this);
             return;
         }
         fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
@@ -2304,7 +2410,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
                 continue;
             }
 
-            Debug.Log($"[ProductBattlePrep] Replacing {group.GetType().Name} on {content.name} with VerticalLayoutGroup for lightweight list content.", this);
+            if (debugBattlePrepLayout)
+            {
+                Debug.Log($"[Battle] replacing {group.GetType().Name} on {content.name} with VerticalLayoutGroup for lightweight list content.", this);
+            }
             RemoveComponentImmediate(group);
         }
     }
@@ -2407,7 +2516,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     {
         if (content == null)
         {
-            Debug.LogWarning($"[ProductBattlePrep] {label}: content is not assigned.", this);
+            Debug.LogWarning($"[Battle] {label}: content is not assigned.", this);
             return;
         }
 
@@ -2424,16 +2533,19 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         string scrollContent = scroll == null || scroll.content == null ? "missing" : scroll.content.name;
         string maskInfo = mask == null ? "missing" : mask.showMaskGraphic.ToString();
 
-        Debug.Log(
-            $"[ProductBattlePrep] {label}: " +
-            $"Grid cellSize={gridCell}, " +
-            $"VerticalLayout={verticalInfo}, " +
-            $"Fitter={fitterInfo}, " +
-            $"Scroll viewport={scrollViewport}, " +
-            $"Scroll content={scrollContent}, " +
-            $"Mask={maskInfo}",
-            this
-        );
+        if (debugBattlePrepLayout)
+        {
+            Debug.Log(
+                $"[Battle] {label}: " +
+                $"Grid cellSize={gridCell}, " +
+                $"VerticalLayout={verticalInfo}, " +
+                $"Fitter={fitterInfo}, " +
+                $"Scroll viewport={scrollViewport}, " +
+                $"Scroll content={scrollContent}, " +
+                $"Mask={maskInfo}",
+                this
+            );
+        }
 
         ProductBattleCardListRowView[] rows = content.GetComponentsInChildren<ProductBattleCardListRowView>(true);
         for (int i = 0; i < rows.Length; i++)
@@ -2446,13 +2558,16 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             string layoutInfo = layout == null
                 ? "missing"
                 : "min " + layout.minWidth + "x" + layout.minHeight + " preferred " + layout.preferredWidth + "x" + layout.preferredHeight;
-            Debug.Log(
-                $"[ProductBattlePrep] {label} Row {i}: " +
-                $"size={cardSize}, " +
-                $"Layout={layoutInfo}, " +
-                $"raycastTargetGraphics={raycastTargets}",
-                rows[i]
-            );
+            if (debugBattlePrepLayout)
+            {
+                Debug.Log(
+                    $"[Battle] {label} Row {i}: " +
+                    $"size={cardSize}, " +
+                    $"Layout={layoutInfo}, " +
+                    $"raycastTargetGraphics={raycastTargets}",
+                    rows[i]
+                );
+            }
         }
     }
 
@@ -2462,7 +2577,6 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         {
             statusText.text = value;
         }
-        Debug.Log("[ProductBattlePrep] " + value, this);
     }
 
     private string ShortStatusText(string primary, string fallback)

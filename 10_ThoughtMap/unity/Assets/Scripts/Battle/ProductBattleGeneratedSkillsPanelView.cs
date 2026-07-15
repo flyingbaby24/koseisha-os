@@ -95,7 +95,7 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
 
         if (debugLog)
         {
-            Debug.Log($"[GeneratedSkills] Rendered {ordered.Count} skills. selectedCardDocId={selectedCardDocId}", this);
+            Debug.Log($"[GeneratedSkill] rendered={ordered.Count} selectedCardDocId={selectedCardDocId}", this);
         }
 
         ApplyFontToGeneratedTexts();

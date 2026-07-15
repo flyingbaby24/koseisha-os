@@ -67,13 +67,13 @@ public static class ThoughtMapTmpFontResolver
         else if (!warned)
         {
             warned = true;
-            Debug.LogWarning("[SourceOfThought Font] Runtime TMP font generation skipped because OS font Include Font Data cannot be verified. Use Assets/Fonts/ThoughtMapJapanese SDF.asset or TMP Settings fallback.");
+            Debug.LogWarning("[Battle] Runtime TMP font generation skipped. Use a valid TMP FontAsset under Assets/Fonts.");
         }
 
         if (!warned)
         {
             warned = true;
-            Debug.LogWarning("[SourceOfThought Font] No usable TMP font was found. Run ThoughtMap > Repair All TMP Font Assets and assign Assets/Fonts/ThoughtMapJapanese SDF.asset.");
+            Debug.LogWarning("[Battle] No usable TMP font was found under Assets/Fonts or TMP Settings.");
         }
 
         return null;
@@ -122,6 +122,11 @@ public static class ThoughtMapTmpFontResolver
 
     public static void ApplyToChildren(GameObject root, TMP_FontAsset preferred)
     {
+        ApplyToChildren(root, preferred, false);
+    }
+
+    public static void ApplyToChildren(GameObject root, TMP_FontAsset preferred, bool force)
+    {
         if (root == null)
         {
             return;
@@ -141,7 +146,7 @@ public static class ThoughtMapTmpFontResolver
                 continue;
             }
 
-            if (IsUsable(text.font))
+            if (!force && IsUsable(text.font))
             {
                 continue;
             }
@@ -153,7 +158,37 @@ public static class ThoughtMapTmpFontResolver
     private static TMP_FontAsset LoadPersistentRepairFont()
     {
 #if UNITY_EDITOR
-        return AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(RepairFontPath);
+        TMP_FontAsset fixedAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(RepairFontPath);
+        if (IsUsable(fixedAsset))
+        {
+            return fixedAsset;
+        }
+
+        string[] guids = AssetDatabase.FindAssets("t:TMP_FontAsset", new[] { "Assets/Fonts" });
+        foreach (string preferredName in new[] { "Noto Sans JP", "BIZ UDPGothic", "BIZ UD", "ThoughtMapJapanese" })
+        {
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                TMP_FontAsset asset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(path);
+                if (IsUsable(asset) && asset.name.Contains(preferredName))
+                {
+                    return asset;
+                }
+            }
+        }
+
+        foreach (string guid in guids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            TMP_FontAsset asset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(path);
+            if (IsUsable(asset))
+            {
+                return asset;
+            }
+        }
+
+        return null;
 #else
         return null;
 #endif
@@ -238,6 +273,5 @@ public static class ThoughtMapTmpFontResolver
         }
 
         loggedFontChoice = true;
-        Debug.Log($"[SourceOfThought Font] Using FontAsset='{fontAsset.name}' source='{source}' runtimeGenerated={runtimeGenerated}");
     }
 }

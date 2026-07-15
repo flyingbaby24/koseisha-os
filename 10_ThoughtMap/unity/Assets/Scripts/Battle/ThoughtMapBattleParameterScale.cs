@@ -42,10 +42,7 @@ public static class ThoughtMapBattleParameterScale
         report.rawValues = FormatValues(raw);
         if (raw.Count == 0)
         {
-            if (log)
-            {
-                Debug.Log($"[Battle Parameter Scale] {context} card='{card.cardName}' doc_id='{card.docId}' raw_count=0");
-            }
+            _ = log;
             return report;
         }
 
@@ -75,13 +72,7 @@ public static class ThoughtMapBattleParameterScale
 
         report.scale = scale;
         report.normalizedValues = FormatValues(normalized);
-        if (log)
-        {
-            Debug.Log(
-                $"[Battle Parameter Scale] {context} card='{card.cardName}' doc_id='{card.docId}' " +
-                $"raw={report.rawValues} scale={scale:0.###} normalized={report.normalizedValues}"
-            );
-        }
+        _ = log;
 
         return report;
     }

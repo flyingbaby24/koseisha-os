@@ -153,15 +153,11 @@ public class ProductBattleGridCellView : MonoBehaviour
         {
             artImage.sprite = artSprite;
             artImage.enabled = artSprite != null;
-            Debug.Log(
-                $"[ProductBattlePrep Art] Grid Cell Image.sprite assigned={(artSprite == null ? "null" : artSprite.name)} cell=({x + 1},{y + 1}) card='{(sourceCard == null ? "null" : sourceCard.cardName)}'",
-                this
-            );
         }
         else
         {
             Debug.LogWarning(
-                $"[ProductBattlePrep Art] Grid Cell artImage is null cell=({x + 1},{y + 1}) card='{(sourceCard == null ? "null" : sourceCard.cardName)}'",
+                $"[Battle] Grid Cell artImage is null cell=({x + 1},{y + 1}) card='{(sourceCard == null ? "null" : sourceCard.cardName)}'",
                 this
             );
         }
@@ -169,10 +165,6 @@ public class ProductBattleGridCellView : MonoBehaviour
         {
             attributeIconImage.sprite = attributeSprite;
             attributeIconImage.enabled = attributeSprite != null;
-            Debug.Log(
-                $"[ProductBattlePrep Art] Grid Cell Attribute Image.sprite assigned={(attributeSprite == null ? "null" : attributeSprite.name)} cell=({x + 1},{y + 1}) card='{(sourceCard == null ? "null" : sourceCard.cardName)}'",
-                this
-            );
         }
     }
 

@@ -131,23 +131,15 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
             artImage.preserveAspect = true;
             artImage.color = Color.white;
             artImage.transform.SetAsLastSibling();
-            Debug.Log(
-                $"[ProductBattlePrep Art] Detail Panel ArtImage: card title='{card.cardName}' resolved thought attribute='{FormatThoughtAttribute(resolvedThoughtAttribute)}' candidate sprite='{SpriteName(artSprite)}' assigned sprite='{SpriteName(artImage.sprite)}'",
-                this
-            );
         }
         else
         {
-            Debug.LogWarning($"[ProductBattlePrep Art] Detail Panel artImage is null card='{card.cardName}'", this);
+            Debug.LogWarning($"[Battle] Detail Panel artImage is null card='{card.cardName}'", this);
         }
         if (attributeIconImage != null)
         {
             attributeIconImage.sprite = null;
             attributeIconImage.enabled = false;
-            Debug.Log(
-                $"[ProductBattlePrep Art] Detail Panel AttributeIconImage hidden to keep ability bars readable. candidate sprite={(attributeSprite == null ? "null" : attributeSprite.name)} card='{card.cardName}'",
-                this
-            );
         }
 
         RenderAbilityBars(card, resonanceResult, hasPositionBonus, positionBonus);
@@ -233,11 +225,6 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         {
             if (abilityBars[i] != null)
             {
-                Debug.Log(
-                    $"[Battle Ability UI] DetailPanel card='{card.cardName}' doc_id='{card.docId}' " +
-                    $"ability={values[i].definition.shortName} uiBase={values[i].rawValue:0.###} uiPositionDelta={values[i].positionDelta:0.###} uiResonanceDelta={values[i].resonanceDelta:0.###} uiFinal={values[i].finalValue:0.###} fill={values[i].fillAmount:0.###}",
-                    this
-                );
                 abilityBars[i].Bind(values[i]);
             }
         }

@@ -20,13 +20,6 @@ public static class ThoughtMapBattleCardFactory
         string docId = FirstNonEmpty(document.doc_id, document.original_doc_id, document.source_doc_id, document.title, "unknown");
         string scope = string.IsNullOrWhiteSpace(dataScope) ? "personal" : dataScope.Trim().ToLowerInvariant();
         string title = FirstNonEmpty(document.title, document.source_title, document.doc_id, "Untitled");
-        if (string.Equals(scope, "personal", StringComparison.OrdinalIgnoreCase))
-        {
-            Debug.Log(
-                $"[PersonalLibrary Route] FromSavedDocument called doc_id='{docId}' title='{title}' parameters_array_count={(document.parameters == null ? 0 : document.parameters.Length)}"
-            );
-        }
-
         ThoughtMapBattleCardData card = new ThoughtMapBattleCardData
         {
             docId = docId,
@@ -49,14 +42,7 @@ public static class ThoughtMapBattleCardFactory
         CopyParameters(card, document.parameters);
         CopyDirectParameters(card, document);
         ApplyExplicitStats(card, document);
-        NormalizeAndApplyParameterStats(card, "PersonalLibrary FromSavedDocument", string.Equals(scope, "personal", StringComparison.OrdinalIgnoreCase));
-        LogPersonalConversion(card);
-        if (string.Equals(scope, "personal", StringComparison.OrdinalIgnoreCase))
-        {
-            Debug.Log(
-                $"[PersonalLibrary Route] FromSavedDocument completed doc_id='{card.docId}' cardId='{card.cardId}' primaryAttribute='{card.primaryAttribute}' parameter_count={card.parameterScores.Count}"
-            );
-        }
+        NormalizeAndApplyParameterStats(card, "PersonalLibrary FromSavedDocument", false);
         return card;
     }
 
@@ -316,7 +302,7 @@ public static class ThoughtMapBattleCardFactory
         }
 
         Debug.Log(
-            "[PersonalLibrary CardData] " +
+            "[Battle] Personal card data " +
             $"doc_id='{card.docId}' parameters={card.parameterScores.Count} " +
             $"values=[philosophy:{GetParameter(card, "philosophy"):0.###}, psychology:{GetParameter(card, "psychology"):0.###}, science:{GetParameter(card, "science"):0.###}, economy:{GetParameter(card, "economy"):0.###}, karma:{GetParameter(card, "karma"):0.###}, emotion:{GetParameter(card, "emotion"):0.###}, morality:{GetParameter(card, "morality"):0.###}, ideology:{GetParameter(card, "ideology"):0.###}, individual:{GetParameter(card, "individual"):0.###}, community:{GetParameter(card, "community"):0.###}] " +
             $"dominant='{card.primaryAttribute}' " +
