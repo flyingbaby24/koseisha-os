@@ -20,6 +20,24 @@ from .schemas import (
 
 DEFAULT_COMPAT_EMAIL = "default@example.local"
 DEFAULT_USERS_DIR = PROJECT_ROOT / "data" / "thoughtmap_db" / "users"
+THOUGHT_PARAMETER_KEYS = [
+    "philosophy",
+    "psychology",
+    "science",
+    "economy",
+    "karma",
+    "emotion",
+    "morality",
+    "ideology",
+    "individual",
+    "community",
+]
+THOUGHT_PARAMETER_ALIASES = {
+    "economics": "economy",
+    "economic": "economy",
+    "moral": "morality",
+    "ideal": "ideology",
+}
 DOCUMENT_COLUMNS = [
     "doc_id",
     "title",
@@ -90,18 +108,22 @@ def default_email_hash() -> str:
     return email_hash_for(DEFAULT_COMPAT_EMAIL)
 
 
+def canonical_parameter_key(key: object) -> str:
+    text = str(key or "").strip().lower()
+    return THOUGHT_PARAMETER_ALIASES.get(text, text)
+
+
 def normalize_parameters(parameters: object | None) -> list[dict[str, object]] | None:
     if parameters is None:
         return None
 
+    values: dict[str, float] = {}
     if isinstance(parameters, dict):
-        normalized = []
         for key, value in parameters.items():
-            normalized.append({"key": str(key), "value": float(value)})
-        return normalized
-
-    if isinstance(parameters, list):
-        normalized = []
+            canonical = canonical_parameter_key(key)
+            if canonical:
+                values[canonical] = float(value)
+    elif isinstance(parameters, list):
         for item in parameters:
             if isinstance(item, ParameterScore):
                 item = _model_to_dict(item)
@@ -111,10 +133,23 @@ def normalize_parameters(parameters: object | None) -> list[dict[str, object]] |
             value = item.get("value")
             if key is None or value is None:
                 continue
-            normalized.append({"key": str(key), "value": float(value)})
-        return normalized
+            canonical = canonical_parameter_key(key)
+            if canonical:
+                values[canonical] = float(value)
+    else:
+        return None
 
-    return None
+    ordered = [
+        {"key": key, "value": values[key]}
+        for key in THOUGHT_PARAMETER_KEYS
+        if key in values
+    ]
+    extras = [
+        {"key": key, "value": value}
+        for key, value in values.items()
+        if key not in THOUGHT_PARAMETER_KEYS
+    ]
+    return ordered + extras if ordered or extras else None
 
 
 def saved_document_from_mapping(item: dict[str, object]) -> SavedDocument:

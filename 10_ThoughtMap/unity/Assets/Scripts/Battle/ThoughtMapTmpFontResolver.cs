@@ -161,20 +161,14 @@ public static class ThoughtMapTmpFontResolver
 
     private static TMP_FontAsset ResolveFromTmpSettings()
     {
-        TMP_Settings settings = TMP_Settings.instance;
-        if (settings == null)
+        if (IsUsable(TMP_Settings.defaultFontAsset))
         {
-            return null;
+            return TMP_Settings.defaultFontAsset;
         }
 
-        if (IsUsable(settings.defaultFontAsset))
+        if (TMP_Settings.fallbackFontAssets != null)
         {
-            return settings.defaultFontAsset;
-        }
-
-        if (settings.fallbackFontAssets != null)
-        {
-            foreach (TMP_FontAsset fallback in settings.fallbackFontAssets)
+            foreach (TMP_FontAsset fallback in TMP_Settings.fallbackFontAssets)
             {
                 if (IsUsable(fallback))
                 {

@@ -74,7 +74,14 @@ class UserLibraryService:
             logger.info("Personal service using request metadata doc_id=%s", doc_id)
 
         saved_at = datetime.now(timezone.utc).isoformat()
-        logger.info("Personal service repository save started doc_id=%s", doc_id)
+        parameter_count = len(request.parameters or []) if isinstance(request.parameters, list) else (
+            len(request.parameters) if isinstance(request.parameters, dict) else 0
+        )
+        logger.info(
+            "Personal service repository save started doc_id=%s parameters_count=%s",
+            doc_id,
+            parameter_count,
+        )
         response = self.personal_repository.save_document(
             email_hash=email_hash_for(email),
             row=row,

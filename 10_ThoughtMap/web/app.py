@@ -91,6 +91,26 @@ USER_DATA_DIR = BASE_DIR / "user_data"
 USER_ID_LENGTH = 16
 DEFAULT_FASTAPI_BASE_URL = "https://koseisha-os.onrender.com"
 
+THOUGHT_PARAMETER_KEYS = [
+    "philosophy",
+    "psychology",
+    "science",
+    "economy",
+    "karma",
+    "emotion",
+    "morality",
+    "ideology",
+    "individual",
+    "community",
+]
+
+THOUGHT_PARAMETER_ALIASES = {
+    "economics": "economy",
+    "economic": "economy",
+    "moral": "morality",
+    "ideal": "ideology",
+}
+
 DEFAULT_FILTERS = {
     "basic_thought": {
         "Society": "society, class, family, reputation, status, community, social order, hierarchy, institution, organization, culture",
@@ -164,33 +184,74 @@ def build_api_url(api_base_url: str, path: str) -> str:
     return base + clean_path
 
 
-def parameter_rows_from_embedding_row(row: pd.Series) -> list[dict[str, object]] | None:
-    parameter_keys = [
-        "philosophy",
-        "psychology",
-        "science",
-        "economy",
-        "economics",
-        "karma",
-        "emotion",
-        "moral",
-        "morality",
-        "ideal",
-        "individual",
-        "community",
+def canonical_thought_parameter_key(key: object) -> str:
+    text = str(key or "").strip().lower()
+    return THOUGHT_PARAMETER_ALIASES.get(text, text)
+
+
+def normalize_parameter_score_frame(parameter_score_df: pd.DataFrame | None) -> pd.DataFrame | None:
+    if parameter_score_df is None or parameter_score_df.empty:
+        return None
+
+    normalized = parameter_score_df.copy()
+    for alias, canonical in THOUGHT_PARAMETER_ALIASES.items():
+        if alias in normalized.columns and canonical not in normalized.columns:
+            normalized[canonical] = normalized[alias]
+
+    missing = [key for key in THOUGHT_PARAMETER_KEYS if key not in normalized.columns]
+    if missing:
+        logger.warning("Thought parameter scores are missing required columns: %s", missing)
+        return None
+
+    metadata_cols = [
+        col for col in ["doc_id", "title", "author", "source", "category"]
+        if col in normalized.columns
     ]
+    return normalized[metadata_cols + THOUGHT_PARAMETER_KEYS].copy()
+
+
+def build_parameter_score_frame(
+    df: pd.DataFrame,
+    filter_score_df: pd.DataFrame | None,
+) -> tuple[pd.DataFrame | None, str]:
+    if filter_score_df is None or filter_score_df.empty:
+        return None, "No filter scores are available."
+
+    try:
+        _make_filter_scores, make_parameter_scores = require_thought_composition()
+        parameter_score_df = make_parameter_scores(df, filter_score_df)
+    except ValueError as exc:
+        logger.warning("Thought parameter score generation failed: %s", exc)
+        return None, str(exc)
+
+    normalized = normalize_parameter_score_frame(parameter_score_df)
+    if normalized is None:
+        return None, "The selected filters do not contain all 10 Source of Thought parameters."
+    return normalized, ""
+
+
+def parameter_rows_from_embedding_row(row: pd.Series) -> list[dict[str, object]] | None:
     out = []
-    for key in parameter_keys:
+    missing = []
+    for key in THOUGHT_PARAMETER_KEYS:
         if key not in row:
+            missing.append(key)
             continue
         value = row.get(key)
         if value is None or str(value).strip() == "":
+            missing.append(key)
             continue
         try:
             out.append({"key": key, "value": float(value)})
         except (TypeError, ValueError):
-            continue
-    return out or None
+            missing.append(key)
+    if missing or len(out) != len(THOUGHT_PARAMETER_KEYS):
+        logger.warning(
+            "Personal save skipped parameters because row is missing canonical keys: %s",
+            missing,
+        )
+        return None
+    return out
 
 
 def call_health_api(api_base_url: str, timeout_seconds: int) -> dict[str, object]:
@@ -258,6 +319,11 @@ def post_save_document_by_email(
     }
     if parameters:
         payload["parameters"] = parameters
+    logger.info(
+        "Personal save request prepared doc_id=%s parameters_count=%s",
+        payload["doc_id"],
+        len(parameters or []),
+    )
 
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     request = Request(
@@ -357,6 +423,7 @@ def build_embedding_export_frame(
     docs: list[dict],
     labels: dict,
     upload_session_id: str = "",
+    parameter_score_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     docs = docs or []
     upload_session_id = upload_session_id or f"upload_{int(time.time())}_{uuid.uuid4().hex[:8]}"
@@ -395,6 +462,16 @@ def build_embedding_export_frame(
             for emb in embeddings
         ],
     })
+    normalized_parameters = normalize_parameter_score_frame(parameter_score_df)
+    if normalized_parameters is not None and len(normalized_parameters) == len(frame):
+        for key in THOUGHT_PARAMETER_KEYS:
+            frame[key] = normalized_parameters[key].values
+    elif parameter_score_df is not None:
+        logger.warning(
+            "Parameter scores were not attached to embedding export because row counts differ: export=%s parameters=%s",
+            len(frame),
+            len(parameter_score_df),
+        )
     return frame
 
 
@@ -598,13 +675,16 @@ def analyze(docs, cluster_count: int, n_neighbors: int, min_dist: float, categor
     ]
 
     filter_score_df = make_filter_scores(embeddings, categories, model)
+    parameter_score_df, parameter_warning = build_parameter_score_frame(df, filter_score_df)
+    if parameter_warning:
+        logger.warning("Source of Thought parameter preview unavailable: %s", parameter_warning)
 
     if filter_score_df is not None:
         df["top_filter"] = filter_score_df.idxmax(axis=1).values
         df["top_filter_score"] = filter_score_df.max(axis=1).values
 
     labels = auto_label_clusters(df, filter_score_df)
-    return df, embeddings, filter_score_df, labels
+    return df, embeddings, filter_score_df, parameter_score_df, labels
 
 
 def plot_map(df, labels):
@@ -1049,6 +1129,9 @@ if run:
             categories,
             model
         )
+        parameter_score_df, parameter_warning = build_parameter_score_frame(df, filter_score_df)
+        if parameter_warning:
+            st.warning(f"Source of Thought parameter scores are unavailable: {parameter_warning}")
 
         if filter_score_df is not None:
             df["top_filter"] = filter_score_df.idxmax(axis=1).values
@@ -1062,7 +1145,7 @@ if run:
             cluster_count = max(2, doc_count - 1)
 
         with st.spinner("Analyzing..."):
-            df, embeddings, filter_score_df, labels = analyze(
+            df, embeddings, filter_score_df, parameter_score_df, labels = analyze(
                 docs,
                 cluster_count,
                 min(n_neighbors, doc_count - 1),
@@ -1075,6 +1158,7 @@ if run:
     st.session_state["docs"] = docs
     st.session_state["labels"] = labels
     st.session_state["filter_score_df"] = filter_score_df
+    st.session_state["parameter_score_df"] = parameter_score_df
     st.session_state["categories"] = categories
     st.session_state["selected_filter_names"] = selected_filter_names
     st.session_state["upload_session_id"] = f"upload_{int(time.time())}_{uuid.uuid4().hex[:8]}"
@@ -1088,6 +1172,7 @@ embeddings = st.session_state["embeddings"]
 docs = st.session_state["docs"]
 labels = st.session_state["labels"]
 filter_score_df = st.session_state.get("filter_score_df")
+parameter_score_df = st.session_state.get("parameter_score_df")
 categories = st.session_state.get("categories", {})
 
 st.subheader("Overview")
@@ -1304,6 +1389,7 @@ with tab6:
         docs=docs,
         labels=labels,
         upload_session_id=st.session_state.get("upload_session_id", ""),
+        parameter_score_df=parameter_score_df,
     )
     embedding_csv = embedding_df.to_csv(
         index=False,
@@ -1342,6 +1428,24 @@ with tab6:
                 doc_id = str(row.get("doc_id", "") or "").strip()
                 if not doc_id:
                     continue
+                parameters = parameter_rows_from_embedding_row(row)
+                if parameters is None or len(parameters) != len(THOUGHT_PARAMETER_KEYS):
+                    results.append({
+                        "ok": False,
+                        "doc_id": doc_id,
+                        "url": save_url,
+                        "status_code": None,
+                        "response_text": "Missing Source of Thought parameters.",
+                        "elapsed_seconds": 0,
+                        "exception_type": "MissingParameters",
+                        "exception_message": "Personal saves require all 10 Source of Thought parameter scores.",
+                        "request_json": {
+                            "doc_id": doc_id,
+                            "title": str(row.get("title", "") or doc_id),
+                            "parameters_count": 0,
+                        },
+                    })
+                    continue
                 result = post_save_document_by_email(
                     api_base_url=personal_api_base_url,
                     email=registered_email,
@@ -1357,7 +1461,7 @@ with tab6:
                     text=str(row.get("text", "") or ""),
                     text_preview=str(row.get("text", "") or "")[:500],
                     model_name=MODEL_NAME,
-                    parameters=parameter_rows_from_embedding_row(row),
+                    parameters=parameters,
                     timeout_seconds=int(personal_api_timeout_seconds),
                 )
                 results.append(result)
@@ -1441,13 +1545,14 @@ with tab6:
         )
 
         try:
-            _make_filter_scores, make_parameter_scores = require_thought_composition()
-            parameter_score_df = make_parameter_scores(df, filter_score_df)
+            current_parameter_score_df, parameter_warning = build_parameter_score_frame(df, filter_score_df)
+            if parameter_warning:
+                st.warning(f"Source of Thought parameter scores are unavailable: {parameter_warning}")
         except ValueError:
-            parameter_score_df = None
+            current_parameter_score_df = None
 
-        if parameter_score_df is not None:
-            parameter_score_bytes = parameter_score_df.to_csv(
+        if current_parameter_score_df is not None:
+            parameter_score_bytes = current_parameter_score_df.to_csv(
                 index=False,
                 encoding="utf-8-sig"
             ).encode("utf-8-sig")

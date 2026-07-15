@@ -165,6 +165,32 @@ class UserLibraryServiceTests(unittest.TestCase):
         self.assertEqual(items["doc:2"].parameters[0].key, "science")
         self.assertEqual(items["doc:2"].parameters[0].value, 12.5)
 
+    def test_parameter_aliases_are_returned_as_canonical_source_of_thought_keys(self) -> None:
+        service = make_service()
+        service.save_document_by_email(
+            "user@example.com",
+            SaveDocumentRequest(
+                doc_id="doc:1",
+                parameters={
+                    "economics": 11.0,
+                    "moral": 22.0,
+                    "ideal": 33.0,
+                    "community": 44.0,
+                },
+            ),
+        )
+
+        saved = service.list_saved_by_email("user@example.com").items[0]
+        values = {item.key: item.value for item in saved.parameters}
+
+        self.assertNotIn("economics", values)
+        self.assertNotIn("moral", values)
+        self.assertNotIn("ideal", values)
+        self.assertEqual(values["economy"], 11.0)
+        self.assertEqual(values["morality"], 22.0)
+        self.assertEqual(values["ideology"], 33.0)
+        self.assertEqual(values["community"], 44.0)
+
     def test_postgres_backend_requires_database_url(self) -> None:
         settings = ApiSettings(personal_backend="postgres", database_url="")
 
