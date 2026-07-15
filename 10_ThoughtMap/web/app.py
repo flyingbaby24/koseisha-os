@@ -3,6 +3,7 @@ import hashlib
 import logging
 import os
 import re
+import sys
 import json
 import socket
 import time
@@ -10,6 +11,7 @@ import uuid
 import zipfile
 import tempfile
 import io
+from importlib import metadata
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -35,12 +37,29 @@ def require_sentence_transformer():
     try:
         from sentence_transformers import SentenceTransformer
     except Exception as exc:
+        logger.exception("Failed to import sentence-transformers for ThoughtMap analysis.")
         raise RuntimeError(
             "SentenceTransformer is required only for the local Thought Composition app. "
             "The FastAPI shared-backend search page does not need it. "
             f"Import failed: {exc}"
         ) from exc
+    logger.info(
+        "SentenceTransformer import check python=%s sentence-transformers=%s torch=%s transformers=%s",
+        sys.version.replace("\n", " "),
+        _package_version("sentence-transformers"),
+        _package_version("torch"),
+        _package_version("transformers"),
+    )
     return SentenceTransformer
+
+
+def _package_version(name: str) -> str:
+    try:
+        return metadata.version(name)
+    except metadata.PackageNotFoundError:
+        return "not-installed"
+    except Exception as exc:
+        return f"unknown ({type(exc).__name__}: {exc})"
 
 
 def require_umap():
@@ -419,6 +438,21 @@ def _json_decode_error(text: str) -> str:
     return ""
 
 
+def show_sentence_transformer_error(exc: BaseException) -> None:
+    st.error("SentenceTransformer model could not be loaded.")
+    st.warning(str(exc))
+    with st.expander("SentenceTransformer import / model debug", expanded=True):
+        st.write({
+            "python": sys.version,
+            "sentence_transformers": _package_version("sentence-transformers"),
+            "torch": _package_version("torch"),
+            "transformers": _package_version("transformers"),
+            "huggingface_hub": _package_version("huggingface-hub"),
+            "exception_type": type(exc).__name__,
+            "exception_message": str(exc),
+        })
+
+
 def build_embedding_export_frame(
     df: pd.DataFrame,
     embeddings,
@@ -501,7 +535,16 @@ def ensure_default_filters():
 @st.cache_resource
 def load_model():
     SentenceTransformer = require_sentence_transformer()
-    return SentenceTransformer(MODEL_NAME)
+    try:
+        model = SentenceTransformer(MODEL_NAME)
+        logger.info("SentenceTransformer model loaded model=%s", MODEL_NAME)
+        return model
+    except Exception as exc:
+        logger.exception("Failed to load SentenceTransformer model '%s'.", MODEL_NAME)
+        raise RuntimeError(
+            "SentenceTransformer model could not be loaded. "
+            f"model={MODEL_NAME}; exception={type(exc).__name__}: {exc}"
+        ) from exc
 
 
 def load_filter_sets():
@@ -1102,16 +1145,25 @@ if run:
             "Thought Continent and clustering are disabled."
         )
 
-        model = load_model()
-        make_filter_scores, _make_parameter_scores = require_thought_composition()
+        try:
+            model = load_model()
+            make_filter_scores, _make_parameter_scores = require_thought_composition()
+        except RuntimeError as exc:
+            show_sentence_transformer_error(exc)
+            st.stop()
 
         titles = [d["title"] for d in docs]
         texts = [d["text"] for d in docs]
 
-        embeddings = model.encode(
-            texts,
-            show_progress_bar=False
-        )
+        try:
+            embeddings = model.encode(
+                texts,
+                show_progress_bar=False
+            )
+        except Exception as exc:
+            logger.exception("SentenceTransformer encode failed during small-dataset analysis.")
+            show_sentence_transformer_error(exc)
+            st.stop()
 
         df = pd.DataFrame({
             "title": titles,
@@ -1147,13 +1199,17 @@ if run:
             cluster_count = max(2, doc_count - 1)
 
         with st.spinner("Analyzing..."):
-            df, embeddings, filter_score_df, parameter_score_df, labels = analyze(
-                docs,
-                cluster_count,
-                min(n_neighbors, doc_count - 1),
-                min_dist,
-                categories
-            )
+            try:
+                df, embeddings, filter_score_df, parameter_score_df, labels = analyze(
+                    docs,
+                    cluster_count,
+                    min(n_neighbors, doc_count - 1),
+                    min_dist,
+                    categories
+                )
+            except RuntimeError as exc:
+                show_sentence_transformer_error(exc)
+                st.stop()
 
     st.session_state["df"] = df
     st.session_state["embeddings"] = embeddings

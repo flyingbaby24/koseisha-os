@@ -3,3 +3,7 @@ pandas
 numpy
 matplotlib
 umap-learn
+sentence-transformers
+torch
+transformers
+huggingface-hub
