@@ -21,6 +21,7 @@ from sqlalchemy import (
     delete,
     insert,
     select,
+    update,
 )
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
@@ -114,6 +115,15 @@ class PostgresPersonalRepository:
                 )
             ).mappings().first()
             if existing is not None:
+                normalized_parameters = normalize_parameters(parameters)
+                if normalized_parameters:
+                    conn.execute(
+                        update(saved_works)
+                        .where(saved_works.c.id == existing["id"])
+                        .values(parameters_json=normalized_parameters)
+                    )
+                    existing = dict(existing)
+                    existing["parameters_json"] = normalized_parameters
                 logger.info(
                     "Postgres personal save duplicate doc_id=%s elapsed=%.3fs",
                     doc_id,
@@ -174,9 +184,33 @@ class PostgresPersonalRepository:
                 .where(saved_works.c.user_id == user_id)
                 .order_by(saved_works.c.created_at.desc())
             ).mappings().all()
+            embedding_rows = conn.execute(
+                select(
+                    saved_embeddings.c.doc_id,
+                    saved_embeddings.c.embedding_json,
+                    saved_embeddings.c.model_name,
+                ).where(saved_embeddings.c.user_id == user_id)
+            ).mappings().all()
 
+        embeddings_by_doc_id = {
+            str(row["doc_id"]): {
+                "embedding": row.get("embedding_json"),
+                "model_name": row.get("model_name", ""),
+            }
+            for row in embedding_rows
+        }
         return SavedDocumentsResponse(
-            items=[saved_document_from_mapping(self._work_row_to_item(dict(row))) for row in rows]
+            items=[
+                saved_document_from_mapping(
+                    self._work_row_to_item(
+                        {
+                            **dict(row),
+                            **embeddings_by_doc_id.get(str(row.get("doc_id", "")), {}),
+                        }
+                    )
+                )
+                for row in rows
+            ]
         )
 
     def delete_saved(self, email_hash: str, doc_id: str) -> DeleteSavedDocumentResponse:
@@ -234,6 +268,8 @@ class PostgresPersonalRepository:
             "url": row.get("url"),
             "source_url": row.get("source_url"),
             "saved_at": row.get("saved_at", ""),
+            "embedding": row.get("embedding"),
+            "model_name": row.get("model_name", ""),
             "parameters": normalize_parameters(row.get("parameters_json")),
         }
 

@@ -56,6 +56,8 @@ class SavedDocument(BaseModel):
     source_url: str | None = None
     saved_at: str = ""
     original_doc_id: str = ""
+    embedding: Any | None = None
+    model_name: str = ""
     parameters: list[ParameterScore] | None = None
 
 

@@ -52,6 +52,9 @@ class InMemoryPersonalRepository:
         doc_id = str(row.get("doc_id", ""))
         user_items = self.items.setdefault(email_hash, {})
         if doc_id in user_items:
+            normalized_parameters = normalize_parameters(parameters)
+            if normalized_parameters:
+                user_items[doc_id]["parameters"] = normalized_parameters
             return SaveDocumentResponse(
                 saved=False,
                 duplicate=True,
@@ -190,6 +193,25 @@ class UserLibraryServiceTests(unittest.TestCase):
         self.assertEqual(values["morality"], 22.0)
         self.assertEqual(values["ideology"], 33.0)
         self.assertEqual(values["community"], 44.0)
+
+    def test_duplicate_save_updates_parameters(self) -> None:
+        service = make_service()
+        service.save_document_by_email(
+            "user@example.com",
+            SaveDocumentRequest(doc_id="doc:1", parameters={"philosophy": 1.0}),
+        )
+        response = service.save_document_by_email(
+            "user@example.com",
+            SaveDocumentRequest(doc_id="doc:1", parameters={"science": 77.0}),
+        )
+
+        saved = service.list_saved_by_email("user@example.com").items[0]
+        values = {item.key: item.value for item in saved.parameters}
+
+        self.assertFalse(response.saved)
+        self.assertTrue(response.duplicate)
+        self.assertEqual(values["science"], 77.0)
+        self.assertNotIn("philosophy", values)
 
     def test_postgres_backend_requires_database_url(self) -> None:
         settings = ApiSettings(personal_backend="postgres", database_url="")

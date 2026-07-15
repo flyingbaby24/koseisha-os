@@ -164,6 +164,8 @@ def saved_document_from_mapping(item: dict[str, object]) -> SavedDocument:
         source_url=_optional_text(item.get("source_url") or item.get("url")),
         saved_at=str(item.get("saved_at", "") or ""),
         original_doc_id=str(item.get("original_doc_id", "") or ""),
+        embedding=item.get("embedding"),
+        model_name=str(item.get("model_name", "") or ""),
         parameters=parameters if isinstance(parameters, list) else None,
     )
 
@@ -218,6 +220,10 @@ class LocalFilePersonalRepository:
         doc_id = row_text(row, "doc_id")
         existing = self._find_favorite(favorites, doc_id)
         if existing is not None:
+            normalized_parameters = normalize_parameters(parameters)
+            if normalized_parameters:
+                existing["parameters"] = normalized_parameters
+                self._write_favorites(user_dir, favorites)
             return SaveDocumentResponse(
                 saved=False,
                 duplicate=True,
