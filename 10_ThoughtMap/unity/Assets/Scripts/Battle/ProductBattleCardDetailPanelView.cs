@@ -114,8 +114,8 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         }
 
         SetText(titleText, card.cardName);
-        SetText(descriptionText, string.IsNullOrWhiteSpace(card.sourceTitle) ? card.docId : card.sourceTitle);
-        SetText(attributeText, $"Battle {card.primaryAttribute} / {card.secondaryAttribute}\nThought {FormatThoughtAttribute(resolvedThoughtAttribute)}");
+        SetText(descriptionText, $"Category: {FormatCategory(card)}");
+        SetText(attributeText, $"Battle: {card.primaryAttribute} / {card.secondaryAttribute}\nThought: {FormatThoughtAttribute(resolvedThoughtAttribute)}");
         SetText(hpText, $"HP {card.MaxHp}");
         SetText(atkText, $"ATK {Mathf.Max(card.statPhysicalAttack, card.statSkillAttack)}");
         SetText(defenseText, $"DEF {Mathf.Max(card.statPhysicalDefense, card.statSkillDefense)}");
@@ -164,7 +164,9 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         else
         {
             builder.AppendLine($"Assigned Skill: {skill.DisplayName}");
-            builder.AppendLine($"Trigger: {skill.trigger} / Effect: {FirstEffectType(skill)} / CT: {skill.cooldown}");
+            builder.AppendLine($"Trigger: {skill.trigger}");
+            builder.AppendLine($"{GeneratedSkillLibrary.CostSummary(skill)} / Cooldown: {skill.cooldown}");
+            builder.AppendLine($"Effect: {GeneratedSkillLibrary.EffectSummary(skill)}");
         }
 
         assignedSkillsText.text = builder.ToString();
@@ -585,7 +587,7 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
 
     private string FormatSkillAndHateText(ThoughtMapBattleCardData card, bool hasPositionBonus, ThoughtMapGridBonus positionBonus)
     {
-        string text = $"Skill Seed {card.skillSeed}";
+        string text = $"Generation Seed {card.skillSeed}";
         if (!hasPositionBonus)
         {
             return text;
@@ -607,5 +609,20 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         {
             text.text = value;
         }
+    }
+
+    private string FormatCategory(ThoughtMapBattleCardData card)
+    {
+        if (card == null)
+        {
+            return "-";
+        }
+
+        if (!string.IsNullOrWhiteSpace(card.category))
+        {
+            return card.category;
+        }
+
+        return string.IsNullOrWhiteSpace(card.sourceTitle) ? "-" : card.sourceTitle;
     }
 }

@@ -32,6 +32,7 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour, IPointerDownHan
         bool matchingDoc,
         bool canAssign,
         bool canRemove,
+        string unavailableReason,
         UnityAction<GeneratedSkillDto> selectedHandler,
         UnityAction<GeneratedSkillDto> assignHandler,
         UnityAction<GeneratedSkillDto> removeHandler)
@@ -45,9 +46,7 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour, IPointerDownHan
         SetText(nameText, sourceSkill == null ? "No generated skill" : sourceSkill.DisplayName);
         SetText(metaText, sourceSkill == null ? "" : $"Trigger: {sourceSkill.trigger}  {GeneratedSkillLibrary.CostSummary(sourceSkill)}  Cooldown: {sourceSkill.cooldown}");
         SetText(effectText, sourceSkill == null ? "" : GeneratedSkillLibrary.EffectSummary(sourceSkill));
-        SetText(stateText, assigned
-            ? $"Assigned to: {assignedLabel}"
-            : "Available");
+        SetText(stateText, StateLabel(assigned, assignedLabel, canAssign, canRemove, unavailableReason));
 
         if (backgroundImage != null)
         {
@@ -62,10 +61,12 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour, IPointerDownHan
         if (assignButton != null)
         {
             assignButton.interactable = true;
+            assignButton.gameObject.SetActive(canAssign);
         }
         if (removeButton != null)
         {
             removeButton.interactable = true;
+            removeButton.gameObject.SetActive(canRemove);
         }
         Debug.Log(
             $"[GeneratedSkill] Row.Bind skill_id={(sourceSkill == null ? "" : sourceSkill.skill_id)} canAssign={canAssign} canRemove={canRemove} assigned={assigned} selected={selected} {DescribeRaycastState()}",
@@ -100,6 +101,28 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour, IPointerDownHan
     private void HandleSelect()
     {
         SelectSkillOnce("Button");
+    }
+
+    private static string StateLabel(bool assigned, string assignedLabel, bool canAssign, bool canRemove, string unavailableReason)
+    {
+        if (canRemove)
+        {
+            return "Assigned to Current Card";
+        }
+
+        if (assigned)
+        {
+            return string.IsNullOrWhiteSpace(assignedLabel)
+                ? "Assigned"
+                : $"Assigned to {assignedLabel}";
+        }
+
+        if (canAssign)
+        {
+            return "Available";
+        }
+
+        return string.IsNullOrWhiteSpace(unavailableReason) ? "Unavailable" : unavailableReason;
     }
 
     private void SelectSkillOnce(string source)
@@ -172,7 +195,7 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour, IPointerDownHan
         nameText = nameText == null ? CreateText("NameText", new Vector2(0.03f, 0.74f), new Vector2(0.70f, 0.96f), 15f, TextAlignmentOptions.Left) : nameText;
         metaText = metaText == null ? CreateText("MetaText", new Vector2(0.03f, 0.50f), new Vector2(0.70f, 0.74f), 12f, TextAlignmentOptions.Left) : metaText;
         effectText = effectText == null ? CreateText("EffectText", new Vector2(0.03f, 0.12f), new Vector2(0.70f, 0.50f), 12f, TextAlignmentOptions.Left) : effectText;
-        stateText = stateText == null ? CreateText("StateText", new Vector2(0.72f, 0.66f), new Vector2(0.97f, 0.95f), 11f, TextAlignmentOptions.Right) : stateText;
+        stateText = stateText == null ? CreateText("StateText", new Vector2(0.72f, 0.60f), new Vector2(0.97f, 0.95f), 11f, TextAlignmentOptions.Right) : stateText;
         assignButton = ResolveChildButton(assignButton, "AssignButton", "Assign", new Vector2(0.72f, 0.34f), new Vector2(0.845f, 0.58f));
         removeButton = ResolveChildButton(removeButton, "RemoveButton", "Remove", new Vector2(0.855f, 0.34f), new Vector2(0.98f, 0.58f));
         if (assignButton != null) assignButton.transform.SetAsLastSibling();
@@ -180,7 +203,7 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour, IPointerDownHan
         AnchorText(nameText, new Vector2(0.03f, 0.74f), new Vector2(0.70f, 0.96f));
         AnchorText(metaText, new Vector2(0.03f, 0.50f), new Vector2(0.70f, 0.74f));
         AnchorText(effectText, new Vector2(0.03f, 0.12f), new Vector2(0.70f, 0.50f));
-        AnchorText(stateText, new Vector2(0.72f, 0.66f), new Vector2(0.97f, 0.95f));
+        AnchorText(stateText, new Vector2(0.72f, 0.60f), new Vector2(0.97f, 0.95f));
         AnchorButton(assignButton, new Vector2(0.72f, 0.34f), new Vector2(0.845f, 0.58f));
         AnchorButton(removeButton, new Vector2(0.855f, 0.34f), new Vector2(0.98f, 0.58f));
         ConfigureExistingText(nameText, 15f, TextOverflowModes.Ellipsis);

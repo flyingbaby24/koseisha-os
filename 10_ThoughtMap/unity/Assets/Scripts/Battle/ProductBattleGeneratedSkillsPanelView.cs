@@ -54,6 +54,8 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
         bool selectedCardCanReceiveSkill)
     {
         EnsureBuilt();
+        ScrollRect scrollRect = GetComponent<ScrollRect>();
+        float scrollPosition = scrollRect == null ? 1f : scrollRect.verticalNormalizedPosition;
         ClearRows();
 
         HashSet<string> assigned = new HashSet<string>(assignedSkillIds ?? Enumerable.Empty<string>());
@@ -82,6 +84,7 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
             bool assignedToSelected = assigned.Contains(skill.skill_id);
             bool canAssign = selectedCardIsDeckCard && selectedCardCanReceiveSkill && !assignedAnywhere;
             bool canRemove = assignedToSelected;
+            string unavailableReason = BuildUnavailableReason(selectedCardIsDeckCard, selectedCardCanReceiveSkill, assignedAnywhere, assignedToSelected);
             ProductBattleGeneratedSkillRowView row = CreateRow();
             row.Bind(
                 skill,
@@ -91,6 +94,7 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
                 !string.IsNullOrWhiteSpace(selectedCardDocId) && skill.doc_id == selectedCardDocId,
                 canAssign,
                 canRemove,
+                unavailableReason,
                 HandleSelected,
                 HandleAssign,
                 HandleRemove
@@ -107,6 +111,10 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
         Canvas.ForceUpdateCanvases();
 
         LogScrollState(ordered.Count);
+        if (scrollRect != null)
+        {
+            scrollRect.verticalNormalizedPosition = Mathf.Clamp01(scrollPosition);
+        }
 
         if (debugLog)
         {
@@ -442,6 +450,31 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
     {
         Debug.Log($"[GeneratedSkill] Panel.Remove skill_id={(skill == null ? "" : skill.skill_id)} onRemoveNull={onRemove == null}", this);
         onRemove?.Invoke(skill);
+    }
+
+    private static string BuildUnavailableReason(bool selectedCardIsDeckCard, bool selectedCardCanReceiveSkill, bool assignedAnywhere, bool assignedToSelected)
+    {
+        if (assignedToSelected)
+        {
+            return "";
+        }
+
+        if (assignedAnywhere)
+        {
+            return "Used by another card";
+        }
+
+        if (!selectedCardIsDeckCard)
+        {
+            return "Select deck card";
+        }
+
+        if (!selectedCardCanReceiveSkill)
+        {
+            return "Card already has a skill";
+        }
+
+        return "";
     }
 
     private void ClearRows()

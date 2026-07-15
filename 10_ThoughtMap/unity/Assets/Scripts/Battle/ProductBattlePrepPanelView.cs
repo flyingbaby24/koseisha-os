@@ -67,6 +67,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     [SerializeField] private Button startBattleButton;
     [SerializeField] private Button simulateButton;
     [SerializeField] private Button clearButton;
+    [SerializeField] private TMP_Text battleRequirementText;
 
     [Header("Background")]
     [SerializeField] private Sprite battlePrepBackground;
@@ -107,6 +108,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     private int selectedLibraryIndex = -1;
     private string selectedGeneratedSkillId = "";
     private ThoughtMapBattleResonanceCalculator resonanceCalculator;
+    private TMP_Text deckHeadingText;
 
     private void Awake()
     {
@@ -534,7 +536,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             ProductBattleCardListRowView view = CreateListRow(cardListContent, GetSharedCardRowPrefab(), "CardListRow");
-            string state = FormatCardListState(loadedCards[i], deckCards.Contains(loadedCards[i]) ? "In Deck" : "");
+            string state = FormatCardListState(loadedCards[i], deckCards.Contains(loadedCards[i]) ? "In Deck" : "Add");
             Sprite artSprite = ResolveCardArtForTarget(loadedCards[i], i, "Card List");
             view.Bind(loadedCards[i], i, $"C{i + 1}", i == selectedLibraryIndex, deckCards.Contains(loadedCards[i]), state, artSprite);
             view.SetClickHandler(OnLibraryCardClicked);
@@ -544,6 +546,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
     private void RenderDeck()
     {
+        UpdateDeckHeading();
         if (deckListContent == null)
         {
             EnsureListContentReferences();
@@ -562,12 +565,34 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         for (int i = 0; i < deckCards.Count; i++)
         {
             ProductBattleCardListRowView view = CreateListRow(deckListContent, GetSharedCardRowPrefab(), "DeckListRow");
-            string state = FormatCardListState(deckCards[i], placement.ContainsValue(deckCards[i]) ? "Placed" : "Ready");
+            string state = FormatDeckCardState(deckCards[i], placement.ContainsValue(deckCards[i]));
             Sprite artSprite = ResolveCardArtForTarget(deckCards[i], i, "Deck List");
             view.Bind(deckCards[i], i, $"P{i + 1}", i == selectedDeckIndex, placement.ContainsValue(deckCards[i]), state, artSprite);
             view.SetClickHandler(OnDeckCardClicked);
         }
         RestoreScrollPosition(scroll, scrollPosition);
+    }
+
+    private void UpdateDeckHeading()
+    {
+        if (deckHeadingText == null)
+        {
+            Transform deckPanel = FindDescendant(transform, "DeckListPanel");
+            Transform heading = deckPanel == null ? null : FindDirectChild(deckPanel, "HeadingText");
+            if (heading == null && deckPanel != null)
+            {
+                heading = FindDirectChild(deckPanel, "TitleText");
+            }
+
+            deckHeadingText = heading == null ? null : heading.GetComponent<TMP_Text>();
+        }
+
+        if (deckHeadingText != null)
+        {
+            deckHeadingText.text = $"Deck {deckCards.Count} / {deckLimit}";
+            deckHeadingText.fontSize = Mathf.Max(deckHeadingText.fontSize, 16f);
+            AddTextShadow(deckHeadingText);
+        }
     }
 
     private void RenderGrid()
@@ -1619,6 +1644,14 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
         bool canStart = CanStartBattle(out string reason);
         startBattleButton.interactable = canStart;
+        EnsureBattleRequirementText();
+        if (battleRequirementText != null)
+        {
+            battleRequirementText.text = canStart ? "Ready" : reason;
+            battleRequirementText.color = canStart
+                ? new Color(0.55f, 1f, 0.78f, 1f)
+                : new Color(1f, 0.78f, 0.42f, 1f);
+        }
         if (showReason && !canStart)
         {
             WriteStatus(reason);
@@ -1902,8 +1935,50 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         NormalizeTopButton(saveDeckButton, "Save Deck", new Vector2(0.725f, 0.93f), new Vector2(0.805f, 0.985f));
         NormalizeTopButton(simulateButton, "Preview", new Vector2(0.815f, 0.93f), new Vector2(0.905f, 0.985f));
         NormalizeTopButton(startBattleButton, "Battle", new Vector2(0.915f, 0.93f), new Vector2(0.985f, 0.985f));
+        EnsureBattleRequirementText();
         NormalizeEmailInput(personalEmailInput, new Vector2(0.70f, 0.01f), new Vector2(0.86f, 0.07f));
         NormalizeTopButton(loadPersonalLibraryButton, "Load Personal", new Vector2(0.865f, 0.01f), new Vector2(0.985f, 0.07f));
+    }
+
+    private void EnsureBattleRequirementText()
+    {
+        if (battleRequirementText != null)
+        {
+            return;
+        }
+
+        if (startBattleButton == null)
+        {
+            return;
+        }
+
+        Transform existing = startBattleButton.transform.Find("RequirementText");
+        if (existing == null)
+        {
+            GameObject textObject = new GameObject("RequirementText", typeof(RectTransform));
+            textObject.transform.SetParent(startBattleButton.transform, false);
+            RectTransform textRect = textObject.GetComponent<RectTransform>();
+            textRect.anchorMin = new Vector2(0f, -0.52f);
+            textRect.anchorMax = new Vector2(1f, -0.05f);
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+            battleRequirementText = textObject.AddComponent<TextMeshProUGUI>();
+        }
+        else
+        {
+            battleRequirementText = existing.GetComponent<TMP_Text>();
+            if (battleRequirementText == null)
+            {
+                battleRequirementText = existing.gameObject.AddComponent<TextMeshProUGUI>();
+            }
+        }
+
+        battleRequirementText.fontSize = 12f;
+        battleRequirementText.enableWordWrapping = false;
+        battleRequirementText.overflowMode = TextOverflowModes.Overflow;
+        battleRequirementText.alignment = TextAlignmentOptions.Top;
+        battleRequirementText.raycastTarget = false;
+        AddTextShadow(battleRequirementText);
     }
 
     private void NormalizeTopButton(Button button, string label, Vector2 min, Vector2 max)
@@ -2191,7 +2266,23 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             return state;
         }
 
-        return string.IsNullOrWhiteSpace(state) ? "Personal" : $"Personal / {state}";
+        return string.IsNullOrWhiteSpace(state) ? "Personal" : $"{state} / Personal";
+    }
+
+    private string FormatDeckCardState(ThoughtMapBattleCardData card, bool placed)
+    {
+        string cardId = GetCardId(card);
+        bool hasSkill = !string.IsNullOrWhiteSpace(cardId)
+            && assignedSkillIdsByCardId.TryGetValue(cardId, out List<string> ids)
+            && ids != null
+            && ids.Any(id => !string.IsNullOrWhiteSpace(id));
+        string skillState = hasSkill ? "Skill" : "No Skill";
+        if (placed)
+        {
+            return $"{skillState} / Placed";
+        }
+
+        return skillState;
     }
 
     private string AttributeName(ThoughtMapBattleCardData card)
