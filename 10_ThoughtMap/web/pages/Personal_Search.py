@@ -1,0 +1,627 @@
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import streamlit as st
+
+from search_utils import (
+    cosine,
+    normalize_key,
+    normalize_text,
+    parse_embedding,
+    safe_filename,
+    vector_to_json,
+    make_embedding_download_csv,
+    normalized_average_vector,
+    work_similarity_by_vector,
+    author_similarity_by_vector,
+    format_similarity,
+)
+from storage import load_user_db, resolve_users_dir, list_user_libraries, resolve_user_db_dir
+from personal_library_admin import (
+    DEFAULT_FASTAPI_BASE_URL,
+    get_secret_or_env,
+    render_personal_library_admin,
+)
+
+
+APP_TITLE = "ThoughtMap Personal Works Search"
+BASE_DIR = Path(__file__).resolve().parents[2]
+
+DEFAULT_USERS_DIR = BASE_DIR / "data" / "thoughtmap_db" / "users"
+FALLBACK_USERS_DIR = BASE_DIR / "data" / "users"
+FALLBACK_DB_DIR = BASE_DIR / "master"
+THOUGHT_PARAMETER_KEYS = [
+    "philosophy",
+    "psychology",
+    "science",
+    "economy",
+    "karma",
+    "emotion",
+    "morality",
+    "ideology",
+    "individual",
+    "community",
+]
+
+
+def load_personal_db_cached(users_dir_text: str, user_id: str) -> pd.DataFrame:
+    users_dir = resolve_users_dir(users_dir_text)
+    docs, embs, _map_points = load_user_db(user_id, users_dir)
+
+    if "doc_id" not in docs.columns or "doc_id" not in embs.columns:
+        raise ValueError("documents.csv / embeddings.csv の両方に doc_id 列が必要です。")
+    if "embedding" not in embs.columns:
+        raise ValueError("embeddings.csv に embedding 列がありません。")
+
+    if "model_name" not in embs.columns:
+        if "model" in embs.columns:
+            embs["model_name"] = embs["model"]
+        else:
+            embs["model_name"] = ""
+
+    df = docs.merge(embs[["doc_id", "model_name", "embedding"]], on="doc_id", how="inner")
+    df["_embedding_vec"] = df["embedding"].map(parse_embedding)
+    df = df[df["_embedding_vec"].notna()].copy()
+
+    if df.empty:
+        raise ValueError("有効な embedding がありません。")
+
+    df["_dim"] = df["_embedding_vec"].map(lambda x: len(x) if x is not None else 0)
+    common_dim = int(df["_dim"].value_counts().idxmax())
+    df = df[df["_dim"] == common_dim].copy()
+
+    for col in [
+        "user_id", "author", "title", "source", "source_url", "status",
+        "category", "subcategory", "tags", "notes", "text_path",
+        "gutenberg_id",
+    ]:
+        if col not in df.columns:
+            df[col] = ""
+
+    # 個人DBでは category が空の場合、tags を category 代わりに使う
+    df["category"] = df.apply(
+        lambda r: normalize_text(r.get("category", "")) or normalize_text(r.get("tags", "")) or "unknown",
+        axis=1,
+    )
+
+    df["label"] = df.apply(
+        lambda r: f"{r.get('title', '')} — {r.get('author', '')} [{r.get('doc_id', '')}]",
+        axis=1,
+    )
+
+    return df.reset_index(drop=True)
+
+
+@st.cache_data(show_spinner=False)
+def load_uploaded_embeddings(uploaded_file) -> pd.DataFrame:
+    up = pd.read_csv(uploaded_file, dtype=str).fillna("")
+
+    if "embedding" not in up.columns:
+        raise ValueError("アップロードCSVに embedding 列がありません。")
+
+    for col in ["doc_id", "author", "title", "source", "gutenberg_id", "source_url", "status", "category", "subcategory"]:
+        if col not in up.columns:
+            up[col] = ""
+
+    if up["doc_id"].map(normalize_text).eq("").all():
+        for alt in ["document_id", "id", "file_id"]:
+            if alt in up.columns:
+                up["doc_id"] = up[alt]
+                break
+
+    if up["title"].map(normalize_text).eq("").all():
+        for alt in ["filename", "name", "work_title"]:
+            if alt in up.columns:
+                up["title"] = up[alt]
+                break
+
+    up["_embedding_vec"] = up["embedding"].map(parse_embedding)
+    up = up[up["_embedding_vec"].notna()].copy()
+
+    if up.empty:
+        raise ValueError("アップロードCSV内に有効な embedding がありません。")
+
+    up["_dim"] = up["_embedding_vec"].map(lambda x: len(x) if x is not None else 0)
+    common_dim = int(up["_dim"].value_counts().idxmax())
+    up = up[up["_dim"] == common_dim].copy()
+
+    up["_row_id"] = [f"upload_{i:06d}" for i in range(len(up))]
+    up["label"] = up.apply(
+        lambda r: (
+            f"{normalize_text(r.get('title', '')) or normalize_text(r.get('doc_id', '')) or r.get('_row_id', '')}"
+            f" — {normalize_text(r.get('author', ''))} [{r.get('_row_id', '')}]"
+        ),
+        axis=1,
+    )
+
+    return up.reset_index(drop=True)
+
+
+def filter_catalog(df: pd.DataFrame, query: str, source: str, category: str = "All") -> pd.DataFrame:
+    out = df.copy()
+
+    if source and source != "All" and "source" in out.columns:
+        out = out[out["source"].map(normalize_text) == source]
+
+    if category and category != "All" and "category" in out.columns:
+        out = out[out["category"].map(normalize_text) == category]
+
+    q = normalize_key(query)
+    if q:
+        mask = (
+            out["title"].map(normalize_key).str.contains(re.escape(q), na=False)
+            | out["author"].map(normalize_key).str.contains(re.escape(q), na=False)
+            | out["gutenberg_id"].map(normalize_key).str.contains(re.escape(q), na=False)
+            | out["doc_id"].map(normalize_key).str.contains(re.escape(q), na=False)
+            | out.get("tags", pd.Series("", index=out.index)).map(normalize_key).str.contains(re.escape(q), na=False)
+            | out.get("source", pd.Series("", index=out.index)).map(normalize_key).str.contains(re.escape(q), na=False)
+            | out.get("source_url", pd.Series("", index=out.index)).map(normalize_key).str.contains(re.escape(q), na=False)
+        )
+        out = out[mask]
+
+    return out
+
+
+def render_results(
+    df: pd.DataFrame,
+    target_title: str,
+    target_author: str,
+    target_doc_id: str,
+    target_gutenberg_id: str,
+    target_source_url: str,
+    target_vec: np.ndarray,
+    top: int,
+    include_self: bool,
+    include_same_author: bool,
+    source_label: str,
+    button_key: str,
+    target_category: str = "",
+    target_subcategory: str = "",
+) -> None:
+    st.markdown("---")
+    st.subheader("Target")
+    st.write(f"**{target_title}**")
+    st.write(
+        f"Author: {target_author}  |  "
+        f"doc_id: `{target_doc_id}`  |  "
+        f"External ID: `{target_gutenberg_id}`"
+    )
+
+    if normalize_text(target_source_url):
+        st.markdown(f"[Open source]({target_source_url})")
+
+    target_embedding_csv = make_embedding_download_csv(
+        title=target_title,
+        author=target_author,
+        doc_id=target_doc_id,
+        gutenberg_id=target_gutenberg_id,
+        source=source_label,
+        source_url=target_source_url,
+        embedding=vector_to_json(target_vec),
+        category=target_category,
+        subcategory=target_subcategory,
+    )
+    st.download_button(
+        "Download target embedding CSV",
+        data=target_embedding_csv,
+        file_name=f"{safe_filename(target_doc_id or target_title)}_embedding.csv",
+        mime="text/csv",
+        key=f"{button_key}_target_embedding_download",
+    )
+
+    if not st.button("Search similar works / authors", type="primary", key=button_key):
+        return
+
+    work_df = work_similarity_by_vector(
+        df,
+        target_vec=target_vec,
+        top=top,
+        exclude_doc_id=target_doc_id if source_label == "DB" else "",
+        include_self=include_self,
+    )
+    author_df = author_similarity_by_vector(
+        df,
+        target_vec=target_vec,
+        target_author=target_author,
+        top=top,
+        include_same_author=include_same_author,
+    )
+
+    left, right = st.columns([3, 2])
+
+    with left:
+        st.subheader("Similar works")
+        if work_df.empty:
+            st.info("No similar works found.")
+        else:
+            view_cols = ["rank", "similarity", "doc_id", "gutenberg_id", "author", "title", "source", "category"]
+            view_cols = [c for c in view_cols if c in work_df.columns]
+            view = format_similarity(work_df[view_cols])
+            st.dataframe(view, use_container_width=True, hide_index=True)
+            st.download_button(
+                "Download similar works CSV",
+                data=work_df.to_csv(index=False, encoding="utf-8-sig"),
+                file_name=f"{safe_filename(target_doc_id or 'uploaded')}_similar_works.csv",
+                mime="text/csv",
+                key=f"{button_key}_works_download",
+            )
+
+            embedding_cols = [
+                "doc_id", "author", "title", "source", "category", "subcategory", "gutenberg_id",
+                "source_url", "model_name", "embedding",
+            ]
+            available_cols = [c for c in embedding_cols if c in work_df.columns]
+            st.download_button(
+                "Download Top works embeddings CSV",
+                data=work_df[available_cols].to_csv(index=False, encoding="utf-8-sig"),
+                file_name=f"{safe_filename(target_doc_id or 'uploaded')}_top_work_embeddings.csv",
+                mime="text/csv",
+                key=f"{button_key}_top_work_embeddings_download",
+            )
+
+            work_options = [
+                f"{r.rank}. {r.title} — {r.author} [{r.doc_id}]"
+                for r in work_df.itertuples(index=False)
+            ]
+            selected_work = st.selectbox(
+                "Download one work embedding",
+                options=work_options,
+                key=f"{button_key}_selected_work_embedding",
+            )
+            selected_index = work_options.index(selected_work)
+            selected_row = work_df.iloc[selected_index]
+            st.download_button(
+                "Download selected work embedding CSV",
+                data=make_embedding_download_csv(
+                    title=selected_row.get("title", ""),
+                    author=selected_row.get("author", ""),
+                    doc_id=selected_row.get("doc_id", ""),
+                    gutenberg_id=selected_row.get("gutenberg_id", ""),
+                    source=selected_row.get("source", ""),
+                    source_url=selected_row.get("source_url", ""),
+                    embedding=selected_row.get("embedding", ""),
+                    category=selected_row.get("category", ""),
+                    subcategory=selected_row.get("subcategory", ""),
+                ),
+                file_name=f"{safe_filename(selected_row.get('doc_id', '') or selected_row.get('title', ''))}_embedding.csv",
+                mime="text/csv",
+                key=f"{button_key}_selected_work_embedding_download",
+            )
+
+    with right:
+        st.subheader("Similar authors")
+        if author_df.empty:
+            st.info("No similar authors found.")
+        else:
+            view = format_similarity(
+                author_df[["rank", "similarity", "author", "works_count", "sample_titles"]]
+            )
+            st.dataframe(view, use_container_width=True, hide_index=True)
+            st.download_button(
+                "Download similar authors CSV",
+                data=author_df.to_csv(index=False, encoding="utf-8-sig"),
+                file_name=f"{safe_filename(target_doc_id or 'uploaded')}_similar_authors.csv",
+                mime="text/csv",
+                key=f"{button_key}_authors_download",
+            )
+
+            author_embedding_cols = ["author", "works_count", "source", "embedding"]
+            available_author_cols = [c for c in author_embedding_cols if c in author_df.columns]
+            st.download_button(
+                "Download Top author embeddings CSV",
+                data=author_df[available_author_cols].to_csv(index=False, encoding="utf-8-sig"),
+                file_name=f"{safe_filename(target_doc_id or 'uploaded')}_top_author_embeddings.csv",
+                mime="text/csv",
+                key=f"{button_key}_top_author_embeddings_download",
+            )
+
+            author_options = [
+                f"{r.rank}. {r.author} ({r.works_count} works)"
+                for r in author_df.itertuples(index=False)
+            ]
+            selected_author = st.selectbox(
+                "Download one author embedding",
+                options=author_options,
+                key=f"{button_key}_selected_author_embedding",
+            )
+            selected_author_index = author_options.index(selected_author)
+            selected_author_row = author_df.iloc[selected_author_index]
+            st.download_button(
+                "Download selected author embedding CSV",
+                data=make_embedding_download_csv(
+                    title=f"{selected_author_row.get('author', '')} author average",
+                    author=selected_author_row.get("author", ""),
+                    doc_id=f"author_average:{selected_author_row.get('author', '')}",
+                    gutenberg_id="",
+                    source="author_average",
+                    source_url="",
+                    embedding=selected_author_row.get("embedding", ""),
+                ),
+                file_name=f"{safe_filename(selected_author_row.get('author', 'author'))}_author_average_embedding.csv",
+                mime="text/csv",
+                key=f"{button_key}_selected_author_embedding_download",
+            )
+
+
+def render_db_work_mode(
+    df: pd.DataFrame,
+    sources: list[str],
+    categories: list[str],
+    top: int,
+    include_self: bool,
+    include_same_author: bool,
+    registered_email: str = "",
+    personal_api_base_url: str = DEFAULT_FASTAPI_BASE_URL,
+    personal_api_timeout_seconds: int = 90,
+) -> None:
+    st.subheader("Select personal work")
+
+    q_col, s_col, cat_col = st.columns([3, 1, 1])
+    query = q_col.text_input("Search title / author / source / tags / doc_id", value="")
+    source = s_col.selectbox("Source", sources, index=0)
+    category = cat_col.selectbox("Category", categories, index=0)
+
+    catalog = filter_catalog(df, query, source, category)
+    if catalog.empty:
+        st.warning("該当作品がありません。")
+        st.stop()
+
+    st.markdown("#### Personal Library Admin")
+    render_personal_library_admin(
+        api_base_url=personal_api_base_url,
+        email=registered_email,
+        timeout_seconds=int(personal_api_timeout_seconds),
+        key_prefix="personal_page_admin",
+    )
+
+    view_cols = ["doc_id", "author", "title", "source", "category", "source_url", "status"]
+    view_cols = [c for c in view_cols if c in catalog.columns]
+    catalog_view = catalog[view_cols].copy()
+    st.dataframe(catalog_view.head(200), use_container_width=True, hide_index=True)
+
+    selected_label = st.selectbox("Target", options=catalog["label"].tolist(), index=0)
+    selected_doc_id = catalog.loc[catalog["label"] == selected_label, "doc_id"].iloc[0]
+    target = df[df["doc_id"] == selected_doc_id].iloc[0]
+    with st.expander("Selected work parameter debug"):
+        debug_values = {
+            key: target.get(key, None)
+            for key in THOUGHT_PARAMETER_KEYS
+            if key in target.index
+        }
+        st.write({
+            "doc_id": target.get("doc_id", ""),
+            "title": target.get("title", ""),
+            "parameters_count": len(debug_values),
+            "parameters": debug_values,
+        })
+
+    render_results(
+        df=df,
+        target_title=target.get("title", ""),
+        target_author=target.get("author", ""),
+        target_doc_id=target.get("doc_id", ""),
+        target_gutenberg_id=target.get("gutenberg_id", ""),
+        target_source_url=target.get("source_url", ""),
+        target_vec=target["_embedding_vec"],
+        target_category=target.get("category", ""),
+        target_subcategory=target.get("subcategory", ""),
+        top=top,
+        include_self=include_self,
+        include_same_author=include_same_author,
+        source_label="DB",
+        button_key="db_search",
+    )
+
+
+def render_upload_mode(
+    df: pd.DataFrame,
+    categories: list[str],
+    top: int,
+    include_same_author: bool,
+) -> None:
+    st.subheader("Upload embeddings CSV")
+    st.caption(
+        "既存ThoughtMapの Export > Download document embeddings CSV をアップロードして、"
+        "DB登録せずに近い作品・作者を検索します。"
+    )
+
+    uploaded = st.file_uploader("Embedding CSV", type=["csv"])
+    if uploaded is None:
+        st.info("embedding列を含むCSVをアップロードしてください。")
+        st.stop()
+
+    try:
+        upload_df = load_uploaded_embeddings(uploaded)
+    except Exception as exc:
+        st.error(str(exc))
+        st.stop()
+
+    db_dim = int(df["_dim"].value_counts().idxmax())
+    upload_df = upload_df[upload_df["_dim"] == db_dim].copy()
+
+    if upload_df.empty:
+        st.error(f"DB側のembedding次元({db_dim})と一致する行がありません。")
+        st.stop()
+
+    c1, c2 = st.columns(2)
+    c1.metric("Uploaded works", len(upload_df))
+    c2.metric("Embedding dim", db_dim)
+
+    compare_category = st.selectbox("Compare against category", categories, index=0)
+    compare_df = filter_catalog(df, "", "All", compare_category)
+    if compare_df.empty:
+        st.warning("比較対象カテゴリに作品がありません。")
+        st.stop()
+
+    query = st.text_input("Filter uploaded title / author / doc_id", value="")
+    filtered = filter_catalog(upload_df, query, "All", "All")
+
+    if filtered.empty:
+        st.warning("該当作品がありません。")
+        st.stop()
+
+    view_cols = ["_row_id", "doc_id", "author", "title", "source"]
+    st.dataframe(filtered[view_cols].head(200), use_container_width=True, hide_index=True)
+
+    upload_mode = st.radio(
+        "Uploaded search type",
+        ["Single uploaded work", "Uploaded personality average"],
+        horizontal=True,
+    )
+
+    if upload_mode == "Uploaded personality average":
+        avg_vec = normalized_average_vector(upload_df["_embedding_vec"].to_list())
+
+        render_results(
+            df=compare_df,
+            target_title=f"Uploaded personality average ({len(upload_df)} works)",
+            target_author="Uploaded CSV",
+            target_doc_id="uploaded_personality_average",
+            target_gutenberg_id="",
+            target_source_url="",
+            target_vec=avg_vec,
+            target_category=compare_category if compare_category != "All" else "",
+            target_subcategory="",
+            top=top,
+            include_self=False,
+            include_same_author=include_same_author,
+            source_label="Upload",
+            button_key="upload_average_search",
+        )
+        return
+
+    selected_label = st.selectbox(
+        "Uploaded target",
+        options=filtered["label"].tolist(),
+        index=0,
+    )
+    target = filtered.loc[filtered["label"] == selected_label].iloc[0]
+
+    render_results(
+        df=compare_df,
+        target_title=target.get("title", ""),
+        target_author=target.get("author", ""),
+        target_doc_id=target.get("doc_id", "") or target.get("_row_id", ""),
+        target_gutenberg_id=target.get("gutenberg_id", ""),
+        target_source_url=target.get("source_url", ""),
+        target_vec=target["_embedding_vec"],
+        target_category=target.get("category", ""),
+        target_subcategory=target.get("subcategory", ""),
+        top=top,
+        include_self=False,
+        include_same_author=include_same_author,
+        source_label="Upload",
+        button_key="upload_single_search",
+    )
+
+
+def main() -> None:
+    st.set_page_config(page_title=APP_TITLE, layout="wide")
+    st.title(APP_TITLE)
+
+    with st.sidebar:
+        st.header("Personal DB")
+        users_dir = str(DEFAULT_USERS_DIR)
+        st.caption(f"Users: {DEFAULT_USERS_DIR}")
+        registered_email = st.text_input(
+            "Registered e-mail",
+            value=get_secret_or_env("THOUGHTMAP_REGISTERED_EMAIL", ""),
+        )
+        personal_api_base_url = st.text_input(
+            "Personal API Base URL",
+            value=get_secret_or_env("THOUGHTMAP_API_BASE_URL", DEFAULT_FASTAPI_BASE_URL),
+        )
+        personal_api_timeout_seconds = st.number_input(
+            "Personal API timeout seconds",
+            min_value=10,
+            max_value=180,
+            value=90,
+            step=10,
+        )
+
+        top = st.slider("Top results", min_value=5, max_value=50, value=20, step=5)
+        include_same_author = st.checkbox(
+            "Include the same author in the author ranking",
+            value=True,
+        )
+        include_self = st.checkbox(
+            "Include selected work in the work rankings",
+            value=False,
+        )
+
+        if st.button("Reload Personal DB"):
+            st.cache_data.clear()
+
+    users_base = resolve_users_dir(users_dir)
+    user_libraries = list_user_libraries(users_base)
+
+    if user_libraries.empty:
+        st.error(f"個人ユーザーDBが見つかりません: {users_base}")
+        st.info("先に create_user.py と import_thoughtmap_csv.py を実行してください。")
+        st.stop()
+
+    user_options = [
+        f"{r.display_name}"
+        for r in user_libraries.itertuples(index=False)
+    ]
+
+    selected_user_label = st.selectbox("Library", options=user_options, index=0)
+    selected_user_index = user_options.index(selected_user_label)
+    selected_user = user_libraries.iloc[selected_user_index]
+    selected_user_id = selected_user["user_id"]
+
+    try:
+        df = load_personal_db_cached(users_dir, selected_user_id)
+    except Exception as exc:
+        st.error(str(exc))
+        st.stop()
+
+    sources = ["All"] + sorted(
+        [s for s in df["source"].map(normalize_text).unique().tolist() if s]
+    )
+    categories = ["All"] + sorted(
+        [c for c in df["category"].map(normalize_text).unique().tolist() if c]
+    )
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Works", len(df))
+    c2.metric("Authors", df["author"].replace("", pd.NA).dropna().nunique())
+    c3.metric("Sources", max(0, len(sources) - 1))
+    c4.metric("Library", normalize_text(selected_user.get("display_name", "")) or selected_user_id)
+
+    mode = st.radio(
+        "Search mode",
+        ["Personal work", "Upload embeddings CSV"],
+        horizontal=True,
+    )
+
+    if mode == "Personal work":
+        render_db_work_mode(
+            df=df,
+            sources=sources,
+            categories=categories,
+            top=top,
+            include_self=include_self,
+            include_same_author=include_same_author,
+            registered_email=registered_email,
+            personal_api_base_url=personal_api_base_url,
+            personal_api_timeout_seconds=int(personal_api_timeout_seconds),
+        )
+    else:
+        render_upload_mode(
+            df=df,
+            categories=categories,
+            top=top,
+            include_same_author=include_same_author,
+        )
+
+    with st.expander("Personal DB columns"):
+        st.write(df.drop(columns=["_embedding_vec"], errors="ignore").columns.tolist())
+
+
+if __name__ == "__main__":
+    main()
