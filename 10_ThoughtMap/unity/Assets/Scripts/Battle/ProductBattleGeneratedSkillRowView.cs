@@ -117,7 +117,7 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour, IPointerDownHan
     public void OnPointerDown(PointerEventData eventData)
     {
         Debug.Log(
-            $"[GeneratedSkill] Row.PointerDown skill_id={(skill == null ? "" : skill.skill_id)} currentRaycast={RaycastName(eventData)} pointerPress={(eventData == null || eventData.pointerPress == null ? "" : eventData.pointerPress.name)}",
+            $"[GeneratedSkill] Row.PointerDown skill_id={(skill == null ? "" : skill.skill_id)} CurrentSelected={(EventSystem.current == null || EventSystem.current.currentSelectedGameObject == null ? "" : EventSystem.current.currentSelectedGameObject.name)} CurrentRaycast={RaycastName(eventData)} pointerPress={(eventData == null || eventData.pointerPress == null ? "" : eventData.pointerPress.name)}",
             this
         );
     }
@@ -125,7 +125,7 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour, IPointerDownHan
     public void OnPointerClick(PointerEventData eventData)
     {
         Debug.Log(
-            $"[GeneratedSkill] Row.PointerClick skill_id={(skill == null ? "" : skill.skill_id)} currentRaycast={RaycastName(eventData)} pointerPress={(eventData == null || eventData.pointerPress == null ? "" : eventData.pointerPress.name)}",
+            $"[GeneratedSkill] Row.PointerClick skill_id={(skill == null ? "" : skill.skill_id)} CurrentSelected={(EventSystem.current == null || EventSystem.current.currentSelectedGameObject == null ? "" : EventSystem.current.currentSelectedGameObject.name)} CurrentRaycast={RaycastName(eventData)} pointerPress={(eventData == null || eventData.pointerPress == null ? "" : eventData.pointerPress.name)}",
             this
         );
         if (eventData != null && eventData.pointerPress == gameObject)

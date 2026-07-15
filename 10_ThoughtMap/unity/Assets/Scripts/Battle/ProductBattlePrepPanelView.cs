@@ -115,6 +115,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         EnsurePersonalLibraryApiClient();
         WireButtons();
         EnsureTopControlReadability();
+        RepairBattlePrepTmpInputFields();
         EnsureBattlePrepBackground();
         EnsurePanelTransparency();
         EnsureReadableTextEffects();
@@ -982,6 +983,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
                 .ThenBy(skill => skill.skill_id)
                 .ToList();
         }
+        Debug.Log(
+            $"[GeneratedSkill] RenderGeneratedSkills GeneratedSkill Count={generatedSkills.Count} DeckMatched Count={GetDeckMatchedGeneratedSkills().Count} Rendered Row Count={deckMatchedSkills.Count} deckCount={deckCards.Count} selectedSkill={selectedGeneratedSkillId} fallbackAll={usedDebugFallback}",
+            this
+        );
         generatedSkillsPanel.SetSelectedSkill(selectedGeneratedSkillId);
         generatedSkillsPanel.Render(
             deckMatchedSkills,
@@ -1941,6 +1946,87 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             placeholder.enableWordWrapping = false;
             placeholder.overflowMode = TextOverflowModes.Ellipsis;
         }
+
+        RepairTmpInputField(input);
+    }
+
+    private void RepairBattlePrepTmpInputFields()
+    {
+        TMP_InputField[] inputs = GetComponentsInChildren<TMP_InputField>(true);
+        foreach (TMP_InputField input in inputs)
+        {
+            RepairTmpInputField(input);
+        }
+    }
+
+    private void RepairTmpInputField(TMP_InputField input)
+    {
+        if (input == null)
+        {
+            return;
+        }
+
+        RectTransform inputRect = input.transform as RectTransform;
+        if (inputRect == null)
+        {
+            return;
+        }
+
+        RectTransform viewport = input.textViewport;
+        if (viewport == null)
+        {
+            Transform existing = input.transform.Find("Text Area");
+            if (existing == null)
+            {
+                existing = input.transform.Find("Viewport");
+            }
+
+            GameObject viewportObject = existing == null
+                ? new GameObject("Text Area", typeof(RectTransform), typeof(RectMask2D))
+                : existing.gameObject;
+            viewportObject.transform.SetParent(input.transform, false);
+            viewport = viewportObject.GetComponent<RectTransform>();
+            if (viewport == null)
+            {
+                viewport = viewportObject.AddComponent<RectTransform>();
+            }
+            if (viewportObject.GetComponent<RectMask2D>() == null)
+            {
+                viewportObject.AddComponent<RectMask2D>();
+            }
+            input.textViewport = viewport;
+            Debug.Log($"[Battle] TMP_InputField repaired textViewport input={input.gameObject.name} viewport={viewport.gameObject.name}", this);
+        }
+
+        viewport.anchorMin = Vector2.zero;
+        viewport.anchorMax = Vector2.one;
+        viewport.offsetMin = new Vector2(6f, 2f);
+        viewport.offsetMax = new Vector2(-6f, -2f);
+
+        if (input.textComponent == null)
+        {
+            TMP_Text text = input.GetComponentInChildren<TMP_Text>(true);
+            if (text == null || text == input.placeholder)
+            {
+                GameObject textObject = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
+                textObject.transform.SetParent(viewport, false);
+                text = textObject.GetComponent<TMP_Text>();
+            }
+            input.textComponent = text;
+            Debug.Log($"[Battle] TMP_InputField repaired textComponent input={input.gameObject.name} text={text.gameObject.name}", this);
+        }
+
+        RectTransform textRect = input.textComponent.transform as RectTransform;
+        if (textRect != null)
+        {
+            textRect.SetParent(viewport, false);
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+        }
+
+        input.textComponent.raycastTarget = false;
     }
 
     private void EnsureReadableTextEffects()

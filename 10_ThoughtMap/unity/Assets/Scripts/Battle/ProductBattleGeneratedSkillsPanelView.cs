@@ -1,11 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
-public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
+public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDownHandler
 {
     [SerializeField] private TMP_FontAsset overrideFontAsset;
     [SerializeField] private Transform content;
@@ -97,6 +99,15 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
             rows.Add(row);
         }
 
+        Canvas.ForceUpdateCanvases();
+        if (content is RectTransform contentRect)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+        }
+        Canvas.ForceUpdateCanvases();
+
+        LogScrollState(ordered.Count);
+
         if (debugLog)
         {
             Debug.Log($"[GeneratedSkill] rendered={ordered.Count} selectedCardDocId={selectedCardDocId}", this);
@@ -138,6 +149,14 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
         }
     }
 
+    private void Update()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            LogPointerRaycast("MouseDown");
+        }
+    }
+
     [ContextMenu("Ensure Generated Skills Panel")]
     public void EnsureBuilt()
     {
@@ -153,6 +172,9 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
             image = gameObject.AddComponent<Image>();
         }
         image.color = new Color(0.015f, 0.03f, 0.04f, 0.68f);
+        image.raycastTarget = false;
+
+        EnsureCanvasRaycaster();
 
         if (headingText == null)
         {
@@ -212,6 +234,7 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
 
     private void ConfigureContent(Transform target)
     {
+        DisableConflictingLayoutGroups(target);
         RectTransform rect = target as RectTransform;
         if (rect != null)
         {
@@ -249,6 +272,48 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
         scrollRect.movementType = ScrollRect.MovementType.Clamped;
     }
 
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        Debug.Log(
+            $"[GeneratedSkill] Panel.PointerDown currentSelected={(EventSystem.current == null || EventSystem.current.currentSelectedGameObject == null ? "" : EventSystem.current.currentSelectedGameObject.name)} currentRaycast={(eventData == null || eventData.pointerCurrentRaycast.gameObject == null ? "" : eventData.pointerCurrentRaycast.gameObject.name)} pointerPress={(eventData == null || eventData.pointerPress == null ? "" : eventData.pointerPress.name)}",
+            this
+        );
+    }
+
+    private void LogPointerRaycast(string reason)
+    {
+        if (EventSystem.current == null)
+        {
+            Debug.LogWarning($"[GeneratedSkill] Raycast {reason} EventSystem missing.", this);
+            return;
+        }
+
+        PointerEventData pointer = new PointerEventData(EventSystem.current)
+        {
+            position = Input.mousePosition
+        };
+        List<RaycastResult> results = new List<RaycastResult>();
+        EventSystem.current.RaycastAll(pointer, results);
+
+        StringBuilder builder = new StringBuilder();
+        int limit = Mathf.Min(results.Count, 12);
+        for (int i = 0; i < limit; i++)
+        {
+            RaycastResult result = results[i];
+            if (i > 0)
+            {
+                builder.Append(" > ");
+            }
+            builder.Append(result.gameObject == null ? "null" : result.gameObject.name);
+        }
+
+        Debug.Log(
+            $"[GeneratedSkill] EventSystemRaycast reason={reason} CurrentSelected={(EventSystem.current.currentSelectedGameObject == null ? "" : EventSystem.current.currentSelectedGameObject.name)} " +
+            $"first={(results.Count == 0 || results[0].gameObject == null ? "" : results[0].gameObject.name)} count={results.Count} path={builder}",
+            this
+        );
+    }
+
     private ProductBattleGeneratedSkillRowView CreateRow()
     {
         ProductBattleGeneratedSkillRowView row;
@@ -264,6 +329,58 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour
         }
         row.SetFontAsset(overrideFontAsset);
         return row;
+    }
+
+    private void EnsureCanvasRaycaster()
+    {
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas == null)
+        {
+            Debug.LogWarning("[GeneratedSkill] Canvas missing for Generated Skills Panel.", this);
+            return;
+        }
+
+        GraphicRaycaster raycaster = canvas.GetComponent<GraphicRaycaster>();
+        if (raycaster == null)
+        {
+            raycaster = canvas.gameObject.AddComponent<GraphicRaycaster>();
+            Debug.LogWarning($"[GeneratedSkill] GraphicRaycaster was missing and has been added to Canvas={canvas.gameObject.name}.", canvas);
+        }
+        else
+        {
+            Debug.Log($"[GeneratedSkill] GraphicRaycaster present Canvas={canvas.gameObject.name} enabled={raycaster.enabled}", canvas);
+        }
+    }
+
+    private void LogScrollState(int generatedSkillCount)
+    {
+        RectTransform contentRect = content as RectTransform;
+        ScrollRect scrollRect = GetComponent<ScrollRect>();
+        RectTransform viewport = scrollRect == null ? null : scrollRect.viewport;
+        Debug.Log(
+            $"[GeneratedSkill] Layout generatedSkillCount={generatedSkillCount} renderedRowCount={rows.Count} " +
+            $"contentHeight={(contentRect == null ? -1f : contentRect.rect.height):0.##} " +
+            $"viewportHeight={(viewport == null ? -1f : viewport.rect.height):0.##} " +
+            $"scrollVertical={(scrollRect != null && scrollRect.vertical)} content={(contentRect == null ? "null" : contentRect.name)} viewport={(viewport == null ? "null" : viewport.name)}",
+            this
+        );
+    }
+
+    private static void DisableConflictingLayoutGroups(Transform target)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        LayoutGroup[] groups = target.GetComponents<LayoutGroup>();
+        foreach (LayoutGroup group in groups)
+        {
+            if (group != null && !(group is VerticalLayoutGroup))
+            {
+                group.enabled = false;
+            }
+        }
     }
 
     private TMP_Text CreateText(string objectName, Vector2 min, Vector2 max, string textValue, float fontSize, TextAlignmentOptions alignment)
