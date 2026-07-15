@@ -11,12 +11,13 @@ import zipfile
 import tempfile
 import io
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
 import numpy as np
 import pandas as pd
 import streamlit as st
+
+from personal_library_admin import render_personal_library_admin
 
 
 logger = logging.getLogger(__name__)
@@ -110,18 +111,6 @@ THOUGHT_PARAMETER_ALIASES = {
     "economic": "economy",
     "moral": "morality",
     "ideal": "ideology",
-}
-THOUGHT_PARAMETER_PROMPTS = {
-    "philosophy": "truth, existence, meaning, reality, wisdom, being, knowledge",
-    "psychology": "mind, emotion, memory, desire, behavior, motivation",
-    "science": "science, logic, experiment, evidence, observation, theory",
-    "economy": "economy, exchange, value, labor, market, resource, wealth",
-    "karma": "karma, consequence, fate, cause, responsibility, return",
-    "emotion": "emotion, feeling, passion, grief, joy, anger, empathy",
-    "morality": "morality, ethics, justice, virtue, duty, good, evil",
-    "ideology": "ideal, ideology, belief, vision, principle, hope, purpose",
-    "individual": "individual, self, identity, agency, solitude, personal life",
-    "community": "community, society, relation, cooperation, family, collective",
 }
 
 DEFAULT_FILTERS = {
@@ -267,55 +256,6 @@ def parameter_rows_from_embedding_row(row: pd.Series) -> list[dict[str, object]]
     return out
 
 
-def parse_embedding_value(value: object) -> np.ndarray | None:
-    if value is None:
-        return None
-    if isinstance(value, str):
-        text = value.strip()
-        if not text:
-            return None
-        try:
-            value = json.loads(text)
-        except json.JSONDecodeError:
-            try:
-                value = [float(part) for part in re.split(r"[\s,]+", text) if part]
-            except ValueError:
-                return None
-    try:
-        array = np.asarray(value, dtype=float)
-    except (TypeError, ValueError):
-        return None
-    if array.ndim != 1 or array.size == 0:
-        return None
-    return array
-
-
-def score_source_of_thought_parameters_for_embeddings(
-    embeddings: list[np.ndarray],
-) -> list[list[dict[str, object]]]:
-    if not embeddings:
-        return []
-    model = load_model()
-    prompt_embeddings = model.encode(
-        [THOUGHT_PARAMETER_PROMPTS[key] for key in THOUGHT_PARAMETER_KEYS],
-        show_progress_bar=False,
-    )
-    prompt_array = np.asarray(prompt_embeddings, dtype=float)
-    scored_rows = []
-    for embedding in embeddings:
-        if prompt_array.ndim != 2 or prompt_array.shape[1] != embedding.size:
-            raise ValueError(
-                f"Embedding dimension mismatch: document={embedding.size}, prompts={prompt_array.shape}"
-            )
-        values = []
-        for key, prompt_vec in zip(THOUGHT_PARAMETER_KEYS, prompt_array):
-            denom = float(np.linalg.norm(embedding) * np.linalg.norm(prompt_vec))
-            similarity = float(np.dot(embedding, prompt_vec) / denom) if denom else 0.0
-            values.append({"key": key, "value": round(max(0.0, min(1.0, similarity)) * 100.0, 2)})
-        scored_rows.append(values)
-    return scored_rows
-
-
 def call_health_api(api_base_url: str, timeout_seconds: int) -> dict[str, object]:
     url = build_api_url(api_base_url, "/health")
     started = time.perf_counter()
@@ -336,79 +276,6 @@ def call_health_api(api_base_url: str, timeout_seconds: int) -> dict[str, object
         return {
             "ok": False,
             "url": url,
-            "status_code": getattr(exc, "code", None),
-            "response_text": _read_error_body(exc),
-            "elapsed_seconds": round(time.perf_counter() - started, 3),
-            "exception_type": type(exc).__name__,
-            "exception_message": str(exc),
-        }
-
-
-def get_saved_documents_by_email(
-    api_base_url: str,
-    email: str,
-    timeout_seconds: int = 90,
-) -> dict[str, object]:
-    query = urlencode({"email": normalize_registered_email(email)})
-    url = build_api_url(api_base_url, f"/users/by-email/saved?{query}")
-    request = Request(url, headers={"Accept": "application/json"}, method="GET")
-    started = time.perf_counter()
-    try:
-        with urlopen(request, timeout=timeout_seconds) as response:
-            body = response.read().decode("utf-8", errors="replace")
-            payload = json.loads(body) if body.strip() else {}
-            works = payload.get("works") if isinstance(payload, dict) else None
-            return {
-                "ok": 200 <= int(response.status) < 300,
-                "url": url,
-                "status_code": int(response.status),
-                "response_text": body[:2000],
-                "elapsed_seconds": round(time.perf_counter() - started, 3),
-                "works": works if isinstance(works, list) else [],
-                "exception_type": "",
-                "exception_message": "",
-            }
-    except Exception as exc:
-        return {
-            "ok": False,
-            "url": url,
-            "status_code": getattr(exc, "code", None),
-            "response_text": _read_error_body(exc),
-            "elapsed_seconds": round(time.perf_counter() - started, 3),
-            "works": [],
-            "exception_type": type(exc).__name__,
-            "exception_message": str(exc),
-        }
-
-
-def delete_saved_document_by_email(
-    api_base_url: str,
-    email: str,
-    doc_id: str,
-    timeout_seconds: int = 90,
-) -> dict[str, object]:
-    query = urlencode({"email": normalize_registered_email(email)})
-    url = build_api_url(api_base_url, f"/users/by-email/saved/{quote(str(doc_id), safe='')}?{query}")
-    request = Request(url, headers={"Accept": "application/json"}, method="DELETE")
-    started = time.perf_counter()
-    try:
-        with urlopen(request, timeout=timeout_seconds) as response:
-            body = response.read().decode("utf-8", errors="replace")
-            return {
-                "ok": 200 <= int(response.status) < 300,
-                "url": url,
-                "doc_id": doc_id,
-                "status_code": int(response.status),
-                "response_text": body,
-                "elapsed_seconds": round(time.perf_counter() - started, 3),
-                "exception_type": "",
-                "exception_message": "",
-            }
-    except Exception as exc:
-        return {
-            "ok": False,
-            "url": url,
-            "doc_id": doc_id,
             "status_code": getattr(exc, "code", None),
             "response_text": _read_error_body(exc),
             "elapsed_seconds": round(time.perf_counter() - started, 3),
@@ -529,154 +396,6 @@ def post_save_document_by_email(
             "exception_message": str(exc),
             "request_json": payload,
         }
-
-
-def render_personal_library_management(
-    api_base_url: str,
-    email: str,
-    timeout_seconds: int,
-) -> None:
-    st.subheader("Personal Library Management")
-    st.caption("Delete saved works or recalculate Source of Thought parameters from saved embeddings.")
-
-    load_result = get_saved_documents_by_email(api_base_url, email, timeout_seconds)
-    if not load_result.get("ok"):
-        st.warning("Could not load Personal Library.")
-        with st.expander("Personal Library load debug"):
-            st.write({key: value for key, value in load_result.items() if key != "works"})
-        return
-
-    works = list(load_result.get("works") or [])
-    st.caption(f"Loaded {len(works)} saved work(s).")
-    if not works:
-        st.info("Personal Library is empty.")
-        return
-
-    rows = []
-    work_by_doc_id = {}
-    for work in works:
-        doc_id = str(work.get("doc_id", "") or "")
-        if not doc_id:
-            continue
-        work_by_doc_id[doc_id] = work
-        parameters = work.get("parameters") if isinstance(work.get("parameters"), list) else []
-        rows.append({
-            "select": False,
-            "doc_id": doc_id,
-            "title": work.get("title", ""),
-            "author": work.get("author", ""),
-            "source": work.get("source", ""),
-            "category": work.get("category", ""),
-            "parameters": len(parameters),
-            "has_embedding": parse_embedding_value(work.get("embedding")) is not None,
-            "saved_at": work.get("saved_at", ""),
-        })
-
-    editor_df = pd.DataFrame(rows)
-    edited = st.data_editor(
-        editor_df,
-        hide_index=True,
-        use_container_width=True,
-        key="personal_library_management_editor",
-        disabled=[col for col in editor_df.columns if col != "select"],
-        column_config={
-            "select": st.column_config.CheckboxColumn("Select"),
-            "doc_id": st.column_config.TextColumn("doc_id", width="medium"),
-            "title": st.column_config.TextColumn("Title", width="large"),
-            "parameters": st.column_config.NumberColumn("Parameters"),
-            "has_embedding": st.column_config.CheckboxColumn("Embedding"),
-        },
-    )
-    selected_doc_ids = edited.loc[edited["select"], "doc_id"].astype(str).tolist()
-    st.caption(f"Selected {len(selected_doc_ids)} work(s).")
-
-    action_col1, action_col2 = st.columns(2)
-    with action_col1:
-        if st.button("Delete Selected", disabled=not selected_doc_ids, type="secondary"):
-            results = [
-                delete_saved_document_by_email(api_base_url, email, doc_id, timeout_seconds)
-                for doc_id in selected_doc_ids
-            ]
-            deleted_count = sum(1 for item in results if item.get("ok"))
-            failed_count = len(results) - deleted_count
-            if failed_count:
-                st.error(f"Deleted {deleted_count}, failed {failed_count}.")
-            else:
-                st.success(f"Deleted {deleted_count} saved work(s).")
-            with st.expander("Delete debug"):
-                st.write(results)
-            _rerun_streamlit()
-
-    with action_col2:
-        if st.button("Recalculate Parameters", disabled=not selected_doc_ids, type="primary"):
-            selected_works = [work_by_doc_id[doc_id] for doc_id in selected_doc_ids if doc_id in work_by_doc_id]
-            embeddings = []
-            valid_works = []
-            skipped = []
-            for work in selected_works:
-                embedding = parse_embedding_value(work.get("embedding"))
-                if embedding is None:
-                    skipped.append({"doc_id": work.get("doc_id"), "reason": "missing embedding"})
-                    continue
-                embeddings.append(embedding)
-                valid_works.append(work)
-
-            if not valid_works:
-                st.warning("No selected saved works have embeddings to recalculate.")
-                if skipped:
-                    with st.expander("Recalculate skipped works"):
-                        st.write(skipped)
-                return
-
-            try:
-                parameter_rows = score_source_of_thought_parameters_for_embeddings(embeddings)
-            except Exception as exc:
-                st.error(f"Parameter recalculation failed: {type(exc).__name__}: {exc}")
-                return
-
-            progress = st.progress(0)
-            results = []
-            for index, (work, parameters) in enumerate(zip(valid_works, parameter_rows), start=1):
-                progress.progress(index / max(1, len(valid_works)))
-                result = post_save_document_by_email(
-                    api_base_url=api_base_url,
-                    email=email,
-                    doc_id=str(work.get("doc_id", "")),
-                    title=str(work.get("title", "")),
-                    author=str(work.get("author", "")),
-                    source=str(work.get("source", "")),
-                    category=str(work.get("category", "")),
-                    url=str(work.get("url", "") or work.get("source_url", "") or ""),
-                    source_url=str(work.get("source_url", "") or work.get("url", "") or ""),
-                    original_doc_id=str(work.get("original_doc_id", "") or work.get("doc_id", "")),
-                    embedding=work.get("embedding"),
-                    model_name=str(work.get("model_name", "") or MODEL_NAME),
-                    parameters=parameters,
-                    timeout_seconds=timeout_seconds,
-                )
-                results.append(result)
-
-            success_count = sum(1 for item in results if item.get("ok"))
-            failed_count = len(results) - success_count
-            if failed_count:
-                st.error(f"Recalculated {success_count}, failed {failed_count}.")
-            else:
-                st.success(f"Recalculated parameters for {success_count} saved work(s).")
-            if skipped:
-                st.warning(f"Skipped {len(skipped)} work(s) without embeddings.")
-            with st.expander("Recalculate debug"):
-                st.write({
-                    "updated": results,
-                    "skipped": skipped,
-                })
-            _rerun_streamlit()
-
-
-def _rerun_streamlit() -> None:
-    if hasattr(st, "rerun"):
-        st.rerun()
-    if hasattr(st, "experimental_rerun"):
-        st.experimental_rerun()
 
 
 def _read_error_body(exc: BaseException) -> str:
@@ -1777,10 +1496,11 @@ with tab6:
             with st.expander("Personal save debug"):
                 st.write(debug_rows)
         st.markdown("---")
-        render_personal_library_management(
+        render_personal_library_admin(
             api_base_url=personal_api_base_url,
             email=registered_email,
             timeout_seconds=int(personal_api_timeout_seconds),
+            key_prefix="app_personal_admin",
         )
     else:
         st.info("Enter a registered email in the sidebar to save to the Personal Library.")
