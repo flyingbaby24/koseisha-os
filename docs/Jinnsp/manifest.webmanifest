@@ -1,0 +1,33 @@
+{
+  "id": "/jinnsp/",
+  "name": "JinnSP",
+  "short_name": "JinnSP",
+  "description": "A platform-independent music and video library player for direct media URLs and user-selected local files.",
+  "start_url": "/jinnsp/",
+  "scope": "/jinnsp/",
+  "display": "standalone",
+  "background_color": "#f5f6f1",
+  "theme_color": "#245f63",
+  "orientation": "any",
+  "categories": ["music", "video", "productivity"],
+  "icons": [
+    {
+      "src": "/jinnsp/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/jinnsp/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/jinnsp/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
