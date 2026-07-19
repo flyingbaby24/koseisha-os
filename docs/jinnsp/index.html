@@ -3,72 +3,67 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#245f63" />
-    <meta name="description" content="JinnSP is a platform-independent music and video library player for direct media URLs and user-selected local files." />
+    <meta name="theme-color" content="#2f6f73" />
     <title>JinnSP</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="app-shell">
+    <div class="app">
       <aside class="sidebar">
         <div class="brand">
-          <img src="./icons/icon.svg" alt="" />
+          <span class="mark"></span>
           <div>
             <strong>JinnSP</strong>
-            <small>Independent media library</small>
-            <small id="buildStamp">PWA build loading</small>
+            <small>portable music library</small>
           </div>
         </div>
 
         <section class="panel">
           <h2>Open</h2>
-          <div class="stack">
-            <label>
-              Direct media URL
-              <input id="urlInput" type="url" placeholder="https://example.com/song.mp3" />
-            </label>
-            <div class="two">
-              <select id="urlMediaType">
-                <option value="audio">Audio</option>
-                <option value="video">Video</option>
-              </select>
-              <button id="openUrl" class="primary">Open URL</button>
-            </div>
-            <button id="saveUrl">Add URL to library</button>
-          </div>
-          <label class="file-picker">
-            <span>Open local files</span>
-            <input id="fileInput" type="file" multiple accept="audio/*,video/*" />
+          <p class="hint">Open files or direct media URLs for this browser session. Local files are not uploaded.</p>
+          <label class="file-button primary">
+            Fileを開く
+            <input id="openFileInput" type="file" accept="audio/*,video/*" multiple />
           </label>
-          <p class="hint">GitHub Pages cannot scan folders or read absolute local paths. Choose files from the browser, or add direct HTTP/HTTPS media URLs.</p>
-          <div id="statusLine" class="status">Ready</div>
-        </section>
-
-        <section class="panel">
-          <h2>Library data</h2>
-          <div class="two">
-            <button id="exportLibrary">Export JSON</button>
-            <label class="file-button">Import JSON<input id="importLibrary" type="file" accept="application/json,.json" /></label>
+          <label>Direct media URL
+            <input id="urlInput" placeholder="https://example.com/song.mp3" />
+          </label>
+          <div class="row">
+            <select id="urlMediaType">
+              <option value="audio">Audio</option>
+              <option value="video">Video</option>
+            </select>
+            <button id="openUrl">URLを開く</button>
           </div>
-          <button id="resetLocalData" class="danger">Reset local edits</button>
-          <p class="hint">Seed data loads from <code>data/library.json</code> and <code>data/playlists.json</code>. Browser edits are stored locally.</p>
+          <div id="openStatus" class="status">Ready</div>
         </section>
 
-        <section class="panel">
-          <h2>Install</h2>
-          <button id="installApp" disabled>Install app</button>
-          <div id="pwaStatus" class="status">Checking PWA support...</div>
+        <section class="panel settings">
+          <h2>Settings</h2>
+          <div class="settings-block">
+            <strong>Backup</strong>
+            <p class="hint">Backup saves this browser's full JinnSP data, including playlists and locally edited metadata. Use CSV when you want spreadsheet editing.</p>
+            <button id="downloadBackup">Download backup</button>
+            <label class="file-button">
+              Restore backup
+              <input id="restoreBackup" type="file" accept="application/json,.json" />
+            </label>
+          </div>
+          <div class="settings-block danger-zone">
+            <strong>Danger zone</strong>
+            <p class="hint">This clears only edits stored in this browser. Published seed data remains available.</p>
+            <button id="resetLocalData" class="danger">Reset local edits</button>
+          </div>
         </section>
       </aside>
 
       <main>
-        <section class="player">
+        <section class="player" aria-label="Now playing">
           <div class="now">
             <small>Now playing</small>
-            <strong id="nowTitle">Nothing selected</strong>
+            <strong id="nowTitle">Choose a track</strong>
             <small id="nowMeta">Queue: 0</small>
           </div>
           <video id="video" playsinline controls></video>
@@ -79,76 +74,93 @@
             <button id="next">Next</button>
             <button id="shuffle">Shuffle</button>
             <button id="repeat">Repeat off</button>
-            <label class="seek"><span id="timeNow">0:00</span><input id="seek" type="range" min="0" max="1000" value="0" /><span id="timeTotal">0:00</span></label>
-            <label class="volume">Volume<input id="volume" type="range" min="0" max="1" step="0.01" value="0.8" /></label>
+            <label class="volume">Volume
+              <input id="volume" type="range" min="0" max="1" step="0.01" value="0.8" />
+            </label>
           </div>
+          <div id="playerStatus" class="status"></div>
         </section>
 
-        <header class="filters">
-          <label>Search<input id="q" placeholder="Title, creator, URL, tags" /></label>
-          <label>Media
-            <select id="mediaType">
-              <option value="">All</option>
-              <option value="audio">Audio</option>
-              <option value="video">Video</option>
-            </select>
-          </label>
-          <label>Source
-            <select id="sourceType">
-              <option value="">All sources</option>
-              <option value="url">Direct URL</option>
-              <option value="suno">Suno</option>
-              <option value="local">Local session files</option>
-            </select>
-          </label>
-          <label>Genre<input id="genre" placeholder="Genre" /></label>
-          <label>Tag<input id="tag" placeholder="Tag" /></label>
-          <label>BPM min<input id="bpmMin" type="number" /></label>
-          <label>BPM max<input id="bpmMax" type="number" /></label>
-          <label>Rating
-            <select id="rating">
-              <option value="">Any</option>
-              <option value="1">1+</option>
-              <option value="2">2+</option>
-              <option value="3">3+</option>
-              <option value="4">4+</option>
-              <option value="5">5</option>
-            </select>
-          </label>
-          <button id="clearFilters">Clear filters</button>
-        </header>
-
-        <section class="content">
+        <section class="workspace">
           <section class="library">
             <div class="section-head">
-              <h1>Track library</h1>
+              <div>
+                <h1>Track Library</h1>
+                <p class="hint">CSV is for track lists and metadata you can edit in a spreadsheet. It does not copy audio or video files.</p>
+              </div>
               <div class="actions">
-                <button id="playFiltered">Play filtered</button>
-                <button id="shuffleFiltered">Shuffle filtered</button>
-                <button id="addFilteredToPlaylist">Add filtered to playlist</button>
+                <button id="exportLibraryCsv">Export library CSV</button>
+                <label class="file-button">
+                  Import metadata CSV
+                  <input id="importMetadataCsv" type="file" accept=".csv,text/csv" />
+                </label>
               </div>
             </div>
-            <div id="trackStats" class="status">Loading tracks...</div>
-            <div id="mediaList" class="list"></div>
+
+            <div class="filters">
+              <label>Search
+                <input id="q" placeholder="title / creator / tag / source" />
+              </label>
+              <label>Media
+                <select id="mediaType">
+                  <option value="">All</option>
+                  <option value="audio">Audio</option>
+                  <option value="video">Video</option>
+                </select>
+              </label>
+              <label>Source
+                <select id="sourceType">
+                  <option value="">All sources</option>
+                  <option value="local">Local files</option>
+                  <option value="url">R2 / direct URL</option>
+                  <option value="suno">Suno</option>
+                </select>
+              </label>
+              <label>Tag
+                <input id="tag" placeholder="R2" />
+              </label>
+              <button id="clearFilters">Clear filters</button>
+            </div>
+
+            <div class="library-actions">
+              <button id="playFiltered">Play filtered</button>
+              <button id="shuffleFiltered">Shuffle filtered</button>
+              <button id="addFilteredToPlaylist">Add filtered to playlist</button>
+            </div>
+            <div id="libraryStatus" class="status"></div>
+            <div id="trackList" class="list"></div>
           </section>
 
           <section class="playlists">
             <div class="section-head">
-              <h1>Playlists</h1>
+              <div>
+                <h1>Playlist</h1>
+                <p class="hint">Playlist CSV stores the selected playlist order and track IDs for editing or moving playlists.</p>
+              </div>
               <button id="newPlaylist">New</button>
             </div>
-            <input id="playlistName" placeholder="Playlist name" />
-            <div class="actions">
-              <button id="savePlaylist" class="primary">Save</button>
-              <button id="deletePlaylist" class="danger">Delete</button>
+            <div class="playlist-editor">
+              <input id="playlistName" placeholder="playlist name" />
+              <div class="actions">
+                <button id="savePlaylist" class="primary">Save</button>
+                <button id="exportPlaylistCsv">Export playlist CSV</button>
+                <label class="file-button">
+                  Import playlist CSV
+                  <input id="importPlaylistCsv" type="file" accept=".csv,text/csv" />
+                </label>
+                <button id="deletePlaylist" class="danger">Delete</button>
+              </div>
+              <div id="playlistStatus" class="status">Saved</div>
             </div>
             <div id="playlistList" class="playlist-list"></div>
-            <div id="playlistStats" class="status">No playlist selected</div>
+            <label>Search in selected playlist
+              <input id="playlistSearch" placeholder="title / creator / source / tags" />
+            </label>
             <div id="playlistItems" class="list compact"></div>
           </section>
         </section>
       </main>
     </div>
-    <script src="./app.js" defer></script>
+    <script src="./app.js"></script>
   </body>
 </html>

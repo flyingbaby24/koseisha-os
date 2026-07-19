@@ -1,11 +1,7 @@
-{
-  "schema": "jinnsp-playlists-v1",
-  "updated_at": "2026-07-19T11:30:00+09:00",
-  "playlists": [
-    {
-      "playlist_id": "jinnsp-default",
-      "name": "JinnSP",
-      "media_ids": []
-    }
-  ]
-}
+[
+  {
+    "playlist_id": "playlist-default",
+    "name": "Jinn",
+    "media_ids": []
+  }
+]
