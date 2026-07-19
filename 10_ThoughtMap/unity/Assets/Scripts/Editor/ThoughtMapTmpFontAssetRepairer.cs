@@ -13,19 +13,31 @@ public static class ThoughtMapTmpFontAssetRepairer
 {
     private const string FontFolder = "Assets/Fonts";
     private const string RepairFontPath = "Assets/Fonts/ThoughtMapJapanese SDF.asset";
-    private const string RequiredWarmupCharacters =
-        "+-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,;:!?()[]{}_/\\'\"%→" +
-        "探求封印孤立回復浸食発動率効果時間味方敵思想共鳴";
+    private const int SamplingPointSize = 96;
+    private const int Padding = 12;
+    private const int AtlasSize = 2048;
+    private const string WarmupCharacters =
+        "+-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,;:!?()[]{}_/\\'\"%" +
+        "\u3042\u3044\u3046\u3048\u304a\u304b\u304d\u304f\u3051\u3053\u3055\u3057\u3059\u305b\u305d" +
+        "\u305f\u3061\u3064\u3066\u3068\u306a\u306b\u306c\u306d\u306e\u306f\u3072\u3075\u3078\u307b" +
+        "\u307e\u307f\u3080\u3081\u3082\u3084\u3086\u3088\u3089\u308a\u308b\u308c\u308d\u308f\u3092\u3093" +
+        "\u30a2\u30a4\u30a6\u30a8\u30aa\u30ab\u30ad\u30af\u30b1\u30b3\u30b5\u30b7\u30b9\u30bb\u30bd" +
+        "\u30bf\u30c1\u30c4\u30c6\u30c8\u30ca\u30cb\u30cc\u30cd\u30ce\u30cf\u30d2\u30d5\u30d8\u30db" +
+        "\u30de\u30df\u30e0\u30e1\u30e2\u30e4\u30e6\u30e8\u30e9\u30ea\u30eb\u30ec\u30ed\u30ef\u30f2\u30f3" +
+        "\u4e00\u4e8c\u4e09\u56db\u4e94\u516d\u4e03\u516b\u4e5d\u5341\u767e\u5343\u4e07" +
+        "\u4e0a\u4e0b\u5de6\u53f3\u524d\u5f8c\u4e2d\u5927\u5c0f\u529b\u77e5\u6027\u5fc3\u7406" +
+        "\u79d1\u5b66\u7d4c\u6e08\u54f2\u5b66\u611f\u60c5\u500b\u4eba\u5171\u540c\u4f53" +
+        "\u7406\u5ff5\u9053\u5fb3\u653b\u6483\u9632\u5fa1\u901f\u5ea6\u56de\u907f\u547d\u4e2d\u904b";
+
     private static readonly string[] PreferredOsFonts =
     {
-        "Yu Gothic UI",
-        "Meiryo",
-        "Noto Sans CJK JP",
-        "Yu Gothic",
         "Noto Sans JP",
-        "Microsoft YaHei UI",
-        "Arial",
-        "Liberation Sans"
+        "Noto Sans CJK JP",
+        "BIZ UDPGothic",
+        "Yu Gothic UI",
+        "Yu Gothic",
+        "Meiryo",
+        "Microsoft YaHei UI"
     };
 
     [MenuItem("ThoughtMap/Repair All TMP Font Assets")]
@@ -40,15 +52,16 @@ public static class ThoughtMapTmpFontAssetRepairer
 
         RepairReport report = new RepairReport
         {
-            fontPath = RepairFontPath,
-            atlasCount = GetAtlasTextureCountSafe(repairFont),
-            hasMaterial = GetMaterialSafe(repairFont) != null
+            fontPath = AssetDatabase.GetAssetPath(repairFont),
+            atlasCount = GetAtlasTextureCount(repairFont),
+            atlasMinDimension = GetAtlasMinDimension(repairFont),
+            hasMaterial = SafeMaterial(repairFont) != null
         };
 
         RegisterTmpSettings(repairFont);
         RepairOpenScenes(repairFont, report);
-        RepairAllSceneAssets(repairFont, report);
-        RepairAllPrefabs(repairFont, report);
+        RepairSceneAssets(repairFont, report);
+        RepairPrefabs(repairFont, report);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -56,11 +69,12 @@ public static class ThoughtMapTmpFontAssetRepairer
         Debug.Log(
             "[ThoughtMap TMP Repair] Complete\n" +
             $"FontAsset: {report.fontPath}\n" +
+            $"Sampling Point Size: {SamplingPointSize}, Padding: {Padding}, Atlas: {AtlasSize}x{AtlasSize}\n" +
             $"Open scenes checked: {report.scenesChecked}, scenes saved: {report.scenesSaved}\n" +
             $"Scene assets checked: {report.sceneAssetsChecked}, scene assets saved: {report.sceneAssetsSaved}\n" +
             $"Prefabs checked: {report.prefabsChecked}, prefabs saved: {report.prefabsSaved}\n" +
-            $"TMP_Text replaced: {report.replacedTextCount}\n" +
-            $"atlasTextures: {report.atlasCount}, material: {(report.hasMaterial ? "yes" : "no")}"
+            $"TMP_Text assigned: {report.replacedTextCount}\n" +
+            $"atlasTextures: {report.atlasCount}, atlasMinDimension: {report.atlasMinDimension}, material: {(report.hasMaterial ? "yes" : "no")}"
         );
     }
 
@@ -69,126 +83,113 @@ public static class ThoughtMapTmpFontAssetRepairer
         EnsureFolder(FontFolder);
 
         TMP_FontAsset existing = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(RepairFontPath);
-        if (IsUsableFontAssetSerialized(existing))
+        if (IsHighQualityFontAsset(existing))
         {
             existing.atlasPopulationMode = AtlasPopulationMode.Dynamic;
-            TryWarmUpRequiredGlyphs(existing);
+            existing.isMultiAtlasTexturesEnabled = true;
+            WarmUp(existing);
+            TuneMaterial(existing);
             EditorUtility.SetDirty(existing);
             return existing;
         }
 
         if (existing != null)
         {
-            Debug.Log("[ThoughtMap TMP Repair] Deleting incomplete repair FontAsset before regeneration: " + RepairFontPath);
+            Debug.Log("[ThoughtMap TMP Repair] Deleting incomplete or low-resolution FontAsset before regeneration: " + RepairFontPath);
             AssetDatabase.DeleteAsset(RepairFontPath);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }
 
-        TMP_FontAsset generated = CreateRepairFontAssetFromInstalledFonts(out string successFontName, out string overloadName, out string triedFontsLog);
+        TMP_FontAsset generated = CreateFromInstalledFont(out string successFont, out string overload, out string triedFonts);
         if (generated != null)
         {
+            generated.name = "ThoughtMapJapanese SDF";
+            generated.atlasPopulationMode = AtlasPopulationMode.Dynamic;
+            generated.isMultiAtlasTexturesEnabled = true;
+            TuneMaterial(generated);
+
             AssetDatabase.CreateAsset(generated, RepairFontPath);
             AssetDatabase.SaveAssets();
             AssetDatabase.ImportAsset(RepairFontPath, ImportAssetOptions.ForceUpdate);
 
             TMP_FontAsset saved = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(RepairFontPath);
-            TryWarmUpRequiredGlyphs(saved);
-            if (ValidateCreatedRepairFont(saved))
+            WarmUp(saved);
+            TuneMaterial(saved);
+
+            if (IsHighQualityFontAsset(saved))
             {
                 Debug.Log(
                     "[ThoughtMap TMP Repair] Created persistent TMP FontAsset\n" +
                     $"Path: {RepairFontPath}\n" +
-                    $"Tried OS fonts: {triedFontsLog}\n" +
-                    $"Success font: {successFontName}\n" +
-                    $"CreateFontAsset overload: {overloadName}\n" +
-                    $"atlasTextures: {GetAtlasTextureCountSafe(saved)}, material: {(GetMaterialSafe(saved) != null ? "yes" : "no")}"
+                    $"Tried OS fonts: {triedFonts}\n" +
+                    $"Success font: {successFont}\n" +
+                    $"CreateFontAsset overload: {overload}\n" +
+                    $"atlasTextures: {GetAtlasTextureCount(saved)}, material: {(SafeMaterial(saved) != null ? "yes" : "no")}"
                 );
                 return saved;
             }
 
-            Debug.LogWarning("[ThoughtMap TMP Repair] Created asset failed validation. Deleting and trying existing TMP FontAsset fallback.");
+            Debug.LogWarning("[ThoughtMap TMP Repair] Generated FontAsset failed high-quality validation. Deleting and using fallback if available.");
             AssetDatabase.DeleteAsset(RepairFontPath);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }
 
-        TMP_FontAsset fallback = FindExistingUsableTmpFontAsset();
+        TMP_FontAsset fallback = FindExistingUsableFontAsset();
         if (fallback != null)
         {
-            Debug.LogWarning(
-                "[ThoughtMap TMP Repair] Could not generate ThoughtMapJapanese SDF. " +
-                $"Using existing TMP FontAsset fallback: {AssetDatabase.GetAssetPath(fallback)}"
-            );
-            return fallback;
+            Debug.LogWarning("[ThoughtMap TMP Repair] Could not generate high-quality Noto/BIZ FontAsset. Using fallback: " + AssetDatabase.GetAssetPath(fallback));
         }
-
-        Debug.LogError(
-            "[ThoughtMap TMP Repair] All CreateFontAsset attempts failed and no usable existing TMP FontAsset was found.\n" +
-            $"Tried OS fonts: {triedFontsLog}"
-        );
-        return null;
+        else
+        {
+            Debug.LogError("[ThoughtMap TMP Repair] No usable TMP FontAsset found. Tried OS fonts: " + triedFonts);
+        }
+        return fallback;
     }
 
-    private static TMP_FontAsset CreateRepairFontAssetFromInstalledFonts(
-        out string successFontName,
-        out string overloadName,
-        out string triedFontsLog)
+    private static TMP_FontAsset CreateFromInstalledFont(out string successFont, out string overload, out string triedFonts)
     {
-        successFontName = "";
-        overloadName = "";
-        List<string> triedFonts = new List<string>();
-        string[] installedFontNames = GetInstalledFontNamesSafe();
-        HashSet<string> installed = new HashSet<string>(installedFontNames, StringComparer.OrdinalIgnoreCase);
+        successFont = "";
+        overload = "";
+        List<string> tried = new List<string>();
+        HashSet<string> installed = new HashSet<string>(GetInstalledFontNames(), StringComparer.OrdinalIgnoreCase);
 
         Debug.Log(
-            "[ThoughtMap TMP Repair] Installed OS font count: " + installedFontNames.Length + "\n" +
-            "[ThoughtMap TMP Repair] Preferred candidates: " + string.Join(", ", PreferredOsFonts)
+            "[ThoughtMap TMP Repair] Preferred OS font candidates: " + string.Join(", ", PreferredOsFonts) + "\n" +
+            "[ThoughtMap TMP Repair] Installed preferred matches: " + string.Join(", ", PreferredOsFonts.Where(installed.Contains))
         );
 
-        foreach (string osFont in PreferredOsFonts.Where(name => installed.Contains(name)))
+        foreach (string osFont in PreferredOsFonts.Where(installed.Contains))
         {
-            triedFonts.Add(osFont);
+            tried.Add(osFont);
             try
             {
-                Font font = Font.CreateDynamicFontFromOSFont(osFont, 18);
+                Font sourceFont = Font.CreateDynamicFontFromOSFont(osFont, 18);
                 Debug.Log(
-                    "[ThoughtMap TMP Repair] OS font candidate\n" +
-                    $"requested='{osFont}' returnedNull={font == null} " +
-                    $"fontName='{(font == null ? "<null>" : font.name)}' dynamic={(font != null && font.dynamic)}"
+                    "[ThoughtMap TMP Repair] OS font candidate " +
+                    $"requested='{osFont}' returnedNull={sourceFont == null} " +
+                    $"fontName='{(sourceFont == null ? "<null>" : sourceFont.name)}' dynamic={(sourceFont != null && sourceFont.dynamic)}"
                 );
 
-                if (font != null)
+                if (sourceFont == null)
                 {
-                    TMP_FontAsset asset = CreateFontAssetWithBestAvailableOverload(
-                        font,
-                        out string usedOverload
-                    );
-                    overloadName = usedOverload;
-
-                    if (asset == null)
-                    {
-                        Debug.LogWarning($"[ThoughtMap TMP Repair] TMP_FontAsset.CreateFontAsset returned null for '{osFont}'. Trying next font.");
-                        continue;
-                    }
-
-                    asset.name = "ThoughtMapJapanese SDF";
-                    asset.atlasPopulationMode = AtlasPopulationMode.Dynamic;
-                    asset.isMultiAtlasTexturesEnabled = true;
-
-                    if (!ValidateCreatedRepairFont(asset))
-                    {
-                        Debug.LogWarning(
-                            "[ThoughtMap TMP Repair] Generated TMP FontAsset failed validation for " +
-                            $"'{osFont}'. atlasTextures={GetAtlasTextureCountDirect(asset)} material={(GetMaterialSafe(asset) != null ? "yes" : "no")}"
-                        );
-                        continue;
-                    }
-
-                    successFontName = osFont;
-                    triedFontsLog = string.Join(", ", triedFonts);
-                    return asset;
+                    continue;
                 }
+
+                TMP_FontAsset asset = CreateFontAsset(sourceFont, out overload);
+                if (asset == null)
+                {
+                    Debug.LogWarning("[ThoughtMap TMP Repair] TMP_FontAsset.CreateFontAsset returned null for " + osFont);
+                    continue;
+                }
+
+                asset.name = "ThoughtMapJapanese SDF";
+                asset.atlasPopulationMode = AtlasPopulationMode.Dynamic;
+                asset.isMultiAtlasTexturesEnabled = true;
+                successFont = osFont;
+                triedFonts = string.Join(", ", tried);
+                return asset;
             }
             catch (Exception ex)
             {
@@ -196,23 +197,19 @@ public static class ThoughtMapTmpFontAssetRepairer
             }
         }
 
-        string[] missing = PreferredOsFonts.Where(name => !installed.Contains(name)).ToArray();
+        string[] missing = PreferredOsFonts.Where(font => !installed.Contains(font)).ToArray();
         if (missing.Length > 0)
         {
             Debug.Log("[ThoughtMap TMP Repair] Preferred OS fonts not installed: " + string.Join(", ", missing));
         }
 
-        triedFontsLog = triedFonts.Count == 0 ? "<none: no preferred exact matches installed>" : string.Join(", ", triedFonts);
+        triedFonts = tried.Count == 0 ? "<none>" : string.Join(", ", tried);
         return null;
     }
 
-    private static TMP_FontAsset CreateFontAssetWithBestAvailableOverload(Font font, out string usedOverload)
+    private static TMP_FontAsset CreateFontAsset(Font font, out string usedOverload)
     {
-        usedOverload = "";
-        if (font == null)
-        {
-            return null;
-        }
+        usedOverload = "<none>";
 
         try
         {
@@ -229,17 +226,17 @@ public static class ThoughtMapTmpFontAssetRepairer
                     parameters[6].ParameterType == typeof(AtlasPopulationMode) &&
                     parameters[7].ParameterType == typeof(bool))
                 {
-                    usedOverload = "TMP_FontAsset.CreateFontAsset(Font, int, int, GlyphRenderMode, int, int, AtlasPopulationMode, bool)";
+                    usedOverload = "CreateFontAsset(Font,int,int,GlyphRenderMode,int,int,AtlasPopulationMode,bool)";
                     return method.Invoke(
                         null,
                         new object[]
                         {
                             font,
-                            90,
-                            9,
+                            SamplingPointSize,
+                            Padding,
                             GlyphRenderMode.SDFAA,
-                            1024,
-                            1024,
+                            AtlasSize,
+                            AtlasSize,
                             AtlasPopulationMode.Dynamic,
                             true
                         }
@@ -255,76 +252,32 @@ public static class ThoughtMapTmpFontAssetRepairer
                 }
 
                 System.Reflection.ParameterInfo[] parameters = method.GetParameters();
-                if (parameters.Length == 6 &&
-                    parameters[0].ParameterType == typeof(Font))
+                if (parameters.Length == 6 && parameters[0].ParameterType == typeof(Font))
                 {
-                    usedOverload = "TMP_FontAsset.CreateFontAsset(Font, int, int, GlyphRenderMode, int, int)";
+                    usedOverload = "CreateFontAsset(Font,int,int,GlyphRenderMode,int,int)";
                     TMP_FontAsset asset = method.Invoke(
                         null,
                         new object[]
                         {
                             font,
-                            90,
-                            9,
+                            SamplingPointSize,
+                            Padding,
                             GlyphRenderMode.SDFAA,
-                            1024,
-                            1024
+                            AtlasSize,
+                            AtlasSize
                         }
                     ) as TMP_FontAsset;
                     if (asset != null)
                     {
                         asset.atlasPopulationMode = AtlasPopulationMode.Dynamic;
                     }
-
                     return asset;
                 }
             }
         }
         catch (Exception ex)
         {
-            Debug.LogWarning($"[ThoughtMap TMP Repair] CreateFontAsset reflection call failed: {ex.GetType().Name}: {ex.Message}");
-            return null;
-        }
-
-        usedOverload = "<no compatible TMP_FontAsset.CreateFontAsset overload found>";
-        return null;
-    }
-
-    private static string[] GetInstalledFontNamesSafe()
-    {
-        try
-        {
-            return Font.GetOSInstalledFontNames() ?? Array.Empty<string>();
-        }
-        catch (Exception ex)
-        {
-            Debug.LogWarning("[ThoughtMap TMP Repair] Font.GetOSInstalledFontNames failed: " + ex.GetType().Name + ": " + ex.Message);
-            return Array.Empty<string>();
-        }
-    }
-
-    private static TMP_FontAsset FindExistingUsableTmpFontAsset()
-    {
-        string[] guids = AssetDatabase.FindAssets("t:TMP_FontAsset", new[] { "Assets" });
-        foreach (string guid in guids)
-        {
-            string path = AssetDatabase.GUIDToAssetPath(guid);
-            if (string.IsNullOrWhiteSpace(path) || path == RepairFontPath)
-            {
-                continue;
-            }
-
-            TMP_FontAsset asset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(path);
-            if (asset != null && asset.name.IndexOf("ARIALUNI", StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                continue;
-            }
-
-            if (IsUsableFontAssetSerialized(asset))
-            {
-                TryWarmUpRequiredGlyphs(asset);
-                return asset;
-            }
+            Debug.LogWarning("[ThoughtMap TMP Repair] CreateFontAsset reflection call failed: " + ex.GetType().Name + ": " + ex.Message);
         }
 
         return null;
@@ -335,7 +288,7 @@ public static class ThoughtMapTmpFontAssetRepairer
         TMP_Settings settings = TMP_Settings.instance;
         if (settings == null)
         {
-            Debug.LogWarning("[ThoughtMap TMP Repair] TMP_Settings.instance is null. Font references were repaired, but default TMP settings were not updated.");
+            Debug.LogWarning("[ThoughtMap TMP Repair] TMP Settings asset was not found. Scene and prefab text references were still repaired.");
             return;
         }
 
@@ -369,13 +322,13 @@ public static class ThoughtMapTmpFontAssetRepairer
             }
 
             report.scenesChecked++;
-            bool sceneChanged = false;
+            bool changed = false;
             foreach (GameObject root in scene.GetRootGameObjects())
             {
-                sceneChanged |= RepairTmpTextsInRoot(root, repairFont, report, true);
+                changed |= RepairTmpTextsInRoot(root, repairFont, report, true);
             }
 
-            if (sceneChanged)
+            if (changed)
             {
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene);
@@ -384,7 +337,7 @@ public static class ThoughtMapTmpFontAssetRepairer
         }
     }
 
-    private static void RepairAllSceneAssets(TMP_FontAsset repairFont, RepairReport report)
+    private static void RepairSceneAssets(TMP_FontAsset repairFont, RepairReport report)
     {
         SceneSetup[] originalSetup = EditorSceneManager.GetSceneManagerSetup();
         string[] sceneGuids = AssetDatabase.FindAssets("t:Scene", new[] { "Assets" });
@@ -402,13 +355,13 @@ public static class ThoughtMapTmpFontAssetRepairer
                 try
                 {
                     Scene scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
-                    bool sceneChanged = false;
+                    bool changed = false;
                     foreach (GameObject root in scene.GetRootGameObjects())
                     {
-                        sceneChanged |= RepairTmpTextsInRoot(root, repairFont, report, true);
+                        changed |= RepairTmpTextsInRoot(root, repairFont, report, true);
                     }
 
-                    if (sceneChanged)
+                    if (changed)
                     {
                         EditorSceneManager.MarkSceneDirty(scene);
                         EditorSceneManager.SaveScene(scene);
@@ -417,7 +370,7 @@ public static class ThoughtMapTmpFontAssetRepairer
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"[ThoughtMap TMP Repair] Failed to repair scene asset '{path}': {ex.GetType().Name}: {ex.Message}");
+                    Debug.LogWarning($"[ThoughtMap TMP Repair] Failed to repair scene '{path}': {ex.GetType().Name}: {ex.Message}");
                 }
             }
         }
@@ -432,12 +385,12 @@ public static class ThoughtMapTmpFontAssetRepairer
             }
             catch (Exception ex)
             {
-                Debug.LogWarning("[ThoughtMap TMP Repair] Could not restore previous open scene setup: " + ex.GetType().Name + ": " + ex.Message);
+                Debug.LogWarning("[ThoughtMap TMP Repair] Could not restore previously open scenes: " + ex.GetType().Name + ": " + ex.Message);
             }
         }
     }
 
-    private static void RepairAllPrefabs(TMP_FontAsset repairFont, RepairReport report)
+    private static void RepairPrefabs(TMP_FontAsset repairFont, RepairReport report)
     {
         string[] prefabGuids = AssetDatabase.FindAssets("t:Prefab", new[] { "Assets" });
         foreach (string guid in prefabGuids)
@@ -478,6 +431,7 @@ public static class ThoughtMapTmpFontAssetRepairer
     {
         bool changed = false;
         TMP_Text[] texts = root.GetComponentsInChildren<TMP_Text>(true);
+        Material repairMaterial = SafeMaterial(repairFont);
         foreach (TMP_Text text in texts)
         {
             if (text == null)
@@ -488,8 +442,7 @@ public static class ThoughtMapTmpFontAssetRepairer
             SerializedObject serializedText = new SerializedObject(text);
             SerializedProperty fontProperty = serializedText.FindProperty("m_fontAsset");
             UnityEngine.Object currentFont = fontProperty == null ? null : fontProperty.objectReferenceValue;
-
-            if (!ShouldReplaceFont(currentFont))
+            if (currentFont == repairFont && IsUsableFontAsset(repairFont))
             {
                 continue;
             }
@@ -499,13 +452,24 @@ public static class ThoughtMapTmpFontAssetRepairer
                 fontProperty.objectReferenceValue = repairFont;
             }
 
-            Material repairMaterial = GetMaterialSafe(repairFont);
             SetMaterialPropertyIfPresent(serializedText, "m_fontSharedMaterial", repairMaterial);
             SetMaterialPropertyIfPresent(serializedText, "m_sharedMaterial", repairMaterial);
             SetMaterialPropertyIfPresent(serializedText, "m_fontMaterial", repairMaterial);
-
             serializedText.ApplyModifiedPropertiesWithoutUndo();
-            ApplyFontPropertySafe(text, repairFont, repairMaterial);
+
+            try
+            {
+                text.font = repairFont;
+                if (repairMaterial != null)
+                {
+                    text.fontSharedMaterial = repairMaterial;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ThoughtMap TMP Repair] TMP_Text refresh failed on '{text.name}': {ex.GetType().Name}: {ex.Message}");
+            }
+
             EditorUtility.SetDirty(text);
             if (recordPrefabInstance)
             {
@@ -521,7 +485,7 @@ public static class ThoughtMapTmpFontAssetRepairer
 
     private static void SetMaterialPropertyIfPresent(SerializedObject serializedText, string propertyName, Material material)
     {
-        if (serializedText == null || material == null)
+        if (material == null)
         {
             return;
         }
@@ -533,43 +497,110 @@ public static class ThoughtMapTmpFontAssetRepairer
         }
     }
 
-    private static void ApplyFontPropertySafe(TMP_Text text, TMP_FontAsset repairFont, Material repairMaterial)
+    private static void WarmUp(TMP_FontAsset fontAsset)
     {
-        if (text == null || repairFont == null)
+        if (fontAsset == null)
         {
             return;
         }
 
         try
         {
-            text.font = repairFont;
-            if (repairMaterial != null)
-            {
-                text.fontSharedMaterial = repairMaterial;
-            }
+            fontAsset.atlasPopulationMode = AtlasPopulationMode.Dynamic;
+            fontAsset.TryAddCharacters(WarmupCharacters, out _);
+            EditorUtility.SetDirty(fontAsset);
         }
         catch (Exception ex)
         {
-            Debug.LogWarning($"[ThoughtMap TMP Repair] TMP_Text property refresh failed on '{text.name}': {ex.GetType().Name}: {ex.Message}");
+            Debug.LogWarning($"[ThoughtMap TMP Repair] Glyph warmup failed for '{fontAsset.name}': {ex.GetType().Name}: {ex.Message}");
         }
     }
 
-    private static bool ShouldReplaceFont(UnityEngine.Object fontObject)
+    private static void TuneMaterial(TMP_FontAsset fontAsset)
     {
-        TMP_FontAsset fontAsset = fontObject as TMP_FontAsset;
-        TMP_FontAsset repairFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(RepairFontPath);
-        if (fontAsset != null && repairFont != null && fontAsset == repairFont && IsUsableFontAssetSerialized(fontAsset))
+        Material material = SafeMaterial(fontAsset);
+        if (material == null)
         {
-            return false;
+            return;
         }
 
-        // Normalize every scene/prefab TMP_Text onto the persistent repair asset.
-        // This avoids scene restore failures from broken assets and avoids CJK glyph gaps
-        // from otherwise-valid but non-Japanese TMP font assets.
-        return true;
+        try
+        {
+            if (material.HasProperty(ShaderUtilities.ID_OutlineWidth))
+            {
+                material.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.015f);
+            }
+
+            if (material.HasProperty(ShaderUtilities.ID_OutlineSoftness))
+            {
+                material.SetFloat(ShaderUtilities.ID_OutlineSoftness, 0f);
+            }
+
+            if (material.HasProperty(ShaderUtilities.ID_UnderlayOffsetX))
+            {
+                material.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0f);
+            }
+
+            if (material.HasProperty(ShaderUtilities.ID_UnderlayOffsetY))
+            {
+                material.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, 0f);
+            }
+
+            if (material.HasProperty(ShaderUtilities.ID_UnderlaySoftness))
+            {
+                material.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0f);
+            }
+
+            EditorUtility.SetDirty(material);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[ThoughtMap TMP Repair] Could not tune TMP material: {ex.GetType().Name}: {ex.Message}");
+        }
     }
 
-    private static bool ValidateCreatedRepairFont(TMP_FontAsset fontAsset)
+    private static TMP_FontAsset FindExistingUsableFontAsset()
+    {
+        string[] guids = AssetDatabase.FindAssets("t:TMP_FontAsset", new[] { "Assets/Fonts", "Assets" });
+        foreach (string preferredName in new[] { "Noto Sans JP", "Noto Sans CJK", "BIZ UDPGothic", "BIZ UD", "ThoughtMapJapanese" })
+        {
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                TMP_FontAsset asset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(path);
+                if (IsUsableFontAsset(asset) && asset.name.IndexOf(preferredName, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    WarmUp(asset);
+                    return asset;
+                }
+            }
+        }
+
+        foreach (string guid in guids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            TMP_FontAsset asset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(path);
+            if (asset != null && asset.name.IndexOf("ARIAL", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                continue;
+            }
+
+            if (IsUsableFontAsset(asset))
+            {
+                WarmUp(asset);
+                return asset;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsHighQualityFontAsset(TMP_FontAsset fontAsset)
+    {
+        return IsUsableFontAsset(fontAsset) && GetAtlasMinDimension(fontAsset) >= AtlasSize;
+    }
+
+    private static bool IsUsableFontAsset(TMP_FontAsset fontAsset)
     {
         if (fontAsset == null)
         {
@@ -583,121 +614,32 @@ public static class ThoughtMapTmpFontAssetRepairer
                 return false;
             }
 
-            if (fontAsset.atlasTextures[0] == null)
+            foreach (Texture2D texture in fontAsset.atlasTextures)
             {
-                return false;
-            }
-
-            if (fontAsset.material == null)
-            {
-                return false;
-            }
-
-            if (fontAsset.atlasPopulationMode != AtlasPopulationMode.Dynamic)
-            {
-                return false;
-            }
-        }
-        catch
-        {
-            return false;
-        }
-
-        return true;
-    }
-
-    private static void TryWarmUpRequiredGlyphs(TMP_FontAsset fontAsset)
-    {
-        if (fontAsset == null)
-        {
-            return;
-        }
-
-        try
-        {
-            fontAsset.atlasPopulationMode = AtlasPopulationMode.Dynamic;
-            bool success = fontAsset.TryAddCharacters(RequiredWarmupCharacters, out string missingCharacters);
-            if (!success && !string.IsNullOrEmpty(missingCharacters))
-            {
-                Debug.LogWarning(
-                    "[ThoughtMap TMP Repair] Repair font could not preload some glyphs. " +
-                    "The font is still assigned, but these characters may need another OS font: " + missingCharacters
-                );
-            }
-            EditorUtility.SetDirty(fontAsset);
-        }
-        catch (Exception ex)
-        {
-            Debug.LogWarning($"[ThoughtMap TMP Repair] Required glyph warmup failed for '{fontAsset.name}': {ex.GetType().Name}: {ex.Message}");
-        }
-    }
-
-    private static bool IsUsableFontAssetSerialized(TMP_FontAsset fontAsset)
-    {
-        if (fontAsset == null)
-        {
-            return false;
-        }
-
-        string assetPath = AssetDatabase.GetAssetPath(fontAsset);
-        if (string.IsNullOrWhiteSpace(assetPath))
-        {
-            return false;
-        }
-
-        try
-        {
-            SerializedObject serializedFont = new SerializedObject(fontAsset);
-            SerializedProperty atlasTextures = serializedFont.FindProperty("m_AtlasTextures");
-            if (atlasTextures == null || !atlasTextures.isArray || atlasTextures.arraySize == 0)
-            {
-                return false;
-            }
-
-            for (int i = 0; i < atlasTextures.arraySize; i++)
-            {
-                if (atlasTextures.GetArrayElementAtIndex(i).objectReferenceValue == null)
+                if (texture == null)
                 {
                     return false;
                 }
             }
 
-            SerializedProperty material = serializedFont.FindProperty("m_Material");
-            if (material != null && material.objectReferenceValue == null)
-            {
-                return false;
-            }
-        }
-        catch
-        {
-            return false;
-        }
-
-        try
-        {
             if (fontAsset.material == null)
             {
                 return false;
             }
+
+            return fontAsset.atlasPopulationMode == AtlasPopulationMode.Dynamic || fontAsset.characterTable.Count > 0;
         }
         catch
         {
             return false;
         }
-
-        return true;
     }
 
-    private static int GetAtlasTextureCountDirect(TMP_FontAsset fontAsset)
+    private static int GetAtlasTextureCount(TMP_FontAsset fontAsset)
     {
-        if (fontAsset == null)
-        {
-            return 0;
-        }
-
         try
         {
-            return fontAsset.atlasTextures == null ? 0 : fontAsset.atlasTextures.Length;
+            return fontAsset == null || fontAsset.atlasTextures == null ? 0 : fontAsset.atlasTextures.Length;
         }
         catch
         {
@@ -705,18 +647,17 @@ public static class ThoughtMapTmpFontAssetRepairer
         }
     }
 
-    private static int GetAtlasTextureCountSafe(TMP_FontAsset fontAsset)
+    private static int GetAtlasMinDimension(TMP_FontAsset fontAsset)
     {
-        if (fontAsset == null)
-        {
-            return 0;
-        }
-
         try
         {
-            SerializedObject serializedFont = new SerializedObject(fontAsset);
-            SerializedProperty atlasTextures = serializedFont.FindProperty("m_AtlasTextures");
-            return atlasTextures == null || !atlasTextures.isArray ? 0 : atlasTextures.arraySize;
+            if (fontAsset == null || fontAsset.atlasTextures == null || fontAsset.atlasTextures.Length == 0 || fontAsset.atlasTextures[0] == null)
+            {
+                return 0;
+            }
+
+            Texture2D texture = fontAsset.atlasTextures[0];
+            return Mathf.Min(texture.width, texture.height);
         }
         catch
         {
@@ -724,21 +665,46 @@ public static class ThoughtMapTmpFontAssetRepairer
         }
     }
 
-    private static Material GetMaterialSafe(TMP_FontAsset fontAsset)
+    private static Material SafeMaterial(TMP_FontAsset fontAsset)
     {
-        if (fontAsset == null)
-        {
-            return null;
-        }
-
         try
         {
-            return fontAsset.material;
+            return fontAsset == null ? null : fontAsset.material;
         }
         catch
         {
             return null;
         }
+    }
+
+    private static string[] GetInstalledFontNames()
+    {
+        try
+        {
+            return Font.GetOSInstalledFontNames() ?? Array.Empty<string>();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning("[ThoughtMap TMP Repair] Font.GetOSInstalledFontNames failed: " + ex.GetType().Name + ": " + ex.Message);
+            return Array.Empty<string>();
+        }
+    }
+
+    private static void EnsureFolder(string path)
+    {
+        if (AssetDatabase.IsValidFolder(path))
+        {
+            return;
+        }
+
+        string parent = System.IO.Path.GetDirectoryName(path)?.Replace("\\", "/");
+        string name = System.IO.Path.GetFileName(path);
+        if (!string.IsNullOrEmpty(parent) && !AssetDatabase.IsValidFolder(parent))
+        {
+            EnsureFolder(parent);
+        }
+
+        AssetDatabase.CreateFolder(parent, name);
     }
 
     private static bool ContainsObjectReference(SerializedProperty arrayProperty, UnityEngine.Object value)
@@ -759,31 +725,12 @@ public static class ThoughtMapTmpFontAssetRepairer
         return false;
     }
 
-    private static void EnsureFolder(string folderPath)
-    {
-        string normalized = folderPath.Replace("\\", "/");
-        if (AssetDatabase.IsValidFolder(normalized))
-        {
-            return;
-        }
-
-        string[] parts = normalized.Split('/');
-        string current = parts[0];
-        for (int i = 1; i < parts.Length; i++)
-        {
-            string next = current + "/" + parts[i];
-            if (!AssetDatabase.IsValidFolder(next))
-            {
-                AssetDatabase.CreateFolder(current, parts[i]);
-            }
-
-            current = next;
-        }
-    }
-
-    private class RepairReport
+    private struct RepairReport
     {
         public string fontPath;
+        public int atlasCount;
+        public int atlasMinDimension;
+        public bool hasMaterial;
         public int scenesChecked;
         public int scenesSaved;
         public int sceneAssetsChecked;
@@ -791,8 +738,6 @@ public static class ThoughtMapTmpFontAssetRepairer
         public int prefabsChecked;
         public int prefabsSaved;
         public int replacedTextCount;
-        public int atlasCount;
-        public bool hasMaterial;
     }
 }
 #endif

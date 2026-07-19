@@ -37,7 +37,10 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
         onSelected = selectedHandler;
         onAssign = assignHandler;
         onRemove = removeHandler;
-        Debug.Log($"[GeneratedSkill] Panel.SetHandlers selectedNull={onSelected == null} assignNull={onAssign == null} removeNull={onRemove == null}", this);
+        if (debugLog)
+        {
+            Debug.Log($"[GeneratedSkill] Panel.SetHandlers selectedNull={onSelected == null} assignNull={onAssign == null} removeNull={onRemove == null}", this);
+        }
     }
 
     public void SetSelectedSkill(string skillId)
@@ -99,7 +102,10 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
                 HandleAssign,
                 HandleRemove
             );
-            Debug.Log($"[GeneratedSkill] Panel.RenderRow skill_id={skill.skill_id} selected={skill.skill_id == selectedSkillId}", this);
+            if (debugLog)
+            {
+                Debug.Log($"[GeneratedSkill] Panel.RenderRow skill_id={skill.skill_id} selected={skill.skill_id == selectedSkillId}", this);
+            }
             rows.Add(row);
         }
 
@@ -159,7 +165,7 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
 
     private void Update()
     {
-        if (Input.GetMouseButtonDown(0))
+        if (debugLog && Input.GetMouseButtonDown(0))
         {
             LogPointerRaycast("MouseDown");
         }
@@ -282,6 +288,11 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
 
     public void OnPointerDown(PointerEventData eventData)
     {
+        if (!debugLog)
+        {
+            return;
+        }
+
         Debug.Log(
             $"[GeneratedSkill] Panel.PointerDown currentSelected={(EventSystem.current == null || EventSystem.current.currentSelectedGameObject == null ? "" : EventSystem.current.currentSelectedGameObject.name)} currentRaycast={(eventData == null || eventData.pointerCurrentRaycast.gameObject == null ? "" : eventData.pointerCurrentRaycast.gameObject.name)} pointerPress={(eventData == null || eventData.pointerPress == null ? "" : eventData.pointerPress.name)}",
             this
@@ -290,6 +301,11 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
 
     private void LogPointerRaycast(string reason)
     {
+        if (!debugLog)
+        {
+            return;
+        }
+
         if (EventSystem.current == null)
         {
             Debug.LogWarning($"[GeneratedSkill] Raycast {reason} EventSystem missing.", this);
@@ -352,9 +368,12 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
         if (raycaster == null)
         {
             raycaster = canvas.gameObject.AddComponent<GraphicRaycaster>();
-            Debug.LogWarning($"[GeneratedSkill] GraphicRaycaster was missing and has been added to Canvas={canvas.gameObject.name}.", canvas);
+            if (debugLog)
+            {
+                Debug.LogWarning($"[GeneratedSkill] GraphicRaycaster was missing and has been added to Canvas={canvas.gameObject.name}.", canvas);
+            }
         }
-        else
+        else if (debugLog)
         {
             Debug.Log($"[GeneratedSkill] GraphicRaycaster present Canvas={canvas.gameObject.name} enabled={raycaster.enabled}", canvas);
         }
@@ -362,6 +381,11 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
 
     private void LogScrollState(int generatedSkillCount)
     {
+        if (!debugLog)
+        {
+            return;
+        }
+
         RectTransform contentRect = content as RectTransform;
         ScrollRect scrollRect = GetComponent<ScrollRect>();
         RectTransform viewport = scrollRect == null ? null : scrollRect.viewport;
@@ -436,19 +460,28 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
     private void HandleSelected(GeneratedSkillDto skill)
     {
         selectedSkillId = skill == null ? "" : skill.skill_id;
-        Debug.Log($"[GeneratedSkill] Panel.Select skill_id={selectedSkillId} onSelectedNull={onSelected == null}", this);
+        if (debugLog)
+        {
+            Debug.Log($"[GeneratedSkill] Panel.Select skill_id={selectedSkillId} onSelectedNull={onSelected == null}", this);
+        }
         onSelected?.Invoke(skill);
     }
 
     private void HandleAssign(GeneratedSkillDto skill)
     {
-        Debug.Log($"[GeneratedSkill] Panel.Assign skill_id={(skill == null ? "" : skill.skill_id)} onAssignNull={onAssign == null}", this);
+        if (debugLog)
+        {
+            Debug.Log($"[GeneratedSkill] Panel.Assign skill_id={(skill == null ? "" : skill.skill_id)} onAssignNull={onAssign == null}", this);
+        }
         onAssign?.Invoke(skill);
     }
 
     private void HandleRemove(GeneratedSkillDto skill)
     {
-        Debug.Log($"[GeneratedSkill] Panel.Remove skill_id={(skill == null ? "" : skill.skill_id)} onRemoveNull={onRemove == null}", this);
+        if (debugLog)
+        {
+            Debug.Log($"[GeneratedSkill] Panel.Remove skill_id={(skill == null ? "" : skill.skill_id)} onRemoveNull={onRemove == null}", this);
+        }
         onRemove?.Invoke(skill);
     }
 

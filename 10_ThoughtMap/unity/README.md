@@ -205,6 +205,22 @@ Create the placeholder scene from Unity Editor:
 Tools > Source of Thought > Create BattleScene
 ```
 
+This creates the initial formal battle scene scaffold:
+
+- root `BattleScene`
+- `Main Camera`
+- `Directional Light`
+- `BattleCanvas`
+- `EventSystem`
+- `BattleRoot`
+- `Effects`
+- `Background`
+
+`BattleCanvas` contains `TopBar`, `TurnText`, `BattleLog`, and `SpeedOrder`.
+`BattleRoot` contains `PlayerTeam` and `EnemyTeam`.
+
+The initial scene is view-only. It uses `BattleSceneController`, `BattleFieldView`, `BattleCardView`, `BattleHudView`, `BattleLogView`, and `SpeedOrderView` to render static placeholder teams and HUD elements. Combat logic, AI, turn progression, skills, effects, and animation remain future work.
+
 Open:
 
 ```text
@@ -2029,3 +2045,55 @@ Display examples:
 
 - Unplaced or no modifier: `P.ATK 80`
 - Placed with resonance: `P.ATK 80 +15% -> 92`
+
+## Battle Prep Personal Library Source
+
+Battle Prep can load cards from the same FastAPI backend used by the web and search clients. Unity should not know where the official database is stored; GitHub, Zenodo, SQLite, or repository internals stay behind FastAPI.
+
+Endpoint used by Unity:
+
+```text
+GET /users/by-email/saved?email={email}
+```
+
+Default API base URL:
+
+```text
+https://koseisha-os.onrender.com
+```
+
+Scene wiring:
+
+1. Select `ProductBattlePrepPanel`.
+2. Confirm it has `ThoughtMapPersonalLibraryApiClient`.
+3. In `ProductBattlePrepPanelView`, assign:
+   - `Personal Library Api Client`
+   - `Personal Email Input`
+   - `Load Personal Library Button`
+4. If any reference is missing, run:
+
+```text
+Tools > Source of Thought > Repair Product Battle Prep Controls
+```
+
+Runtime behavior:
+
+- Enter the registered email in `PersonalEmailInput`.
+- Press `Load Personal`.
+- The response `works` list is converted into `ThoughtMapBattleCardData`.
+- Converted cards are marked with `dataScope = personal`.
+- The original document id is kept as `sourceDocId`.
+- Existing `cards.csv` loading remains available through `Load Cards`.
+- If the API fails and no cards are loaded, Battle Prep falls back to sample cards when `Fallback To Sample Cards On Api Error` is enabled.
+
+Current accepted response fields:
+
+- `doc_id`
+- `title`
+- `author`
+- `source`
+- `saved_at`
+- `original_doc_id`
+- `parameters`
+
+The Unity DTO also accepts optional `category`, `url`, and `source_url` if the API returns them. It accepts either a `works` array or the older `items` array.

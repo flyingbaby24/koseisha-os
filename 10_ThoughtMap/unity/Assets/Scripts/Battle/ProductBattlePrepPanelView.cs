@@ -73,6 +73,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     [SerializeField] private Sprite battlePrepBackground;
     [SerializeField] private Image backgroundImage;
     [SerializeField] private Image darkOverlayImage;
+    [SerializeField] private bool enableBattlePrepDarkOverlay;
     [SerializeField] private Color darkOverlayColor = new Color(0f, 0f, 0f, 0.25f);
     [SerializeField] private bool softenPanelForBackground = true;
     [SerializeField, Range(0f, 1f)] private float battlePrepOverlayAlpha = 0.25f;
@@ -121,7 +122,6 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         EnsureBattlePrepBackground();
         EnsurePanelTransparency();
         EnsureReadableTextEffects();
-        ApplyResolvedFontToBattlePrepTexts();
         EnsureListContentReferences();
         if (cardListContent != null)
         {
@@ -183,34 +183,6 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         AddClick(startBattleButton, StartBattleScene);
         AddClick(simulateButton, SimulatePreview);
         AddClick(clearButton, ClearPlacement);
-    }
-
-    private void ApplyResolvedFontToBattlePrepTexts()
-    {
-        TMP_FontAsset resolved = ThoughtMapTmpFontResolver.Resolve(null);
-        if (resolved == null)
-        {
-            resolved = ThoughtMapTmpFontResolver.Resolve(cjkFontAsset);
-        }
-        if (resolved == null)
-        {
-            return;
-        }
-
-        cjkFontAsset = resolved;
-        ThoughtMapTmpFontResolver.ApplyToChildren(gameObject, resolved, true);
-        if (cardDetailPanel != null)
-        {
-            cardDetailPanel.SetFontAsset(resolved);
-        }
-        if (generatedSkillsPanel != null)
-        {
-            generatedSkillsPanel.SetFontAsset(resolved);
-        }
-        if (debugLogPanel != null)
-        {
-            debugLogPanel.ConfigureRaycastTargets();
-        }
     }
 
     [ContextMenu("Load Cards")]
@@ -511,7 +483,6 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         RenderGrid();
         ShowSelectedDetail();
         RenderGeneratedSkills();
-        ApplyResolvedFontToBattlePrepTexts();
         UpdateBattleButtonState(false);
     }
 
@@ -1820,29 +1791,38 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         if (darkOverlayImage == null)
         {
             Transform existing = FindDirectChild(parent, "BattlePrepDarkOverlay");
-            GameObject overlayObject = existing == null
-                ? new GameObject("BattlePrepDarkOverlay", typeof(RectTransform), typeof(Image))
-                : existing.gameObject;
-            overlayObject.transform.SetParent(parent, false);
-            darkOverlayImage = overlayObject.GetComponent<Image>();
-            if (darkOverlayImage == null)
+            if (existing != null)
             {
-                darkOverlayImage = overlayObject.AddComponent<Image>();
+                darkOverlayImage = existing.GetComponent<Image>();
             }
         }
 
-        RectTransform overlayRect = darkOverlayImage.GetComponent<RectTransform>();
-        overlayRect.anchorMin = Vector2.zero;
-        overlayRect.anchorMax = Vector2.one;
-        overlayRect.offsetMin = Vector2.zero;
-        overlayRect.offsetMax = Vector2.zero;
-        overlayRect.SetSiblingIndex(Mathf.Min(1, parent.childCount - 1));
-        darkOverlayColor.a = Mathf.Clamp(battlePrepOverlayAlpha, 0.20f, 0.30f);
-        darkOverlayImage.color = darkOverlayColor;
-        darkOverlayImage.raycastTarget = false;
-        if (debugBattlePrepLayout)
+        if (darkOverlayImage != null)
         {
-            Debug.Log($"[Battle] darkOverlayAlpha={darkOverlayImage.color.a}", this);
+            darkOverlayImage.raycastTarget = false;
+            if (!enableBattlePrepDarkOverlay)
+            {
+                Color disabledColor = darkOverlayImage.color;
+                disabledColor.a = 0f;
+                darkOverlayImage.color = disabledColor;
+                darkOverlayImage.enabled = false;
+            }
+            else
+            {
+                RectTransform overlayRect = darkOverlayImage.GetComponent<RectTransform>();
+                overlayRect.anchorMin = Vector2.zero;
+                overlayRect.anchorMax = Vector2.one;
+                overlayRect.offsetMin = Vector2.zero;
+                overlayRect.offsetMax = Vector2.zero;
+                overlayRect.SetSiblingIndex(Mathf.Min(1, parent.childCount - 1));
+                darkOverlayColor.a = Mathf.Clamp(battlePrepOverlayAlpha, 0f, 0.30f);
+                darkOverlayImage.color = darkOverlayColor;
+                darkOverlayImage.enabled = darkOverlayColor.a > 0.001f;
+                if (debugBattlePrepLayout)
+                {
+                    Debug.Log($"[Battle] darkOverlayAlpha={darkOverlayImage.color.a}", this);
+                }
+            }
         }
 
         root.SetAsLastSibling();

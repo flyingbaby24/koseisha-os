@@ -11,20 +11,10 @@ public static class ThoughtMapTmpFontResolver
     private const string RepairFontPath = "Assets/Fonts/ThoughtMapJapanese SDF.asset";
     private const string RequiredCharacters =
         "+-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,;:!?()[]{}_/\\'\"%";
-    private const bool AllowRuntimeFontGenerationWithoutVerifiedFontData = false;
-
-    private static readonly string[] PreferredOsFonts =
-    {
-        "Yu Gothic UI", "Yu Gothic", "Meiryo", "Microsoft YaHei UI",
-        "Microsoft YaHei", "SimSun", "Noto Sans CJK JP", "Noto Sans JP"
-    };
-
-    private static TMP_FontAsset cachedRuntimeFont;
     private static bool warned;
     private static bool loggedFontChoice;
-    private static bool runtimeGenerationAttempted;
 
-    public static bool RuntimeGenerationAttempted => runtimeGenerationAttempted;
+    public static bool RuntimeGenerationAttempted => false;
 
     public static TMP_FontAsset Resolve(TMP_FontAsset preferred)
     {
@@ -48,32 +38,10 @@ public static class ThoughtMapTmpFontResolver
             return settingsFont;
         }
 
-        if (cachedRuntimeFont != null && IsUsable(cachedRuntimeFont))
-        {
-            LogFontChoice("cached runtime", cachedRuntimeFont, true);
-            return cachedRuntimeFont;
-        }
-
-        if (AllowRuntimeFontGenerationWithoutVerifiedFontData)
-        {
-            TMP_FontAsset runtimeFont = CreateRuntimeFontAsset();
-            if (IsUsable(runtimeFont))
-            {
-                cachedRuntimeFont = runtimeFont;
-                LogFontChoice("runtime generated", cachedRuntimeFont, true);
-                return cachedRuntimeFont;
-            }
-        }
-        else if (!warned)
-        {
-            warned = true;
-            Debug.LogWarning("[Battle] Runtime TMP font generation skipped. Use a valid TMP FontAsset under Assets/Fonts.");
-        }
-
         if (!warned)
         {
             warned = true;
-            Debug.LogWarning("[Battle] No usable TMP font was found under Assets/Fonts or TMP Settings.");
+            Debug.LogWarning("[Battle] No usable persistent TMP font was found under Assets/Fonts or TMP Settings. Runtime TMP font generation is disabled.");
         }
 
         return null;
@@ -209,39 +177,6 @@ public static class ThoughtMapTmpFontResolver
                 {
                     return fallback;
                 }
-            }
-        }
-
-        return null;
-    }
-
-    private static TMP_FontAsset CreateRuntimeFontAsset()
-    {
-        runtimeGenerationAttempted = true;
-        foreach (string osFont in PreferredOsFonts)
-        {
-            try
-            {
-                Font font = Font.CreateDynamicFontFromOSFont(osFont, 18);
-                if (font == null)
-                {
-                    continue;
-                }
-
-                TMP_FontAsset asset = TMP_FontAsset.CreateFontAsset(font, 90, 9, GlyphRenderMode.SDFAA, 1024, 1024);
-                if (asset == null)
-                {
-                    continue;
-                }
-
-                asset.name = "SourceOfThoughtRuntimeCJK SDF";
-                asset.atlasPopulationMode = AtlasPopulationMode.Dynamic;
-                WarmUpRequiredCharacters(asset);
-                return asset;
-            }
-            catch
-            {
-                // Try the next installed OS font.
             }
         }
 
