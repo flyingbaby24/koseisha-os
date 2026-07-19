@@ -1,4 +1,5 @@
 const STORAGE_KEY = "jinnsp-pwa-state-v1";
+const BACKUP_SCHEMA_VERSION = 1;
 const CSV_COLUMNS = [
   "media_id",
   "title",
@@ -139,6 +140,19 @@ function downloadText(filename, content, type) {
   anchor.download = filename;
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function backupTimestamp(date = new Date()) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+  ].join("-") + "_" + [
+    pad(date.getHours()),
+    pad(date.getMinutes()),
+    pad(date.getSeconds()),
+  ].join("");
 }
 
 function parseCsv(text) {
@@ -400,24 +414,107 @@ async function importPlaylistCsv(file) {
 }
 
 function downloadBackup() {
-  const backup = {
-    version: 1,
-    exported_at: new Date().toISOString(),
-    userTracks: state.userTracks,
-    playlists: state.playlists,
+  const settings = {
     selectedPlaylistId: state.selectedPlaylistId,
+    repeat: state.repeat,
   };
-  downloadText("jinnsp-backup.json", JSON.stringify(backup, null, 2), "application/json;charset=utf-8");
+  const backup = {
+    schemaVersion: BACKUP_SCHEMA_VERSION,
+    app: "JinnSP",
+    exportedAt: new Date().toISOString(),
+    tracks: state.userTracks,
+    playlists: state.playlists,
+    settings,
+  };
+  const filename = `JinnSP_Backup_${backupTimestamp()}.jinnsp`;
+  downloadText(filename, JSON.stringify(backup, null, 2), "application/octet-stream");
+  $("backupStatus").textContent = `Backup downloaded: ${filename}`;
+}
+
+function normalizeBackupData(data) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("This is not a valid JinnSP backup file.");
+  }
+
+  if (Object.prototype.hasOwnProperty.call(data, "schemaVersion")) {
+    if (data.schemaVersion !== BACKUP_SCHEMA_VERSION) {
+      throw new Error(`Unsupported backup schemaVersion: ${data.schemaVersion}`);
+    }
+    if (!Array.isArray(data.tracks)) throw new Error("Backup is missing tracks.");
+    if (!Array.isArray(data.playlists)) throw new Error("Backup is missing playlists.");
+    if (!data.settings || typeof data.settings !== "object" || Array.isArray(data.settings)) {
+      throw new Error("Backup is missing settings.");
+    }
+    return {
+      tracks: data.tracks,
+      playlists: data.playlists,
+      settings: data.settings,
+      schemaVersion: data.schemaVersion,
+    };
+  }
+
+  if (Array.isArray(data.userTracks) && Array.isArray(data.playlists)) {
+    return {
+      tracks: data.userTracks,
+      playlists: data.playlists,
+      settings: {
+        selectedPlaylistId: data.selectedPlaylistId || "",
+      },
+      schemaVersion: "legacy",
+    };
+  }
+
+  throw new Error("Backup is missing required JinnSP data.");
+}
+
+function validateBackupItems(backup) {
+  for (const [index, track] of backup.tracks.entries()) {
+    if (!track || typeof track !== "object" || Array.isArray(track)) {
+      throw new Error(`Track ${index + 1} is invalid.`);
+    }
+  }
+  for (const [index, playlist] of backup.playlists.entries()) {
+    if (!playlist || typeof playlist !== "object" || Array.isArray(playlist)) {
+      throw new Error(`Playlist ${index + 1} is invalid.`);
+    }
+    if (!playlist.playlist_id || !playlist.name || !Array.isArray(playlist.media_ids)) {
+      throw new Error(`Playlist ${index + 1} is missing required fields.`);
+    }
+  }
+  return backup;
 }
 
 async function restoreBackup(file) {
-  const data = JSON.parse(await file.text());
-  state.userTracks = Array.isArray(data.userTracks) ? data.userTracks.map(normalizeTrack) : [];
-  state.playlists = Array.isArray(data.playlists) ? data.playlists : [];
-  state.selectedPlaylistId = data.selectedPlaylistId || state.playlists[0]?.playlist_id || "";
-  saveState();
-  renderAll();
-  $("openStatus").textContent = "Backup restored.";
+  let parsed;
+  try {
+    parsed = JSON.parse(await file.text());
+    const backup = validateBackupItems(normalizeBackupData(parsed));
+    const counts = {
+      tracks: backup.tracks.length,
+      playlists: backup.playlists.length,
+      settings: Object.keys(backup.settings).length,
+    };
+    $("backupStatus").textContent = `Backup contains tracks: ${counts.tracks}, playlists: ${counts.playlists}, settings: ${counts.settings}.`;
+    const ok = confirm(
+      `Restore this JinnSP backup?\n\ntracks: ${counts.tracks}\nplaylists: ${counts.playlists}\nsettings: ${counts.settings}\n\nCurrent browser edits will be replaced.`,
+    );
+    if (!ok) {
+      $("backupStatus").textContent = "Restore canceled. Existing data was not changed.";
+      return;
+    }
+    state.userTracks = backup.tracks.map(normalizeTrack);
+    state.playlists = backup.playlists;
+    state.selectedPlaylistId = backup.settings.selectedPlaylistId || state.playlists[0]?.playlist_id || "";
+    state.repeat = backup.settings.repeat || "none";
+    $("repeat").textContent = state.repeat === "none" ? "Repeat off" : state.repeat === "all" ? "Repeat all" : "Repeat one";
+    saveState();
+    renderAll();
+    $("backupStatus").textContent = `Backup restored. tracks: ${counts.tracks}, playlists: ${counts.playlists}, settings: ${counts.settings}.`;
+  } catch (error) {
+    $("backupStatus").textContent = `Restore failed: ${error.message}`;
+  } finally {
+    $("restoreBackup").value = "";
+  }
 }
 
 function trackById(id) {

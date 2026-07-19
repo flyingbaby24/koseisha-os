@@ -44,12 +44,13 @@
           <h2>Settings</h2>
           <div class="settings-block">
             <strong>Backup</strong>
-            <p class="hint">Backup saves this browser's full JinnSP data, including playlists and locally edited metadata. Use CSV when you want spreadsheet editing.</p>
+            <p class="hint">ライブラリ、プレイリスト、設定をまとめて保存します。復元用ファイルのため、通常は編集しないでください。CSVは表計算ソフトで編集するための形式です。</p>
             <button id="downloadBackup">Download backup</button>
             <label class="file-button">
               Restore backup
-              <input id="restoreBackup" type="file" accept="application/json,.json" />
+              <input id="restoreBackup" type="file" accept=".jinnsp,application/json,.json" />
             </label>
+            <div id="backupStatus" class="status">Backup ready</div>
           </div>
           <div class="settings-block danger-zone">
             <strong>Danger zone</strong>
