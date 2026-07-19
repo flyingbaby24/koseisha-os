@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JinnSP MVP</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="mark"></span>
+          <div>
+            <strong>JinnSP</strong>
+            <small>folder-first player</small>
+            <small id="buildStamp">build loading</small>
+          </div>
+        </div>
+
+        <section class="panel">
+          <h2>Open</h2>
+          <label>Folder path<input id="folderPath" placeholder="D:\Jinn Sound\有料版\Pub" /></label>
+          <div class="row">
+            <button id="openFolder" class="primary">フォルダを開く</button>
+            <button id="addFolderLibrary">ライブラリへ追加</button>
+          </div>
+          <label>File path<input id="filePath" placeholder="C:\Music\song.mp3" /></label>
+          <button id="openFile">ファイルを開く</button>
+          <label>Direct media URL<input id="urlSource" placeholder="https://example.com/song.mp3" /></label>
+          <div class="split">
+            <select id="urlMediaType">
+              <option value="audio">audio</option>
+              <option value="video">video</option>
+            </select>
+            <button id="openUrl">URLを開く</button>
+          </div>
+          <div id="urlDiagnosis" class="status">URL diagnosis: not checked</div>
+          <div id="scanResult" class="status">Ready</div>
+          <div id="invalidMedia" class="status"></div>
+          <button id="deleteInvalid" class="danger hidden">誤登録フォルダを削除</button>
+        </section>
+
+        <section class="panel">
+          <h2>Registered folders</h2>
+          <div id="folderList" class="folder-list"></div>
+        </section>
+
+        <section class="panel">
+          <h2>CSV</h2>
+          <input id="csvFile" type="file" accept=".csv,text/csv" />
+          <div class="row">
+            <button id="importCsv">Import</button>
+            <a id="exportCsv" class="button" href="/api/export/media.csv">Export</a>
+          </div>
+          <div id="csvDebug" class="status">CSV not selected</div>
+          <div id="csvResult" class="status"></div>
+        </section>
+      </aside>
+
+      <main>
+        <header class="toolbar">
+          <div class="filter-title">Track library filters</div>
+          <div class="filters">
+            <label>Search<input id="q" placeholder="Title, creator, file path, URL" /></label>
+            <label>Media type
+              <select id="mediaType">
+                <option value="">All</option>
+                <option value="audio">Audio</option>
+                <option value="video">Video</option>
+              </select>
+            </label>
+            <label>Source
+              <select id="sourceType">
+                <option value="">All sources</option>
+                <option value="local">Local files</option>
+                <option value="url">R2 / direct URL</option>
+                <option value="suno">Suno</option>
+              </select>
+            </label>
+            <label>Genre<input id="genre" placeholder="Select or enter genre" /></label>
+            <label>Tag<input id="tag" placeholder="Select or enter tag" /></label>
+            <label>BPM min<input id="bpmMin" type="number" placeholder="Min" /></label>
+            <label>BPM max<input id="bpmMax" type="number" placeholder="Max" /></label>
+            <label>Rating
+              <select id="rating">
+                <option value="">Any</option>
+                <option value="1">1+</option>
+                <option value="2">2+</option>
+                <option value="3">3+</option>
+                <option value="4">4+</option>
+                <option value="5">5</option>
+              </select>
+            </label>
+          </div>
+          <div class="filter-actions">
+            <button id="clearFilters">Clear filters</button>
+            <span id="filterHint" class="status">Filters affect the track list only. Current playback and queue are unchanged.</span>
+          </div>
+          <div class="filter-help status">BPM filters only include tracks with BPM metadata. Rating 1+ excludes unrated tracks.</div>
+        </header>
+
+        <section class="player">
+          <div class="now">
+            <small>Now playing</small>
+            <span id="nowType">idle</span>
+            <strong id="nowTitle">Choose a folder</strong>
+            <small id="nowBpm">BPM: -</small>
+            <small id="nowMeta"></small>
+            <small id="queueCount">Queue: 0</small>
+          </div>
+          <video id="video" playsinline></video>
+          <audio id="audio"></audio>
+          <div class="controls">
+            <button id="prev" title="Previous">Prev</button>
+            <button id="playPause" class="primary" title="Play/Pause">Play</button>
+            <button id="next" title="Next">Next</button>
+            <button id="shuffle" title="Shuffle">Shuffle</button>
+            <button id="repeat" title="Repeat">Repeat off</button>
+            <label class="seek"><span id="timeNow">0:00</span><input id="seek" type="range" min="0" max="1000" value="0" /><span id="timeTotal">0:00</span></label>
+            <label class="volume">Volume<input id="volume" type="range" min="0" max="1" step="0.01" value="0.8" /></label>
+          </div>
+        </section>
+
+        <section class="content">
+          <div class="library">
+            <div class="section-head">
+              <h1>Track library</h1>
+              <div class="tabs">
+                <button id="showFolders" class="primary">Folders</button>
+                <button id="showTracks">Tracks</button>
+                <button id="shuffleFiltered">Shuffle tracks</button>
+                <button id="addFilteredToPlaylist">Add filtered to playlist</button>
+                <button id="createPlaylistFromFiltered">Create playlist from filtered tracks</button>
+                <button id="replacePlaylistWithFiltered">Replace playlist tracks with current filtered tracks</button>
+              </div>
+            </div>
+            <div class="csv-tools">
+              <a id="exportViewCsv" class="button" href="/api/media/export.csv">Export view CSV</a>
+              <label class="file-button">Import metadata CSV<input id="trackMetadataCsv" type="file" accept=".csv,text/csv" /></label>
+              <span id="exportStatus" class="status"></span>
+            </div>
+            <div id="trackImportPanel" class="import-panel hidden">
+              <div class="import-head">
+                <strong>Track metadata import preview</strong>
+                <span id="trackImportState" class="status">Waiting for CSV</span>
+              </div>
+              <div id="trackImportSummary" class="status"></div>
+              <div id="trackImportExamples" class="preview-list"></div>
+              <div class="row">
+                <button id="applyTrackImport" class="primary" disabled>Apply import</button>
+                <button id="cancelTrackImport">Cancel</button>
+              </div>
+            </div>
+            <div id="trackStats" class="pager status">Tracks: loading</div>
+            <div id="trackPager" class="pager">
+              <button id="trackPrev">Prev</button>
+              <span id="trackPageLabel">Page 1 / 1</span>
+              <button id="trackNext">Next</button>
+              <label>Page size
+                <select id="trackPageSize">
+                  <option value="25">25</option>
+                  <option value="50" selected>50</option>
+                  <option value="100">100</option>
+                </select>
+              </label>
+            </div>
+            <div id="folderCards" class="list"></div>
+            <div id="mediaList" class="list hidden"></div>
+          </div>
+
+          <div class="playlists">
+            <div class="section-head">
+              <h1>Playlists</h1>
+              <button id="newPlaylist">New</button>
+            </div>
+            <div class="playlist-editor">
+              <input id="playlistName" placeholder="playlist name" />
+              <div class="row">
+                <button id="savePlaylist" class="primary">Save</button>
+                <a id="exportPlaylist" class="button disabled">Export playlist CSV</a>
+                <label class="file-button">Import playlist CSV<input id="playlistCsv" type="file" accept=".csv,text/csv" /></label>
+                <button id="deletePlaylist" class="danger">Delete playlist</button>
+              </div>
+              <div id="playlistStatus" class="status">Saved</div>
+              <div id="playlistImportPanel" class="import-panel hidden">
+                <div class="import-head">
+                  <strong>Playlist import preview</strong>
+                  <span id="playlistImportState" class="status">Waiting for CSV</span>
+                </div>
+                <div id="playlistImportSummary" class="status"></div>
+                <div id="playlistImportExamples" class="preview-list"></div>
+                <div class="row">
+                  <button id="applyPlaylistImport" class="primary" disabled>Apply import</button>
+                  <button id="cancelPlaylistImport">Cancel</button>
+                </div>
+              </div>
+            </div>
+            <div id="playlistList" class="playlist-list"></div>
+            <div class="playlist-search">
+              <label>Search in selected playlist<input id="playlistSearch" placeholder="title / creator / source / tags" /></label>
+              <div id="playlistStats" class="status">No playlist selected</div>
+              <div id="playlistPager" class="pager">
+                <button id="playlistPrev">Prev</button>
+                <span id="playlistPageLabel">Page 1 / 1</span>
+                <button id="playlistNext">Next</button>
+              </div>
+            </div>
+            <div id="playlistItems" class="list compact"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
