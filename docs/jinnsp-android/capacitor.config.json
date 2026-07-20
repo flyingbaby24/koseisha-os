@@ -1,0 +1,14 @@
+{
+  "appId": "com.jinnproject.jinnsp",
+  "appName": "JinnSP",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "Preferences": {
+      "group": "JinnSP"
+    }
+  }
+}

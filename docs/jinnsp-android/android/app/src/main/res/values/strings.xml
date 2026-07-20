@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">JinnSP</string>
+    <string name="title_activity_main">JinnSP</string>
+    <string name="package_name">com.jinnproject.jinnsp</string>
+    <string name="custom_url_scheme">com.jinnproject.jinnsp</string>
+</resources>
