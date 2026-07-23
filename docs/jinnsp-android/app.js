@@ -569,6 +569,7 @@ const isNative = () => Boolean(CapacitorBridge?.isNativePlatform?.());
 const STORAGE_KEY = "jinnsp-android-state-v1";
 const BACKUP_SCHEMA_VERSION = 1;
 const AUDIO_EXTENSIONS = [".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac"];
+const VIDEO_EXTENSIONS = [".mp4", ".webm", ".mov", ".m4v", ".ogv"];
 let libraryScope = "";
 
 const state = {
@@ -601,7 +602,9 @@ function slugId(prefix = "id") {
 
 function mediaTypeFromName(name = "") {
   const lower = name.toLowerCase();
-  return AUDIO_EXTENSIONS.some((ext) => lower.endsWith(ext)) ? "audio" : "audio";
+  if (VIDEO_EXTENSIONS.some((ext) => lower.endsWith(ext))) return "video";
+  if (AUDIO_EXTENSIONS.some((ext) => lower.endsWith(ext))) return "audio";
+  return "audio";
 }
 
 function normalizeTrack(track) {
@@ -809,10 +812,15 @@ function trackDurationLabel(track) {
   return `${mins}:${secs}`;
 }
 
+function canDeleteTrack(track) {
+  return state.tracks.some((item) => item.media_id === track.media_id);
+}
+
 function renderTrackCard(track, options = {}) {
-  const disabled = track.access_status === "invalid" ? "disabled" : "";
+  const disabled = track.access_status === "invalid" || !playUrl(track) ? "disabled" : "";
   const addButton = options.hideAdd ? "" : `<button class="kebab" data-action="add" title="Add to playlist">＋</button>`;
-  const removeButton = options.remove ? `<button class="kebab" data-action="remove" title="Remove">−</button>` : "";
+  const deleteButton = options.deletable ? `<button class="kebab danger" data-action="delete" title="Delete from library">Del</button>` : "";
+  const removeButton = options.remove ? `<button class="kebab" data-action="remove" title="Remove from playlist">−</button>` : "";
   return `
     <article class="track-item" data-id="${escapeHtml(track.media_id)}">
       <button class="thumb" data-action="play" ${disabled} aria-label="Play ${escapeHtml(track.title)}"></button>
@@ -823,7 +831,7 @@ function renderTrackCard(track, options = {}) {
       </div>
       <div class="track-side">
         <span>${escapeHtml(trackDurationLabel(track))}</span>
-        ${addButton}${removeButton}
+        ${addButton}${removeButton}${deleteButton}
         <button class="kebab" data-action="more" title="More">...</button>
       </div>
     </article>
@@ -836,7 +844,7 @@ function renderTracks() {
     ? `${items.length} tracks`
     : `Filtered: ${items.length} of ${allTracks().length}`;
   $("trackList").innerHTML = items.length
-    ? items.map((track) => renderTrackCard(track)).join("")
+    ? items.map((track) => renderTrackCard(track, { deletable: canDeleteTrack(track) })).join("")
     : `<div class="status">No tracks match.</div>`;
 }
 
@@ -880,7 +888,7 @@ function renderSearch() {
     ? `${tracks.length} tracks / ${playlists.length} playlists`
     : "Search across tracks and playlists.";
   $("searchResults").innerHTML = query
-    ? tracks.slice(0, 40).map((track) => renderTrackCard(track)).join("") || `<div class="status">No search results.</div>`
+    ? tracks.slice(0, 40).map((track) => renderTrackCard(track, { deletable: canDeleteTrack(track) })).join("") || `<div class="status">No search results.</div>`
     : `<div class="status">Type to search your JinnSP library.</div>`;
 }
 
@@ -920,21 +928,58 @@ async function addUrl() {
   renderAll();
 }
 
+function pickWebFiles() {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "audio/*,video/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.mp4,.webm,.mov,.m4v,.ogv";
+    input.multiple = true;
+    input.style.position = "fixed";
+    input.style.left = "-10000px";
+    document.body.appendChild(input);
+    input.addEventListener("change", () => {
+      const files = [...(input.files || [])];
+      input.remove();
+      resolve(files.map((file) => {
+        const objectUrl = URL.createObjectURL(file);
+        return normalizeTrack({
+          media_id: slugId("local"),
+          title: file.name.replace(/\.[^.]+$/, ""),
+          creator: "local file",
+          media_type: file.type.startsWith("video/") ? "video" : mediaTypeFromName(file.name),
+          source_type: "local",
+          source: objectUrl,
+          uri: objectUrl,
+          tags: "web local",
+          duration: "",
+          access_status: "ok",
+        });
+      }));
+    }, { once: true });
+    input.addEventListener("cancel", () => { input.remove(); reject(new Error("No file selected.")); }, { once: true });
+    input.click();
+  });
+}
+
 async function pickFiles() {
+  let items = [];
   if (isNative() && Native) {
     const result = await Native.pickAudioFiles();
-    upsertTracks((result.items || []).map((item) => ({
+    items = (result.items || []).map((item) => ({
       ...item,
       media_id: item.media_id || slugId("local"),
       source_type: "local",
       source: item.uri,
       tags: item.tags || "Android",
-    })));
+    }));
   } else {
-    alert("Android file picker is available in the app build.");
+    items = await pickWebFiles();
   }
+  if (!items.length) return;
+  upsertTracks(items);
   await saveState();
   renderAll();
+  $("syncStatus").textContent = `Added ${items.length} file(s).`;
 }
 
 async function scanFolder(folderUri = "") {
@@ -977,6 +1022,22 @@ async function pickFolder() {
   await scanFolder(folder.uri);
 }
 
+function deleteTrack(track) {
+  if (!canDeleteTrack(track)) return;
+  if (!confirm(`Delete "${track.title}" from library?`)) return;
+  const url = track.source || track.uri || "";
+  if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+  state.tracks = state.tracks.filter((item) => item.media_id !== track.media_id);
+  state.playlists = state.playlists.map((playlist) => ({
+    ...playlist,
+    media_ids: (playlist.media_ids || []).filter((id) => id !== track.media_id),
+  }));
+  state.queue = state.queue.filter((item) => item.media_id !== track.media_id);
+  if (state.currentIndex >= state.queue.length) state.currentIndex = state.queue.length - 1;
+  saveState().then(renderAll);
+  $("syncStatus").textContent = "Track deleted.";
+}
+
 function addToPlaylist(track) {
   const playlist = selectedPlaylist();
   if (!playlist) return alert("Create or select a playlist first.");
@@ -1005,14 +1066,43 @@ function makeBackup() {
   };
 }
 
-function validateBackup(data) {
-  if (!data || typeof data !== "object" || data.schemaVersion !== BACKUP_SCHEMA_VERSION) {
-    throw new Error("Unsupported JinnSP backup.");
+function normalizeBackup(data) {
+  if (!data || typeof data !== "object") throw new Error("Unsupported JinnSP backup.");
+  if (Object.prototype.hasOwnProperty.call(data, "schemaVersion") && data.schemaVersion !== BACKUP_SCHEMA_VERSION) {
+    throw new Error(`Unsupported JinnSP backup schemaVersion: ${data.schemaVersion}`);
   }
-  if (!Array.isArray(data.tracks)) throw new Error("Backup is missing tracks.");
+  const tracks = Array.isArray(data.tracks) ? data.tracks : Array.isArray(data.userTracks) ? data.userTracks : null;
+  if (!tracks) throw new Error("Backup is missing tracks.");
   if (!Array.isArray(data.playlists)) throw new Error("Backup is missing playlists.");
-  if (!data.settings || typeof data.settings !== "object") throw new Error("Backup is missing settings.");
-  return data;
+  return {
+    schemaVersion: BACKUP_SCHEMA_VERSION,
+    tracks: tracks.map(normalizeTrack),
+    playlists: data.playlists,
+    settings: data.settings && typeof data.settings === "object" ? data.settings : {
+      selectedPlaylistId: data.selectedPlaylistId || "",
+      repeat: data.repeat || "none",
+      folders: Array.isArray(data.folders) ? data.folders : [],
+    },
+  };
+}
+
+function readBackupFileWeb() {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".jinnsp,.json,application/json";
+    input.style.position = "fixed";
+    input.style.left = "-10000px";
+    document.body.appendChild(input);
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      input.remove();
+      if (!file) return reject(new Error("No backup selected."));
+      file.text().then(resolve, reject);
+    }, { once: true });
+    input.addEventListener("cancel", () => { input.remove(); reject(new Error("No backup selected.")); }, { once: true });
+    input.click();
+  });
 }
 
 async function downloadBackup() {
@@ -1039,10 +1129,9 @@ async function restoreBackup() {
     const result = await Native.openBackup();
     data = JSON.parse(result.content);
   } else {
-    alert("Restore backup is available in the Android app build.");
-    return;
+    data = JSON.parse(await readBackupFileWeb());
   }
-  const backup = validateBackup(data);
+  const backup = normalizeBackup(data);
   const counts = {
     tracks: backup.tracks.length,
     playlists: backup.playlists.length,
@@ -1106,6 +1195,7 @@ function handleTrackListClick(event) {
     setTab("now");
   }
   if (button.dataset.action === "add") addToPlaylist(track);
+  if (button.dataset.action === "delete") deleteTrack(track);
   if (button.dataset.action === "more") alert(`${track.title}\n${track.source || track.uri || track.direct_media_url || ""}`);
 }
 $("trackList").addEventListener("click", handleTrackListClick);
@@ -1253,4 +1343,5 @@ if (favoriteNow) {
     renderAll();
   });
 }
+
 
