@@ -813,7 +813,8 @@ function updateBrowserMediaSession(track, isPlaying) {
       artist: track?.creator || "unknown creator",
       album: `${source.type || "Library"}: ${source.name || "Queue"}`,
       artwork: [
-        { src: "./icons/icon.svg", sizes: "any", type: "image/svg+xml" },
+        { src: "./icons/icon-jinnsp-v3-512.png", sizes: "512x512", type: "image/png" },
+        { src: "./icons/icon-jinnsp-v3-192.png", sizes: "192x192", type: "image/png" },
       ],
     });
   } catch (error) {
@@ -1473,6 +1474,7 @@ if (favoriteNow) {
     renderAll();
   });
 }
+
 
 
 
