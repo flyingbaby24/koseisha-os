@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "jinnsp-android-pwa-v2-icons";
+const CACHE_NAME = "jinnsp-android-pwa-v3-icons";
 const ASSETS = [
   "./",
   "./index.html",
@@ -7,9 +7,9 @@ const ASSETS = [
   "./manifest.webmanifest",
   "./data/library.json",
   "./data/playlists.json",
-  "./icons/icon-jinnsp-v2-192.png",
-  "./icons/icon-jinnsp-v2-512.png",
-  "./icons/apple-touch-icon-v2.png",
+  "./icons/icon-jinnsp-v3-192.png",
+  "./icons/icon-jinnsp-v3-512.png",
+  "./icons/apple-touch-icon-v3.png",
   "./assets/mascot/idle.svg"
 ];
 
