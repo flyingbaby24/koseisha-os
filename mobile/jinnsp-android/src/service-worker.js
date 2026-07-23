@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "jinnsp-android-pwa-v1";
+﻿const CACHE_NAME = "jinnsp-android-pwa-v2-icons";
 const ASSETS = [
   "./",
   "./index.html",
@@ -7,7 +7,9 @@ const ASSETS = [
   "./manifest.webmanifest",
   "./data/library.json",
   "./data/playlists.json",
-  "./icons/icon.svg",
+  "./icons/icon-jinnsp-v2-192.png",
+  "./icons/icon-jinnsp-v2-512.png",
+  "./icons/apple-touch-icon-v2.png",
   "./assets/mascot/idle.svg"
 ];
 
@@ -23,3 +25,4 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)));
 });
+

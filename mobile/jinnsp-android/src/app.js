@@ -28,6 +28,7 @@ const state = {
   currentIndex: -1,
   repeat: "none",
   playbackSource: { type: "Library", name: "Queue", count: 0 },
+  mediaSessionReady: false,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -190,7 +191,87 @@ function setQueue(items, shuffle = false, source = null) {
   updateNow();
 }
 
+function isIOSWebKit() {
+  const ua = navigator.userAgent || "";
+  return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function shouldRegisterSeekHandlers() {
+  // iOS Safari/PWA may choose lock-screen Seek controls over Next/Previous when seek handlers exist.
+  // The Media Session API does not guarantee which controls are displayed, so JinnSP omits seek handlers on iOS
+  // to prefer nexttrack/previoustrack when WebKit decides they are eligible.
+  return !isIOSWebKit();
+}
+
+function setMediaAction(action, handler) {
+  if (!("mediaSession" in navigator) || !navigator.mediaSession?.setActionHandler) return false;
+  try {
+    navigator.mediaSession.setActionHandler(action, handler);
+    return true;
+  } catch (error) {
+    console.info(`MediaSession action ${action} is not supported here.`, error);
+    return false;
+  }
+}
+
+function registerBrowserMediaSession() {
+  if (state.mediaSessionReady || !("mediaSession" in navigator)) return;
+  const registered = {};
+  registered.play = setMediaAction("play", () => audio.play());
+  registered.pause = setMediaAction("pause", () => audio.pause());
+  registered.nexttrack = setMediaAction("nexttrack", () => playNext(1));
+  registered.previoustrack = setMediaAction("previoustrack", () => playNext(-1));
+  registered.seekto = setMediaAction("seekto", (details = {}) => {
+    if (Number.isFinite(details.seekTime)) audio.currentTime = details.seekTime;
+  });
+  if (shouldRegisterSeekHandlers()) {
+    registered.seekforward = setMediaAction("seekforward", (details = {}) => {
+      const offset = Number(details.seekOffset || 10);
+      audio.currentTime = Math.min((audio.currentTime || 0) + offset, Number.isFinite(audio.duration) ? audio.duration : Number.MAX_SAFE_INTEGER);
+    });
+    registered.seekbackward = setMediaAction("seekbackward", (details = {}) => {
+      const offset = Number(details.seekOffset || 10);
+      audio.currentTime = Math.max((audio.currentTime || 0) - offset, 0);
+    });
+  } else {
+    registered.seekforward = setMediaAction("seekforward", null);
+    registered.seekbackward = setMediaAction("seekbackward", null);
+  }
+  state.mediaSessionReady = true;
+  window.JinnSPMediaSessionDebug = {
+    supported: true,
+    iOSWebKit: isIOSWebKit(),
+    seekHandlersEnabled: shouldRegisterSeekHandlers(),
+    registered,
+  };
+}
+
+function updateBrowserMediaSession(track, isPlaying) {
+  if (!("mediaSession" in navigator)) {
+    window.JinnSPMediaSessionDebug = { supported: false };
+    return;
+  }
+  registerBrowserMediaSession();
+  const source = state.playbackSource || { type: "Library", name: "Queue", count: state.queue.length };
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: track?.title || "JinnSP",
+      artist: track?.creator || "unknown creator",
+      album: `${source.type || "Library"}: ${source.name || "Queue"}`,
+      artwork: [
+        { src: "./icons/icon.svg", sizes: "any", type: "image/svg+xml" },
+      ],
+    });
+  } catch (error) {
+    console.info("MediaSession metadata could not be updated.", error);
+  }
+  try {
+    navigator.mediaSession.playbackState = isPlaying ? "playing" : track ? "paused" : "none";
+  } catch {}
+}
+
 async function notifyNative(track, isPlaying) {
+  updateBrowserMediaSession(track, isPlaying);
   if (!isNative() || !Native) return;
   try {
     await Native.updateMediaSession({
@@ -201,7 +282,7 @@ async function notifyNative(track, isPlaying) {
       index: state.currentIndex,
     });
   } catch (error) {
-    console.warn("MediaSession update failed", error);
+    console.warn("Native MediaSession update failed", error);
   }
 }
 
@@ -217,6 +298,7 @@ async function playAt(index) {
   audio.src = playUrl(track);
   audio.load();
   updateNow(track);
+  updateBrowserMediaSession(track, false);
   try {
     await audio.play();
     $("playPause").textContent = "Pause";
@@ -794,7 +876,9 @@ window.JinnSPMediaControls = {
   pause: () => audio.pause(),
   next: () => playNext(1),
   prev: () => playNext(-1),
+  mediaSession: () => window.JinnSPMediaSessionDebug,
 };
+registerBrowserMediaSession();
 
 init().catch((error) => {
   $("syncStatus").textContent = `Startup failed: ${error.message}`;
@@ -835,5 +919,6 @@ if (favoriteNow) {
     renderAll();
   });
 }
+
 
 
