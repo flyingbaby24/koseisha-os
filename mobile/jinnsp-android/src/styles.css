@@ -403,3 +403,5 @@ audio { width: 100%; filter: drop-shadow(0 0 10px rgba(34,243,255,0.16)); }
 .playlist-actions button { min-height: 40px; flex: 0 0 auto; }
 .playlist-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 @media (max-width: 430px) { .playlist-filters { grid-template-columns: 1fr; } }
+
+.button-link{min-height:44px;border:1px solid rgba(39,227,255,.28);border-radius:14px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;color:var(--cyan);background:rgba(39,227,255,.06);font-weight:700}.button-link:hover{border-color:var(--cyan);box-shadow:0 0 18px rgba(39,227,255,.16)}

@@ -826,7 +826,7 @@ $("deletePlaylist").addEventListener("click", async () => {
 $("downloadBackup").addEventListener("click", () => downloadBackup().catch((error) => $("backupStatus").textContent = error.message));
 $("restoreBackup").addEventListener("click", () => restoreBackup().catch((error) => $("backupStatus").textContent = `Restore failed: ${error.message}`));
 $("resetLocalData").addEventListener("click", async () => {
-  if (!confirm("Reset JinnSP Android data?")) return;
+  if (!confirm("Reset JinnSP data?")) return;
   await Preferences.remove({ key: STORAGE_KEY });
   location.reload();
 });
