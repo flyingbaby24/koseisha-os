@@ -567,6 +567,9 @@ const Preferences = CapacitorBridge?.Plugins?.Preferences || {
 };
 const isNative = () => Boolean(CapacitorBridge?.isNativePlatform?.());
 const STORAGE_KEY = "jinnsp-android-state-v1";
+const WEB_FOLDER_DB = "jinnsp-web-folders-v1";
+const WEB_FOLDER_STORE = "handles";
+const WEB_FOLDER_KEY = "primary-music-folder";
 const BACKUP_SCHEMA_VERSION = 1;
 const AUDIO_EXTENSIONS = [".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac"];
 const VIDEO_EXTENSIONS = [".mp4", ".webm", ".mov", ".m4v", ".ogv"];
@@ -583,7 +586,134 @@ const state = {
   repeat: "none",
   playbackSource: { type: "Library", name: "Queue", count: 0 },
   mediaSessionReady: false,
+  webFolder: { supported: false, status: "unsupported", name: "", message: "" },
 };
+
+const activeObjectUrls = new Set();
+
+function registerObjectUrl(url) {
+  if (url?.startsWith?.("blob:")) activeObjectUrls.add(url);
+  return url;
+}
+
+function revokeObjectUrl(url) {
+  if (!url?.startsWith?.("blob:")) return;
+  URL.revokeObjectURL(url);
+  activeObjectUrls.delete(url);
+}
+
+function revokeTrackObjectUrl(track) {
+  revokeObjectUrl(track?.source);
+  if (track?.uri !== track?.source) revokeObjectUrl(track?.uri);
+}
+
+function webRuntime() {
+  return document.defaultView || window;
+}
+
+function isWebFolderSupported() {
+  const runtime = webRuntime();
+  return !isNative() && typeof runtime.showDirectoryPicker === "function" && "indexedDB" in runtime;
+}
+
+function openWebFolderDb() {
+  return new Promise((resolve, reject) => {
+    const runtime = webRuntime();
+    if (!("indexedDB" in runtime)) return reject(new Error("IndexedDB is unavailable."));
+    const request = runtime.indexedDB.open(WEB_FOLDER_DB, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(WEB_FOLDER_STORE);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("IndexedDB open failed."));
+  });
+}
+
+function idbRequest(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("IndexedDB request failed."));
+  });
+}
+
+async function withWebFolderStore(mode, fn) {
+  const db = await openWebFolderDb();
+  try {
+    const tx = db.transaction(WEB_FOLDER_STORE, mode);
+    const store = tx.objectStore(WEB_FOLDER_STORE);
+    const result = await fn(store);
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error("IndexedDB transaction failed."));
+      tx.onabort = () => reject(tx.error || new Error("IndexedDB transaction aborted."));
+    });
+    return result;
+  } finally {
+    db.close();
+  }
+}
+
+async function getStoredDirectoryHandle() {
+  if (!isWebFolderSupported()) return null;
+  return withWebFolderStore("readonly", (store) => idbRequest(store.get(WEB_FOLDER_KEY)));
+}
+
+async function saveDirectoryHandle(handle) {
+  await withWebFolderStore("readwrite", (store) => idbRequest(store.put(handle, WEB_FOLDER_KEY)));
+}
+
+async function deleteDirectoryHandle() {
+  if (!isWebFolderSupported()) return;
+  await withWebFolderStore("readwrite", (store) => idbRequest(store.delete(WEB_FOLDER_KEY)));
+}
+
+function setWebFolderStatus(status, name = state.webFolder.name, message = "") {
+  state.webFolder = { supported: isWebFolderSupported(), status, name: name || "", message };
+}
+
+function webFolderStatusLabel(status = state.webFolder.status, supported = state.webFolder.supported) {
+  if (!supported) return "Unsupported browser";
+  if (status === "connected") return "Connected";
+  if (status === "prompt" || status === "denied") return "Permission required";
+  if (status === "scanning") return "Scanning";
+  return "Folder unavailable";
+}
+
+function updateFolderPickerAvailability() {
+  const button = $("pickFolder");
+  if (!button) return;
+  const available = isNative() || isWebFolderSupported();
+  button.disabled = !available;
+  button.title = available ? "Choose a music folder" : "Folder persistence is available on supported desktop browsers.";
+}
+
+function persistableTrack(track) {
+  const copy = { ...track };
+  if (copy.web_folder === true) {
+    copy.source = "";
+    copy.direct_media_url = "";
+    copy.access_status = copy.access_status === "ok" ? "unavailable" : copy.access_status;
+  } else {
+    if (copy.source?.startsWith?.("blob:")) copy.source = "";
+    if (copy.direct_media_url?.startsWith?.("blob:")) copy.direct_media_url = "";
+  }
+  if (copy.uri?.startsWith?.("blob:")) copy.uri = "";
+  return copy;
+}
+
+function fileIdFromParts(relativePath, file) {
+  const raw = `${relativePath}|${file.size}|${file.lastModified}`;
+  let hash = 0;
+  for (let i = 0; i < raw.length; i += 1) hash = ((hash << 5) - hash + raw.charCodeAt(i)) | 0;
+  return `fs-${Math.abs(hash).toString(36)}`;
+}
+
+function isSupportedMediaName(name = "") {
+  const lower = name.toLowerCase();
+  return AUDIO_EXTENSIONS.some((ext) => lower.endsWith(ext)) || VIDEO_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
+function nextFrame() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
 
 const $ = (id) => document.getElementById(id);
 const audio = $("audio");
@@ -631,6 +761,12 @@ function normalizeTrack(track) {
     play_count: Number(track.play_count || 0),
     last_played: track.last_played || "",
     access_status: track.access_status || "ok",
+    web_folder: Boolean(track.web_folder),
+    folder_uri: track.folder_uri || "",
+    relative_path: track.relative_path || "",
+    file_name: track.file_name || "",
+    file_size: track.file_size || 0,
+    last_modified: track.last_modified || 0,
   };
 }
 
@@ -651,7 +787,7 @@ async function saveState() {
   await Preferences.set({
     key: STORAGE_KEY,
     value: JSON.stringify({
-      tracks: state.tracks,
+      tracks: state.tracks.map(persistableTrack),
       folders: state.folders,
       playlists: state.playlists,
       selectedPlaylistId: state.selectedPlaylistId,
@@ -714,7 +850,7 @@ function filteredTracks() {
 }
 
 function playUrl(track) {
-  return track.direct_media_url || track.source || track.uri || "";
+  return track.direct_media_url || track.source || (track.uri?.startsWith?.("fs:") ? "" : track.uri) || "";
 }
 
 function queueUnique(items) {
@@ -914,7 +1050,7 @@ function renderTrackCard(track, options = {}) {
       <div class="track-main">
         <div class="item-title">${escapeHtml(track.title)}</div>
         <div class="meta">${escapeHtml(track.creator)} / ${escapeHtml(track.source_type)} / ${escapeHtml(track.tags || "no tags")}</div>
-        <div class="meta">${track.access_status === "invalid" ? "Access lost / " : ""}${escapeHtml(track.source || track.uri || track.direct_media_url || "-")}</div>
+        <div class="meta">${track.access_status === "invalid" || track.access_status === "unavailable" ? "Access lost / " : ""}${escapeHtml(track.relative_path || track.source || track.uri || track.direct_media_url || "-")}</div>
       </div>
       <div class="track-side">
         <span>${escapeHtml(trackDurationLabel(track))}</span>
@@ -982,7 +1118,25 @@ function renderPlaylists() {
 }
 
 function renderFolders() {
-  $("folderList").innerHTML = state.folders.length ? state.folders.map((folder) => `
+  updateFolderPickerAvailability();
+  const supported = isWebFolderSupported();
+  const web = { ...state.webFolder, supported, status: supported ? state.webFolder.status : "unsupported" };
+  const webCard = `
+    <article class="folder-card connected-folder">
+      <div class="folder-card-head">
+        <strong>Connected music folder</strong>
+        <span class="folder-state ${escapeHtml(web.status || "unsupported")}">${escapeHtml(webFolderStatusLabel(web.status, web.supported))}</span>
+      </div>
+      <div class="meta">${escapeHtml(web.name || "No desktop folder connected")}</div>
+      <p class="hint">Folder persistence is available on supported desktop browsers. Local files are not copied, and access may need to be reconnected after browser permission changes.</p>
+      ${web.message ? `<div class="status">${escapeHtml(web.message)}</div>` : ""}
+      <div class="quick-actions">
+        <button data-web-folder="reconnect">Reconnect folder</button>
+        <button data-web-folder="rescan" ${web.status === "connected" ? "" : "disabled"}>Rescan folder</button>
+        <button data-web-folder="forget" ${web.name ? "" : "disabled"}>Forget folder</button>
+      </div>
+    </article>`;
+  const nativeCards = state.folders.length ? state.folders.map((folder) => `
     <article class="folder-card">
       <strong>${escapeHtml(folder.name || "Music folder")}</strong>
       <div class="meta">${escapeHtml(folder.uri)}</div>
@@ -990,7 +1144,8 @@ function renderFolders() {
         <button data-folder="${escapeHtml(folder.uri)}" data-action="rescan">Rescan</button>
       </div>
     </article>
-  `).join("") : `<div class="status">No music folders selected.</div>`;
+  `).join("") : `<div class="status">No Android music folders selected.</div>`;
+  $("folderList").innerHTML = `${webCard}${isNative() ? nativeCards : ""}`;
 }
 
 function renderSearch() {
@@ -1056,7 +1211,7 @@ function pickWebFiles() {
       const files = [...(input.files || [])];
       input.remove();
       resolve(files.map((file) => {
-        const objectUrl = URL.createObjectURL(file);
+        const objectUrl = registerObjectUrl(URL.createObjectURL(file));
         return normalizeTrack({
           media_id: slugId("local"),
           title: file.name.replace(/\.[^.]+$/, ""),
@@ -1098,6 +1253,7 @@ async function pickFiles() {
 }
 
 async function scanFolder(folderUri = "") {
+  if (!isNative() || !Native) return scanStoredWebFolder(false);
   const result = await Native.listFolderAudio({ uri: folderUri });
   upsertTracks((result.items || []).map((item) => ({
     ...item,
@@ -1113,7 +1269,11 @@ async function scanFolder(folderUri = "") {
 }
 
 async function restoreFoldersOnStartup() {
-  if (!isNative() || !Native || !state.folders.length) return;
+  if (!isNative()) {
+    await restoreWebFolderOnStartup();
+    return;
+  }
+  if (!Native || !state.folders.length) return;
   for (const folder of state.folders) {
     try {
       await scanFolder(folder.uri);
@@ -1126,9 +1286,168 @@ async function restoreFoldersOnStartup() {
   await saveState();
 }
 
+async function* walkDirectory(handle, prefix = "") {
+  for await (const [name, entry] of handle.entries()) {
+    const relativePath = prefix ? `${prefix}/${name}` : name;
+    if (entry.kind === "file") {
+      if (isSupportedMediaName(name)) yield { relativePath, handle: entry };
+    } else if (entry.kind === "directory") {
+      yield* walkDirectory(entry, relativePath);
+    }
+  }
+}
+
+async function scanWebDirectoryHandle(handle, { removeMissing = true } = {}) {
+  if (!handle) throw new Error("No folder handle is stored.");
+  setWebFolderStatus("scanning", handle.name, "Scanning folder...");
+  renderFolders();
+  const foundUris = new Set();
+  const tracks = [];
+  let scanned = 0;
+  let skipped = 0;
+  for await (const entry of walkDirectory(handle)) {
+    scanned += 1;
+    try {
+      const file = await entry.handle.getFile();
+      const uri = `fs:${entry.relativePath}`;
+      foundUris.add(uri);
+      const old = state.tracks.find((track) => track.web_folder && track.uri === uri);
+      if (old?.source?.startsWith?.("blob:")) revokeObjectUrl(old.source);
+      const objectUrl = registerObjectUrl(URL.createObjectURL(file));
+      tracks.push(normalizeTrack({
+        media_id: old?.media_id || fileIdFromParts(entry.relativePath, file),
+        title: old?.title || file.name.replace(/\.[^.]+$/, ""),
+        creator: old?.creator || "local file",
+        media_type: file.type.startsWith("video/") ? "video" : mediaTypeFromName(file.name),
+        source_type: "local",
+        source: objectUrl,
+        uri,
+        tags: old?.tags || "desktop folder",
+        duration: old?.duration || "",
+        rating: old?.rating || "",
+        genre: old?.genre || "",
+        bpm: old?.bpm || "",
+        play_count: old?.play_count || 0,
+        last_played: old?.last_played || "",
+        created_at: old?.created_at || new Date(file.lastModified || Date.now()).toISOString(),
+        access_status: "ok",
+        web_folder: true,
+        folder_uri: "fs-access",
+        relative_path: entry.relativePath,
+        file_name: file.name,
+        file_size: file.size,
+        last_modified: file.lastModified,
+      }));
+    } catch (error) {
+      skipped += 1;
+      console.warn("JinnSP folder file skipped", entry.relativePath, error);
+    }
+    if (scanned % 50 === 0) {
+      setWebFolderStatus("scanning", handle.name, `Scanning folder... ${scanned} media files found`);
+      renderFolders();
+      await nextFrame();
+    }
+  }
+  if (removeMissing) {
+    const removedIds = new Set(state.tracks.filter((item) => item.web_folder && !foundUris.has(item.uri)).map((item) => item.media_id));
+    for (const track of state.tracks.filter((item) => item.web_folder && !foundUris.has(item.uri))) revokeTrackObjectUrl(track);
+    state.tracks = state.tracks.filter((item) => !item.web_folder || foundUris.has(item.uri));
+    if (removedIds.size) {
+      state.playlists = state.playlists.map((playlist) => ({
+        ...playlist,
+        media_ids: (playlist.media_ids || []).filter((id) => !removedIds.has(id)),
+      }));
+      state.queue = state.queue.filter((track) => !removedIds.has(track.media_id));
+    }
+  }
+  upsertTracks(tracks);
+  const latestTracks = new Map(state.tracks.map((track) => [track.media_id, track]));
+  state.queue = state.queue.map((track) => latestTracks.get(track.media_id) || track);
+  setWebFolderStatus("connected", handle.name, `Scanned ${tracks.length} track(s).${skipped ? ` Skipped ${skipped}.` : ""}`);
+  await saveState();
+  renderAll();
+  $("syncStatus").textContent = `Connected folder: ${handle.name} (${tracks.length} track(s))`;
+}
+
+async function restoreWebFolderOnStartup() {
+  if (!isWebFolderSupported()) {
+    setWebFolderStatus("unsupported", "", "Folder persistence is available on supported desktop browsers.");
+    state.tracks = state.tracks.map((track) => track.web_folder ? { ...track, access_status: "unavailable", source: "" } : track);
+    return;
+  }
+  let handle = null;
+  try {
+    handle = await getStoredDirectoryHandle();
+  } catch (error) {
+    setWebFolderStatus("missing", "", `Folder storage unavailable: ${error.message}`);
+    return;
+  }
+  if (!handle) {
+    setWebFolderStatus("missing", "", "Choose a music folder to keep it available after restart.");
+    return;
+  }
+  const permission = await handle.queryPermission({ mode: "read" });
+  if (permission === "granted") {
+    await scanWebDirectoryHandle(handle, { removeMissing: true });
+    return;
+  }
+  state.tracks = state.tracks.map((track) => track.web_folder ? { ...track, access_status: "unavailable", source: "" } : track);
+  setWebFolderStatus(permission === "denied" ? "denied" : "prompt", handle.name, "Reconnect folder to restore local file access.");
+}
+
+async function pickWebFolder() {
+  if (!isWebFolderSupported()) {
+    setWebFolderStatus("unsupported", "", "Folder persistence is available on supported desktop browsers.");
+    renderFolders();
+    return;
+  }
+  const handle = await webRuntime().showDirectoryPicker({ id: "jinnsp-music-folder", mode: "read" });
+  let permission = await handle.queryPermission({ mode: "read" });
+  if (permission !== "granted") permission = await handle.requestPermission({ mode: "read" });
+  if (permission !== "granted") {
+    setWebFolderStatus("denied", handle.name, "Folder permission was not granted.");
+    renderFolders();
+    return;
+  }
+  await saveDirectoryHandle(handle);
+  await scanWebDirectoryHandle(handle, { removeMissing: true });
+}
+
+async function scanStoredWebFolder(requestPermission = false) {
+  if (!isWebFolderSupported()) return pickWebFolder();
+  const handle = await getStoredDirectoryHandle();
+  if (!handle) return pickWebFolder();
+  let permission = await handle.queryPermission({ mode: "read" });
+  if (permission !== "granted" && requestPermission) permission = await handle.requestPermission({ mode: "read" });
+  if (permission !== "granted") {
+    state.tracks = state.tracks.map((track) => track.web_folder ? { ...track, access_status: "unavailable", source: "" } : track);
+    setWebFolderStatus(permission === "denied" ? "denied" : "prompt", handle.name, "Reconnect folder to restore local file access.");
+    await saveState();
+    renderAll();
+    return;
+  }
+  await scanWebDirectoryHandle(handle, { removeMissing: true });
+}
+
+async function forgetWebFolder() {
+  if (!confirm("Forget connected music folder? Tracks from that folder will be removed from the library, but files on disk are untouched.")) return;
+  await deleteDirectoryHandle();
+  const removed = new Set(state.tracks.filter((track) => track.web_folder).map((track) => track.media_id));
+  for (const track of state.tracks.filter((item) => item.web_folder)) revokeTrackObjectUrl(track);
+  state.tracks = state.tracks.filter((track) => !track.web_folder);
+  state.playlists = state.playlists.map((playlist) => ({
+    ...playlist,
+    media_ids: (playlist.media_ids || []).filter((id) => !removed.has(id)),
+  }));
+  state.queue = state.queue.filter((track) => !track.web_folder);
+  setWebFolderStatus("missing", "", "Music folder forgotten.");
+  await saveState();
+  renderAll();
+}
 async function pickFolder() {
-  if (!isNative() || !Native) {
-    alert("Android folder picker is available in the app build.");
+  if (!isNative()) return pickWebFolder();
+  if (!Native) {
+    alert("Folder picker is available in supported app builds.");
     return;
   }
   const result = await Native.pickMusicFolder();
@@ -1141,7 +1460,7 @@ function deleteTrack(track) {
   if (!canDeleteTrack(track)) return;
   if (!confirm(`Delete "${track.title}" from library?`)) return;
   const url = track.source || track.uri || "";
-  if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+  revokeTrackObjectUrl(track);
   state.tracks = state.tracks.filter((item) => item.media_id !== track.media_id);
   state.playlists = state.playlists.map((playlist) => ({
     ...playlist,
@@ -1173,7 +1492,7 @@ function makeBackup() {
     version: BACKUP_SCHEMA_VERSION,
     app: "JinnSP",
     exportedAt: new Date().toISOString(),
-    tracks: state.tracks,
+    tracks: state.tracks.map(persistableTrack),
     playlists: state.playlists,
     settings: {
       selectedPlaylistId: state.selectedPlaylistId,
@@ -1382,9 +1701,18 @@ $("restoreBackup").addEventListener("click", () => restoreBackup().catch((error)
 $("resetLocalData").addEventListener("click", async () => {
   if (!confirm("Reset JinnSP data?")) return;
   await Preferences.remove({ key: STORAGE_KEY });
+  await deleteDirectoryHandle().catch(() => {});
   location.reload();
 });
 $("folderList").addEventListener("click", (event) => {
+  const webButton = event.target.closest("[data-web-folder]");
+  if (webButton) {
+    const action = webButton.dataset.webFolder;
+    if (action === "reconnect") scanStoredWebFolder(true).catch((error) => $("syncStatus").textContent = error.message);
+    if (action === "rescan") scanStoredWebFolder(false).catch((error) => $("syncStatus").textContent = error.message);
+    if (action === "forget") forgetWebFolder().catch((error) => $("syncStatus").textContent = error.message);
+    return;
+  }
   const button = event.target.closest("[data-folder]");
   if (button) scanFolder(button.dataset.folder).catch((error) => $("syncStatus").textContent = error.message);
 });

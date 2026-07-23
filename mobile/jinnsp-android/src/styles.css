@@ -256,6 +256,15 @@ h2 { font-size: 16px; }
 .playlist-button,
 .folder-card { grid-template-columns: minmax(0, 1fr) auto; text-align: left; }
 .playlist-button.active { border-color: rgba(182, 92, 255, 0.62); background: rgba(182, 92, 255, 0.16); box-shadow: var(--glow-purple); }
+.connected-folder { display: grid; grid-template-columns: minmax(0, 1fr); }
+.folder-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.folder-card-head strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-state { flex: 0 0 auto; border: 1px solid rgba(34,243,255,0.26); border-radius: 999px; padding: 4px 8px; color: var(--cyan); font-size: 11px; background: rgba(34,243,255,0.08); }
+.folder-state.connected { color: var(--success); border-color: rgba(64,245,155,0.35); background: rgba(64,245,155,0.08); }
+.folder-state.prompt, .folder-state.denied, .folder-state.missing { color: #ffdca8; border-color: rgba(255,220,168,0.34); background: rgba(255,220,168,0.08); }
+.folder-state.unsupported { color: var(--muted); border-color: rgba(159,177,213,0.26); background: rgba(159,177,213,0.06); }
+.folder-card .actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.folder-card .actions button { min-width: 0; }
 
 .thumb {
   width: 52px;
