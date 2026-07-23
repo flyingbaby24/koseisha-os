@@ -109,7 +109,18 @@
               <button id="savePlaylist" class="primary">Save</button>
               <button id="deletePlaylist" class="danger">Delete</button>
             </div>
-            <label>Search in playlist<input id="playlistSearch" placeholder="title / source / tags" /></label>
+            <label>Search in playlist<input id="playlistSearch" placeholder="title / artist / source" /></label>
+            <div class="playlist-filters">
+              <label>Tag<input id="playlistTag" placeholder="R2 / favorite" /></label>
+              <label>Source
+                <select id="playlistSource">
+                  <option value="">All sources</option>
+                  <option value="local">Local files</option>
+                  <option value="url">R2 / direct URL</option>
+                  <option value="suno">Suno</option>
+                </select>
+              </label>
+            </div>
             <div class="quick-actions muted-actions">
               <button disabled title="Coming Soon">Export playlist CSV</button>
               <button disabled title="Coming Soon">Import playlist CSV</button>
@@ -235,3 +246,4 @@
     <script src="./app.js"></script>
   </body>
 </html>
+

@@ -581,6 +581,7 @@ const state = {
   queue: [],
   currentIndex: -1,
   repeat: "none",
+  playbackSource: { type: "Library", name: "Queue", count: 0 },
 };
 
 const $ = (id) => document.getElementById(id);
@@ -729,7 +730,7 @@ function queueUnique(items) {
   return unique;
 }
 
-function setQueue(items, shuffle = false) {
+function setQueue(items, shuffle = false, source = null) {
   const queue = queueUnique(items);
   if (shuffle) {
     for (let i = queue.length - 1; i > 0; i -= 1) {
@@ -739,6 +740,7 @@ function setQueue(items, shuffle = false) {
   }
   state.queue = queue;
   state.currentIndex = -1;
+  state.playbackSource = source || { type: "Library", name: shuffle ? "Shuffle" : "Queue", count: queue.length };
   updateNow();
 }
 
@@ -787,9 +789,11 @@ function playNext(step = 1) {
 
 function updateNow(track = state.queue[state.currentIndex]) {
   const title = track?.title || "Choose a track";
+  const source = state.playbackSource || { type: "Library", name: "Queue", count: state.queue.length };
+  const sourceLabel = `${source.type || "Library"}: ${source.name || "Queue"} / ${source.count ?? state.queue.length} tracks`;
   const meta = track
-    ? `${track.creator || "unknown creator"} / ${track.source_type || "-"} / Queue: ${state.queue.length}`
-    : `Queue: ${state.queue.length}`;
+    ? `${track.creator || "unknown creator"} / ${track.source_type || "-"} / ${sourceLabel}`
+    : `${sourceLabel} / Queue: ${state.queue.length}`;
   $("nowTitle").textContent = title;
   $("nowMeta").textContent = meta;
   $("miniTitle").textContent = title;
@@ -848,21 +852,49 @@ function renderTracks() {
     : `<div class="status">No tracks match.</div>`;
 }
 
+function playlistTracks(playlist) {
+  const byId = new Map(allTracks().map((track) => [track.media_id, track]));
+  return (playlist?.media_ids || []).map((id) => byId.get(id)).filter(Boolean);
+}
+
+function filteredPlaylistItems(playlist) {
+  const query = $("playlistSearch").value.trim().toLowerCase();
+  const tag = $("playlistTag")?.value.trim().toLowerCase() || "";
+  const sourceType = $("playlistSource")?.value || "";
+  return playlistTracks(playlist).filter((track) => {
+    if (query && !trackMatchesQuery(track, query)) return false;
+    if (tag && !String(track.tags || "").toLowerCase().split(/[;, ]+/).includes(tag)) return false;
+    if (sourceType && track.source_type !== sourceType) return false;
+    return true;
+  });
+}
+
 function renderPlaylists() {
   const playlist = selectedPlaylist();
-  $("playlistList").innerHTML = state.playlists.map((item) => `
-    <button class="playlist-button ${item.playlist_id === state.selectedPlaylistId ? "active" : ""}" data-id="${escapeHtml(item.playlist_id)}">
-      <span><strong>${escapeHtml(item.name)}</strong><br><small class="status">${(item.media_ids || []).length} tracks</small></span>
-      <span>›</span>
-    </button>
-  `).join("");
+  const playing = state.playbackSource?.type === "Playlist" ? state.playbackSource.name : "";
+  $("playlistList").innerHTML = state.playlists.map((item) => {
+    const count = (item.media_ids || []).length;
+    const isSelected = item.playlist_id === state.selectedPlaylistId;
+    const isPlaying = playing && item.name === playing;
+    return `
+      <article class="playlist-card ${isSelected ? "active" : ""} ${isPlaying ? "playing" : ""}" data-id="${escapeHtml(item.playlist_id)}">
+        <div class="playlist-card-main">
+          <strong>${escapeHtml(item.name)}</strong>
+          <small class="status">${count} tracks ${isPlaying ? " / ● Playing" : isSelected ? " / ✓ Selected" : ""}</small>
+        </div>
+        <div class="playlist-actions">
+          <button data-action="play">Play</button>
+          <button data-action="shuffle">Shuffle</button>
+          <button data-action="open">Open/Edit</button>
+        </div>
+      </article>`;
+  }).join("");
   $("playlistName").value = playlist?.name || "";
-  const query = $("playlistSearch").value.trim().toLowerCase();
-  const byId = new Map(allTracks().map((track) => [track.media_id, track]));
-  const items = (playlist?.media_ids || []).map((id) => byId.get(id)).filter(Boolean)
-    .filter((track) => !query || trackMatchesQuery(track, query));
+  const items = filteredPlaylistItems(playlist);
+  const total = playlistTracks(playlist).length;
+  $("playlistStatus").textContent = playlist ? `Showing ${items.length} of ${total} tracks` : "Create or select a playlist.";
   $("playlistItems").innerHTML = playlist
-    ? items.map((track) => renderTrackCard(track, { hideAdd: true, remove: true })).join("") || `<div class="status">No playlist items.</div>`
+    ? items.map((track) => renderTrackCard(track, { hideAdd: true, remove: true })).join("") || `<div class="status">No playlist items match.</div>`
     : `<div class="status">Create or select a playlist.</div>`;
 }
 
@@ -1054,7 +1086,9 @@ function backupTimestamp(date = new Date()) {
 function makeBackup() {
   return {
     schemaVersion: BACKUP_SCHEMA_VERSION,
-    app: "JinnSP Android",
+    format: "JinnSP Backup",
+    version: BACKUP_SCHEMA_VERSION,
+    app: "JinnSP",
     exportedAt: new Date().toISOString(),
     tracks: state.tracks,
     playlists: state.playlists,
@@ -1090,7 +1124,7 @@ function readBackupFileWeb() {
   return new Promise((resolve, reject) => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".jinnsp,.json,application/json";
+    input.accept = "";
     input.style.position = "fixed";
     input.style.left = "-10000px";
     document.body.appendChild(input);
@@ -1107,12 +1141,12 @@ function readBackupFileWeb() {
 
 async function downloadBackup() {
   const backup = makeBackup();
-  const filename = `JinnSP_Backup_${backupTimestamp()}.jinnsp`;
+  const filename = `JinnSP_Backup_${backupTimestamp()}.jinnsp.json`;
   const content = JSON.stringify(backup, null, 2);
   if (isNative() && Native) {
     await Native.saveBackup({ filename, content });
   } else {
-    const blob = new Blob([content], { type: "application/octet-stream" });
+    const blob = new Blob([content], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -1181,8 +1215,8 @@ $("toggleFilters").addEventListener("click", () => $("filters").classList.toggle
 $("pickFiles").addEventListener("click", () => pickFiles().catch((error) => $("syncStatus").textContent = error.message));
 $("pickFolder").addEventListener("click", () => pickFolder().catch((error) => $("syncStatus").textContent = error.message));
 $("addUrl").addEventListener("click", () => addUrl().catch((error) => $("syncStatus").textContent = error.message));
-$("playFiltered").addEventListener("click", () => { setQueue(filteredTracks()); playAt(0); });
-$("shuffleFiltered").addEventListener("click", () => { setQueue(filteredTracks(), true); playAt(0); });
+$("playFiltered").addEventListener("click", () => { const items = filteredTracks(); setQueue(items, false, { type: "Library", name: "Filtered tracks", count: items.length }); playAt(0); });
+$("shuffleFiltered").addEventListener("click", () => { const items = filteredTracks(); setQueue(items, true, { type: "Library", name: "Filtered shuffle", count: items.length }); playAt(0); });
 function handleTrackListClick(event) {
   const button = event.target.closest("button");
   const item = event.target.closest(".track-item");
@@ -1190,7 +1224,7 @@ function handleTrackListClick(event) {
   const track = allTracks().find((entry) => entry.media_id === item.dataset.id);
   if (!track) return;
   if (button.dataset.action === "play") {
-    setQueue([track]);
+    setQueue([track], false, { type: "Library", name: "Single track", count: 1 });
     playAt(0);
     setTab("now");
   }
@@ -1201,9 +1235,21 @@ function handleTrackListClick(event) {
 $("trackList").addEventListener("click", handleTrackListClick);
 $("searchResults").addEventListener("click", handleTrackListClick);
 $("playlistList").addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-id]");
-  if (!button) return;
-  state.selectedPlaylistId = button.dataset.id;
+  const card = event.target.closest("[data-id]");
+  if (!card) return;
+  const playlist = state.playlists.find((item) => item.playlist_id === card.dataset.id);
+  if (!playlist) return;
+  const action = event.target.closest("button")?.dataset.action || "open";
+  if (action === "play" || action === "shuffle") {
+    state.selectedPlaylistId = playlist.playlist_id;
+    const items = playlistTracks(playlist);
+    setQueue(items, action === "shuffle", { type: "Playlist", name: playlist.name, count: items.length });
+    renderAll();
+    playAt(0);
+    setTab("now");
+    return;
+  }
+  state.selectedPlaylistId = playlist.playlist_id;
   await saveState();
   renderAll();
 });
@@ -1214,7 +1260,7 @@ $("playlistItems").addEventListener("click", (event) => {
   if (!button || !item || !playlist) return;
   const track = allTracks().find((entry) => entry.media_id === item.dataset.id);
   if (button.dataset.action === "play" && track) {
-    setQueue((playlist.media_ids || []).map((id) => allTracks().find((entry) => entry.media_id === id)).filter(Boolean));
+    setQueue(playlistTracks(playlist), false, { type: "Playlist", name: playlist.name, count: (playlist.media_ids || []).length });
     playAt(state.queue.findIndex((entry) => entry.media_id === track.media_id));
     setTab("now");
   }
@@ -1259,7 +1305,7 @@ $("folderList").addEventListener("click", (event) => {
   const button = event.target.closest("[data-folder]");
   if (button) scanFolder(button.dataset.folder).catch((error) => $("syncStatus").textContent = error.message);
 });
-for (const id of ["q", "sourceType", "tag", "playlistSearch", "globalSearch"]) {
+for (const id of ["q", "sourceType", "tag", "playlistSearch", "playlistTag", "playlistSource", "globalSearch"]) {
   $(id).addEventListener("input", renderAll);
   $(id).addEventListener("change", renderAll);
 }
@@ -1343,5 +1389,6 @@ if (favoriteNow) {
     renderAll();
   });
 }
+
 
 
