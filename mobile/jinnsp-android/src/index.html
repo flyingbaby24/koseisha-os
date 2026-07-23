@@ -1,0 +1,237 @@
+﻿<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#050814" />
+    <title>JinnSP</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="desktop-rail" aria-label="Desktop navigation">
+        <div class="brand-lockup">
+          <div class="logo-mark">J</div>
+          <div>
+            <strong>JinnSP</strong>
+            <small>Your music, your way.</small>
+          </div>
+        </div>
+        <nav class="rail-nav">
+          <button data-tab="library" class="active">Library</button>
+          <button data-tab="playlists">Playlists</button>
+          <button data-tab="now">Playing</button>
+          <button data-tab="search">Search</button>
+          <button data-tab="settings">Settings</button>
+        </nav>
+        <section class="jinn-card compact-jinn">
+          <div class="mascot mascot-idle" aria-hidden="true"></div>
+          <strong>Jinn is ready</strong>
+          <small id="syncStatus">Loading library...</small>
+        </section>
+      </aside>
+
+      <section class="phone-stage">
+        <header class="topbar">
+          <button class="ghost icon-button" id="menuButton" aria-label="Menu">☰</button>
+          <div class="brand-title">
+            <span class="logo-text">JinnSP</span>
+            <small>Neon Jukebox</small>
+          </div>
+          <button class="ghost icon-button" id="openNow" aria-label="Now Playing">♪</button>
+        </header>
+
+        <section id="view-library" class="view active" data-title="Library">
+          <div class="hero-panel library-hero">
+            <div>
+              <p class="eyebrow">YOUR MUSIC, YOUR WAY.</p>
+              <h1>Library</h1>
+              <p class="hint">Local files, Android folders, and R2 direct URLs live together.</p>
+            </div>
+            <div class="mascot mascot-idle" aria-label="Jinn mascot"></div>
+          </div>
+
+          <div class="segmented" id="libraryScope">
+            <button data-scope="" class="active">All</button>
+            <button data-scope="local">Local</button>
+            <button data-scope="url">R2</button>
+            <button data-scope="favorite">Favorites</button>
+          </div>
+
+          <div class="search-bar inline-search">
+            <span>⌕</span>
+            <input id="q" placeholder="Search tracks, artists, URLs" />
+            <button id="toggleFilters" class="ghost">Filters</button>
+          </div>
+
+          <div id="filters" class="filters collapsed">
+            <label>Source
+              <select id="sourceType">
+                <option value="">All sources</option>
+                <option value="local">Local files</option>
+                <option value="url">R2 / direct URL</option>
+                <option value="suno">Suno</option>
+              </select>
+            </label>
+            <label>Tag<input id="tag" placeholder="R2" /></label>
+            <button id="clearFilters">Clear filters</button>
+          </div>
+
+          <div class="quick-actions neon-row">
+            <button id="pickFiles" class="primary">Add files</button>
+            <button id="pickFolder">Music folder</button>
+            <button id="playFiltered">Play all</button>
+            <button id="shuffleFiltered">Shuffle</button>
+          </div>
+
+          <div class="url-add neon-card">
+            <input id="urlInput" placeholder="https://media.jinn-project.com/music/..." />
+            <button id="addUrl">Add URL</button>
+          </div>
+
+          <div id="libraryStatus" class="status"></div>
+          <div id="trackList" class="track-list"></div>
+        </section>
+
+        <section id="view-playlists" class="view" data-title="Playlists">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">CURATED SETS</p>
+              <h1>Playlists</h1>
+            </div>
+            <button id="newPlaylist" class="icon-button primary">＋</button>
+          </div>
+          <div id="playlistList" class="playlist-list"></div>
+          <div class="playlist-editor neon-card">
+            <input id="playlistName" placeholder="playlist name" />
+            <div class="quick-actions">
+              <button id="savePlaylist" class="primary">Save</button>
+              <button id="deletePlaylist" class="danger">Delete</button>
+            </div>
+            <label>Search in playlist<input id="playlistSearch" placeholder="title / source / tags" /></label>
+            <div class="quick-actions muted-actions">
+              <button disabled title="Coming Soon">Export playlist CSV</button>
+              <button disabled title="Coming Soon">Import playlist CSV</button>
+            </div>
+            <div id="playlistStatus" class="status">Saved</div>
+          </div>
+          <div id="playlistItems" class="track-list compact-list"></div>
+        </section>
+
+        <section id="view-now" class="view now-view" data-title="Now Playing">
+          <div class="now-art-shell">
+            <div id="nowArtwork" class="now-art mascot mascot-idle"></div>
+          </div>
+          <div class="now-copy">
+            <p class="eyebrow">NOW PLAYING</p>
+            <h1 id="nowTitle">Choose a track</h1>
+            <p id="nowMeta">Queue: 0</p>
+          </div>
+          <audio id="audio" controls></audio>
+          <div class="fake-wave" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="transport primary-transport">
+            <button id="prev" class="ghost">⏮</button>
+            <button id="playPause" class="play-button">Play</button>
+            <button id="next" class="ghost">⏭</button>
+          </div>
+          <div class="transport secondary-transport">
+            <button id="shuffle">Shuffle</button>
+            <button id="favoriteNow">♡ Favorite</button>
+            <button id="repeat">Repeat off</button>
+          </div>
+          <div id="playerStatus" class="status"></div>
+        </section>
+
+        <section id="view-search" class="view" data-title="Search">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">CROSS SEARCH</p>
+              <h1>Search</h1>
+            </div>
+            <div class="mascot mascot-searching tiny-mascot" aria-hidden="true"></div>
+          </div>
+          <div class="search-bar">
+            <span>⌕</span>
+            <input id="globalSearch" placeholder="曲、アーティスト、プレイリストを検索" />
+          </div>
+          <div class="chips">
+            <button data-search-chip="R2">R2</button>
+            <button data-search-chip="local">Local</button>
+            <button data-search-chip="favorite">Favorites</button>
+          </div>
+          <div id="searchStatus" class="status">Library search is shared with the Library filter.</div>
+          <div id="searchResults" class="track-list"></div>
+        </section>
+
+        <section id="view-settings" class="view" data-title="Settings">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">CONTROL ROOM</p>
+              <h1>Settings</h1>
+            </div>
+            <div class="mascot mascot-success tiny-mascot" aria-hidden="true"></div>
+          </div>
+
+          <section class="settings-card neon-card">
+            <h2>Theme</h2>
+            <div class="setting-row"><span>Theme</span><strong>Cyber Neon</strong></div>
+            <div class="setting-row"><span>Glow intensity</span><strong>Readable</strong></div>
+          </section>
+
+          <section class="settings-card neon-card">
+            <h2>Backup / Restore</h2>
+            <p class="hint">ライブラリ、プレイリスト、設定をまとめて保存します。復元用ファイルのため、通常は編集しないでください。</p>
+            <div class="quick-actions">
+              <button id="downloadBackup">Download backup</button>
+              <button id="restoreBackup">Restore backup</button>
+            </div>
+            <div id="backupStatus" class="status">Backup ready</div>
+          </section>
+
+          <section class="settings-card neon-card">
+            <h2>R2 Status</h2>
+            <div class="setting-row"><span>R2 Connection</span><strong class="online">Ready for direct URLs</strong></div>
+          </section>
+
+          <section class="settings-card neon-card">
+            <h2>Local folder</h2>
+            <p class="hint">Android Storage Access Frameworkで選択したフォルダを保持します。</p>
+            <div id="folderList" class="folder-list"></div>
+          </section>
+
+          <section class="settings-card neon-card muted-card">
+            <h2>Account</h2>
+            <div class="setting-row"><span>Sync</span><strong>同期未設定</strong></div>
+          </section>
+
+          <section class="settings-card danger-zone">
+            <h2>Danger Zone</h2>
+            <button id="resetLocalData" class="danger">Reset app data</button>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <div id="miniPlayer" class="mini-player">
+      <button id="miniOpen" class="mini-main">
+        <span id="miniArtwork" class="mini-art mascot mascot-idle"></span>
+        <span class="mini-copy">
+          <strong id="miniTitle">No track</strong>
+          <small id="miniMeta">Queue: 0</small>
+        </span>
+      </button>
+      <button id="miniPlay" class="mini-play">Play</button>
+    </div>
+
+    <nav class="tabs" aria-label="Main navigation">
+      <button data-tab="library" class="active"><span>▣</span><small>Library</small></button>
+      <button data-tab="playlists"><span>≋</span><small>Playlists</small></button>
+      <button data-tab="now"><span>◉</span><small>Playing</small></button>
+      <button data-tab="search"><span>⌕</span><small>Search</small></button>
+      <button data-tab="settings"><span>⚙</span><small>Settings</small></button>
+    </nav>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
