@@ -1,49 +1,543 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="JinnSP is an installable music library and playlist player PWA for desktop, Android, and iOS.">
+
+  <meta
+    name="description"
+    content="JinnSP is an installable music library and playlist player PWA for desktop, Android, and iOS."
+  >
   <meta name="theme-color" content="#070b10">
+
   <title>JinnSP — Music Library PWA | Jinn Project</title>
+
   <link rel="canonical" href="https://www.jinn-project.com/jinnsp/">
-  <link rel="alternate" hreflang="en" href="https://www.jinn-project.com/jinnsp/">
-  <link rel="alternate" hreflang="ja" href="https://www.jinn-project.com/jinnsp/index-ja.html">
-  <link rel="alternate" hreflang="x-default" href="https://www.jinn-project.com/jinnsp/">
+  <link
+    rel="alternate"
+    hreflang="en"
+    href="https://www.jinn-project.com/jinnsp/"
+  >
+  <link
+    rel="alternate"
+    hreflang="ja"
+    href="https://www.jinn-project.com/jinnsp/index-ja.html"
+  >
+  <link
+    rel="alternate"
+    hreflang="x-default"
+    href="https://www.jinn-project.com/jinnsp/"
+  >
+
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Jinn Project">
   <meta property="og:locale" content="en_US">
   <meta property="og:title" content="JinnSP — Music Library PWA">
-  <meta property="og:description" content="Installable music library and playlist player for large personal collections across desktop, Android, and iOS.">
+  <meta
+    property="og:description"
+    content="Installable music library and playlist player for large personal collections across desktop, Android, and iOS."
+  >
   <meta property="og:url" content="https://www.jinn-project.com/jinnsp/">
-  <meta property="og:image" content="https://www.jinn-project.com/jinnsp-android/icons/icon-jinnsp-v3-512.png">
+  <meta
+    property="og:image"
+    content="https://www.jinn-project.com/jinnsp-android/icons/icon-jinnsp-v3-512.png"
+  >
+
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="JinnSP — Music Library PWA">
-  <meta name="twitter:description" content="Installable music library and playlist player for desktop, Android, and iOS.">
+  <meta
+    name="twitter:description"
+    content="Installable music library and playlist player for desktop, Android, and iOS."
+  >
+
   <link rel="preload" href="../images/logo.png" as="image">
   <link rel="stylesheet" href="../style.css">
   <link rel="stylesheet" href="../i18n/language-switch.css">
 </head>
+
 <body class="project-page">
   <a class="skip-link" href="#main">Skip to content</a>
+
   <header class="site-header">
-    <a class="logo" href="../index.html" aria-label="Jinn Project home"><img src="../images/logo.png" alt=""><span>JINN PROJECT<small>PUBLIC APP</small></span></a>
-    <button class="nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false"><span></span><span></span></button>
-    <nav class="site-nav" aria-label="Main navigation"><a href="../index.html">Home</a><a href="../index.html#projects">Projects</a><a href="../research/source-of-thought/">Source of Thought</a><a href="../index.html#contact">Contact</a></nav>
-    <div class="language-switch" aria-label="Language"><span aria-hidden="true">🌐</span><a lang="en" hreflang="en" href="index.html" aria-current="true">EN</a><span aria-hidden="true">|</span><a lang="ja" hreflang="ja" href="index-ja.html">JP</a></div>
+    <a
+      class="logo"
+      href="../index.html"
+      aria-label="Jinn Project home"
+    >
+      <img src="../images/logo.png" alt="">
+      <span>
+        JINN PROJECT
+        <small>PUBLIC APP</small>
+      </span>
+    </a>
+
+    <button
+      class="nav-toggle"
+      type="button"
+      aria-label="Open navigation"
+      aria-expanded="false"
+    >
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="../index.html">Home</a>
+      <a href="../index.html#projects">Projects</a>
+      <a href="../research/source-of-thought/">Source of Thought</a>
+      <a href="../index.html#contact">Contact</a>
+    </nav>
+
+    <div class="language-switch" aria-label="Language">
+      <span aria-hidden="true">🌐</span>
+      <a
+        lang="en"
+        hreflang="en"
+        href="index.html"
+        aria-current="true"
+      >
+        EN
+      </a>
+      <span aria-hidden="true">|</span>
+      <a
+        lang="ja"
+        hreflang="ja"
+        href="index-ja.html"
+      >
+        JP
+      </a>
+    </div>
   </header>
+
   <main id="main">
     <section class="jinnsp-page-hero">
-      <div><p class="eyebrow">JINN PROJECT / PUBLIC APP</p><h1>Jinn<em>SP.</em></h1><p>Your music, your way. JinnSP is an installable music library and playlist player for large personal collections, direct media URLs, and local files.</p><div class="actions"><a class="button primary" href="../jinnsp-android/">Launch App</a><a class="button ghost" href="../jinnsp-android/">Install as PWA</a></div><div class="project-subnav"><a href="#features">Features</a><a href="#platforms">Platforms</a><a href="#screenshots">Screenshots</a></div></div>
-      <div class="jinnsp-device" aria-label="JinnSP app preview"><div class="device-top"><span>JinnSP</span><span>PWA</span></div><div class="device-art"><img src="../jinnsp-android/icons/icon-jinnsp-v3-512.png" alt="JinnSP icon"></div><div class="device-track"><div><strong>Now Playing</strong><br><small>Library / Playlist / Queue</small></div><small>1080 tracks</small></div><div class="device-bars" aria-hidden="true"><i style="height:35%"></i><i style="height:62%"></i><i style="height:44%"></i><i style="height:82%"></i><i style="height:55%"></i><i style="height:70%"></i><i style="height:48%"></i><i style="height:90%"></i><i style="height:58%"></i><i style="height:76%"></i></div><div class="device-actions"><span>Library</span><span>Playlists</span><span>Playing</span></div></div>
+      <div>
+        <p class="eyebrow">JINN PROJECT / PUBLIC APP</p>
+
+        <h1>Jinn<em>SP.</em></h1>
+
+        <p>
+          Your music, your way. JinnSP is an installable music library
+          and playlist player for large personal collections, direct
+          media URLs, and local files.
+        </p>
+
+        <div class="actions">
+          <a
+            class="button primary"
+            href="../jinnsp-android/"
+          >
+            Launch App
+          </a>
+
+          <a
+            class="button ghost"
+            href="../jinnsp-android/"
+          >
+            Install as PWA
+          </a>
+        </div>
+
+        <div class="project-subnav">
+          <a href="#features">Features</a>
+          <a href="#platforms">Platforms</a>
+          <a href="#screenshots">Screenshots</a>
+          <a href="#official-playlists">Playlists</a>
+        </div>
+      </div>
+
+      <div
+        class="jinnsp-device"
+        aria-label="JinnSP app preview"
+      >
+        <div class="device-top">
+          <span>JinnSP</span>
+          <span>PWA</span>
+        </div>
+
+        <div class="device-art">
+          <img
+            src="../jinnsp-android/icons/icon-jinnsp-v3-512.png"
+            alt="JinnSP icon"
+          >
+        </div>
+
+        <div class="device-track">
+          <div>
+            <strong>Now Playing</strong><br>
+            <small>Library / Playlist / Queue</small>
+          </div>
+          <small>1094 tracks</small>
+        </div>
+
+        <div class="device-bars" aria-hidden="true">
+          <i style="height:35%"></i>
+          <i style="height:62%"></i>
+          <i style="height:44%"></i>
+          <i style="height:82%"></i>
+          <i style="height:55%"></i>
+          <i style="height:70%"></i>
+          <i style="height:48%"></i>
+          <i style="height:90%"></i>
+          <i style="height:58%"></i>
+          <i style="height:76%"></i>
+        </div>
+
+        <div class="device-actions">
+          <span>Library</span>
+          <span>Playlists</span>
+          <span>Playing</span>
+        </div>
+      </div>
     </section>
-    <section class="section reveal" id="features"><div class="section-head"><div><p class="eyebrow">FEATURES</p><h2>Built for large<br>music libraries.</h2></div><p>JinnSP focuses on practical playback and library control without locking your music into a platform.</p></div><div class="feature-list"><article><h3>Large library control</h3><p>Manage large track sets, search the library, and filter by source and tags.</p></article><article><h3>Playlists</h3><p>Create playlists, play them directly, shuffle within the playlist, and search inside large lists.</p></article><article><h3>Local and URL sources</h3><p>Use local files where the browser or Android file access allows it, and play direct HTTP/HTTPS media URLs such as R2-hosted audio.</p></article><article><h3>Playback tools</h3><p>Queue, repeat, favorites, background audio, and Media Session metadata for supported lock screens and browsers.</p></article><article><h3>Portable data</h3><p>CSV import/export for editable lists and JSON-based backup/restore for app data.</p></article><article><h3>Installable PWA</h3><p>Runs from the browser and can be installed on supported desktop, Android, and iOS environments.</p></article></div></section>
-    <section class="section reveal" id="platforms"><div class="section-head"><div><p class="eyebrow">PLATFORMS</p><h2>Clear about what<br>the web can do.</h2></div><p>Capabilities vary by browser and operating system, especially for local files and lock screen controls.</p></div><div class="truth-table"><article><h3>Desktop</h3><p>Direct URL playback, CSV workflows, backup/restore, and installable PWA behavior are supported by modern Chromium browsers. Local file persistence depends on browser file permissions.</p></article><article><h3>Android</h3><p>The Capacitor build keeps Storage Access Framework folder access, saved preferences, background playback, and Media Session support.</p></article><article><h3>iOS</h3><p>Safari and Home Screen PWA playback are supported within iOS limits. Lock screen next/previous buttons may depend on iOS Media Session behavior.</p></article><article><h3>Offline</h3><p>The app shell is cached by the service worker. Remote music URLs still require network access, and local file access depends on the platform permission model.</p></article></div></section>
-    <section class="section reveal" id="screenshots"><div class="section-head compact"><div><p class="eyebrow">SCREENSHOTS</p><h2>App views.</h2></div><p>No real screenshots are stored in the repository yet, so this page does not invent product imagery.</p></div><div class="screenshot-note">Recommended files: <code>docs/images/jinnsp-library.png</code>, <code>docs/images/jinnsp-playlists.png</code>, <code>docs/images/jinnsp-playing.png</code>, and <code>docs/images/jinnsp-mobile.png</code>.</div></section>
-    <section class="section reveal"><div class="section-head compact"><div><p class="eyebrow">START</p><h2>Open JinnSP.</h2></div><div class="jinnsp-links"><a class="button primary" href="../jinnsp-android/">Launch App</a><a class="button ghost" href="../index.html#projects">Back to Jinn Project</a></div></div></section>
+
+    <section class="section reveal" id="features">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">FEATURES</p>
+          <h2>
+            Built for large<br>
+            music libraries.
+          </h2>
+        </div>
+
+        <p>
+          JinnSP focuses on practical playback and library control
+          without locking your music into a platform.
+        </p>
+      </div>
+
+      <div class="feature-list">
+        <article>
+          <h3>Large library control</h3>
+          <p>
+            Manage large track sets, search the library, and filter by
+            source and tags.
+          </p>
+        </article>
+
+        <article>
+          <h3>Playlists</h3>
+          <p>
+            Create playlists, play them directly, shuffle within the
+            playlist, and search inside large lists.
+          </p>
+        </article>
+
+        <article>
+          <h3>Local and URL sources</h3>
+          <p>
+            Use local files where the browser or Android file access
+            allows it, and play direct HTTP/HTTPS media URLs such as
+            R2-hosted audio.
+          </p>
+        </article>
+
+        <article>
+          <h3>Playback tools</h3>
+          <p>
+            Queue, repeat, favorites, background audio, and Media
+            Session metadata for supported lock screens and browsers.
+          </p>
+        </article>
+
+        <article>
+          <h3>Portable data</h3>
+          <p>
+            CSV import/export for editable lists and JSON-based
+            backup/restore for app data.
+          </p>
+        </article>
+
+        <article>
+          <h3>Installable PWA</h3>
+          <p>
+            Runs from the browser and can be installed on supported
+            desktop, Android, and iOS environments.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section reveal" id="platforms">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">PLATFORMS</p>
+          <h2>
+            Clear about what<br>
+            the web can do.
+          </h2>
+        </div>
+
+        <p>
+          Capabilities vary by browser and operating system,
+          especially for local files and lock screen controls.
+        </p>
+      </div>
+
+      <div class="truth-table">
+        <article>
+          <h3>Desktop</h3>
+          <p>
+            Direct URL playback, CSV workflows, backup/restore, and
+            installable PWA behavior are supported by modern Chromium
+            browsers. Local file persistence depends on browser file
+            permissions.
+          </p>
+        </article>
+
+        <article>
+          <h3>Android</h3>
+          <p>
+            The Capacitor build keeps Storage Access Framework folder
+            access, saved preferences, background playback, and Media
+            Session support.
+          </p>
+        </article>
+
+        <article>
+          <h3>iOS</h3>
+          <p>
+            Safari and Home Screen PWA playback are supported within
+            iOS limits. Lock screen next/previous buttons may depend
+            on iOS Media Session behavior.
+          </p>
+        </article>
+
+        <article>
+          <h3>Offline</h3>
+          <p>
+            The app shell is cached by the service worker. Remote
+            music URLs still require network access, and local file
+            access depends on the platform permission model.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section reveal" id="screenshots">
+      <div class="section-head compact">
+        <div>
+          <p class="eyebrow">SCREENSHOTS</p>
+          <h2>App views.</h2>
+        </div>
+
+        <p>
+          No real screenshots are stored in the repository yet, so
+          this page does not invent product imagery.
+        </p>
+      </div>
+
+      <div class="screenshot-note">
+        Recommended files:
+        <code>docs/images/jinnsp-library.png</code>,
+        <code>docs/images/jinnsp-playlists.png</code>,
+        <code>docs/images/jinnsp-playing.png</code>, and
+        <code>docs/images/jinnsp-mobile.png</code>.
+      </div>
+    </section>
+
+    <section class="section reveal" id="official-playlists">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">OFFICIAL PLAYLISTS</p>
+          <h2>
+            Ready-to-use<br>
+            music libraries.
+          </h2>
+        </div>
+
+        <p>
+          Download an official Jinn Project library file, then import
+          it from <strong>Settings → Restore backup</strong> in JinnSP.
+        </p>
+      </div>
+
+      <div class="feature-list">
+        <article>
+          <h3>Complete Library</h3>
+
+          <p>
+            Import the complete Jinn Project music library as a single
+            JinnSP backup file.
+          </p>
+
+          <a
+            class="button primary"
+            href="https://media.jinn-project.com/playlists/All.json"
+          >
+            Download All.json
+          </a>
+        </article>
+
+        <article>
+          <h3>Jazz and Ambient</h3>
+
+          <p>
+            Start with a smaller genre collection instead of importing
+            the complete library.
+          </p>
+
+          <div class="jinnsp-links">
+            <a
+              class="button ghost"
+              href="https://media.jinn-project.com/playlists/Acid_jazz.json"
+            >
+              Acid Jazz
+            </a>
+
+            <a
+              class="button ghost"
+              href="https://media.jinn-project.com/playlists/Ambient_jazz.json"
+            >
+              Ambient Jazz
+            </a>
+
+            <a
+              class="button ghost"
+              href="https://media.jinn-project.com/playlists/Ambient_pop.json"
+            >
+              Ambient Pop
+            </a>
+          </div>
+        </article>
+
+        <article>
+          <h3>Cyber Collections</h3>
+
+          <p>
+            Download genre libraries built around cyber, electronic,
+            pop, rap, and chant styles.
+          </p>
+
+          <div class="jinnsp-links">
+            <a
+              class="button ghost"
+              href="https://media.jinn-project.com/playlists/Cyber_chant.json"
+            >
+              Cyber Chant
+            </a>
+
+            <a
+              class="button ghost"
+              href="https://media.jinn-project.com/playlists/Cyber_pop.json"
+            >
+              Cyber Pop
+            </a>
+
+            <a
+              class="button ghost"
+              href="https://media.jinn-project.com/playlists/Cyber_rap.json"
+            >
+              Cyber Rap
+            </a>
+          </div>
+        </article>
+
+        <article>
+          <h3>How to import</h3>
+
+          <p>
+            Download one JSON file, open JinnSP, and select
+            <strong>Settings → Restore backup</strong>. Restoring a
+            file replaces the current library and playlist data, so
+            download a backup first when needed.
+          </p>
+
+          <a
+            class="button ghost"
+            href="../jinnsp-android/"
+          >
+            Open JinnSP
+          </a>
+        </article>
+      </div>
+    </section>
+
+    <section class="section reveal">
+      <div class="section-head compact">
+        <div>
+          <p class="eyebrow">START</p>
+          <h2>Open JinnSP.</h2>
+        </div>
+
+        <div class="jinnsp-links">
+          <a
+            class="button primary"
+            href="../jinnsp-android/"
+          >
+            Launch App
+          </a>
+
+          <a
+            class="button ghost"
+            href="../index.html#projects"
+          >
+            Back to Jinn Project
+          </a>
+        </div>
+      </div>
+    </section>
   </main>
-  <footer id="contact"><div class="footer-brand"><a class="logo" href="../index.html"><img src="../images/logo.png" alt=""><span>JINN PROJECT</span></a><p>Independent research, open systems, and public tools.</p></div><div class="footer-links"><div><strong>PROJECT</strong><a href="../jinnsp-android/">Launch JinnSP</a><a href="../research/source-of-thought/">Source of Thought</a></div><div><strong>RESEARCH</strong><a href="../index.html#publications">Publications</a><a href="../research/stratagems/">Stratagems Atlas</a></div><div><strong>CONTACT</strong><a href="https://linktr.ee/Jinn_project" target="_blank" rel="noopener">All Links ↗</a></div></div><div class="footer-bottom"><span>© 2026 Jinn Project</span><span>JinnSP / Music Library PWA</span></div></footer>
-  <script src="../i18n/language-switch.js"></script><script src="../script.js"></script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"JinnSP","applicationCategory":"MultimediaApplication","operatingSystem":"Web, Android, iOS","url":"https://www.jinn-project.com/jinnsp-android/","description":"Installable music library and playlist player PWA."}</script>
+
+  <footer id="contact">
+    <div class="footer-brand">
+      <a class="logo" href="../index.html">
+        <img src="../images/logo.png" alt="">
+        <span>JINN PROJECT</span>
+      </a>
+
+      <p>
+        Independent research, open systems, and public tools.
+      </p>
+    </div>
+
+    <div class="footer-links">
+      <div>
+        <strong>PROJECT</strong>
+        <a href="../jinnsp-android/">Launch JinnSP</a>
+        <a href="../research/source-of-thought/">
+          Source of Thought
+        </a>
+      </div>
+
+      <div>
+        <strong>RESEARCH</strong>
+        <a href="../index.html#publications">Publications</a>
+        <a href="../research/stratagems/">Stratagems Atlas</a>
+      </div>
+
+      <div>
+        <strong>CONTACT</strong>
+        <a
+          href="https://linktr.ee/Jinn_project"
+          target="_blank"
+          rel="noopener"
+        >
+          All Links ↗
+        </a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>© 2026 Jinn Project</span>
+      <span>JinnSP / Music Library PWA</span>
+    </div>
+  </footer>
+
+  <script src="../i18n/language-switch.js"></script>
+  <script src="../script.js"></script>
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "JinnSP",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Web, Android, iOS",
+      "url": "https://www.jinn-project.com/jinnsp-android/",
+      "description": "Installable music library and playlist player PWA."
+    }
+  </script>
 </body>
 </html>
