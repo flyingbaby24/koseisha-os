@@ -31,6 +31,8 @@ public class ProductBattleCardListRowView : MonoBehaviour
     {
         EnsureBuilt();
         ConfigureRaycasts();
+        backgroundImage.enabled = false;
+        backgroundImage.enabled = true;
         WireButton();
     }
 
@@ -65,6 +67,8 @@ public class ProductBattleCardListRowView : MonoBehaviour
         }
 
         ConfigureRaycasts();
+        backgroundImage.enabled = false;
+        backgroundImage.enabled = true;
         WireButton();
     }
 
@@ -131,6 +135,7 @@ public class ProductBattleCardListRowView : MonoBehaviour
             rootImage = gameObject.AddComponent<Image>();
         }
         backgroundImage = rootImage;
+        backgroundImage.enabled = true;
         backgroundImage.color = normalColor;
         backgroundImage.raycastTarget = true;
 

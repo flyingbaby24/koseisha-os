@@ -1,0 +1,15 @@
+{
+  "tables": [
+    {
+      "tableId": "reward_standard",
+      "victoryFragments": 100,
+      "defeatFragments": 40,
+      "fragmentsPerKill": 10,
+      "minimumResearchPoints": 10,
+      "researchPerTurn": 5,
+      "researchPerDamage": 0.1,
+      "victorySkillChance": 0.35,
+      "defeatSkillChance": 0.15
+    }
+  ]
+}

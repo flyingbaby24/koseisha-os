@@ -9,12 +9,23 @@ using UnityEngine.UI;
 
 public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDownHandler
 {
+    private enum InventoryFilter { Available, Equipped, All }
     [SerializeField] private TMP_FontAsset overrideFontAsset;
     [SerializeField] private Transform content;
     [SerializeField] private TMP_Text headingText;
     [SerializeField] private TMP_Text emptyText;
     [SerializeField] private ProductBattleGeneratedSkillRowView rowPrefab;
     [SerializeField] private bool debugLog;
+    private InventoryFilter inventoryFilter = InventoryFilter.Available;
+    private Button availableFilterButton;
+    private Button equippedFilterButton;
+    private Button allFilterButton;
+    private List<GeneratedSkillDto> cachedSkills = new List<GeneratedSkillDto>();
+    private string cachedSelectedCardDocId = "";
+    private List<string> cachedAssignedSkillIds = new List<string>();
+    private Dictionary<string, string> cachedAssignedLabels = new Dictionary<string, string>();
+    private bool cachedSelectedCardIsDeckCard;
+    private bool cachedSelectedCardCanReceiveSkill;
 
     private readonly List<ProductBattleGeneratedSkillRowView> rows = new List<ProductBattleGeneratedSkillRowView>();
     private string selectedSkillId = "";
@@ -57,28 +68,37 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
         bool selectedCardCanReceiveSkill)
     {
         EnsureBuilt();
+        cachedSkills = (skills ?? Enumerable.Empty<GeneratedSkillDto>()).Where(item => item != null).ToList();
+        cachedSelectedCardDocId = selectedCardDocId ?? "";
+        cachedAssignedSkillIds = (assignedSkillIds ?? Enumerable.Empty<string>()).ToList();
+        cachedAssignedLabels = assignedSkillLabels == null ? new Dictionary<string, string>() : new Dictionary<string, string>(assignedSkillLabels);
+        cachedSelectedCardIsDeckCard = selectedCardIsDeckCard;
+        cachedSelectedCardCanReceiveSkill = selectedCardCanReceiveSkill;
         ScrollRect scrollRect = GetComponent<ScrollRect>();
         float scrollPosition = scrollRect == null ? 1f : scrollRect.verticalNormalizedPosition;
         ClearRows();
 
         HashSet<string> assigned = new HashSet<string>(assignedSkillIds ?? Enumerable.Empty<string>());
         Dictionary<string, string> assignmentLabels = assignedSkillLabels ?? new Dictionary<string, string>();
-        List<GeneratedSkillDto> ordered = (skills ?? Enumerable.Empty<GeneratedSkillDto>())
+        List<GeneratedSkillDto> allOrdered = cachedSkills
             .Where(skill => skill != null && !string.IsNullOrWhiteSpace(skill.skill_id))
             .OrderByDescending(skill => !string.IsNullOrWhiteSpace(selectedCardDocId) && skill.doc_id == selectedCardDocId)
             .ThenBy(skill => skill.DisplayName)
             .ThenBy(skill => skill.skill_id)
             .ToList();
+        List<GeneratedSkillDto> ordered = allOrdered.Where(skill =>
+            inventoryFilter == InventoryFilter.All ||
+            (inventoryFilter == InventoryFilter.Equipped) == assignmentLabels.ContainsKey(skill.skill_id)).ToList();
 
         if (headingText != null)
         {
-            headingText.text = $"Generated Skills ({ordered.Count})";
+            headingText.text = $"Generated Skills ({ordered.Count}/{allOrdered.Count})";
         }
 
         if (emptyText != null)
         {
             emptyText.gameObject.SetActive(ordered.Count == 0);
-            emptyText.text = "No generated skills";
+            emptyText.text = inventoryFilter == InventoryFilter.Available ? "No Available Skills" : inventoryFilter == InventoryFilter.Equipped ? "No Equipped Skills" : "No Generated Skills";
         }
 
         foreach (GeneratedSkillDto skill in ordered)
@@ -128,6 +148,7 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
         }
 
         ApplyFontToGeneratedTexts();
+        RefreshFilterButtons();
     }
 
     public void SetFontAsset(TMP_FontAsset fontAsset)
@@ -186,15 +207,19 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
             image = gameObject.AddComponent<Image>();
         }
         image.color = new Color(0.015f, 0.03f, 0.04f, 0.68f);
-        image.raycastTarget = false;
+        image.raycastTarget = true;
 
         EnsureCanvasRaycaster();
 
         if (headingText == null)
         {
-            headingText = CreateText("HeadingText", new Vector2(0.04f, 0.90f), new Vector2(0.96f, 0.99f), "Generated Skills", 19f, TextAlignmentOptions.Left);
+            headingText = CreateText("HeadingText", new Vector2(0.04f, 0.90f), new Vector2(0.43f, 0.99f), "Generated Skills", 19f, TextAlignmentOptions.Left);
         }
         ConfigureReadableText(headingText, 19f);
+        availableFilterButton = EnsureFilterButton(availableFilterButton, "AvailableFilter", "Available", new Vector2(0.44f, 0.91f), new Vector2(0.61f, 0.985f), InventoryFilter.Available);
+        equippedFilterButton = EnsureFilterButton(equippedFilterButton, "EquippedFilter", "Equipped", new Vector2(0.62f, 0.91f), new Vector2(0.78f, 0.985f), InventoryFilter.Equipped);
+        allFilterButton = EnsureFilterButton(allFilterButton, "AllFilter", "All", new Vector2(0.79f, 0.91f), new Vector2(0.95f, 0.985f), InventoryFilter.All);
+        RefreshFilterButtons();
 
         RectTransform viewport = EnsureViewport();
         if (content == null)
@@ -438,6 +463,46 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
         return text;
     }
 
+    private Button EnsureFilterButton(Button current, string objectName, string label, Vector2 min, Vector2 max, InventoryFilter filter)
+    {
+        if (current == null)
+        {
+            Transform existing = transform.Find(objectName);
+            if (existing != null) current = existing.GetComponent<Button>();
+        }
+        if (current == null)
+        {
+            GameObject target = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(Button));
+            target.transform.SetParent(transform, false);
+            current = target.GetComponent<Button>();
+            TMP_Text text = CreateText("Label", Vector2.zero, Vector2.one, label, 11f, TextAlignmentOptions.Center);
+            text.transform.SetParent(target.transform, false);
+        }
+        RectTransform rect = current.transform as RectTransform;
+        rect.anchorMin = min; rect.anchorMax = max; rect.offsetMin = rect.offsetMax = Vector2.zero;
+        current.onClick.RemoveAllListeners(); current.onClick.AddListener(() => SetInventoryFilter(filter));
+        return current;
+    }
+
+    private void SetInventoryFilter(InventoryFilter filter)
+    {
+        inventoryFilter = filter;
+        Render(cachedSkills, cachedSelectedCardDocId, cachedAssignedSkillIds, cachedAssignedLabels, cachedSelectedCardIsDeckCard, cachedSelectedCardCanReceiveSkill);
+    }
+
+    private void RefreshFilterButtons()
+    {
+        SetFilterColor(availableFilterButton, inventoryFilter == InventoryFilter.Available);
+        SetFilterColor(equippedFilterButton, inventoryFilter == InventoryFilter.Equipped);
+        SetFilterColor(allFilterButton, inventoryFilter == InventoryFilter.All);
+    }
+
+    private static void SetFilterColor(Button button, bool selected)
+    {
+        Image image = button == null ? null : button.GetComponent<Image>();
+        if (image != null) image.color = selected ? new Color(0.0f, 0.48f, 0.62f, 0.96f) : new Color(0.03f, 0.16f, 0.22f, 0.92f);
+    }
+
     private static void ConfigureReadableText(TMP_Text text, float fontSize)
     {
         if (text == null)
@@ -519,7 +584,9 @@ public class ProductBattleGeneratedSkillsPanelView : MonoBehaviour, IPointerDown
         }
         for (int i = content.childCount - 1; i >= 0; i--)
         {
-            Destroy(content.GetChild(i).gameObject);
+            GameObject child = content.GetChild(i).gameObject;
+            child.SetActive(false);
+            Destroy(child);
         }
     }
 }

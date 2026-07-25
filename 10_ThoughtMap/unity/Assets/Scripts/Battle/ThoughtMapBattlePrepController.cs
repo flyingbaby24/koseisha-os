@@ -5,6 +5,9 @@ using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class ThoughtMapBattlePrepController : MonoBehaviour
 {
@@ -100,7 +103,51 @@ public class ThoughtMapBattlePrepController : MonoBehaviour
             return;
         }
 
+        if (!CanLoadBattleScene())
+        {
+            return;
+        }
+
         SceneManager.LoadScene(battleSceneName);
+    }
+
+    private bool CanLoadBattleScene()
+    {
+        if (string.IsNullOrWhiteSpace(battleSceneName))
+        {
+            const string message = "Battle Scene transition failed: Battle Scene Name is empty. Assign it in the Inspector.";
+            Debug.LogError("[BattleScene Transition] " + message, this);
+            WriteStatus(message);
+            return false;
+        }
+
+#if UNITY_EDITOR
+        bool registeredInActiveBuildProfile = EditorBuildSettings.scenes.Any(scene =>
+            scene.enabled &&
+            string.Equals(Path.GetFileNameWithoutExtension(scene.path), battleSceneName, System.StringComparison.Ordinal));
+        if (!registeredInActiveBuildProfile)
+        {
+            string profileMessage =
+                $"Battle Scene transition failed: Assets/Scenes/{battleSceneName}.unity exists, " +
+                "but it is not enabled in the active Unity 6 Build Profile Scene List. Add and enable the scene before starting battle.";
+            Debug.LogError("[BattleScene Transition][Build Profile] " + profileMessage, this);
+            WriteStatus(profileMessage);
+            return false;
+        }
+#endif
+
+        if (Application.CanStreamedLevelBeLoaded(battleSceneName))
+        {
+            return true;
+        }
+
+        string loadMessage =
+            $"Battle Scene transition failed: '{battleSceneName}' cannot be loaded. " +
+            $"The scene asset is Assets/Scenes/{battleSceneName}.unity. " +
+            "Confirm the Inspector scene name, then add and enable this scene in the active Unity 6 Build Profile Scene List.";
+        Debug.LogError("[BattleScene Transition] " + loadMessage, this);
+        WriteStatus(loadMessage);
+        return false;
     }
 
     private List<ThoughtMapBattleCardData> LoadCards()

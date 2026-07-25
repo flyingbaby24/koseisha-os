@@ -6,6 +6,9 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class ProductBattlePrepPanelView : MonoBehaviour
 {
@@ -123,6 +126,8 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         EnsurePanelTransparency();
         EnsureReadableTextEffects();
         EnsureListContentReferences();
+        ConfigureDragDropZones();
+        HideLegacyAddButtons();
         if (cardListContent != null)
         {
             NormalizeLightweightListScrollArea(cardListContent);
@@ -147,6 +152,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         WireGeneratedSkillsPanel();
         RenderGrid();
         cardDetailPanel?.Clear();
+        EnsureDeckLibrary();
     }
 
     private void EnsureFormationRules()
@@ -172,6 +178,14 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             LoadCards();
         }
         LoadGeneratedSkills();
+        if (!string.IsNullOrWhiteSpace(ThoughtMapPersonalSession.Email))
+        {
+            if (personalEmailInput != null)
+            {
+                personalEmailInput.text = ThoughtMapPersonalSession.Email;
+            }
+            LoadPersonalLibrary();
+        }
     }
 
     private void WireButtons()
@@ -240,6 +254,8 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             return;
         }
 
+        ThoughtMapPersonalSession.Email = email;
+
         WriteStatus("Loading Personal Library...");
         StartCoroutine(personalLibraryApiClient.GetSavedByEmail(
             email,
@@ -294,6 +310,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
         RefreshGeneratedSkills("Load Personal");
         RenderAll();
+        GetComponent<DeckLibraryManager>()?.RestoreLastUsedDeck();
         if (personalCards.Count == 0)
         {
             string status = string.Equals(response.parse_status, "actual_empty", System.StringComparison.OrdinalIgnoreCase)
@@ -511,6 +528,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             Sprite artSprite = ResolveCardArtForTarget(loadedCards[i], i, "Card List");
             view.Bind(loadedCards[i], i, $"C{i + 1}", i == selectedLibraryIndex, deckCards.Contains(loadedCards[i]), state, artSprite);
             view.SetClickHandler(OnLibraryCardClicked);
+            ConfigureDragSource(view.gameObject, loadedCards[i], BattlePrepDragSourceKind.CardList, i);
         }
         RestoreScrollPosition(scroll, scrollPosition);
     }
@@ -540,6 +558,8 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             Sprite artSprite = ResolveCardArtForTarget(deckCards[i], i, "Deck List");
             view.Bind(deckCards[i], i, $"P{i + 1}", i == selectedDeckIndex, placement.ContainsValue(deckCards[i]), state, artSprite);
             view.SetClickHandler(OnDeckCardClicked);
+            ConfigureDragSource(view.gameObject, deckCards[i], BattlePrepDragSourceKind.Deck, i);
+            ConfigureSkillDropTarget(view.gameObject, deckCards[i]);
         }
         RestoreScrollPosition(scroll, scrollPosition);
     }
@@ -596,7 +616,14 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             {
                 gridCells[index].BindEmpty(x, y, available);
             }
-            gridCells[index].SetClickHandler(OnGridCellClicked);
+            gridCells[index].SetClickHandler(null);
+            ConfigureDragSource(gridCells[index].gameObject, placement.TryGetValue(index, out ThoughtMapBattleCardData dragCard) ? dragCard : null, BattlePrepDragSourceKind.Formation, index);
+            ConfigureGridDropZone(gridCells[index], index);
+            if (dragCard != null)
+            {
+                ConfigureSkillDropTarget(gridCells[index].gameObject, dragCard);
+                gridCells[index].SetSkillLabel(GetAssignedSkillDisplayName(dragCard));
+            }
             if (logFormationGridCells)
             {
                 if (debugBattlePrepLayout)
@@ -759,6 +786,148 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     private bool IsFormationCellAvailable(int row)
     {
         return row >= 0 && row < Mathf.Clamp(playerRows, 0, 5);
+    }
+
+    private void ConfigureDragDropZones()
+    {
+        if (cardListContent != null)
+        {
+            Transform target = cardListContent.parent != null && cardListContent.parent.parent != null ? cardListContent.parent.parent : cardListContent;
+            Image targetImage = target.GetComponent<Image>(); if (targetImage != null) targetImage.raycastTarget = true;
+            BattlePrepDropZone zone = target.GetComponent<BattlePrepDropZone>() ?? target.gameObject.AddComponent<BattlePrepDropZone>();
+            zone.Configure(RemoveDeckCardFromDrag, payload => payload != null && payload.source == BattlePrepDragSourceKind.Deck, targetImage);
+        }
+        if (deckListContent != null)
+        {
+            Transform target = deckListContent.parent != null && deckListContent.parent.parent != null ? deckListContent.parent.parent : deckListContent;
+            Image targetImage = target.GetComponent<Image>(); if (targetImage != null) targetImage.raycastTarget = true;
+            BattlePrepDropZone zone = target.GetComponent<BattlePrepDropZone>() ?? target.gameObject.AddComponent<BattlePrepDropZone>();
+            zone.Configure(HandleDeckDrop, payload => payload != null && (payload.source == BattlePrepDragSourceKind.CardList || payload.source == BattlePrepDragSourceKind.Formation), targetImage);
+        }
+        if (generatedSkillsPanel != null)
+        {
+            Image panelImage = generatedSkillsPanel.GetComponent<Image>();
+            if (panelImage != null) panelImage.raycastTarget = true;
+            BattlePrepDropZone zone = generatedSkillsPanel.GetComponent<BattlePrepDropZone>() ?? generatedSkillsPanel.gameObject.AddComponent<BattlePrepDropZone>();
+            zone.Configure(
+                RemoveSkillFromDraggedCard,
+                payload => payload != null && (payload.source == BattlePrepDragSourceKind.Deck || payload.source == BattlePrepDragSourceKind.Formation) && HasAssignedSkill(payload.card),
+                panelImage);
+        }
+    }
+
+    private void HideLegacyAddButtons()
+    {
+        foreach (Button candidate in GetComponentsInChildren<Button>(true))
+        {
+            if (candidate != null && candidate.gameObject.name == "AddToDeckButton") candidate.gameObject.SetActive(false);
+        }
+    }
+
+    private static void ConfigureDragSource(GameObject target, ThoughtMapBattleCardData card, BattlePrepDragSourceKind source, int index)
+    {
+        BattlePrepDragSource drag = target.GetComponent<BattlePrepDragSource>() ?? target.AddComponent<BattlePrepDragSource>();
+        drag.Configure(card, source, index);
+    }
+
+    private void ConfigureGridDropZone(ProductBattleGridCellView cell, int cellIndex)
+    {
+        BattlePrepDropZone zone = cell.GetComponent<BattlePrepDropZone>() ?? cell.gameObject.AddComponent<BattlePrepDropZone>();
+        zone.Configure(
+            payload => PlaceDraggedCard(payload, cellIndex),
+            payload => payload != null && IsFormationCellAvailable(cell.Y) &&
+                (payload.source == BattlePrepDragSourceKind.Deck || payload.source == BattlePrepDragSourceKind.Formation),
+            cell.GetComponent<Image>());
+    }
+
+    private void HandleDeckDrop(BattlePrepDragPayload payload)
+    {
+        if (payload == null) return;
+        if (payload.source == BattlePrepDragSourceKind.Formation)
+        {
+            if (placement.Remove(payload.sourceIndex))
+            {
+                RefreshGeneratedSkills("Drag Remove Placement"); RenderAll(); WriteStatus("Returned card to Deck.");
+            }
+            return;
+        }
+        ThoughtMapBattleCardData card = payload.card;
+        int existing = deckCards.IndexOf(card);
+        if (existing >= 0) { selectedDeckIndex = existing; RenderAll(); WriteStatus($"Card already in Deck as P{existing + 1}."); return; }
+        if (deckCards.Count >= deckLimit) { WriteStatus($"Deck limit is {deckLimit}."); return; }
+        deckCards.Add(card); selectedDeckIndex = deckCards.Count - 1; selectedLibraryIndex = -1;
+        RefreshGeneratedSkills("Drag Add Deck"); RenderAll(); WriteStatus($"Added P{selectedDeckIndex + 1} to Deck.");
+    }
+
+    private void RemoveDeckCardFromDrag(BattlePrepDragPayload payload)
+    {
+        if (payload == null || payload.source != BattlePrepDragSourceKind.Deck) return;
+        int index = deckCards.IndexOf(payload.card);
+        if (index < 0) return;
+        foreach (int cellIndex in placement.Where(pair => pair.Value == payload.card).Select(pair => pair.Key).ToList()) placement.Remove(cellIndex);
+        assignedSkillIdsByCardId.Remove(GetCardId(payload.card));
+        deckCards.RemoveAt(index); selectedDeckIndex = -1;
+        RefreshGeneratedSkills("Drag Remove Deck"); RenderAll(); WriteStatus("Removed card from Deck.");
+    }
+
+    private void PlaceDraggedCard(BattlePrepDragPayload payload, int targetIndex)
+    {
+        if (payload == null || !IsFormationCellAvailable(targetIndex / 5)) return;
+        ThoughtMapBattleCardData card = payload.card;
+        if (!deckCards.Contains(card)) return;
+        bool alreadyPlaced = placement.ContainsValue(card);
+        if (!alreadyPlaced && placement.Count >= deployLimit) { WriteStatus($"Deploy limit is {deployLimit}."); return; }
+        foreach (int oldIndex in placement.Where(pair => pair.Value == card).Select(pair => pair.Key).ToList()) placement.Remove(oldIndex);
+        if (placement.TryGetValue(targetIndex, out ThoughtMapBattleCardData displaced) && displaced != card) placement.Remove(targetIndex);
+        placement[targetIndex] = card; selectedDeckIndex = deckCards.IndexOf(card);
+        RefreshGeneratedSkills("Drag Place Card"); RenderAll(); WriteStatus($"Placed P{selectedDeckIndex + 1} at ({targetIndex % 5 + 1},{targetIndex / 5 + 1}).");
+    }
+
+    private void ConfigureSkillDropTarget(GameObject target, ThoughtMapBattleCardData card)
+    {
+        Image image = target.GetComponent<Image>();
+        BattlePrepSkillDropTarget drop = target.GetComponent<BattlePrepSkillDropTarget>() ?? target.AddComponent<BattlePrepSkillDropTarget>();
+        drop.Configure(skill => AssignSkillToCard(card, skill), skill => CanAssignSkillToCard(card, skill), image);
+    }
+
+    private bool CanAssignSkillToCard(ThoughtMapBattleCardData card, GeneratedSkillDto skill)
+    {
+        if (card == null || skill == null || !deckCards.Contains(card)) return false;
+        string cardId = GetCardId(card);
+        if (string.IsNullOrWhiteSpace(cardId) || HasAssignedSkill(card)) return false;
+        return string.IsNullOrWhiteSpace(FindAssignedCardIdForSkill(skill.skill_id));
+    }
+
+    private bool HasAssignedSkill(ThoughtMapBattleCardData card)
+    {
+        string cardId = GetCardId(card);
+        return !string.IsNullOrWhiteSpace(cardId) && assignedSkillIdsByCardId.TryGetValue(cardId, out List<string> ids) && ids != null && ids.Any(id => !string.IsNullOrWhiteSpace(id));
+    }
+
+    private void AssignSkillToCard(ThoughtMapBattleCardData card, GeneratedSkillDto skill)
+    {
+        selectedDeckIndex = deckCards.IndexOf(card);
+        selectedLibraryIndex = -1;
+        AssignGeneratedSkill(skill);
+    }
+
+    private void RemoveSkillFromDraggedCard(BattlePrepDragPayload payload)
+    {
+        if (payload == null || payload.card == null) return;
+        string cardId = GetCardId(payload.card);
+        if (!assignedSkillIdsByCardId.TryGetValue(cardId, out List<string> ids) || ids == null || ids.Count == 0) return;
+        string removedId = ids.FirstOrDefault(id => !string.IsNullOrWhiteSpace(id));
+        assignedSkillIdsByCardId.Remove(cardId);
+        WriteStatus($"Removed {(generatedSkillById.TryGetValue(removedId ?? "", out GeneratedSkillDto skill) ? skill.DisplayName : "skill")} from {payload.card.cardName}.");
+        RefreshAfterSkillAssignment();
+    }
+
+    private string GetAssignedSkillDisplayName(ThoughtMapBattleCardData card)
+    {
+        string cardId = GetCardId(card);
+        if (!assignedSkillIdsByCardId.TryGetValue(cardId, out List<string> ids) || ids == null) return "";
+        string skillId = ids.FirstOrDefault(id => !string.IsNullOrWhiteSpace(id));
+        return !string.IsNullOrWhiteSpace(skillId) && generatedSkillById.TryGetValue(skillId, out GeneratedSkillDto skill) ? "Skill: " + skill.DisplayName : "Skill";
     }
 
     [ContextMenu("Load Generated Skills")]
@@ -966,6 +1135,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
     {
         EnsureGeneratedSkillsPanel();
         WireGeneratedSkillsPanel();
+        ConfigureDragDropZones();
         if (generatedSkillsPanel == null)
         {
             return;
@@ -1377,26 +1547,92 @@ public class ProductBattlePrepPanelView : MonoBehaviour
 
     public void SaveDeckJson()
     {
-        RefreshGeneratedSkills("Save Deck");
-        ThoughtMapBattleDeckConfig config = new ThoughtMapBattleDeckConfig();
-        config.deckCardIds = deckCards.Select(GetCardId).ToList();
-        config.assignedSkills = BuildAssignedSkillSaveData();
-        foreach (KeyValuePair<int, ThoughtMapBattleCardData> pair in placement.OrderBy(pair => pair.Key))
-        {
-            int x = pair.Key % 5;
-            int y = pair.Key / 5;
-            config.deployedCardIds.Add(GetCardId(pair.Value));
-            config.gridPositions.Add(new ThoughtMapBattleDeckPosition(GetCardId(pair.Value), x, y));
-        }
+        Debug.Log(
+            $"[BattlePrep SaveDeck] invoked object={name} instanceId={GetInstanceID()} " +
+            $"deckCards(source)={deckCards.Count} placement(source)={placement.Count} " +
+            $"assignedSkillCards(source)={assignedSkillIdsByCardId.Count}",
+            this);
+
+        ThoughtMapBattleDeckConfig config = BuildCurrentDeckConfig();
 
         string path = Path.Combine(Application.persistentDataPath, deckFileName);
-        File.WriteAllText(path, JsonUtility.ToJson(config, true), Encoding.UTF8);
+        string json = JsonUtility.ToJson(config, true);
+        Debug.Log(
+            $"[BattlePrep SaveDeck] before write path={path} " +
+            $"deckCardIds.Count={config.deckCardIds?.Count ?? 0} " +
+            $"deployedCardIds.Count={config.deployedCardIds?.Count ?? 0} " +
+            $"gridPositions.Count={config.gridPositions?.Count ?? 0} " +
+            $"assignedSkills.Count={config.assignedSkills?.Count ?? 0}\n" +
+            $"deckConfig={json}",
+            this);
+        File.WriteAllText(path, json, Encoding.UTF8);
+        GetComponent<DeckLibraryManager>()?.SyncCurrentDeck();
         if (debugGeneratedSkills)
         {
             int count = config.assignedSkills == null ? 0 : config.assignedSkills.Sum(item => item.skillIds == null ? 0 : item.skillIds.Count);
             Debug.Log($"[GeneratedSkill] savedAssignedSkillCount={count} path={path}", this);
         }
         WriteStatus("Saved deck: " + path);
+    }
+
+    public ThoughtMapBattleDeckConfig BuildCurrentDeckConfig()
+    {
+        RefreshGeneratedSkills("Build Deck Config");
+        ThoughtMapBattleDeckConfig config = new ThoughtMapBattleDeckConfig
+        {
+            deckCardIds = deckCards.Select(GetCardId).ToList(),
+            assignedSkills = BuildAssignedSkillSaveData()
+        };
+        Dictionary<int, ThoughtMapResonanceResult> resonanceResults = CalculatePlacementResonanceByCell();
+        foreach (KeyValuePair<int, ThoughtMapBattleCardData> pair in placement.OrderBy(pair => pair.Key))
+        {
+            int x = pair.Key % 5;
+            int y = pair.Key / 5;
+            string cardId = GetCardId(pair.Value);
+            config.deployedCardIds.Add(cardId);
+            config.gridPositions.Add(new ThoughtMapBattleDeckPosition(cardId, x, y));
+            float resonance = resonanceResults.TryGetValue(pair.Key, out ThoughtMapResonanceResult result) ? result.totalModifier : 0f;
+            config.preparedUnits.Add(BuildPreparedUnitData(pair.Value, x, y, resonance));
+        }
+        return config;
+    }
+
+    private ThoughtMapBattlePreparedUnitData BuildPreparedUnitData(
+        ThoughtMapBattleCardData card,
+        int x,
+        int y,
+        float resonanceModifier)
+    {
+        ThoughtMapGridBonus bonus = ThoughtMapGridBonusCalculator.GetBonus(new ThoughtMapGridPosition(x, y), "Player");
+        ThoughtMapBattleAbilityValue[] values = ThoughtMapBattleAbilityStats.BuildCombatPreviewValues(
+            card,
+            bonus,
+            true,
+            resonanceModifier,
+            true
+        );
+        Dictionary<string, int> finalValues = values.ToDictionary(
+            value => value.definition.shortName,
+            value => Mathf.Max(0, Mathf.RoundToInt(value.finalValue))
+        );
+        return new ThoughtMapBattlePreparedUnitData
+        {
+            cardId = GetCardId(card),
+            x = x,
+            y = y,
+            resonanceModifier = resonanceModifier,
+            attackMultiplier = bonus.attackMultiplier,
+            defenseMultiplier = bonus.defenseMultiplier,
+            hpMultiplier = bonus.hpMultiplier,
+            speedMultiplier = bonus.speedMultiplier,
+            hateMultiplier = bonus.hateMultiplier,
+            maxHp = finalValues["HP"],
+            physicalAttack = finalValues["P.ATK"],
+            skillAttack = finalValues["S.ATK"],
+            physicalDefense = finalValues["P.DEF"],
+            skillDefense = finalValues["S.DEF"],
+            speed = finalValues["SPD"],
+        };
     }
 
     [ContextMenu("Restore Assigned Skills From Deck JSON")]
@@ -1431,6 +1667,13 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             return;
         }
 
+        ApplyDeckConfig(config);
+        WriteStatus("Loaded deck: " + path);
+    }
+
+    public bool ApplyDeckConfig(ThoughtMapBattleDeckConfig config)
+    {
+        if (config == null || config.deckCardIds == null) return false;
         deckCards.Clear();
         placement.Clear();
         foreach (string cardId in config.deckCardIds)
@@ -1463,7 +1706,17 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         selectedLibraryIndex = -1;
         RefreshGeneratedSkills("Load Deck");
         RenderAll();
-        WriteStatus("Loaded deck: " + path);
+        return deckCards.Count > 0;
+    }
+
+    public string PersonalEmail => GetPersonalLibraryEmail();
+
+    private void EnsureDeckLibrary()
+    {
+        if (GetComponent<DeckLibraryManager>() == null)
+        {
+            gameObject.AddComponent<DeckLibraryManager>();
+        }
     }
 
     private List<CardAssignedSkillData> BuildAssignedSkillSaveData()
@@ -1577,9 +1830,53 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             return;
         }
 
+        if (!CanLoadBattleScene())
+        {
+            return;
+        }
+
         SaveDeckJson();
         WriteStatus("Opening BattleScene: " + battleSceneName);
         SceneManager.LoadScene(battleSceneName);
+    }
+
+    private bool CanLoadBattleScene()
+    {
+        if (string.IsNullOrWhiteSpace(battleSceneName))
+        {
+            const string message = "Battle Scene transition failed: Battle Scene Name is empty. Assign it in the ProductBattlePrepPanelView Inspector.";
+            Debug.LogError("[BattleScene Transition] " + message, this);
+            WriteStatus(message);
+            return false;
+        }
+
+#if UNITY_EDITOR
+        bool registeredInActiveBuildProfile = EditorBuildSettings.scenes.Any(scene =>
+            scene.enabled &&
+            string.Equals(Path.GetFileNameWithoutExtension(scene.path), battleSceneName, System.StringComparison.Ordinal));
+        if (!registeredInActiveBuildProfile)
+        {
+            string profileMessage =
+                $"Battle Scene transition failed: Assets/Scenes/{battleSceneName}.unity exists, " +
+                "but it is not enabled in the active Unity 6 Build Profile Scene List. Add and enable the scene before starting battle.";
+            Debug.LogError("[BattleScene Transition][Build Profile] " + profileMessage, this);
+            WriteStatus(profileMessage);
+            return false;
+        }
+#endif
+
+        if (Application.CanStreamedLevelBeLoaded(battleSceneName))
+        {
+            return true;
+        }
+
+        string loadMessage =
+            $"Battle Scene transition failed: '{battleSceneName}' cannot be loaded. " +
+            $"The scene asset is Assets/Scenes/{battleSceneName}.unity. " +
+            "Confirm the Inspector scene name, then add and enable this scene in the active Unity 6 Build Profile Scene List.";
+        Debug.LogError("[BattleScene Transition] " + loadMessage, this);
+        WriteStatus(loadMessage);
+        return false;
     }
 
     private bool CanStartBattle(out string reason)
@@ -2256,7 +2553,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
             && assignedSkillIdsByCardId.TryGetValue(cardId, out List<string> ids)
             && ids != null
             && ids.Any(id => !string.IsNullOrWhiteSpace(id));
-        string skillState = hasSkill ? "Skill" : "No Skill";
+        string skillState = hasSkill ? GetAssignedSkillDisplayName(card) : "No Skill";
         if (placed)
         {
             return $"{skillState} / Placed";
@@ -2561,7 +2858,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         vertical.spacing = LightweightRowSpacing;
         vertical.childAlignment = TextAnchor.UpperCenter;
         vertical.childControlWidth = true;
-        vertical.childControlHeight = true;
+        vertical.childControlHeight = false;
         vertical.childForceExpandWidth = true;
         vertical.childForceExpandHeight = false;
 
@@ -2586,7 +2883,10 @@ public class ProductBattlePrepPanelView : MonoBehaviour
                 viewportImage = viewport.gameObject.AddComponent<Image>();
                 viewportImage.color = new Color(0f, 0f, 0f, 0.08f);
             }
-            viewportImage.raycastTarget = true;
+            if (IsUnderPanel(content, "DeckListPanel"))
+            {
+                viewportImage.raycastTarget = false;
+            }
 
             Mask mask = viewport.GetComponent<Mask>();
             if (mask == null)
@@ -2707,6 +3007,7 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
 
         Canvas.ForceUpdateCanvases();
+        if (scroll.content != null) LayoutRebuilder.ForceRebuildLayoutImmediate(scroll.content);
         scroll.verticalNormalizedPosition = Mathf.Clamp01(position);
     }
 
@@ -2849,7 +3150,9 @@ public class ProductBattlePrepPanelView : MonoBehaviour
         }
         for (int i = root.childCount - 1; i >= 0; i--)
         {
-            Destroy(root.GetChild(i).gameObject);
+            GameObject child = root.GetChild(i).gameObject;
+            child.SetActive(false);
+            Destroy(child);
         }
     }
 

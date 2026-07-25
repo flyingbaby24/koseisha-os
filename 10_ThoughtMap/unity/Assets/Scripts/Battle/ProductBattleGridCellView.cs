@@ -112,7 +112,7 @@ public class ProductBattleGridCellView : MonoBehaviour
         EnsureInteractionEnabled();
         SetText(coordinateText, $"{x + 1},{y + 1}");
         SetText(unitIdText, "");
-        SetText(cardNameText, available ? "Deploy" : "");
+        SetText(cardNameText, available ? "Drop Card" : "");
         SetText(attributeText, "");
         SetResonanceModifier(0f);
         if (placedGlowImage != null)
@@ -188,10 +188,21 @@ public class ProductBattleGridCellView : MonoBehaviour
         resonanceText.text = percent >= 0f ? $"+{percent:0}%" : $"{percent:0}%";
     }
 
+    public void SetSkillLabel(string value)
+    {
+        EnsureResonanceText();
+        if (resonanceText == null) return;
+        if (string.IsNullOrWhiteSpace(value)) return;
+        resonanceText.gameObject.SetActive(true);
+        resonanceText.text = value;
+        resonanceText.color = new Color(0.35f, 0.9f, 1f, 1f);
+    }
+
     public void SetClickHandler(UnityAction<ProductBattleGridCellView> handler)
     {
         clickHandler = handler;
         EnsureInteractionEnabled();
+        if (button != null && handler == null) button.enabled = false;
     }
 
     private void EnsureInteractionEnabled()

@@ -159,17 +159,31 @@ public class ProductBattleCardDetailPanelView : MonoBehaviour
         GeneratedSkillDto skill = assignedSkills != null && assignedSkills.Count > 0 ? assignedSkills[0] : null;
         if (skill == null)
         {
-            builder.AppendLine("Assigned Skill: None");
+            builder.AppendLine("No Skill");
         }
         else
         {
-            builder.AppendLine($"Assigned Skill: {skill.DisplayName}");
-            builder.AppendLine($"Trigger: {skill.trigger}");
-            builder.AppendLine($"{GeneratedSkillLibrary.CostSummary(skill)} / Cooldown: {skill.cooldown}");
-            builder.AppendLine($"Effect: {GeneratedSkillLibrary.EffectSummary(skill)}");
+            builder.AppendLine($"Skill: {skill.DisplayName}");
+            builder.AppendLine($"Trigger: {FormatTrigger(skill.trigger)}");
+            builder.AppendLine($"SP Cost: {(skill.cost == null ? 0 : skill.cost.sp)}");
+            builder.AppendLine($"Effect: {ShortEffectSummary(GeneratedSkillLibrary.EffectSummary(skill))}");
         }
 
         assignedSkillsText.text = builder.ToString();
+    }
+
+    private static string FormatTrigger(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "-";
+        string normalized = value.Replace("_", " ").Trim();
+        return System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(normalized.ToLowerInvariant());
+    }
+
+    private static string ShortEffectSummary(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "-";
+        string normalized = value.Replace("\r", " ").Replace("\n", " ").Trim();
+        return normalized.Length <= 150 ? normalized : normalized.Substring(0, 147) + "...";
     }
 
     private string FirstEffectType(GeneratedSkillDto skill)

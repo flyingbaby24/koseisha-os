@@ -50,7 +50,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   buildOnAwake: 1
   debugSaveFlow: 0
-  japaneseFontAsset: {fileID: 0}
+  japaneseFontAsset: {fileID: 11400000, guid: fe601d6492084c446900202195a24f55, type: 2}
   fontReferenceText: {fileID: 0}
   panelColor: {r: 0.012, g: 0.045, b: 0.1, a: 0.88}
   blockColor: {r: 0.015, g: 0.06, b: 0.13, a: 0.72}

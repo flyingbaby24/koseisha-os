@@ -1,0 +1,14 @@
+{
+  "defaultStageId": "stage_001",
+  "stages": [
+    {
+      "stageId": "stage_001",
+      "displayName": "First Inquiry",
+      "enemyDeckId": "enemy_deck_001",
+      "rewardTableId": "reward_standard",
+      "dropTableId": "drop_standard",
+      "skillPoolId": "skill_pool_standard",
+      "nextStageId": ""
+    }
+  ]
+}

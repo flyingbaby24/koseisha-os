@@ -48,3 +48,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 961cacfbd057f24c5b6878e75c5e158e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  buildOnAwake: 1
+  japaneseFontAsset: {fileID: 11400000, guid: fe601d6492084c446900202195a24f55, type: 2}
+  fontReferenceText: {fileID: 0}
+  normalColor: {r: 0.015, g: 0.055, b: 0.12, a: 0.92}
+  selectedColor: {r: 0.02, g: 0.13, b: 0.25, a: 0.98}
+  outlineColor: {r: 0.05, g: 0.42, b: 0.75, a: 0.45}
+  selectedOutlineColor: {r: 0.05, g: 0.82, b: 1, a: 1}
+  textPrimary: {r: 0.92, g: 0.98, b: 1, a: 1}
+  textSecondary: {r: 0.6, g: 0.78, b: 0.92, a: 1}
+  titleFontSize: 18
+  metadataFontSize: 13
+  padding: 12
+  spacing: 4

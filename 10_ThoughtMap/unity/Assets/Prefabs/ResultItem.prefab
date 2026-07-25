@@ -67,10 +67,10 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: fe601d6492084c446900202195a24f55, type: 2}
-  m_sharedMaterial: {fileID: -1696483692792904847, guid: fe601d6492084c446900202195a24f55, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: f96e4252b85c3994a9c4476c6bc7c4c0, type: 2}
+  m_sharedMaterial: {fileID: 171738505672774445, guid: b7d06949f943dd44db88469dc9b17a68, type: 2}
   m_fontSharedMaterials: []
-  m_fontMaterial: {fileID: 0}
+  m_fontMaterial: {fileID: 171738505672774445, guid: b7d06949f943dd44db88469dc9b17a68, type: 2}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
@@ -208,10 +208,10 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: fe601d6492084c446900202195a24f55, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: f96e4252b85c3994a9c4476c6bc7c4c0, type: 2}
+  m_sharedMaterial: {fileID: 171738505672774445, guid: b7d06949f943dd44db88469dc9b17a68, type: 2}
   m_fontSharedMaterials: []
-  m_fontMaterial: {fileID: 0}
+  m_fontMaterial: {fileID: 171738505672774445, guid: b7d06949f943dd44db88469dc9b17a68, type: 2}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
@@ -275,7 +275,7 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 1
+  m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!114 &3948150736830477601
@@ -292,7 +292,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   titleText: {fileID: 4418409544640770107}
   authorText: {fileID: 7760769360626110150}
+  similarityText: {fileID: 0}
   selectButton: {fileID: -3894484616797524933}
+  backgroundImage: {fileID: 0}
+  selectionOutline: {fileID: 0}
+  normalColor: {r: 0.015, g: 0.045, b: 0.1, a: 0.9}
+  selectedColor: {r: 0.02, g: 0.12, b: 0.24, a: 0.98}
+  normalOutlineColor: {r: 0.05, g: 0.42, b: 0.75, a: 0.38}
+  selectedOutlineColor: {r: 0.05, g: 0.82, b: 1, a: 1}
+  titleColor: {r: 0.92, g: 0.98, b: 1, a: 1}
+  secondaryColor: {r: 0.6, g: 0.78, b: 0.92, a: 1}
 --- !u!114 &-3894484616797524933
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -404,10 +413,10 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: fe601d6492084c446900202195a24f55, type: 2}
-  m_sharedMaterial: {fileID: -1696483692792904847, guid: fe601d6492084c446900202195a24f55, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: f96e4252b85c3994a9c4476c6bc7c4c0, type: 2}
+  m_sharedMaterial: {fileID: 171738505672774445, guid: b7d06949f943dd44db88469dc9b17a68, type: 2}
   m_fontSharedMaterials: []
-  m_fontMaterial: {fileID: 0}
+  m_fontMaterial: {fileID: 171738505672774445, guid: b7d06949f943dd44db88469dc9b17a68, type: 2}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
@@ -446,7 +455,7 @@ MonoBehaviour:
   m_lineSpacingMax: 0
   m_paragraphSpacing: 0
   m_charWidthMaxAdj: 0
-  m_TextWrappingMode: 1
+  m_TextWrappingMode: 0
   m_wordWrappingRatios: 0.4
   m_overflowMode: 0
   m_linkedTextComponent: {fileID: 0}

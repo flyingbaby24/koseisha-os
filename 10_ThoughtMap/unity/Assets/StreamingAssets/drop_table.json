@@ -1,0 +1,13 @@
+{
+  "tables": [
+    {
+      "tableId": "drop_standard",
+      "victoryRareChance": 0.18,
+      "defeatRareChance": 0.06,
+      "rareCards": [
+        { "id": "rare_thought_001", "name": "Rare Thought Card", "weight": 70 },
+        { "id": "rare_thought_002", "name": "Prismatic Research", "weight": 30 }
+      ]
+    }
+  ]
+}

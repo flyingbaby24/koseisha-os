@@ -1,0 +1,14 @@
+{
+  "pools": [
+    {
+      "poolId": "skill_pool_standard",
+      "skillIds": [
+        "skill:1:8a0bf08651e5b981",
+        "skill:1:c7ab2398598a71d4",
+        "skill:1:9a38359a2ccf4fd1",
+        "skill:1:6b774f10fa8b10c8",
+        "skill:1:8f8abced8707b50c"
+      ]
+    }
+  ]
+}

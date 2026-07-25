@@ -33,6 +33,7 @@ public class ThoughtMapRuntimeController : MonoBehaviour
 
     private bool detailPanelV2SaveSubscribed;
     private ThoughtMapParameterScore[] currentQueryParameters;
+    private ThoughtMapSearchResult pendingCollectionSaveResult;
 
     private void Awake()
     {
@@ -223,16 +224,30 @@ public class ThoughtMapRuntimeController : MonoBehaviour
         }
 
         detailPanelV2?.SetSaving();
+        pendingCollectionSaveResult = result;
         StartCoroutine(apiClient.SaveDefaultDocument(result, HandleSaveSuccess, HandleSaveError));
     }
 
     private void HandleSaveSuccess(SaveDocumentResponse response)
     {
         detailPanelV2?.SetSaved(response != null && response.duplicate);
+        CollectionRepository collection = new CollectionRepository();
+        if (response != null && response.item != null)
+        {
+            collection.MergePersonalLibrary(new[] { response.item });
+        }
+        else
+        {
+            collection.AddSearchResult(pendingCollectionSaveResult);
+        }
+        CollectionView collectionView = Object.FindFirstObjectByType<CollectionView>();
+        collectionView?.Refresh();
+        pendingCollectionSaveResult = null;
     }
 
     private void HandleSaveError(string message)
     {
+        pendingCollectionSaveResult = null;
         detailPanelV2?.SetSaveError(message);
         Debug.LogError($"ThoughtMap save failed: {message}", this);
     }

@@ -1,0 +1,15 @@
+{
+  "decks": [
+    {
+      "deckId": "enemy_deck_001",
+      "cardIds": ["sample_011", "sample_012", "sample_013", "sample_014", "sample_015"],
+      "visualPositions": [
+        { "cardId": "sample_011", "x": 2, "y": 0 },
+        { "cardId": "sample_012", "x": 0, "y": 1 },
+        { "cardId": "sample_013", "x": 4, "y": 1 },
+        { "cardId": "sample_014", "x": 1, "y": 2 },
+        { "cardId": "sample_015", "x": 3, "y": 2 }
+      ]
+    }
+  ]
+}

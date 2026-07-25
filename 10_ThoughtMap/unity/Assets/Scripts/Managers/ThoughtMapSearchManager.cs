@@ -18,6 +18,7 @@ public class ThoughtMapSearchManager : MonoBehaviour
     [SerializeField] private QueryParameterPanelView queryParameterPanelView;
     [SerializeField] private int topResults = 10;
     [SerializeField] private bool debugSaveFlow = true;
+    private ThoughtMapSearchResult pendingCollectionSaveResult;
 
     private void Awake()
     {
@@ -153,6 +154,7 @@ public class ThoughtMapSearchManager : MonoBehaviour
         }
 
         detailPanelView?.SetSaving();
+        pendingCollectionSaveResult = result;
         LogSaveFlow($"Starting SaveDefaultDocument coroutine doc_id={result.doc_id}");
         StartCoroutine(apiClient.SaveDefaultDocument(result, HandleSaveSuccess, HandleSaveError));
     }
@@ -161,12 +163,18 @@ public class ThoughtMapSearchManager : MonoBehaviour
     {
         LogSaveFlow($"HandleSaveSuccess saved={(response == null ? "null" : response.saved.ToString())} duplicate={(response == null ? "null" : response.duplicate.ToString())}");
         detailPanelView?.SetSaved(response != null && response.duplicate);
+        CollectionRepository collection = new CollectionRepository();
+        if (response != null && response.item != null) collection.MergePersonalLibrary(new[] { response.item });
+        else collection.AddSearchResult(pendingCollectionSaveResult);
+        Object.FindFirstObjectByType<CollectionView>()?.Refresh();
+        pendingCollectionSaveResult = null;
     }
 
     private void HandleSaveError(string message)
     {
         LogSaveFlow($"HandleSaveError message={message}");
         detailPanelView?.SetSaveError(message);
+        pendingCollectionSaveResult = null;
         Debug.LogError($"ThoughtMap save failed: {message}");
     }
     private void LogSaveFlow(string message)

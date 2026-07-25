@@ -60,14 +60,14 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour, IPointerDownHan
         WireButtons();
         if (assignButton != null)
         {
-            assignButton.interactable = true;
-            assignButton.gameObject.SetActive(canAssign);
+            assignButton.gameObject.SetActive(false);
         }
         if (removeButton != null)
         {
-            removeButton.interactable = true;
-            removeButton.gameObject.SetActive(canRemove);
+            removeButton.gameObject.SetActive(false);
         }
+        BattlePrepSkillDragSource drag = GetComponent<BattlePrepSkillDragSource>() ?? gameObject.AddComponent<BattlePrepSkillDragSource>();
+        drag.Configure(sourceSkill);
         Debug.Log(
             $"[GeneratedSkill] Row.Bind skill_id={(sourceSkill == null ? "" : sourceSkill.skill_id)} canAssign={canAssign} canRemove={canRemove} assigned={assigned} selected={selected} {DescribeRaycastState()}",
             this
@@ -196,8 +196,18 @@ public class ProductBattleGeneratedSkillRowView : MonoBehaviour, IPointerDownHan
         metaText = metaText == null ? CreateText("MetaText", new Vector2(0.03f, 0.50f), new Vector2(0.70f, 0.74f), 12f, TextAlignmentOptions.Left) : metaText;
         effectText = effectText == null ? CreateText("EffectText", new Vector2(0.03f, 0.12f), new Vector2(0.70f, 0.50f), 12f, TextAlignmentOptions.Left) : effectText;
         stateText = stateText == null ? CreateText("StateText", new Vector2(0.72f, 0.60f), new Vector2(0.97f, 0.95f), 11f, TextAlignmentOptions.Right) : stateText;
-        assignButton = ResolveChildButton(assignButton, "AssignButton", "Assign", new Vector2(0.72f, 0.34f), new Vector2(0.845f, 0.58f));
-        removeButton = ResolveChildButton(removeButton, "RemoveButton", "Remove", new Vector2(0.855f, 0.34f), new Vector2(0.98f, 0.58f));
+        if (assignButton == null)
+        {
+            Transform existingAssign = transform.Find("AssignButton");
+            assignButton = existingAssign == null ? null : existingAssign.GetComponent<Button>();
+        }
+        if (removeButton == null)
+        {
+            Transform existingRemove = transform.Find("RemoveButton");
+            removeButton = existingRemove == null ? null : existingRemove.GetComponent<Button>();
+        }
+        if (assignButton != null) assignButton.gameObject.SetActive(false);
+        if (removeButton != null) removeButton.gameObject.SetActive(false);
         if (assignButton != null) assignButton.transform.SetAsLastSibling();
         if (removeButton != null) removeButton.transform.SetAsLastSibling();
         AnchorText(nameText, new Vector2(0.03f, 0.74f), new Vector2(0.70f, 0.96f));
