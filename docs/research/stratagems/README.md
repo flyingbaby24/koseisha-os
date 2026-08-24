@@ -1,5 +1,7 @@
 # 36 Stratagems Cognitive Bias Atlas
 
+For the current Source of Thought runtime architecture, JSON migration status, Rule Framework, and simulator integration, see the [Source of Thought technical architecture index](../source-of-thought/README.md).
+
 Place these files at:
 
 ```text
