@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Mandalizm is a browser-based rhythm game and real-time generative art system. Play a song and the performance paints itself.">
+  <meta name="theme-color" content="#070b10">
+  <title>Mandalizm | Jinn Project</title>
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="mandalizm.css">
+</head>
+<body class="mandalizm-page">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header scrolled">
+    <a class="logo" href="../index.html" aria-label="Jinn Project home">
+      <img src="../images/logo.png" alt="">
+      <span>JINN PROJECT<small>RESEARCH &amp; DEVELOPMENT</small></span>
+    </a>
+    <button class="nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false"><span></span><span></span></button>
+    <nav class="site-nav" aria-label="Mandalizm navigation">
+      <a href="#about">About</a><a href="#play">How to Play</a><a href="#visuals">Visual Art</a><a href="#palette">Palette</a><a href="#capture">Keep a Run</a><a href="#technical">Technical</a><a href="https://mandalizm.pages.dev/" target="_blank" rel="noopener">Play ↗</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="mandalizm-hero">
+      <div class="mandala-stage" aria-hidden="true"><i></i><i></i><i></i><i></i><span></span></div>
+      <div class="mandalizm-hero-copy">
+        <p class="eyebrow">JINN PROJECT / GAME</p>
+        <h1>Mandal<em>izm.</em></h1>
+        <p class="hero-subtitle">Rhythm Game × Real-time Generative Art</p>
+        <p class="mz-hero-line">Play a song, and the way you play it paints the picture.</p>
+        <div class="mz-cta-row">
+          <a class="mz-cta mz-cta--primary" href="https://mandalizm.pages.dev/" target="_blank" rel="noopener">Play Mandalizm ↗</a>
+          <a class="mz-cta mz-cta--ghost" href="https://github.com/flyingbaby24/Mandalizm" target="_blank" rel="noopener">Source on GitHub ↗</a>
+        </div>
+        <p class="mz-hero-note">Runs in a modern desktop browser. No install. <strong>Songs are not bundled</strong> — bring your own SongPack.</p>
+      </div>
+      <figure class="mz-hero-shot">
+        <img src="../images/mandalizm-hero.webp" width="1600" height="900" alt="Mandalizm in play: wave seals converging on a lit mandala, with the score and the last judgement shown at the lower left.">
+      </figure>
+      <div class="hero-meta" aria-label="Project information"><span>BROWSER / WEBGL2</span><span>PLAYABLE NOW</span><span>2026</span></div>
+    </section>
+
+    <section class="section reveal" id="about">
+      <div class="section-head">
+        <div><p class="eyebrow">01 / ABOUT</p><h2>The performance<br>is the picture.</h2></div>
+        <p class="lead">Mandalizm is a rhythm game whose output is a piece of generative art. Waves rise with the music and converge on the centre; you meet them in time. Every judgement, position and moment feeds the renderer, so a run does not just score — it accumulates into an image that only that performance could have made.</p>
+      </div>
+      <div class="mz-about-grid">
+        <article><span>RHYTHM</span><h3>Read the wave,<br>meet the beat.</h3><p>Waves converge on the mandala. Tap when they arrive. Judgement runs PERFECT / GREAT / GOOD / BAD / MISS, with early and late timing tracked separately.</p></article>
+        <article><span>GENERATIVE ART</span><h3>Every hit is<br>a brush stroke.</h3><p>The same events that are scored are handed to the visual engine. Ink spreads, pigment mixes, smoke drifts — the canvas keeps what happened rather than resetting each beat.</p></article>
+      </div>
+    </section>
+
+    <section class="section reveal" id="play">
+      <div class="section-head compact"><div><p class="eyebrow">02 / HOW TO PLAY</p><h2>From a song<br>to a picture.</h2></div></div>
+      <ol class="mz-flow">
+        <li><b>01</b><h3>Import a SongPack</h3><p>Open the game and choose <em>IMPORT SONGPACK</em>. A pack holds the audio and its charts.</p></li>
+        <li><b>02</b><h3>Play</h3><p>Pick a difficulty and a wave speed, then meet the waves as they arrive.</p></li>
+        <li><b>03</b><h3>Watch it paint</h3><p>Your hits, misses and positions become the artwork while you play.</p></li>
+        <li><b>04</b><h3>Result</h3><p>Score, accuracy and timing, with the finished image behind it.</p></li>
+        <li><b>05</b><h3>Keep it</h3><p>Save the performance as data, record the screen, or re-render it as video.</p></li>
+      </ol>
+      <div class="mz-note">
+        <strong>No songs are included.</strong>
+        <p>Mandalizm ships without music, because a SongPack carries the audio it was built from and the rights differ song by song. The first launch shows <em>0 songs</em> — that is the normal starting state, not an error. Use <em>IMPORT SONGPACK</em> to load a pack, and the title screen becomes playable straight away.</p>
+      </div>
+    </section>
+
+    <section class="section reveal" id="visuals">
+      <div class="section-head">
+        <div><p class="eyebrow">03 / VISUAL ART SYSTEM</p><h2>One event,<br>many materials.</h2></div>
+        <p class="lead">A wave is not drawn one fixed way. The same gameplay event can arrive as ink, as a watercolour wash, as smoke, as text, as geometry. Choosing the material changes what the run leaves behind — the rules of the game do not move.</p>
+      </div>
+
+      <div class="mz-materials" aria-label="Visual materials">
+        <span>MANDALA</span><span>RIPPLE</span><span>SMOKE</span><span>CODE</span><span>MATH</span><span>SUMI</span><span>WATERCOLOR</span><span>INK_PAINT</span><span>COLLISION</span>
+      </div>
+
+      <div class="mz-shot-grid">
+        <figure class="mz-shot">
+          <a href="../images/mandalizm-ink-paint.webp" target="_blank" rel="noopener">
+            <img src="../images/mandalizm-ink-paint.webp" width="1200" height="675" loading="lazy" alt="INK_PAINT: opaque magenta, green and yellow pigment covering most of the field, with the mandala showing through in the middle.">
+          </a>
+          <figcaption><strong>INK_PAINT</strong><span>Opaque pigment. A hit throws a controlled splat, a miss bursts across the field, and the ink stays where it landed.</span></figcaption>
+        </figure>
+        <figure class="mz-shot">
+          <a href="../images/mandalizm-watercolor.webp" target="_blank" rel="noopener">
+            <img src="../images/mandalizm-watercolor.webp" width="1200" height="675" loading="lazy" alt="WATERCOLOR: translucent violet and teal washes layered over the mandala, which stays visible through the paint.">
+          </a>
+          <figcaption><strong>WATERCOLOR</strong><span>The same events as translucent wash. Layers stack instead of covering, and the mandala keeps showing through.</span></figcaption>
+        </figure>
+      </div>
+
+      <div class="mz-split">
+        <figure class="mz-shot">
+          <a href="../images/mandalizm-visual-controls.webp" target="_blank" rel="noopener">
+            <img src="../images/mandalizm-visual-controls.webp" width="1200" height="675" loading="lazy" alt="The in-game VISUAL panel showing the gameplay wave materials, selection mode, palette and recording controls, with the run continuing beside it.">
+          </a>
+          <figcaption><strong>Change it while you play</strong><span>The VISUAL panel picks the material, how it is chosen, and the palette.</span></figcaption>
+        </figure>
+        <div class="mz-split-copy">
+          <h3>Gameplay waves and the background are separate.</h3>
+          <p>The material used for the waves you play against is one setting. What fills the field behind them is another. They can be combined freely, so the same chart can be a quiet ink study or a dense collision field.</p>
+          <p>Waves can also be assigned a fixed material, shuffled, weighted, or chosen from what the music is doing at that moment.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="palette">
+      <div class="section-head">
+        <div><p class="eyebrow">04 / PALETTE</p><h2>Colour is part<br>of the work.</h2></div>
+        <p class="lead">A palette is not a UI theme. It decides the pigment the run is painted with, so the same chart played with the same material comes out as a different picture.</p>
+      </div>
+      <div class="mz-shot-grid">
+        <figure class="mz-shot">
+          <a href="../images/mandalizm-ink-paint.webp" target="_blank" rel="noopener">
+            <img src="../images/mandalizm-ink-paint.webp" width="1200" height="675" loading="lazy" alt="INK_PAINT with the PRIMARY palette: magenta, green and yellow pigment.">
+          </a>
+          <figcaption><strong>INK_PAINT · PRIMARY</strong><span>Magenta, green and yellow, meeting at hard edges.</span></figcaption>
+        </figure>
+        <figure class="mz-shot">
+          <a href="../images/mandalizm-ink-paint-cool.webp" target="_blank" rel="noopener">
+            <img src="../images/mandalizm-ink-paint-cool.webp" width="1200" height="675" loading="lazy" alt="INK_PAINT with the COOL palette: the same material in the same run, rendered in green, blue and violet.">
+          </a>
+          <figcaption><strong>INK_PAINT · COOL</strong><span>The same material in the same run, one minute apart — only the palette changed.</span></figcaption>
+        </figure>
+      </div>
+      <p class="mz-caption">PRIMARY · NEON · WARM · COOL · RANDOM — available on the pigment materials, INK_PAINT and WATERCOLOR.</p>
+    </section>
+
+    <section class="section reveal" id="capture">
+      <div class="section-head">
+        <div><p class="eyebrow">05 / KEEP A RUN</p><h2>Three different<br>things to save.</h2></div>
+        <p class="lead">They are easy to confuse, so the game keeps them apart — and so does this page.</p>
+      </div>
+      <div class="mz-cards">
+        <article><span>DATA</span><h3>Replay JSON</h3><p>What you did: the inputs and judgements of a performance, saved as a small JSON file. Load it back to replay the run, or feed it to the exporter.</p><b>SAVE / LOAD REPLAY JSON</b></article>
+        <article><span>REAL TIME</span><h3>Live Recording</h3><p>What the screen showed: the canvas and the song captured as they happen, at 30 or 60 fps, with the audio branched from what you hear.</p><b>START RECORD → DOWNLOAD</b></article>
+        <article><span>OFFLINE</span><h3>Video Export</h3><p>A re-render: the replay drawn again frame by frame, away from real time, up to 4K with the audio muxed in.</p><b>EXPORT VIDEO</b></article>
+      </div>
+      <figure class="mz-shot mz-shot--wide">
+        <a href="../images/mandalizm-replay-recording.webp" target="_blank" rel="noopener">
+          <img src="../images/mandalizm-replay-recording.webp" width="1200" height="675" loading="lazy" alt="The result screen with the replay controls, the recording controls and the export panel shown as three separate groups.">
+        </a>
+        <figcaption><strong>All three, on the result screen</strong><span>Replay, recording and export sit in separate groups so a saved performance is never mistaken for a saved video.</span></figcaption>
+      </figure>
+    </section>
+
+    <section class="section reveal" id="technical">
+      <div class="section-head compact"><div><p class="eyebrow">06 / TECHNICAL NOTES</p><h2>What it needs,<br>and what it cannot do yet.</h2></div></div>
+      <div class="mz-tech">
+        <article>
+          <h3>Requirements</h3>
+          <ul>
+            <li>A modern desktop browser. Developed and verified on Chrome.</li>
+            <li>WebGL2 and Web Audio for play.</li>
+            <li>MediaRecorder for live recording; without it, only recording is unavailable.</li>
+            <li>WebCodecs for offline video export; without it, only export is unavailable.</li>
+          </ul>
+        </article>
+        <article>
+          <h3>Known limitations</h3>
+          <ul>
+            <li>Songs are not bundled. Import a SongPack to play.</li>
+            <li><em>CREATE SONG</em> generates charts with the local Python chart engine, which the public site cannot reach. <b>Local chart engine required.</b></li>
+            <li>Offline export stops at roughly 6,300 frames — about 105 s at 60 fps, or 210 s at 30 fps.</li>
+            <li>Use live recording to capture a full-length song.</li>
+            <li>Narrow layouts have been checked, but touch play has not been tuned.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="download-section reveal" id="play-cta">
+      <div class="download-orbit" aria-hidden="true"></div>
+      <p class="eyebrow">07 / PLAY</p>
+      <h2>Bring a song.<br>Leave with a picture.</h2>
+      <div class="mz-cta-row">
+        <a class="mz-cta mz-cta--primary" href="https://mandalizm.pages.dev/" target="_blank" rel="noopener">Play Mandalizm ↗</a>
+        <a class="mz-cta mz-cta--ghost" href="https://github.com/flyingbaby24/Mandalizm" target="_blank" rel="noopener">Source on GitHub ↗</a>
+      </div>
+      <p>Source-available, all rights reserved. See the repository for the licence.</p>
+    </section>
+  </main>
+
+  <footer class="mandalizm-footer"><a class="logo" href="../index.html"><img src="../images/logo.png" alt=""><span>JINN PROJECT</span></a><a class="back-home" href="../index.html">← Back to Jinn Project</a><div class="footer-bottom"><span>© 2026 Jinn Project</span><span>MANDALIZM / PLAYABLE</span></div></footer>
+  <script src="../script.js"></script>
+</body>
+</html>
