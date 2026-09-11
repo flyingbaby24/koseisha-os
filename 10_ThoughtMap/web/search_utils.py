@@ -208,45 +208,220 @@ def normalized_average_vector(vecs: list[np.ndarray]) -> np.ndarray:
     return avg
 
 
+#: Internal columns that must never appear in a search response.
+INTERNAL_COLUMNS = ("_embedding_vec", "_matrix_row")
+
+RESULT_COLUMNS = [
+    "doc_id",
+    "gutenberg_id",
+    "author",
+    "title",
+    "source",
+    "category",
+    "subcategory",
+    "source_url",
+    "model_name",
+    "embedding",
+]
+
+OPTIONAL_PARAMETER_COLUMNS = [
+    "parameters",
+    "parameter_scores",
+    "filter_scores",
+    "composition",
+    "thought_composition",
+    "scores",
+]
+
+
+def cosine_against_matrix(
+    vectors: list[np.ndarray],
+    target_vec: np.ndarray,
+    matrix: np.ndarray | None = None,
+    row_norms: np.ndarray | None = None,
+) -> np.ndarray:
+    """Cosine similarity of `target_vec` against every row, in one pass.
+
+    Numerically the same definition as `cosine()`, including its rule that a
+    zero or NaN denominator scores 0.0. BLAS may sum the dot product in a
+    different order than a single-vector `np.dot`, so individual values can
+    differ in the last few bits; the API rounds similarity to 4 decimals, well
+    above that.
+
+    `matrix` and `row_norms`, when given, are an already-prepared form of
+    exactly the same rows (T7 #10). Passing them skips rebuilding a 93.6 MB
+    block per request. `row_norms` is only ever supplied for the *whole*
+    matrix, which is the same array the stacking path would itself have
+    measured, so the arithmetic is unchanged rather than merely equivalent.
+    """
+    if matrix is None:
+        matrix = np.stack(vectors).astype(np.float32, copy=False)
+
+    target = np.asarray(target_vec, dtype=np.float32)
+
+    if row_norms is None:
+        row_norms = np.linalg.norm(matrix, axis=1)
+
+    denominator = row_norms * float(np.linalg.norm(target))
+    similarities = np.zeros(matrix.shape[0], dtype=np.float64)
+
+    usable = (denominator != 0) & ~np.isnan(denominator)
+    if not usable.any():
+        return similarities
+
+    if usable.all():
+        # Every row is usable, which is the normal case for a healthy corpus.
+        # Boolean-mask indexing would allocate and copy the whole matrix — 93.6
+        # MB at 63,891 documents — to select all of it, before the matmul that
+        # actually costs 2 ms. Multiplying the full matrix is the identical
+        # arithmetic on identical rows, without the copy.
+        similarities[:] = (matrix @ target) / denominator
+        return similarities
+
+    similarities[usable] = (matrix[usable] @ target) / denominator[usable]
+
+    return similarities
+
+
+#: Explicit position of each row in the corpus embedding matrix.
+#:
+#: Index labels cannot serve this purpose: `apply_metadata_filter` and
+#: `apply_parameter_filter` both end with `reset_index(drop=True)`, so after any
+#: filter the labels are 0..N-1 of the *subset*. Using them would index the
+#: matrix with plausible-looking numbers that point at the wrong documents, and
+#: a filtered search would return confidently wrong results. A real column
+#: survives filtering, copying and reindexing.
+MATRIX_ROW_COLUMN = "_matrix_row"
+
+
+def subset_positions(frame: pd.DataFrame, row_count: int) -> np.ndarray | None:
+    """Row positions of `frame` within a matrix of `row_count` rows, or None.
+
+    Read from `MATRIX_ROW_COLUMN`, which the corpus stamps onto its frame.
+    A frame without that column did not come from a prepared corpus, so the
+    caller stacks instead - which is always correct, only slower.
+    """
+    if row_count <= 0 or frame is None or frame.empty:
+        return None
+    if MATRIX_ROW_COLUMN not in frame.columns:
+        return None
+
+    positions = frame[MATRIX_ROW_COLUMN].to_numpy()
+    if positions.size == 0 or not np.issubdtype(positions.dtype, np.integer):
+        return None
+    if positions.min() < 0 or positions.max() >= row_count:
+        return None
+
+    return positions
+
+
+def prepared_vectors(frame: pd.DataFrame, corpus) -> tuple:
+    """(matrix, row_norms) for `frame` taken from `corpus`, or (None, None).
+
+    Three cases, and the distinction between the last two is the whole point:
+
+    - No usable corpus: the caller stacks, exactly as before.
+    - The frame *is* the whole corpus, in order: use the prepared matrix and
+      its precomputed norms. This is the common case - an unfiltered search -
+      and both arrays are what the stacking path would itself have produced.
+    - The frame is a filtered subset: index the matrix, but recompute the norms
+      over that subset. Reusing a slice of the full norm vector would very
+      likely give identical numbers, but "very likely" is not a basis for
+      changing ranking arithmetic, and a subset is small enough to measure
+      cheaply.
+    """
+    matrix = getattr(corpus, "matrix", None)
+    if matrix is None or getattr(matrix, "size", 0) == 0:
+        return None, None
+
+    positions = subset_positions(frame, len(matrix))
+    if positions is None:
+        return None, None
+
+    if len(positions) == len(matrix) and np.array_equal(
+        positions, np.arange(len(matrix))
+    ):
+        # The frame is the corpus itself, unfiltered and in order.
+        return matrix, corpus.norms
+
+    subset = matrix[positions]
+    return subset, np.linalg.norm(subset, axis=1)
+
+
 def work_similarity_by_vector(
     df: pd.DataFrame,
     target_vec: np.ndarray,
     top: int,
     exclude_doc_id: str = "",
     include_self: bool = False,
+    corpus=None,
 ) -> pd.DataFrame:
-    rows = []
+    """Rank documents by cosine similarity to `target_vec`.
 
-    for _, row in df.iterrows():
-        if exclude_doc_id and not include_self:
-            if normalize_text(row.get("doc_id", "")) == normalize_text(exclude_doc_id):
-                continue
+    Vectorised in phase T4.6. The row-by-row original cost ~0.5 s at 4,915
+    documents, which became several seconds once the corpus reached 63,891.
+    Ranking policy is unchanged: same cosine definition, same exclusion rule,
+    same sort, same top-N, same columns. Only the arithmetic moved into NumPy.
 
-        result_row = {
-            "similarity": cosine(target_vec, row["_embedding_vec"]),
-            "doc_id": row.get("doc_id", ""),
-            "gutenberg_id": row.get("gutenberg_id", ""),
-            "author": row.get("author", ""),
-            "title": row.get("title", ""),
-            "source": row.get("source", ""),
-            "category": row.get("category", ""),
-            "subcategory": row.get("subcategory", ""),
-            "source_url": row.get("source_url", ""),
-            "model_name": row.get("model_name", ""),
-            "embedding": row.get("embedding", ""),
-        }
+    `corpus` is an optional object exposing `.matrix` and `.norms` covering
+    these rows (T7 #10). It is a pure performance hint: absent, or not lined up
+    with `df`, the original stacking path runs and gives the same answer.
+    """
+    if df is None or df.empty:
+        return pd.DataFrame()
 
-        for column in ["parameters", "parameter_scores", "filter_scores", "composition", "thought_composition", "scores"]:
-            if column in row.index:
-                result_row[column] = row.get(column)
+    frame = df
 
-        rows.append(result_row)
+    if exclude_doc_id and not include_self and "doc_id" in frame.columns:
+        target_key = normalize_text(exclude_doc_id)
+        frame = frame[frame["doc_id"].map(normalize_text) != target_key]
 
-    out = pd.DataFrame(rows)
+    if frame.empty:
+        return pd.DataFrame()
+
+    matrix, row_norms = prepared_vectors(frame, corpus)
+    vectors = [] if matrix is not None else frame["_embedding_vec"].to_list()
+
+    try:
+        similarities = cosine_against_matrix(vectors, target_vec, matrix, row_norms)
+    except ValueError:
+        # Ragged vectors cannot be stacked. Rather than guess, fall back to the
+        # per-row path, which handles mismatched dimensions one at a time.
+        similarities = np.array(
+            [
+                cosine(target_vec, vector)
+                for vector in frame["_embedding_vec"].to_list()
+            ],
+            dtype=np.float64,
+        )
+
+    # Rank first, then materialise only the rows that survive.
+    #
+    # Building a 63,891-row frame to immediately discard all but the top 10 was
+    # the dominant cost at full corpus size. A stable descending argsort gives
+    # the same order pandas produced while touching a fraction of the data.
+    order = np.argsort(-similarities, kind="stable")[: max(0, int(top))]
+    if order.size == 0:
+        return pd.DataFrame()
+
+    selected = frame.iloc[order]
+
+    # Same column set and order the row-wise version produced. A column absent
+    # from the input still appears, filled with "", because `row.get(col, "")`
+    # did that.
+    data = {"similarity": similarities[order]}
+    for column in RESULT_COLUMNS:
+        data[column] = selected[column].to_numpy() if column in selected.columns else ""
+
+    out = pd.DataFrame(data, index=pd.RangeIndex(len(order)))
+
+    for column in OPTIONAL_PARAMETER_COLUMNS:
+        if column in selected.columns:
+            out[column] = selected[column].to_numpy()
+
     if out.empty:
         return out
 
-    out = out.sort_values("similarity", ascending=False).head(top).reset_index(drop=True)
     out.insert(0, "rank", range(1, len(out) + 1))
     return out
 

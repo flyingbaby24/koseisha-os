@@ -1,0 +1,39 @@
+# Heavy generated corpus artifacts.
+#
+# The embedding master is ~542 MB at the full 63,891-document corpus, far past
+# GitHub's 100 MB limit. It is managed outside version control and resolved at
+# runtime through THOUGHTMAP_EMBEDDINGS_PATH. See
+# docs/full-corpus-reconciliation.md.
+#
+# The lightweight canonical artifacts — documents_master.csv,
+# parameter_scores.csv and corpus_manifest.json — are deliberately NOT ignored.
+thoughtmap_canonical_embeddings.csv
+*.t45bak_*
+*.bak_*
+data/thoughtmap_db/official/*.npy
+
+# Local benchmark and scratch output.
+benchmarks/
+*.benchmark.json
+
+__pycache__/
+*.pyc
+
+# Parsed-vector cache written beside the embedding artifact. Derived data:
+# rebuildable from the artifact, invalidated by its checksum, and larger than
+# anything that belongs in a repository (~108 MB at full corpus).
+*.vectors.npz
+*.vectors.npz.tmp*
+
+# Frontend build output and bundle analysis.
+threejs/dist/
+threejs/stats.html
+
+# Local deployment environment files. Never commit real values.
+.env
+.env.*
+!.env.example
+
+# Claude Code local tooling configuration (dev-server launch config).
+# Not part of ThoughtMap and not needed to build, test or deploy it.
+.claude/

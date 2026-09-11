@@ -1,0 +1,20 @@
+# ThoughtMap — development, artifact preparation and tests.
+#
+# Install alongside requirements-api.txt. A deployed instance does NOT need any
+# of this: these are the tools that *produce* the artifacts a deployment
+# consumes, plus the test runner.
+
+-r requirements-api.txt
+
+pytest
+
+# Produces the embedding artifact and exports the ONNX query encoder.
+# `api.prepare_query_encoder` needs all three; nothing at runtime does.
+sentence-transformers
+torch
+onnxscript
+
+# Generates the 3D projection (api.generate_map_projection). Offline only:
+# `/map` serves a pre-generated artifact and never imports these.
+umap-learn
+scikit-learn

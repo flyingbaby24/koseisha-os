@@ -1,17 +1,32 @@
 from __future__ import annotations
 
+import logging
+import os
 import sqlite3
+import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Protocol
 
+import numpy as np
 import pandas as pd
 
 from search_utils import parse_embedding
-from storage import load_official_db, load_official_parameter_scores
+from storage import (
+    DEFAULT_OFFICIAL_DB_DIR,
+    load_documents,
+    load_embeddings,
+    load_official_db,
+    load_official_parameter_scores,
+)
 
 from .config import ApiSettings
+from .corpus_manifest import CorpusManifest
 from .db_source import OfficialDatabaseSource
+from .search_corpus import SearchCorpus, build_search_corpus
 
+
+logger = logging.getLogger("thoughtmap.repository")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -75,15 +90,23 @@ def _add_parameter_scores_payload(merged: pd.DataFrame, score_columns: list[str]
 
     merged = merged.copy()
 
-    def build_payload(row: pd.Series) -> dict:
-        payload = {}
-        for column in score_columns:
-            value = pd.to_numeric(pd.Series([row.get(column)]), errors="coerce").iloc[0]
-            if pd.notna(value):
-                payload[column] = float(value)
-        return payload
+    # Convert every score column once, then assemble the per-row dicts.
+    #
+    # The previous version called pd.to_numeric on a one-element Series per
+    # column per row: 638,910 Series constructions at full corpus size, which
+    # dominated repository load. Same output, same NaN-dropping rule.
+    numeric = merged[score_columns].apply(pd.to_numeric, errors="coerce")
+    values = numeric.to_numpy(dtype=float)
+    finite = np.isfinite(values)
 
-    merged["parameter_scores"] = merged.apply(build_payload, axis=1)
+    merged["parameter_scores"] = [
+        {
+            column: float(value)
+            for column, value, keep in zip(score_columns, row_values, row_finite)
+            if keep
+        }
+        for row_values, row_finite in zip(values, finite)
+    ]
     return merged
 
 
@@ -116,6 +139,145 @@ def _sqlite_table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
     return row is not None
 
 
+# Bumped when the cache layout changes, so an old cache is ignored rather
+# than misread.
+VECTOR_CACHE_VERSION = 2
+
+
+def _vector_cache_path(embeddings_path: Path) -> Path:
+    return embeddings_path.with_suffix(embeddings_path.suffix + ".vectors.npz")
+
+
+def _artifact_identity(embeddings_path: Path, artifact_sha256: str = "") -> dict[str, object]:
+    """How this cache decides it belongs to this artifact.
+
+    Two keys, in order of strength:
+
+    - `artifact_sha256` from the corpus manifest. Content-addressed, so a cache
+      built on a build machine stays valid after the artifact is copied to a
+      server - which is the whole point of shipping the two together (T6 #4).
+    - size + mtime_ns. The fallback when no manifest is available. Correct
+      locally, but copying a file changes mtime, so it cannot travel.
+    """
+    stat = embeddings_path.stat()
+    return {
+        "version": VECTOR_CACHE_VERSION,
+        "sha256": str(artifact_sha256 or ""),
+        "size": int(stat.st_size),
+        "mtime_ns": int(stat.st_mtime_ns),
+    }
+
+
+def _load_cached_vectors(
+    embeddings_path: Path, artifact_sha256: str = ""
+) -> dict[str, "np.ndarray"] | None:
+    """Parsed vectors for this exact artifact, or None.
+
+    Parsing 63,891 JSON vectors out of a 542 MB CSV costs ~90 s every time the
+    process starts. The parse is pure, so its result is cached beside the
+    artifact.
+
+    Every rejection path returns None and falls back to parsing, so a stale,
+    truncated or corrupt cache costs time and can never produce wrong vectors.
+    """
+    import numpy as np
+
+    cache = _vector_cache_path(embeddings_path)
+    if not cache.exists():
+        return None
+
+    try:
+        identity = _artifact_identity(embeddings_path, artifact_sha256)
+        with np.load(cache, allow_pickle=False) as data:
+            if int(data["cache_version"]) != VECTOR_CACHE_VERSION:
+                logger.info("Vector cache ignored: written by a different cache version.")
+                return None
+
+            cached_sha = str(data["source_sha256"]) if "source_sha256" in data else ""
+            if identity["sha256"] and cached_sha:
+                # A content match beats file metadata: a copied artifact is
+                # still the same artifact, even with a new mtime.
+                if cached_sha != identity["sha256"]:
+                    logger.info("Vector cache ignored: artifact checksum differs.")
+                    return None
+                matched_by = "sha256"
+            elif (
+                int(data["source_size"]) != identity["size"]
+                or int(data["source_mtime_ns"]) != identity["mtime_ns"]
+            ):
+                logger.info("Vector cache ignored: artifact size/mtime differs.")
+                return None
+            else:
+                matched_by = "mtime"
+
+            doc_id = data["doc_id"]
+            vectors = data["vectors"]
+
+            # Corruption detection. np.load validates the zip container and each
+            # array header, but not that the two arrays still describe each
+            # other, which is what a partial write actually breaks.
+            if vectors.ndim != 2 or len(doc_id) != len(vectors) or len(doc_id) == 0:
+                logger.warning("Vector cache ignored: array shapes disagree; reparsing.")
+                return None
+
+            # Materialise inside the `with` so nothing depends on the file
+            # handle after it closes.
+            return {
+                "doc_id": np.asarray(doc_id),
+                "vectors": np.asarray(vectors),
+                "matched_by": matched_by,
+            }
+    except Exception as exc:
+        logger.warning("Vector cache unreadable (%s); reparsing.", type(exc).__name__)
+        return None
+
+
+def _store_cached_vectors(
+    embeddings_path: Path, doc_ids, vectors, artifact_sha256: str = ""
+) -> None:
+    """Write the cache atomically beside the artifact.
+
+    Atomic because a process killed mid-write would otherwise leave a truncated
+    .npz that every later start has to discover and discard. The temporary file
+    is replaced into place in one operation, so a reader sees either the old
+    cache or the complete new one - never half of either.
+    """
+    import numpy as np
+
+    cache = _vector_cache_path(embeddings_path)
+    temporary = cache.with_suffix(cache.suffix + ".tmp{}".format(os.getpid()))
+
+    try:
+        identity = _artifact_identity(embeddings_path, artifact_sha256)
+        with temporary.open("wb") as handle:
+            np.savez(
+                handle,
+                doc_id=np.asarray(doc_ids, dtype=object).astype("U"),
+                vectors=np.asarray(vectors, dtype=np.float32),
+                cache_version=np.int64(VECTOR_CACHE_VERSION),
+                source_sha256=np.str_(identity["sha256"]),
+                source_size=np.int64(identity["size"]),
+                source_mtime_ns=np.int64(identity["mtime_ns"]),
+            )
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, cache)
+        logger.info("Vector cache written: %s", cache)
+    except Exception as exc:
+        # A read-only or full artifact directory is not a failure; the next
+        # start simply parses again.
+        logger.info("Vector cache not written (%s).", type(exc).__name__)
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def _official_documents_path(db_dir: Path | None) -> Path:
+    base = Path(db_dir) if db_dir is not None else DEFAULT_OFFICIAL_DB_DIR
+    return base / "documents_master.csv"
+
+
 def _normalize_doc_ids(frame: pd.DataFrame) -> pd.DataFrame:
     frame = frame.copy()
     if "doc_id" in frame.columns:
@@ -128,6 +290,9 @@ class SearchIndexRepository(Protocol):
     def load_index(self) -> pd.DataFrame:
         """Return a searchable DataFrame with _embedding_vec prepared."""
 
+    def load_corpus(self) -> "SearchCorpus":
+        """Return the same rows with their embedding matrix prepared once."""
+
 
 class CsvSearchIndexRepository:
     """Current CSV-backed search index loader.
@@ -137,24 +302,218 @@ class CsvSearchIndexRepository:
     contract to keep the service and Unity unchanged.
     """
 
-    def __init__(self, db_dir: str | Path | None = None) -> None:
+    def __init__(
+        self,
+        db_dir: str | Path | None = None,
+        embeddings_path: str | Path | None = None,
+    ) -> None:
         self.db_dir = _resolve_project_path(db_dir) if db_dir is not None else None
+        # The embedding artifact lives outside version control at full corpus
+        # size, so its location is configurable independently of the documents.
+        self.embeddings_path = (
+            _resolve_project_path(embeddings_path) if embeddings_path is not None else None
+        )
         self._index: pd.DataFrame | None = None
+        self._corpus: SearchCorpus | None = None
+        self._artifact_sha256 = ""
+        self._corpus_version = ""
+        self._cached_vectors: dict[str, "np.ndarray"] | None = None
+        # Wall time of each load stage, in milliseconds. Written on the one
+        # real load so startup can be profiled without a parallel copy of this
+        # code that could drift from it (T6 #8).
+        self.load_stages: dict[str, float] = {}
+
+    @contextmanager
+    def _stage(self, name: str):
+        started = time.perf_counter()
+        try:
+            yield
+        finally:
+            self.load_stages[name] = (time.perf_counter() - started) * 1000.0
 
     def load_index(self) -> pd.DataFrame:
         if self._index is not None:
             return self._index
 
-        documents, embeddings, _ = load_official_db(self.db_dir)
-        parameter_scores = load_official_parameter_scores(self.db_dir)
-        merged = _normalize_doc_ids(documents).merge(_normalize_doc_ids(embeddings), on="doc_id", how="inner")
-        merged = _join_parameter_scores(merged, parameter_scores)
-        merged = merged.copy()
-        merged["_embedding_vec"] = merged["embedding"].map(parse_embedding)
-        merged = merged[merged["_embedding_vec"].notna()].reset_index(drop=True)
+        with self._stage("manifest"):
+            manifest = CorpusManifest.load(
+                _official_documents_path(self.db_dir).parent
+            )
 
-        self._index = merged
+        if self.embeddings_path is None:
+            with self._stage("documents_and_embeddings"):
+                documents, embeddings, _ = load_official_db(self.db_dir)
+        else:
+            if not self.embeddings_path.exists():
+                raise FileNotFoundError(
+                    f"Configured embedding artifact not found: {self.embeddings_path}. "
+                    "Set THOUGHTMAP_EMBEDDINGS_PATH to the external embedding master, "
+                    "or unset it to use embeddings_master.csv beside the documents."
+                )
+            # Read the documents alone. Going through load_official_db here
+            # would also read and validate the *superseded* local embeddings
+            # file, wasting the read and emitting alignment warnings about a
+            # file that is about to be replaced.
+            # Catch the wrong artifact before spending a minute reading it.
+            with self._stage("artifact_validation"):
+                if manifest is not None:
+                    manifest.check_artifact_file(self.embeddings_path)
+                    self._artifact_sha256 = manifest.embedding_artifact_sha256
+                    self._corpus_version = manifest.corpus_version
+
+            with self._stage("documents_load"):
+                documents = load_documents(_official_documents_path(self.db_dir))
+
+            with self._stage("vector_cache"):
+                self._cached_vectors = _load_cached_vectors(
+                    self.embeddings_path, self._artifact_sha256
+                )
+
+            if self._can_skip_artifact_read(manifest):
+                # The cache already holds every doc_id and vector in the
+                # artifact, and its checksum proves it was built from this
+                # exact artifact - the same checksum the manifest pins. Reading
+                # 542 MB of CSV to recover strings we would immediately discard
+                # is the single largest avoidable cost in a restart: it is the
+                # difference between a ~50 s and a ~8 s corpus load, and it
+                # keeps roughly 700 MB of embedding text out of the process.
+                with self._stage("embeddings_from_cache"):
+                    embeddings = pd.DataFrame(
+                        {
+                            "doc_id": self._cached_vectors["doc_id"],
+                            "model_name": manifest.embedding_model,
+                        }
+                    )
+            else:
+                with self._stage("embeddings_read"):
+                    embeddings = load_embeddings(self.embeddings_path)
+
+        with self._stage("parameters_load"):
+            parameter_scores = load_official_parameter_scores(self.db_dir)
+
+        with self._stage("merge"):
+            document_count = len(_normalize_doc_ids(documents))
+            merged = _normalize_doc_ids(documents).merge(_normalize_doc_ids(embeddings), on="doc_id", how="inner")
+
+        # The searchable corpus is the intersection. Since the embedding
+        # artifact lives outside version control, the common misconfiguration is
+        # a full documents master paired with a partial embedding file — which
+        # would otherwise silently serve a fraction of the corpus.
+        if manifest is not None:
+            manifest.check_loaded_corpus(len(merged), document_count)
+            if "model_name" in merged.columns:
+                manifest.check_model(set(merged["model_name"].dropna().astype(str)))
+        elif document_count and len(merged) < document_count * 0.9:
+            logger.warning(
+                "Only %d of %d documents have an embedding. The embedding artifact "
+                "is probably stale or unset; point THOUGHTMAP_EMBEDDINGS_PATH at the "
+                "artifact named in corpus_manifest.json.",
+                len(merged),
+                document_count,
+            )
+        with self._stage("parameter_join"):
+            merged = _join_parameter_scores(merged, parameter_scores)
+            merged = merged.copy()
+
+        with self._stage("vectors"):
+            merged["_embedding_vec"] = self._parse_vectors(merged)
+            merged = merged[merged["_embedding_vec"].notna()].reset_index(drop=True)
+
+        # Stack the embedding matrix once, here, rather than once per search.
+        # This is the only place it is built (T7 #10-#11).
+        with self._stage("matrix"):
+            self._corpus = build_search_corpus(merged, self._corpus_version)
+
+        # The corpus frame *is* the index. Keeping `merged` as well would hold
+        # a second DataFrame plus the 63,891 independently allocated vectors
+        # the corpus has already replaced with views into its matrix — about
+        # 100 MB retained for nothing.
+        # `merged` itself still references the 63,891 original arrays; letting
+        # it fall out of scope at return frees them, leaving only the matrix.
+        self._index = self._corpus.frame
+
+        # The per-document vectors now live in the frame and the matrix; the
+        # cache copy would be a third full copy held for nothing.
+        self._cached_vectors = None
+        logger.info(
+            "Search index loaded documents=%d matrix=%.1fMB stages=%s",
+            len(self._index),
+            self._corpus.matrix_bytes / (1024 * 1024) if self._corpus else 0.0,
+            {name: round(value, 1) for name, value in self.load_stages.items()},
+        )
         return self._index
+
+    def load_corpus(self) -> SearchCorpus:
+        """The frame and its prepared matrix. Loads on first call, then reused."""
+        self.load_index()
+        assert self._corpus is not None
+        return self._corpus
+
+    def _can_skip_artifact_read(self, manifest: CorpusManifest | None) -> bool:
+        """May the embedding CSV be left unread this start?
+
+        Only when all three hold:
+
+        - a manifest exists, so there is a pinned expected corpus at all;
+        - the artifact on disk matched that manifest's recorded size;
+        - the cache matched by **checksum**, not merely by size and mtime.
+
+        The checksum requirement is what makes this safe rather than merely
+        fast. Matching on mtime says "probably the same file on this machine";
+        matching on content says "this is the artifact the manifest describes",
+        which is the same claim the guard makes before search is allowed to run
+        at all. Anything weaker falls back to reading the artifact.
+        """
+        return (
+            manifest is not None
+            and bool(self._artifact_sha256)
+            and self._cached_vectors is not None
+            and self._cached_vectors.get("matched_by") == "sha256"
+        )
+
+    def _parse_vectors(self, merged: pd.DataFrame) -> pd.Series:
+        """Vectors for the merged frame, from cache when it is valid."""
+        import numpy as np
+
+        if self.embeddings_path is None:
+            return merged["embedding"].map(parse_embedding)
+
+        cached = self._cached_vectors
+        if cached is not None:
+            lookup = dict(zip(cached["doc_id"].tolist(), cached["vectors"]))
+            if all(doc_id in lookup for doc_id in merged["doc_id"]):
+                self.load_stages["vector_source"] = 1.0  # cache hit
+                return pd.Series(
+                    [lookup[doc_id] for doc_id in merged["doc_id"]], index=merged.index
+                )
+
+        if "embedding" not in merged.columns:
+            # Only reachable if the cache covered the artifact well enough to
+            # skip the read, then failed to cover the merged frame. Re-read
+            # rather than serve a partial corpus.
+            raise RuntimeError(
+                "The vector cache did not cover every document after the join. "
+                f"Delete {_vector_cache_path(self.embeddings_path)} and restart "
+                "to rebuild it from the artifact."
+            )
+
+        self.load_stages["vector_source"] = 0.0  # parsed from the artifact
+        vectors = merged["embedding"].map(parse_embedding)
+
+        usable = vectors.notna()
+        if usable.any():
+            lengths = {len(v) for v in vectors[usable]}
+            # Only a rectangular set can be cached as one array; a ragged set is
+            # a data defect and is left to the normal path.
+            if len(lengths) == 1:
+                _store_cached_vectors(
+                    self.embeddings_path,
+                    merged.loc[usable, "doc_id"].tolist(),
+                    np.stack(vectors[usable].to_list()),
+                    self._artifact_sha256,
+                )
+
+        return vectors
 
 
 class SqliteSearchIndexRepository:
@@ -168,6 +527,7 @@ class SqliteSearchIndexRepository:
     def __init__(self, db_path: str | Path | None = None) -> None:
         self.db_path = _resolve_sqlite_path(db_path)
         self._index: pd.DataFrame | None = None
+        self._corpus: SearchCorpus | None = None
 
     def load_index(self) -> pd.DataFrame:
         if self._index is not None:
@@ -210,16 +570,28 @@ class SqliteSearchIndexRepository:
         merged = merged[merged["_embedding_vec"].notna()].reset_index(drop=True)
 
         self._index = merged
+        self._corpus = build_search_corpus(merged)
         return self._index
+
+    def load_corpus(self) -> SearchCorpus:
+        self.load_index()
+        assert self._corpus is not None
+        return self._corpus
 
 
 def create_search_index_repository(settings: ApiSettings) -> SearchIndexRepository:
     if settings.backend == "csv":
-        return CsvSearchIndexRepository(settings.db_dir)
+        return CsvSearchIndexRepository(settings.db_dir, settings.embeddings_path)
 
     if settings.backend == "sqlite":
-        configured_path = settings.official_db_path or _resolve_sqlite_path(settings.db_dir)
-        db_path = OfficialDatabaseSource(configured_path, settings.official_db_url).ensure_local()
+        # These two settings belong to a SQLite deployment that the CSV
+        # runtime does not define. getattr keeps a wrong THOUGHTMAP_BACKEND
+        # from failing with an AttributeError that names neither problem.
+        configured_path = getattr(settings, "official_db_path", None) or _resolve_sqlite_path(
+            settings.db_dir
+        )
+        db_url = getattr(settings, "official_db_url", "")
+        db_path = OfficialDatabaseSource(configured_path, db_url).ensure_local()
         return SqliteSearchIndexRepository(db_path)
 
     raise ValueError(f"Unsupported THOUGHTMAP_BACKEND: {settings.backend}")

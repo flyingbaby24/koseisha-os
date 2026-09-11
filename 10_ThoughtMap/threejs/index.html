@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ThoughtMap — Search / Collect</title>
+  </head>
+  <body>
+    <div id="app" class="tm-app">
+      <!-- Three.js owns this element and nothing else writes to it. -->
+      <div id="tm-viewport" class="tm-viewport" aria-label="Thought Map"></div>
+
+      <!-- Panels are mounted here, layered over the scene. This container and
+           its layout wrappers stay pointer-transparent so orbit still works
+           wherever a panel is not actually covering the canvas. -->
+      <div id="tm-ui" class="tm-ui"></div>
+
+      <!-- Reset Camera returns to the default angle and whole-map framing.
+           Fit All re-frames the map from the current viewing angle. -->
+      <div id="tm-camera-controls" class="tm-camera-controls">
+        <button type="button" data-camera-action="reset" title="Default angle, whole map">
+          Reset Camera
+        </button>
+        <button type="button" data-camera-action="fit-all" title="Frame the whole map from here">
+          Fit All
+        </button>
+        <!-- Disabled until a search returns results that exist in the map. -->
+        <button
+          type="button"
+          data-camera-action="fit-results"
+          title="Frame the current search results"
+          disabled
+        >
+          Fit Results
+        </button>
+      </div>
+
+      <!-- Compact equivalents for narrow layouts, where the labelled bar does
+           not fit. Same actions, same handler, icon-sized targets. -->
+      <div id="tm-camera-compact" class="tm-camera-compact">
+        <button type="button" data-camera-action="reset" aria-label="Reset camera" title="Reset camera">
+          &#8634;
+        </button>
+        <button type="button" data-camera-action="fit-all" aria-label="Fit all" title="Fit all">
+          &#9744;
+        </button>
+        <button
+          type="button"
+          data-camera-action="fit-results"
+          aria-label="Fit results"
+          title="Fit results"
+          disabled
+        >
+          &#9678;
+        </button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

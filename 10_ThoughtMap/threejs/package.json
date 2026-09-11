@@ -1,0 +1,26 @@
+{
+  "name": "thoughtmap-threejs",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Three.js + TypeScript Search/Collect frontend for ThoughtMap. Python/FastAPI remains the search engine.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.5.0",
+    "@types/three": "^0.180.0",
+    "happy-dom": "^20.14.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.0.0",
+    "vitest": "^3.0.0"
+  }
+}

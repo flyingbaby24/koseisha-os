@@ -1,0 +1,151 @@
+name: ThoughtMap CI
+
+# Scoped to 10_ThoughtMap so the rest of the repository is unaffected.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "10_ThoughtMap/**"
+      - ".github/workflows/thoughtmap-ci.yml"
+  pull_request:
+    paths:
+      - "10_ThoughtMap/**"
+      - ".github/workflows/thoughtmap-ci.yml"
+  workflow_dispatch:
+
+# A new push supersedes an in-flight run for the same ref.
+concurrency:
+  group: thoughtmap-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: 10_ThoughtMap/web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: 10_ThoughtMap/web/requirements-ci.txt
+
+      - name: Install dependencies
+        # requirements-ci.txt, not requirements-dev.txt: no test imports torch
+        # or sentence-transformers, and installing them would add ~2.5 GB and
+        # several minutes per run for no coverage.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
+
+      - name: Confirm the runtime imports nothing heavy
+        # The production runtime must not pull in torch, transformers, umap or
+        # scikit-learn. This is a deployment-size guarantee, so it is checked
+        # rather than assumed — and it fails here rather than in a 2.5 GB image.
+        run: |
+          python - <<'PY'
+          import sys
+          import api.main  # noqa: F401
+
+          heavy = sorted(
+              module
+              for module in (
+                  "torch",
+                  "transformers",
+                  "sentence_transformers",
+                  "huggingface_hub",
+                  "umap",
+                  "sklearn",
+                  "numba",
+              )
+              if module in sys.modules
+          )
+          if heavy:
+              raise SystemExit(f"runtime imported heavy modules: {heavy}")
+          print("runtime imports are clean")
+          PY
+
+      - name: API tests
+        # No THOUGHTMAP_EMBEDDINGS_PATH: unit CI must never need the 542 MB
+        # artifact.
+        run: python -m pytest api/tests -q
+
+      - name: Root tests
+        working-directory: 10_ThoughtMap
+        env:
+          PYTHONPATH: ${{ github.workspace }}/10_ThoughtMap/web
+        run: python -m pytest tests -q
+
+  frontend:
+    name: Frontend tests and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: 10_ThoughtMap/threejs
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: 10_ThoughtMap/threejs/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Check the entry bundle stays small
+        # The point of the T7 chunking is that the search UI does not wait for
+        # three.js. A regression here is invisible in tests and obvious to a
+        # user on a slow connection, so it gets a budget.
+        run: |
+          node - <<'JS'
+          const { readdirSync, readFileSync } = require("node:fs");
+          const { gzipSync } = require("node:zlib");
+          const dir = "dist/assets";
+
+          // Source maps are emitted alongside the bundles and share their
+          // prefixes, so every match here is filtered by the .js extension.
+          const scripts = readdirSync(dir).filter((name) => name.endsWith(".js"));
+
+          const entry = scripts.filter((name) => name.startsWith("index-"));
+          if (entry.length !== 1) {
+            throw new Error(`expected one entry chunk, found ${entry.length}: ${entry}`);
+          }
+
+          const gzipped = gzipSync(readFileSync(`${dir}/${entry[0]}`)).length;
+          const budgetKb = 40;
+          console.log(`entry chunk ${entry[0]}: ${(gzipped / 1024).toFixed(1)} kB gzipped`);
+          if (gzipped > budgetKb * 1024) {
+            throw new Error(
+              `entry chunk is ${(gzipped / 1024).toFixed(1)} kB gzipped, over the ` +
+                `${budgetKb} kB budget. Is three.js back in the entry chunk?`,
+            );
+          }
+
+          const three = scripts.filter((name) => name.startsWith("three-"));
+          if (three.length !== 1) {
+            throw new Error(`three.js must be one separate vendor chunk, found ${three}`);
+          }
+          console.log(`three.js vendor chunk: ${three[0]}`);
+          JS

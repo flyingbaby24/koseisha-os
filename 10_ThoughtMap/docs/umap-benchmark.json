@@ -1,0 +1,34 @@
+{
+  "results": [
+    {
+      "rows": 5000,
+      "seconds": 36.089000099997065,
+      "finite": true,
+      "rss_before_mb": null,
+      "rss_after_mb": null,
+      "rss_delta_mb": null
+    },
+    {
+      "rows": 15000,
+      "seconds": 8.50968080000166,
+      "finite": true,
+      "rss_before_mb": null,
+      "rss_after_mb": null,
+      "rss_delta_mb": null
+    },
+    {
+      "rows": 30000,
+      "seconds": 19.005308400002832,
+      "finite": true,
+      "rss_before_mb": null,
+      "rss_after_mb": null,
+      "rss_delta_mb": null
+    }
+  ],
+  "estimate": {
+    "exponent": -0.4449555212665546,
+    "predicted_seconds": 8.896886093955843,
+    "predicted_minutes": 0.14828143489926404
+  },
+  "corpus_rows": 63891
+}

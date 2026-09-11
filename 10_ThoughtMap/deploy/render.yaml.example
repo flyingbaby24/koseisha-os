@@ -1,0 +1,124 @@
+# ThoughtMap on Render — reference configuration.
+#
+# NOT applied automatically. Copy to render.yaml at the repository root and
+# review before use; nothing here provisions or bills anything by itself.
+#
+# Verified against Render's current documentation during T7:
+#
+#   - The free tier CANNOT attach a persistent disk, and spins down after
+#     15 minutes idle. Every wake would then re-fetch a 542 MB artifact and
+#     re-parse it. The free tier is therefore unusable for this service.
+#   - A service WITH a disk cannot scale to multiple instances. That costs
+#     nothing here: the measured recommendation is a single instance anyway,
+#     because each worker holds its own ~1 GB copy of the corpus and encoder.
+#   - Disks are NOT mounted during the build command, which is why the
+#     artifacts are fetched at start rather than at build.
+#
+# Choose the instance size against Render's current pricing page. The measured
+# requirement is >= 2 GB RAM (1.16 GB peak observed) and ~1.2 GB of disk.
+
+services:
+  - type: web
+    name: thoughtmap-api
+    runtime: python
+    plan: standard # >= 2 GB RAM. Confirm against current Render plans.
+    region: oregon
+    branch: main
+    rootDir: 10_ThoughtMap/web
+
+    # Disks are unavailable during build, so this only installs code.
+    buildCommand: pip install -r requirements-api.txt
+
+    # Artifacts are fetched onto the persistent disk on first start and reused
+    # on every later start and deploy. Both commands are idempotent and verify
+    # checksums, so a restart with everything present is a fast no-op.
+    preDeployCommand: >
+      python -m api.prepare_corpus_artifacts
+      --source $THOUGHTMAP_EMBEDDINGS_URL --build-cache &&
+      python -m api.prepare_corpus_artifacts
+      --encoder-source $THOUGHTMAP_ENCODER_URL
+
+    # One worker. Not a default — measured: throughput is flat from two
+    # concurrent requests upward, so a second worker doubles memory for nothing.
+    startCommand: python -m uvicorn api.main:app --host 0.0.0.0 --port $PORT --workers 1
+
+    # Liveness, never readiness. The process needs ~10 s to load the corpus and
+    # encoder; pointing this at /ready would kill it during every start.
+    healthCheckPath: /health
+
+    disk:
+      name: thoughtmap-corpus
+      mountPath: /data
+      sizeGB: 2 # 542 MB embeddings + 103 MB vector cache + 466 MB encoder
+
+    envVars:
+      - key: THOUGHTMAP_DEPLOYMENT_MODE
+        value: public-demo
+
+      # Same-origin deployments need no origins at all. Set this only if the
+      # frontend is served from a different host; '*' is refused outside
+      # development.
+      - key: THOUGHTMAP_ALLOWED_ORIGINS
+        sync: false
+
+      - key: THOUGHTMAP_EMBEDDINGS_PATH
+        value: /data/thoughtmap_canonical_embeddings.csv
+      - key: THOUGHTMAP_ENCODER_DIR
+        value: /data/encoder
+      - key: THOUGHTMAP_ENCODER_PROVIDER
+        value: onnx
+
+      # Where prepare_corpus_artifacts fetches from. Set in the dashboard: a
+      # signed URL is a credential and does not belong in the repository.
+      - key: THOUGHTMAP_EMBEDDINGS_URL
+        sync: false
+      - key: THOUGHTMAP_ENCODER_URL
+        sync: false
+
+      # The process saturates at 6-8 searches/second. 2/s per client with a
+      # burst of 10 leaves headroom for several people while stopping one
+      # client from consuming the instance.
+      - key: THOUGHTMAP_SEARCH_RATE_LIMIT
+        value: "2"
+      - key: THOUGHTMAP_SEARCH_RATE_BURST
+        value: "10"
+      - key: THOUGHTMAP_TRUST_PROXY_HEADERS
+        value: "true" # Render sets X-Forwarded-For at its edge.
+
+      # The Personal Library authenticates nobody. Left off; do not enable on a
+      # public URL until real authentication exists.
+      - key: THOUGHTMAP_LIBRARY_ENABLED
+        value: "false"
+
+      - key: PYTHON_VERSION
+        value: "3.13"
+
+  # The frontend is static files. Serving it from the same hostname as the API
+  # removes CORS entirely; if this provider cannot do that, set
+  # VITE_THOUGHTMAP_API_BASE_URL to the API origin and configure
+  # THOUGHTMAP_ALLOWED_ORIGINS to match.
+  - type: web
+    name: thoughtmap-web
+    runtime: static
+    branch: main
+    rootDir: 10_ThoughtMap/threejs
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+
+    headers:
+      # Content-hashed filenames: safe to cache forever (T7 §26).
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      # index.html points at those hashed names and must stay revalidated.
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -1,8 +1,28 @@
+# ThoughtMap API — production runtime.
+#
+# This is everything a public-demo or production instance needs. Verified by
+# importing `api.main` and checking what actually loads: torch, transformers,
+# sentence-transformers, umap, scikit-learn, numba and scipy are all absent.
+#
+# Since T7 the query encoder is ONNX Runtime, so a deployment needs neither a
+# ~2.5 GB torch install nor any connection to a model registry. The encoder is
+# provisioned as a checksummed artifact like the corpus embeddings.
+#
+# Tools for *preparing* those artifacts live in requirements-dev.txt.
+
 fastapi
 uvicorn[standard]
 pandas
 numpy
-scikit-learn
+
+# Query encoder (T7). onnxruntime runs the exported graph; tokenizers is the
+# same Rust tokenizer transformers uses, without transformers' ~6 s import.
+onnxruntime
+tokenizers
+
+# Personal Library on the Postgres backend. Not imported unless
+# THOUGHTMAP_PERSONAL_BACKEND=postgres, and the library is off by default in
+# public deployments — but a deployment that enables it needs these.
 SQLAlchemy
 psycopg[binary]
 alembic

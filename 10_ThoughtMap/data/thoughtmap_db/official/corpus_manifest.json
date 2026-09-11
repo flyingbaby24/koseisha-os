@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "corpus_version": "20260909",
+  "created_at": "2026-09-09T07:23:57.706456+00:00",
+  "document_count": 63891,
+  "embedding_count": 63891,
+  "embedding_dimension": 384,
+  "embedding_model": "paraphrase-multilingual-MiniLM-L12-v2",
+  "documents_sha256": "59048ebe0db2ffd60df9b419dbc8cef78e038b4f93460ac692f80b732d9fdeea",
+  "embedding_artifact_sha256": "ad2b45c1152626ef54cfc6ffaab21bcec1fbbc7dff79d70c6a2ec2a707e1b142",
+  "embedding_artifact_bytes": 541994243,
+  "embedding_artifact_filename": "thoughtmap_canonical_embeddings.csv",
+  "parameters_sha256": "5b5fe964549f72e7807179759bf79a5f1520d33694c8acd36e0203744e04dd4d",
+  "sources": {
+    "gutendex": 62306,
+    "user_suno": 992,
+    "user_note": 471,
+    "zip": 122
+  },
+  "release_id": "thoughtmap-corpus-20260909-v1",
+  "release_revision": 1,
+  "projection_fingerprint": "ce109523a9cd996285b1c84f37b50c954fd67a2bf9f584b7e9cd84d3dff7c8cd",
+  "projection_node_count": 63891
+}

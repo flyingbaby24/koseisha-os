@@ -1,0 +1,77 @@
+# ThoughtMap — same-origin reverse proxy (nginx).
+#
+# Equivalent to Caddyfile.example, for a deployment that already runs nginx.
+# See docs/deployment.md for the full operator sequence.
+
+upstream thoughtmap_api {
+    server 127.0.0.1:8078;
+    keepalive 16;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name thoughtmap.example;
+
+    # ssl_certificate / ssl_certificate_key: supplied by your certificate tooling.
+
+    root /srv/thoughtmap/dist;
+    index index.html;
+
+    # /map is already gzipped by the application, which is why the proxy must
+    # not try to compress it again. gzip here covers only what the app sends
+    # uncompressed.
+    gzip on;
+    gzip_proxied any;
+    gzip_types application/json application/javascript text/css text/plain;
+    gzip_min_length 1024;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+
+    # --- API ---------------------------------------------------------------
+    location /api/ {
+        proxy_pass http://thoughtmap_api/;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        # Overwritten here, not appended, so a client cannot forge it. The API
+        # only trusts this when THOUGHTMAP_TRUST_PROXY_HEADERS=true.
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # A cold instance spends ~10 s loading the corpus and encoder.
+        proxy_connect_timeout 10s;
+        proxy_read_timeout 120s;
+
+        # The application sets its own Cache-Control (no-store for /search and
+        # the library, public+ETag for /map). Do not override it here.
+        proxy_pass_header Cache-Control;
+        proxy_pass_header ETag;
+    }
+
+    # --- frontend ----------------------------------------------------------
+
+    # Content-hashed filenames change whenever the bytes do, so these can be
+    # cached permanently and never revalidated (T7 §26).
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    # Source maps are built but are not for the public.
+    location ~ \.map$ {
+        return 404;
+    }
+
+    # index.html points at the hashed assets, so it must stay revalidated or a
+    # returning visitor is pinned to a stale build forever.
+    location = /index.html {
+        add_header Cache-Control "no-cache" always;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

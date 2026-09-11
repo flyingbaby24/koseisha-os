@@ -6,7 +6,9 @@ import re
 import logging
 import time
 from functools import lru_cache
+from typing import Callable
 
+import numpy as np
 import pandas as pd
 
 from search_utils import (
@@ -21,12 +23,29 @@ from search_utils import (
 )
 
 from .config import ApiSettings, get_settings
+from .embedding_model import TextEncoder, load_embedding_model
+from .observability import stage
+from .query_encoder import create_query_encoder
+from .query_profile import QueryProfileService
 from .repositories import SearchIndexRepository, create_search_index_repository
-from .schemas import SearchResponse, SearchResult
+from .schemas import ParameterScore, SearchResponse, SearchResult
 from .user_embedding_sqlite import load_user_embedding_frame
 
 
+# Internal mode names. `embedding` covers both origins of the comparison
+# vector: a query text, or an existing document identified by target_doc_id.
 SEARCH_MODES = {"keyword", "embedding", "hybrid"}
+
+# The public HTTP contract (docs/api_contract.md, Unity, Streamlit) says
+# `semantic`. The internal implementation has always called it `embedding`.
+# Translate at this boundary rather than renaming either side.
+PUBLIC_MODE_ALIASES = {"semantic": "embedding"}
+
+# Existing hybrid weighting, unchanged: semantic similarity dominates and the
+# keyword score breaks ties among keyword matches.
+HYBRID_SIMILARITY_WEIGHT = 0.8
+HYBRID_KEYWORD_WEIGHT = 0.2
+
 logger = logging.getLogger("thoughtmap.search")
 
 PARAMETER_COLUMNS = [
@@ -56,9 +75,14 @@ class ThoughtMapSearchService:
         self,
         repository: SearchIndexRepository,
         model_name: str,
+        model_loader: Callable[[], TextEncoder] | None = None,
+        query_profile_service: QueryProfileService | None = None,
     ) -> None:
         self.repository = repository
         self.model_name = model_name
+        self._model_loader = model_loader or (lambda: load_embedding_model(model_name))
+        self.query_profile_service = query_profile_service or QueryProfileService(self._model_loader)
+        self._model: TextEncoder | None = None
 
     def search_response(
         self,
@@ -84,8 +108,17 @@ class ThoughtMapSearchService:
 
         return SearchResponse(
             results=results,
-            query_parameters=None,
+            query_parameters=self.query_parameters(q, filter_name),
         )
+
+    def query_parameters(self, q: str, filter_name: str = "") -> list[ParameterScore] | None:
+        """Thought Composition profile of the query text itself.
+
+        Same axes and same scale as `results[].parameters`, so a client can
+        overlay the two. Returns None when the text is empty or the embedding
+        model is unavailable; a missing profile never fails the search.
+        """
+        return self.query_profile_service.score_query(q, filter_name)
 
     def search(
         self,
@@ -105,11 +138,14 @@ class ThoughtMapSearchService:
         target_doc_id = str(target_doc_id or "").strip()
         user_email = str(user_email or "").strip()
 
+        mode = PUBLIC_MODE_ALIASES.get(mode, mode)
+
         if mode not in SEARCH_MODES:
             raise ValueError(f"Unsupported search mode: {mode}")
 
         started = time.perf_counter()
-        index = self.repository.load_index()
+        with stage("index_ms"):
+            corpus, index = self._load_corpus()
         counts = {"library": len(index)}
         index = apply_metadata_filter(index, "source", source)
         counts["source"] = len(index)
@@ -122,35 +158,92 @@ class ThoughtMapSearchService:
             logger.info("page=api mode=%s source=%r category=%r parameter=%r counts=%s candidates=0 results=0 elapsed=%.4f", mode, source, category, filter_name, counts, time.perf_counter()-started)
             return []
 
+        with stage("ranking_ms"):
+            results = self._rank(
+                index=index,
+                query=query,
+                mode=mode,
+                top=top,
+                target_doc_id=target_doc_id,
+                user_email=user_email,
+                corpus=corpus,
+            )
+        if results is None:
+            return []
+
+        with stage("response_build_ms"):
+            output = self._to_search_results(results)
+        logger.info("page=api mode=%s source=%r category=%r parameter=%r counts=%s candidates=%d results=%d elapsed=%.4f", mode, source, category, filter_name, counts, len(index), len(output), time.perf_counter()-started)
+        return output
+
+    def _load_corpus(self):
+        """(corpus, frame) from the repository.
+
+        `load_corpus` is an optional extension to the repository protocol: the
+        prepared matrix is a performance hint, not a requirement. A repository
+        that only implements `load_index` — a test double, or a storage backend
+        written before T7 — still works, and simply ranks by stacking.
+        """
+        loader = getattr(self.repository, "load_corpus", None)
+        if loader is None:
+            return None, self.repository.load_index()
+
+        corpus = loader()
+        return corpus, corpus.frame
+
+    def _rank(
+        self,
+        index: pd.DataFrame,
+        query: str,
+        mode: str,
+        top: int,
+        target_doc_id: str,
+        user_email: str,
+        corpus=None,
+    ) -> pd.DataFrame | None:
+        """Dispatch to the ranking path for this mode.
+
+        Extracted from `search` so the ranking cost can be timed as one stage
+        (T6 §35). The branches, their order and their arguments are unchanged;
+        `None` means "no query to rank", which the caller turns into [].
+        """
         if mode == "keyword":
             if not query:
-                return []
-            results = self._keyword_search(index, query, top)
+                return None
+            return self._keyword_search(index, query, top)
 
-        elif mode == "embedding":
-            if not target_doc_id:
-                raise ValueError("target_doc_id is required for embedding mode.")
-            results = self._embedding_search(
-                index=index,
-                target_doc_id=target_doc_id,
-                top=top,
-                user_email=user_email,
-            )
+        if mode == "embedding":
+            # Document-origin similarity when a target is named, query-text
+            # similarity otherwise. Both compare against the same index with
+            # the same cosine ranking.
+            if target_doc_id:
+                return self._embedding_search(
+                    index=index,
+                    target_doc_id=target_doc_id,
+                    top=top,
+                    user_email=user_email,
+                    corpus=corpus,
+                )
+            if query:
+                return self._query_embedding_search(
+                    index=index, query=query, top=top, corpus=corpus
+                )
+            raise ValueError("q or target_doc_id is required for semantic mode.")
 
-        else:
-            if not target_doc_id:
-                raise ValueError("target_doc_id is required for hybrid mode.")
-            results = self._hybrid_embedding_search(
+        if target_doc_id:
+            return self._hybrid_embedding_search(
                 index=index,
                 query=query,
                 target_doc_id=target_doc_id,
                 top=top,
                 user_email=user_email,
+                corpus=corpus,
             )
-
-        output = self._to_search_results(results)
-        logger.info("page=api mode=%s source=%r category=%r parameter=%r counts=%s candidates=%d results=%d elapsed=%.4f", mode, source, category, filter_name, counts, len(index), len(output), time.perf_counter()-started)
-        return output
+        if query:
+            return self._hybrid_query_search(
+                index=index, query=query, top=top, corpus=corpus
+            )
+        raise ValueError("q or target_doc_id is required for hybrid mode.")
 
     def filter_options(self) -> dict[str, list[str]]:
         index = self.repository.load_index()
@@ -166,9 +259,60 @@ class ThoughtMapSearchService:
     def _filter_by_category(self, index: pd.DataFrame, category: str) -> pd.DataFrame:
         return apply_metadata_filter(index, "category", category, multi=True)
 
+    def keyword_scores(self, index: pd.DataFrame, query: str) -> np.ndarray:
+        """Keyword score for every row, computed column-wise.
+
+        Identical rule to `_keyword_score`, which remains the single-row
+        definition: for each metadata column, an exact match scores highest, a
+        substring match scores the partial weight, and a match on every query
+        term scores the partial weight minus 0.05. A row takes the best score
+        across columns.
+
+        Vectorised in T4.6. The per-row version cost ~3.4 s at 63,891
+        documents, which made keyword the slowest mode of the three.
+        """
+        query_text = normalize_text(query).lower()
+        if not query_text:
+            return np.zeros(len(index), dtype=float)
+
+        query_terms = [term for term in re.split(r"\s+", query_text) if term]
+        best = np.zeros(len(index), dtype=float)
+
+        for column in KEYWORD_COLUMNS:
+            if column not in index.columns:
+                continue
+
+            values = index[column].fillna("").astype(str).str.strip().str.lower()
+            present = values.to_numpy() != ""
+            if not present.any():
+                continue
+
+            exact = present & (values.to_numpy() == query_text)
+            contains = present & ~exact & values.str.contains(query_text, regex=False).to_numpy()
+
+            all_terms = np.zeros(len(index), dtype=bool)
+            if query_terms:
+                all_terms = present & ~exact & ~contains
+                for term in query_terms:
+                    if not all_terms.any():
+                        break
+                    all_terms &= values.str.contains(term, regex=False).to_numpy()
+
+            exact_score = self._exact_match_score(column)
+            partial_score = self._partial_match_score(column)
+
+            column_scores = np.where(
+                exact,
+                exact_score,
+                np.where(contains, partial_score, np.where(all_terms, partial_score - 0.05, 0.0)),
+            )
+            np.maximum(best, column_scores, out=best)
+
+        return np.round(np.maximum(best, 0.0), 4)
+
     def _keyword_search(self, index: pd.DataFrame, query: str, top: int) -> pd.DataFrame:
         results = index.copy()
-        results["similarity"] = results.apply(lambda row: self._keyword_score(row, query), axis=1)
+        results["similarity"] = self.keyword_scores(index, query)
         results = results[results["similarity"] > 0]
         results = results.sort_values(
             ["similarity", "title"],
@@ -182,6 +326,7 @@ class ThoughtMapSearchService:
         target_doc_id: str,
         top: int,
         user_email: str = "",
+        corpus=None,
     ) -> pd.DataFrame:
         target_vec, exclude_doc_id = self._resolve_target_embedding(
             index=index,
@@ -195,9 +340,99 @@ class ThoughtMapSearchService:
             top=top,
             exclude_doc_id=exclude_doc_id,
             include_self=False,
+            corpus=corpus,
         )
 
         return format_similarity(results)
+
+    def _encode_query(self, query: str) -> np.ndarray:
+        """Embed the query text with the configured model.
+
+        Only the query is encoded here. Stored document embeddings are read as
+        they are and are never regenerated.
+        """
+        if self._model is None:
+            self._model = self._model_loader()
+
+        with stage("embedding_ms"):
+            encoded = self._model.encode([query], show_progress_bar=False)
+
+        vector = np.asarray(encoded, dtype=np.float32)
+        if vector.ndim > 1:
+            vector = vector[0]
+        return vector
+
+    def _query_embedding_search(
+        self, index: pd.DataFrame, query: str, top: int, corpus=None
+    ) -> pd.DataFrame:
+        """Rank the index by cosine similarity to the query text.
+
+        Uses the same `work_similarity_by_vector` ranking as document-origin
+        similarity; only the origin of the comparison vector differs. Nothing
+        is excluded, because the query is not itself a document in the index.
+        """
+        results = work_similarity_by_vector(
+            index,
+            target_vec=self._encode_query(query),
+            top=top,
+            exclude_doc_id="",
+            include_self=True,
+            corpus=corpus,
+        )
+        return format_similarity(results)
+
+    def _hybrid_query_search(
+        self, index: pd.DataFrame, query: str, top: int, corpus=None
+    ) -> pd.DataFrame:
+        """Keyword matches ranked by query-text semantic similarity.
+
+        Mirrors the existing document-origin hybrid path — keyword matches are
+        the candidate set, then ranked by the 0.8/0.2 similarity/keyword blend —
+        with the query embedding as the comparison vector instead of a target
+        document's. When nothing matches by keyword, it falls back to pure
+        semantic ranking, the "fallback results" behaviour that
+        docs/api_contract.md already describes for this mode.
+        """
+        query_vec = self._encode_query(query)
+
+        candidates = index.copy()
+        candidates["keyword_score"] = self.keyword_scores(index, query)
+        candidates = candidates[candidates["keyword_score"] > 0].copy()
+
+        if candidates.empty:
+            results = work_similarity_by_vector(
+                index,
+                target_vec=query_vec,
+                top=top,
+                exclude_doc_id="",
+                include_self=True,
+                corpus=corpus,
+            )
+            return format_similarity(results)
+
+        results = work_similarity_by_vector(
+            candidates,
+            target_vec=query_vec,
+            top=max(top, len(candidates)),
+            exclude_doc_id="",
+            include_self=True,
+            corpus=corpus,
+        )
+        results = format_similarity(results)
+
+        keyword_scores = candidates[["doc_id", "keyword_score"]].copy()
+        results = results.merge(keyword_scores, on="doc_id", how="left")
+        results["keyword_score"] = results["keyword_score"].fillna(0.0)
+        results["similarity"] = (
+            results["similarity"].astype(float) * HYBRID_SIMILARITY_WEIGHT
+            + results["keyword_score"].astype(float) * HYBRID_KEYWORD_WEIGHT
+        )
+        results = results.sort_values(
+            ["similarity", "keyword_score", "title"],
+            ascending=[False, False, True],
+        ).head(top).reset_index(drop=True)
+
+        return results
 
     def _hybrid_embedding_search(
         self,
@@ -206,6 +441,7 @@ class ThoughtMapSearchService:
         target_doc_id: str,
         top: int,
         user_email: str = "",
+        corpus=None,
     ) -> pd.DataFrame:
         target_vec, exclude_doc_id = self._resolve_target_embedding(
             index=index,
@@ -216,10 +452,7 @@ class ThoughtMapSearchService:
         candidates = index.copy()
 
         if query:
-            candidates["keyword_score"] = candidates.apply(
-                lambda row: self._keyword_score(row, query),
-                axis=1,
-            )
+            candidates["keyword_score"] = self.keyword_scores(candidates, query)
             candidates = candidates[candidates["keyword_score"] > 0].copy()
 
         if candidates.empty:
@@ -231,6 +464,7 @@ class ThoughtMapSearchService:
             top=max(top, len(candidates)),
             exclude_doc_id=exclude_doc_id,
             include_self=False,
+            corpus=corpus,
         )
 
         results = format_similarity(results)
@@ -240,8 +474,8 @@ class ThoughtMapSearchService:
             results = results.merge(keyword_scores, on="doc_id", how="left")
             results["keyword_score"] = results["keyword_score"].fillna(0.0)
             results["similarity"] = (
-                results["similarity"].astype(float) * 0.8
-                + results["keyword_score"].astype(float) * 0.2
+                results["similarity"].astype(float) * HYBRID_SIMILARITY_WEIGHT
+                + results["keyword_score"].astype(float) * HYBRID_KEYWORD_WEIGHT
             )
             results = results.sort_values(
                 ["similarity", "keyword_score", "title"],
@@ -539,9 +773,14 @@ class ThoughtMapSearchService:
 
 def create_search_service(settings: ApiSettings) -> ThoughtMapSearchService:
     repository = create_search_index_repository(settings)
+    # One encoder per service, built from configuration. Ranking never learns
+    # which runtime produced the vector (T7 #4).
+    model_loader = lambda: create_query_encoder(settings)
     return ThoughtMapSearchService(
         repository=repository,
         model_name=settings.model_name,
+        model_loader=model_loader,
+        query_profile_service=QueryProfileService(model_loader),
     )
 
 

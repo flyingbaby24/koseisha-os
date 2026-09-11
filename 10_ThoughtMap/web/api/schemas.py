@@ -25,6 +25,47 @@ class SearchResponse(BaseModel):
     query_parameters: list[ParameterScore] | None = None
 
 
+class MapProjectionMetadata(BaseModel):
+    """Describes how the projection was produced, for cache and debug purposes."""
+
+    generated_at: str
+    dataset_fingerprint: str
+    document_count: int
+    embedding_dimension: int
+    dimensions: int
+    algorithm: str
+    metric: str
+    n_neighbors: int
+    min_dist: float
+    random_seed: int
+    n_components: int | None = None
+    cluster_algorithm: str | None = None
+    cluster_count: int | None = None
+
+
+class MapNode(BaseModel):
+    """One document's place in the thought space.
+
+    Deliberately not a SearchResult: no similarity, no parameters, no URL.
+    The two representations join on doc_id.
+    """
+
+    doc_id: str
+    title: str = ""
+    author: str = ""
+    source: str = ""
+    x: float
+    y: float
+    z: float
+    cluster: int | None = None
+
+
+class MapResponse(BaseModel):
+    schema_version: int
+    projection: MapProjectionMetadata
+    nodes: list[MapNode]
+
+
 class SaveDocumentRequest(BaseModel):
     doc_id: str
     title: str = ""

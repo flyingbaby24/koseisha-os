@@ -1,0 +1,18 @@
+# ThoughtMap — continuous integration.
+#
+# Everything the unit tests need, and nothing else. Deliberately excludes torch
+# and sentence-transformers: no test imports them (they exist to *produce*
+# artifacts, not to serve requests), and installing them would add ~2.5 GB and
+# several minutes to every CI run for no coverage.
+#
+# CI also never needs the 542 MB embedding artifact. The tests use synthetic
+# fixtures and temporary directories throughout; heavy-corpus validation is a
+# release step (`api.release_check`), not a unit-test step.
+
+-r requirements-api.txt
+
+pytest
+
+# api.generate_map_projection is exercised by test_map_projection.
+umap-learn
+scikit-learn

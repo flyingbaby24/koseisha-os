@@ -1,0 +1,1283 @@
+:root {
+  --tm-bg: #05070d;
+  --tm-panel: rgba(11, 17, 29, 0.86);
+  --tm-panel-solid: #0b111d;
+  --tm-border: rgba(110, 160, 220, 0.22);
+  --tm-border-strong: rgba(79, 208, 255, 0.55);
+  --tm-text: #dbe6f5;
+  --tm-text-dim: #8397b0;
+  --tm-accent: #4fd0ff;
+  --tm-accent-soft: rgba(79, 208, 255, 0.14);
+  --tm-danger: #ff8f8f;
+  --tm-font: "Segoe UI", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --tm-mono: "Cascadia Mono", "SF Mono", Consolas, monospace;
+  --tm-gap: 14px;
+  --tm-radius: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Panels toggle visibility with el.hidden. The UA rule for [hidden] is
+   display:none, but any author `display` declaration outranks it, and most
+   elements here are flex/grid/inline-block. Without this they stay visible. */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--tm-bg);
+  color: var(--tm-text);
+  font-family: var(--tm-font);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.tm-app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Three.js owns this element. */
+.tm-viewport {
+  position: absolute;
+  inset: 0;
+}
+
+.tm-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------------------------------------------------------------------------
+   Pointer routing.
+
+   Every layout container is pointer-transparent so drags and wheel events over
+   empty space reach the canvas and orbit keeps working. Only real panels and
+   controls opt back in, which is also what stops a scroll inside the result
+   list from zooming the camera.
+   --------------------------------------------------------------------------- */
+.tm-ui,
+.tm-layout,
+.tm-layout-top,
+.tm-layout-columns,
+.tm-layout-centre,
+.tm-map-status {
+  pointer-events: none;
+}
+
+.tm-ui {
+  position: absolute;
+  inset: 0;
+}
+
+.tm-search,
+.tm-panel,
+.tm-camera-controls button {
+  pointer-events: auto;
+}
+
+/* --- layout --------------------------------------------------------------- */
+
+.tm-layout {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--tm-gap);
+  padding: var(--tm-gap);
+}
+
+.tm-layout-columns {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr) minmax(280px, 380px);
+  gap: var(--tm-gap);
+  min-height: 0;
+}
+
+.tm-results {
+  grid-column: 1;
+}
+
+/* Column 2 is the window onto the Thought Space. It holds only the status
+   overlay, and stays pointer-transparent so orbit works through it. */
+.tm-layout-centre {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 0;
+  padding-bottom: 52px;
+}
+
+.tm-detail {
+  grid-column: 3;
+}
+
+/* --- map status / legend --------------------------------------------------- */
+
+.tm-map-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  text-align: center;
+}
+
+.tm-map-message {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--tm-accent);
+}
+
+.tm-map-status.is-error .tm-map-message {
+  color: var(--tm-danger);
+}
+
+.tm-map-detail {
+  margin: 0;
+  max-width: 42ch;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--tm-text-dim);
+}
+
+.tm-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 14px;
+  padding: 7px 14px;
+  border: 1px solid var(--tm-border);
+  border-radius: 999px;
+  background: rgba(5, 7, 13, 0.66);
+  backdrop-filter: blur(6px);
+  font-size: 11px;
+  color: var(--tm-text-dim);
+}
+
+.tm-map-legend-total {
+  font-family: var(--tm-mono);
+  font-size: 11px;
+  color: var(--tm-text);
+}
+
+.tm-map-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.tm-map-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.tm-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  background: var(--tm-panel);
+  backdrop-filter: blur(10px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.tm-panel-title {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tm-accent);
+}
+
+/* --- search --------------------------------------------------------------- */
+
+.tm-search {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius);
+  background: var(--tm-panel);
+  backdrop-filter: blur(10px);
+}
+
+.tm-search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tm-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--tm-border);
+  border-radius: 8px;
+  background: rgba(4, 8, 15, 0.75);
+  color: var(--tm-text);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.tm-search-input::placeholder {
+  color: var(--tm-text-dim);
+}
+
+.tm-search-input:focus-visible,
+.tm-select:focus-visible {
+  outline: 2px solid var(--tm-accent);
+  outline-offset: 1px;
+}
+
+.tm-search-button {
+  flex: 0 0 auto;
+  padding: 9px 20px;
+  border: 1px solid var(--tm-border-strong);
+  border-radius: 8px;
+  background: var(--tm-accent-soft);
+  color: var(--tm-accent);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 120ms ease, opacity 120ms ease;
+}
+
+.tm-search-button:hover:not(:disabled) {
+  background: rgba(79, 208, 255, 0.24);
+}
+
+.tm-search-button:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.tm-spinner {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(79, 208, 255, 0.25);
+  border-top-color: var(--tm-accent);
+  border-radius: 50%;
+  animation: tm-spin 0.7s linear infinite;
+}
+
+@keyframes tm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tm-spinner {
+    animation-duration: 2s;
+  }
+}
+
+.tm-search-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.tm-field-label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tm-text-dim);
+}
+
+.tm-select {
+  padding: 6px 8px;
+  border: 1px solid var(--tm-border);
+  border-radius: 7px;
+  background: rgba(4, 8, 15, 0.75);
+  color: var(--tm-text);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.tm-select option {
+  background: var(--tm-panel-solid);
+  color: var(--tm-text);
+}
+
+/* --- results -------------------------------------------------------------- */
+
+.tm-note {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--tm-text-dim);
+}
+
+.tm-error {
+  margin: 0 0 10px;
+  padding: 9px 11px;
+  border: 1px solid rgba(255, 143, 143, 0.35);
+  border-radius: 8px;
+  background: rgba(255, 143, 143, 0.09);
+  color: var(--tm-danger);
+  font-size: 12.5px;
+}
+
+.tm-result-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tm-result {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: background 110ms ease, border-color 110ms ease;
+}
+
+.tm-result:hover {
+  background: rgba(79, 208, 255, 0.08);
+}
+
+.tm-result:focus-visible {
+  outline: 2px solid var(--tm-accent);
+  outline-offset: 1px;
+}
+
+.tm-result.is-selected {
+  border-color: var(--tm-border-strong);
+  background: var(--tm-accent-soft);
+}
+
+.tm-result-rank {
+  font-family: var(--tm-mono);
+  font-size: 11px;
+  color: var(--tm-text-dim);
+  text-align: right;
+}
+
+.tm-result-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tm-result-title {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-result-meta {
+  font-size: 11px;
+  color: var(--tm-text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-result-similarity {
+  font-family: var(--tm-mono);
+  font-size: 11.5px;
+  color: var(--tm-accent);
+}
+
+/* --- detail --------------------------------------------------------------- */
+
+.tm-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tm-detail-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.tm-detail-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.tm-detail-field {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 8px;
+  font-size: 12px;
+}
+
+.tm-detail-field dt {
+  color: var(--tm-text-dim);
+}
+
+.tm-detail-field dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.tm-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tm-link-button {
+  display: inline-block;
+  padding: 7px 14px;
+  border: 1px solid var(--tm-border-strong);
+  border-radius: 7px;
+  color: var(--tm-accent);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.tm-link-button:hover {
+  background: var(--tm-accent-soft);
+}
+
+.tm-link-unavailable {
+  font-size: 11.5px;
+  font-style: italic;
+  color: var(--tm-text-dim);
+}
+
+/* --- parameters ----------------------------------------------------------- */
+
+.tm-params {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--tm-border);
+}
+
+.tm-params-title {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tm-text-dim);
+}
+
+.tm-params-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tm-param-row {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.tm-param-label {
+  color: var(--tm-text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-param-track {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.tm-param-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, rgba(79, 208, 255, 0.5), var(--tm-accent));
+}
+
+.tm-param-value {
+  font-family: var(--tm-mono);
+  font-size: 10.5px;
+  color: var(--tm-text);
+  text-align: right;
+}
+
+/* --- map tooltip ----------------------------------------------------------- */
+
+.tm-map-tooltip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5;
+  max-width: 280px;
+  padding: 7px 11px;
+  border: 1px solid var(--tm-border-strong);
+  border-radius: 8px;
+  background: rgba(6, 10, 18, 0.93);
+  backdrop-filter: blur(8px);
+  /* Must never swallow a click meant for the node underneath. */
+  pointer-events: none;
+  will-change: transform;
+}
+
+.tm-tooltip-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--tm-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-tooltip-meta {
+  font-size: 11px;
+  color: var(--tm-text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-tooltip-similarity {
+  margin-top: 2px;
+  font-family: var(--tm-mono);
+  font-size: 10.5px;
+  color: var(--tm-accent);
+}
+
+.tm-detail-origin {
+  margin: 0;
+  font-size: 11px;
+  font-style: italic;
+}
+
+.tm-result.is-hovered:not(.is-selected) {
+  background: rgba(79, 208, 255, 0.06);
+}
+
+/* --- camera controls ------------------------------------------------------ */
+
+.tm-camera-controls {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  display: flex;
+  gap: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.tm-camera-controls button {
+  padding: 6px 13px;
+  border: 1px solid var(--tm-border);
+  border-radius: 6px;
+  background: var(--tm-panel);
+  color: var(--tm-text);
+  font-family: inherit;
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.tm-camera-controls button:hover {
+  border-color: var(--tm-accent);
+  color: var(--tm-accent);
+}
+
+.tm-camera-controls button:focus-visible {
+  outline: 2px solid var(--tm-accent);
+  outline-offset: 2px;
+}
+
+.tm-camera-controls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.tm-camera-controls button:disabled:hover {
+  border-color: var(--tm-border);
+  color: var(--tm-text);
+}
+
+/* --- fatal ---------------------------------------------------------------- */
+
+.tm-fatal {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  padding: 32px;
+  text-align: center;
+  background: var(--tm-bg);
+}
+
+.tm-fatal h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--tm-accent);
+}
+
+.tm-fatal p {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--tm-text-dim);
+}
+
+/* --- responsive ----------------------------------------------------------- */
+
+/* Narrow desktop / tablet: drop the detail column under the results column and
+   keep a slice of the Thought Space visible between them. */
+@media (max-width: 1100px) {
+  .tm-layout-columns {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .tm-results {
+    grid-column: 1;
+  }
+
+  .tm-detail {
+    grid-column: 2;
+  }
+
+  /* No dedicated map column at this width: the overlay floats over the whole
+     row instead, and the scene shows through wherever a panel is not. */
+  .tm-layout-centre {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-content: flex-end;
+    padding-bottom: 8px;
+  }
+
+  .tm-camera-controls {
+    display: none;
+  }
+}
+
+/* Phone: stack everything in one scrollable column, panels capped so the
+   scene stays visible behind them. */
+@media (max-width: 720px) {
+  :root {
+    --tm-gap: 10px;
+  }
+
+  .tm-layout {
+    grid-template-rows: auto minmax(0, 1fr);
+    padding: 10px;
+  }
+
+  .tm-layout-columns {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: minmax(0, auto);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    pointer-events: auto;
+  }
+
+  .tm-results,
+  .tm-detail {
+    grid-column: 1;
+    max-height: 46vh;
+  }
+
+  .tm-layout-centre {
+    grid-column: 1;
+    grid-row: auto;
+    order: -1;
+    padding-bottom: 0;
+  }
+
+  .tm-map-legend {
+    font-size: 10px;
+    gap: 4px 10px;
+    padding: 6px 11px;
+  }
+
+  .tm-search-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tm-search-input {
+    font-size: 16px; /* stops iOS zooming the page on focus */
+  }
+
+  .tm-detail-field {
+    grid-template-columns: 78px minmax(0, 1fr);
+  }
+
+  .tm-param-row {
+    grid-template-columns: 66px minmax(0, 1fr) 44px;
+  }
+}
+
+/* ===== T5: radar, library, saved state ==================================== */
+
+:root {
+  --tm-query: #4fd0ff;
+  --tm-document: #ffb066;
+  --tm-saved: #9be7c4;
+}
+
+/* --- tabs ----------------------------------------------------------------- */
+
+.tm-left {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.tm-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 8px 10px 0;
+  border-bottom: 1px solid var(--tm-border);
+}
+
+.tm-tab {
+  padding: 7px 14px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 7px 7px 0 0;
+  background: transparent;
+  color: var(--tm-text-dim);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.tm-tab:hover {
+  color: var(--tm-text);
+}
+
+.tm-tab.is-active {
+  border-color: var(--tm-border);
+  background: rgba(79, 208, 255, 0.1);
+  color: var(--tm-accent);
+}
+
+.tm-tab:focus-visible {
+  outline: 2px solid var(--tm-accent);
+  outline-offset: -2px;
+}
+
+.tm-tabpanel {
+  flex: 1 1 auto;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+/* --- radar ---------------------------------------------------------------- */
+
+.tm-radar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--tm-border);
+}
+
+.tm-radar-title {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tm-text-dim);
+}
+
+/* viewBox scales to the column; no fixed pixel size, so it never overflows. */
+.tm-radar-svg {
+  display: block;
+  width: 100%;
+  max-width: 340px;
+  height: auto;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.tm-radar-ring {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 1;
+}
+
+.tm-radar-spoke {
+  stroke: rgba(255, 255, 255, 0.09);
+  stroke-width: 1;
+}
+
+.tm-radar-label {
+  fill: var(--tm-text-dim);
+  font-size: 11px;
+  font-family: var(--tm-font);
+}
+
+.tm-radar-shape {
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+
+.tm-radar-shape.is-query {
+  fill: rgba(79, 208, 255, 0.16);
+  stroke: var(--tm-query);
+}
+
+.tm-radar-shape.is-document {
+  fill: rgba(255, 176, 102, 0.16);
+  stroke: var(--tm-document);
+}
+
+.tm-radar-vertex.is-query {
+  fill: var(--tm-query);
+}
+
+.tm-radar-vertex.is-document {
+  fill: var(--tm-document);
+}
+
+.tm-radar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  font-size: 11px;
+  color: var(--tm-text-dim);
+}
+
+.tm-radar-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.tm-radar-legend-item > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 15ch;
+}
+
+.tm-radar-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex: 0 0 auto;
+}
+
+.tm-radar-swatch.is-query {
+  background: var(--tm-query);
+}
+
+.tm-radar-swatch.is-document {
+  background: var(--tm-document);
+}
+
+.tm-radar-scale {
+  margin-left: auto;
+  font-family: var(--tm-mono);
+  font-size: 10px;
+}
+
+.tm-radar-details {
+  font-size: 11px;
+  color: var(--tm-text-dim);
+}
+
+.tm-radar-details summary {
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.tm-radar-table {
+  width: 100%;
+  margin-top: 6px;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.tm-radar-table th,
+.tm-radar-table td {
+  padding: 2px 4px;
+  text-align: right;
+  font-weight: 400;
+}
+
+.tm-radar-table th[scope="row"] {
+  text-align: left;
+  color: var(--tm-text-dim);
+}
+
+.tm-radar-table thead th {
+  color: var(--tm-text);
+  border-bottom: 1px solid var(--tm-border);
+}
+
+.tm-radar-table td {
+  font-family: var(--tm-mono);
+  color: var(--tm-text);
+}
+
+/* --- save action ---------------------------------------------------------- */
+
+.tm-save-button {
+  padding: 7px 16px;
+  border: 1px solid var(--tm-border-strong);
+  border-radius: 7px;
+  background: var(--tm-accent-soft);
+  color: var(--tm-accent);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tm-save-button:hover:not(:disabled) {
+  background: rgba(79, 208, 255, 0.24);
+}
+
+.tm-save-button.is-saved {
+  border-color: rgba(155, 231, 196, 0.55);
+  background: rgba(155, 231, 196, 0.12);
+  color: var(--tm-saved);
+}
+
+.tm-save-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.tm-save-button:focus-visible,
+.tm-library-button:focus-visible,
+.tm-library-remove:focus-visible,
+.tm-library-item-main:focus-visible {
+  outline: 2px solid var(--tm-accent);
+  outline-offset: 1px;
+}
+
+.tm-save-note {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--tm-text-dim);
+}
+
+/* --- saved marker in results ---------------------------------------------- */
+
+.tm-result {
+  grid-template-columns: 22px minmax(0, 1fr) auto auto;
+}
+
+.tm-result-saved {
+  font-size: 11px;
+  color: var(--tm-saved);
+  opacity: 0;
+}
+
+.tm-result.is-saved .tm-result-saved {
+  opacity: 1;
+}
+
+/* --- library -------------------------------------------------------------- */
+
+.tm-library {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.tm-library-identity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tm-library-identity-input {
+  flex: 1 1 140px;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--tm-border);
+  border-radius: 7px;
+  background: rgba(4, 8, 15, 0.75);
+  color: var(--tm-text);
+  font-family: inherit;
+  font-size: 12.5px;
+}
+
+.tm-library-button {
+  padding: 7px 12px;
+  border: 1px solid var(--tm-border);
+  border-radius: 7px;
+  background: var(--tm-accent-soft);
+  color: var(--tm-accent);
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.tm-library-button.is-quiet {
+  background: transparent;
+  color: var(--tm-text-dim);
+}
+
+.tm-library-identity-note {
+  margin: 0;
+  font-size: 10.5px;
+  font-style: italic;
+}
+
+.tm-library-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tm-library-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.tm-library-item.is-selected {
+  border-color: var(--tm-border-strong);
+  background: var(--tm-accent-soft);
+}
+
+.tm-library-item-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tm-library-item-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-library-item-meta {
+  font-size: 10.5px;
+  color: var(--tm-text-dim);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-library-remove {
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--tm-text-dim);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tm-library-remove:hover {
+  color: var(--tm-danger);
+}
+
+/* --- compact camera controls ---------------------------------------------- */
+
+.tm-camera-compact {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.tm-camera-compact button {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--tm-border);
+  border-radius: 50%;
+  background: var(--tm-panel);
+  color: var(--tm-text);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: auto;
+  backdrop-filter: blur(6px);
+}
+
+.tm-camera-compact button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.tm-camera-compact button:focus-visible {
+  outline: 2px solid var(--tm-accent);
+  outline-offset: 2px;
+}
+
+/* Below the desktop breakpoint the labelled bar is hidden, so the compact
+   controls take over rather than leaving the camera unreachable. */
+@media (max-width: 1100px) {
+  .tm-camera-compact {
+    display: flex;
+  }
+}
+
+@media (max-width: 720px) {
+  .tm-radar-svg {
+    max-width: 100%;
+  }
+
+  .tm-radar-label {
+    font-size: 12px;
+  }
+
+  .tm-camera-compact {
+    right: 10px;
+    bottom: 10px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   T6 — deployment status banner
+   One line above the search form. Two tones only: `info` for states that
+   resolve on their own (warming, public demo), `warning` for states that need
+   someone to act. Never red-on-red alarm styling for a service that is simply
+   still starting.
+--------------------------------------------------------------------------- */
+
+.tm-backend-banner {
+  margin: 0 0 0.6rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.tm-backend-banner[data-tone="info"] {
+  background: rgba(64, 196, 255, 0.09);
+  border-color: rgba(64, 196, 255, 0.32);
+  color: #bfe9ff;
+}
+
+.tm-backend-banner[data-tone="warning"] {
+  background: rgba(255, 176, 64, 0.1);
+  border-color: rgba(255, 176, 64, 0.36);
+  color: #ffd9a3;
+}
+
+@media (max-width: 720px) {
+  .tm-backend-banner {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.65rem;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   T7 — reduced motion
+   Someone who asked the system for less motion gets transitions that are
+   effectively immediate. Nothing is removed: every control still works and the
+   3D map is still fully navigable (camera inertia is disabled separately, in
+   CameraController). Only decoration stops moving.
+--------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* The spinner is the one exception: it communicates "still working", so it
+     keeps turning, just slowly enough not to be distracting. */
+  .tm-spinner {
+    animation-duration: 2s !important;
+    animation-iteration-count: infinite !important;
+  }
+}

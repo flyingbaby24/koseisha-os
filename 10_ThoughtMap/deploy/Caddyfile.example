@@ -1,0 +1,61 @@
+# ThoughtMap — same-origin reverse proxy (Caddy).
+#
+#   /          -> the built Vite frontend (threejs/dist)
+#   /api/*     -> the FastAPI service
+#
+# Same origin is the recommended arrangement (T7 §23): the browser never makes
+# a cross-origin request, so CORS stops being a deployment variable at all, and
+# `VITE_THOUGHTMAP_API_BASE_URL` stays at its default of `/api`.
+#
+#   caddy run --config Caddyfile
+#
+# Replace thoughtmap.example with the real hostname. Caddy obtains a
+# certificate automatically for a public hostname.
+
+thoughtmap.example {
+	encode zstd gzip
+
+	# --- API ---------------------------------------------------------------
+	handle_path /api/* {
+		reverse_proxy 127.0.0.1:8078 {
+			# The corpus takes ~10 s to load and the encoder a further ~5 s.
+			# A health check must not mark a warming instance dead, so this
+			# targets /health (liveness), never /ready.
+			health_uri /health
+			health_interval 10s
+			health_timeout 5s
+
+			# /map is 3.7 MB gzipped and search can take ~500 ms under load.
+			transport http {
+				response_header_timeout 120s
+			}
+		}
+	}
+
+	# --- frontend ----------------------------------------------------------
+	root * /srv/thoughtmap/dist
+
+	# Content-hashed assets: the filename changes whenever the bytes do, so a
+	# year-long immutable lifetime is safe and removes revalidation entirely
+	# (T7 §26).
+	@hashed path /assets/*
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+
+	# index.html must NOT be immutable: it is the file that points at the
+	# hashed assets, so caching it hard would pin visitors to an old build.
+	@html path / /index.html
+	header @html Cache-Control "no-cache"
+
+	# Source maps are emitted but should not be served to the public.
+	@maps path *.map
+	respond @maps 404
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "SAMEORIGIN"
+		-Server
+	}
+
+	file_server
+}

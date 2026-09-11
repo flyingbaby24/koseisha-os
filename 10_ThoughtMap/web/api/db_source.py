@@ -4,10 +4,14 @@ import os
 import sqlite3
 import tempfile
 import urllib.request
+from contextlib import closing
 from pathlib import Path
 from typing import Callable
 
 
+# Contract: write the URL's bytes to the destination path and release every
+# handle on it before returning. ensure_local() replaces that file immediately
+# afterwards, and on Windows an open handle makes os.replace() fail.
 DownloadFunction = Callable[[str, Path], None]
 
 
@@ -18,7 +22,11 @@ def _download(url: str, destination: Path) -> None:
 
 
 def validate_sqlite(path: Path) -> None:
-    with sqlite3.connect(path) as connection:
+    # closing(), not `with sqlite3.connect(...)`: a Connection used as a context
+    # manager commits or rolls back the transaction but leaves the connection
+    # open. The lingering file handle makes the later os.replace()/unlink() in
+    # ensure_local() fail on Windows, where an open file cannot be replaced.
+    with closing(sqlite3.connect(path)) as connection:
         result = connection.execute("PRAGMA quick_check").fetchone()
         if not result or result[0] != "ok":
             raise ValueError(f"Downloaded SQLite failed integrity check: {path}")

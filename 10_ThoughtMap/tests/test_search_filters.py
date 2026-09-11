@@ -1,5 +1,6 @@
 import pandas as pd
 import sqlite3
+from contextlib import closing
 
 from web.search_utils import (
     apply_metadata_filter,
@@ -75,7 +76,13 @@ def test_database_source_download_is_mockable_and_atomic(tmp_path):
     calls = []
     def downloader(url, destination):
         calls.append(url)
-        with sqlite3.connect(destination) as connection:
+        # A DownloadFunction must release the destination before returning.
+        # `with sqlite3.connect(...)` only commits; the connection is reclaimed
+        # by the cyclic GC (its statement cache makes a reference cycle), so
+        # without closing() the handle is still open when ensure_local() calls
+        # os.replace() and Windows refuses. closing() makes this stub behave
+        # like the real urllib downloader.
+        with closing(sqlite3.connect(destination)) as connection:
             connection.execute("CREATE TABLE documents (doc_id TEXT)")
             connection.execute("CREATE TABLE embeddings (doc_id TEXT, embedding TEXT)")
     source = OfficialDatabaseSource(target, "https://example.test/files/thoughtmap.sqlite", downloader)
