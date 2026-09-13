@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import platform
 import threading
 import time
 from contextlib import asynccontextmanager
@@ -99,12 +101,16 @@ async def lifespan(app: FastAPI):
     They run on a worker thread instead, so `/health` answers from the first
     moment and `/ready` reports honestly until the work is done (T6 §9).
     """
+    if os.environ.get("RENDER") == "true":
+        from .verify_python_runtime import verify_runtime
+        verify_runtime()
     started = time.perf_counter()
     _evaluate_static_checks()
     readiness.record_stage("static_checks", (time.perf_counter() - started) * 1000.0)
 
     log_event(
         "startup",
+        python_version=platform.python_version(),
         mode=settings.deployment_mode,
         warmup=settings.warmup,
         backend=settings.backend,

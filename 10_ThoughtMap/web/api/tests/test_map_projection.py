@@ -933,12 +933,16 @@ class PrepareMapSidecarsCommandTests(unittest.TestCase):
         # repaired in the field would serve different bytes.
         from api.map_projection import gzip_path_for, meta_path_for
 
-        self.run_command()
+        # Deliberately cross a clock boundary: gzip headers must be stable.
+        from unittest.mock import patch
+        with patch("time.time", return_value=1000):
+            self.run_command()
         by_command = gzip_path_for(self.path).read_bytes()
         command_meta = json.loads(meta_path_for(self.path).read_text(encoding="utf-8"))
 
         regenerated = Path(self.directory.name) / "regenerated.json"
-        write_artifact(self.artifact, regenerated)
+        with patch("time.time", return_value=2000):
+            write_artifact(self.artifact, regenerated)
         by_generator = gzip_path_for(regenerated).read_bytes()
         generator_meta = json.loads(
             meta_path_for(regenerated).read_text(encoding="utf-8")

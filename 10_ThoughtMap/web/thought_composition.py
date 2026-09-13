@@ -4,7 +4,73 @@ from typing import Iterable
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics.pairwise import cosine_similarity
+
+
+def _row_norms(matrix: np.ndarray) -> np.ndarray:
+    """Euclidean norm of each row.
+
+    `sqrt(einsum(...))` rather than `np.linalg.norm(..., axis=1)` because that
+    is the reduction scikit-learn's `row_norms` performs, and the two can
+    differ by an ULP on float32. The point of this function is to reproduce
+    those bits, so it copies the arithmetic rather than an equivalent of it.
+    """
+    return np.sqrt(np.einsum("ij,ij->i", matrix, matrix))
+
+
+def _normalize_rows(matrix: np.ndarray) -> np.ndarray:
+    """Scale each row to unit length, leaving an all-zero row at zero.
+
+    Mirrors `sklearn.preprocessing.normalize`, including its handling of the
+    degenerate row: a zero norm is replaced by 1.0 before the division, so a
+    zero row divides to zeros rather than NaNs.
+    """
+    norms = _row_norms(matrix)
+    norms[norms == 0.0] = 1.0
+    return matrix / norms[:, np.newaxis]
+
+
+def cosine_similarity(X, Y):
+    """Pairwise cosine similarity between the rows of `X` and of `Y`.
+
+    A drop-in replacement for `sklearn.metrics.pairwise.cosine_similarity`,
+    kept deliberately narrow: that one call was the *only* thing the Thought
+    Composition pipeline used scikit-learn for, and importing scikit-learn is
+    not possible in the production container — the runtime deliberately
+    excludes it, so `make_filter_scores` raised `ModuleNotFoundError` and the
+    query radar silently degraded to "no profile" on the public demo.
+
+    The algorithm is unchanged: L2-normalise both sides, then take the inner
+    product. Two details are reproduced rather than reinvented, because these
+    values feed a user-visible radar:
+
+    - **dtype promotion.** scikit-learn's `check_pairwise_arrays` computes in
+      float32 only when *both* inputs are float32, and in float64 otherwise.
+      Query vectors are float32, so this keeps the production path in float32
+      exactly as it was.
+    - **zero rows.** See `_normalize_rows`.
+
+    `api.verify_query_profile_equivalence` checks this against the
+    scikit-learn implementation on the full 63,891-document corpus.
+    """
+    X = np.asarray(X)
+    Y = np.asarray(Y)
+
+    dtype = np.float32 if (X.dtype == np.float32 and Y.dtype == np.float32) else np.float64
+    X = np.asarray(X, dtype=dtype)
+    Y = np.asarray(Y, dtype=dtype)
+
+    if X.ndim == 1:
+        X = X.reshape(1, -1)
+    if Y.ndim == 1:
+        Y = Y.reshape(1, -1)
+
+    if X.shape[1] != Y.shape[1]:
+        raise ValueError(
+            f"Incompatible dimensions: X has {X.shape[1]} features, "
+            f"Y has {Y.shape[1]}."
+        )
+
+    return _normalize_rows(X) @ _normalize_rows(Y).T
 
 
 THOUGHT_COMPOSITION_PARAMETERS = [

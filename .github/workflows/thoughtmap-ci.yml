@@ -7,10 +7,12 @@ on:
     paths:
       - "10_ThoughtMap/**"
       - ".github/workflows/thoughtmap-ci.yml"
+      - ".python-version"
   pull_request:
     paths:
       - "10_ThoughtMap/**"
       - ".github/workflows/thoughtmap-ci.yml"
+      - ".python-version"
   workflow_dispatch:
 
 # A new push supersedes an in-flight run for the same ref.
@@ -35,9 +37,12 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version-file: 10_ThoughtMap/web/.python-version
           cache: pip
           cache-dependency-path: 10_ThoughtMap/web/requirements-ci.txt
+
+      - name: Verify the supported Python runtime
+        run: python -m api.verify_python_runtime
 
       - name: Install dependencies
         # requirements-ci.txt, not requirements-dev.txt: no test imports torch
@@ -73,6 +78,9 @@ jobs:
               raise SystemExit(f"runtime imported heavy modules: {heavy}")
           print("runtime imports are clean")
           PY
+
+      - name: Query profile arithmetic equivalence
+        run: python -m api.verify_query_profile_equivalence --skip-corpus
 
       - name: API tests
         # No THOUGHTMAP_EMBEDDINGS_PATH: unit CI must never need the 542 MB

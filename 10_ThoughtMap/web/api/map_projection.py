@@ -512,7 +512,7 @@ def write_map_sidecars(
     match the file it is serving.
     """
     target = Path(artifact_path)
-    compressed = gzip.compress(raw, SIDECAR_GZIP_LEVEL)
+    compressed = gzip.compress(raw, SIDECAR_GZIP_LEVEL, mtime=0)
 
     meta = {
         "sidecar_version": SIDECAR_VERSION,
