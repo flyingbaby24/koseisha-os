@@ -120,6 +120,8 @@ jobs:
         run: npm run test
 
       - name: Production build
+        env:
+          VITE_THOUGHTMAP_API_BASE_URL: /
         run: npm run build
 
       - name: Check the entry bundle stays small

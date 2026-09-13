@@ -495,3 +495,8 @@ def delete_default_saved(doc_id: str, response: Response) -> DeleteSavedDocument
     except RuntimeError as exc:
         log_event("library.error", operation="delete-default", error=type(exc).__name__)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+from .frontend import mount_frontend
+
+mount_frontend(app, required=os.environ.get("RENDER") == "true")
