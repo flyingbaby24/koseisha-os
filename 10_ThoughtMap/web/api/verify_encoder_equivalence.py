@@ -131,8 +131,22 @@ def _cosine(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.dot(a, b) / denominator)
 
 
-def run(top: int = 10, limit: int | None = None) -> dict[str, Any]:
-    from .config import get_settings
+def run(top: int = 10, limit: int | None = None, reference: str = "torch") -> dict[str, Any]:
+    """Compare the deployed encoder against a reference on the real corpus.
+
+    Two references, because two different questions get asked of this suite:
+
+    ``torch``
+        sentence-transformers, the implementation ONNX replaced in T7. This
+        re-proves the whole chain — export, runtime, tokenizer, pooling —
+        against the original, and needs a torch install.
+    ``tokenizers``
+        the same ONNX graph driven by the Rust tokenizer instead of
+        SentencePiece. This isolates a tokenizer change to itself: the corpus,
+        the matrix, the graph and the pooling are the same objects for both
+        runs, so a mismatch has exactly one possible cause. No torch needed.
+    """
+    from .config import HUGGINGFACE_TOKENIZER, SENTENCEPIECE_TOKENIZER, get_settings
     from .query_encoder import PROVIDER_ONNX, PROVIDER_SENTENCE_TRANSFORMERS, create_query_encoder
     from .query_profile import QueryProfileService
     from .search_service import create_search_service
@@ -140,10 +154,22 @@ def run(top: int = 10, limit: int | None = None) -> dict[str, Any]:
     settings = get_settings()
     queries = QUERIES if limit is None else QUERIES[:limit]
 
-    print(f"Comparing query encoders over {len(queries)} queries\n")
+    print(f"Comparing query encoders over {len(queries)} queries "
+          f"(reference: {reference})\n")
 
-    onnx_settings = _with(settings, encoder_provider=PROVIDER_ONNX)
-    reference_settings = _with(settings, encoder_provider=PROVIDER_SENTENCE_TRANSFORMERS)
+    onnx_settings = _with(
+        settings,
+        encoder_provider=PROVIDER_ONNX,
+        encoder_tokenizer=SENTENCEPIECE_TOKENIZER,
+    )
+    if reference == "tokenizers":
+        reference_settings = _with(
+            settings,
+            encoder_provider=PROVIDER_ONNX,
+            encoder_tokenizer=HUGGINGFACE_TOKENIZER,
+        )
+    else:
+        reference_settings = _with(settings, encoder_provider=PROVIDER_SENTENCE_TRANSFORMERS)
 
     started = time.perf_counter()
     onnx_encoder = create_query_encoder(onnx_settings)
@@ -164,6 +190,7 @@ def run(top: int = 10, limit: int | None = None) -> dict[str, Any]:
 
     report: dict[str, Any] = {
         "tolerance": TOLERANCE,
+        "reference": reference,
         "queries": len(queries),
         "top": top,
         "onnx_load_s": round(onnx_load, 2),
@@ -289,9 +316,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", type=Path, default=None)
     parser.add_argument("--top", type=int, default=10)
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument(
+        "--reference",
+        choices=("torch", "tokenizers"),
+        default="torch",
+        help="What to compare against: sentence-transformers, or the same ONNX "
+        "graph driven by the Rust tokenizer (isolates a tokenizer change).",
+    )
     args = parser.parse_args(argv)
 
-    report = run(top=args.top, limit=args.limit)
+    report = run(top=args.top, limit=args.limit, reference=args.reference)
 
     print(f"queries                     : {report['queries']}")
     print(f"worst cosine distance       : {report['worst_cosine_distance']:.3e}"

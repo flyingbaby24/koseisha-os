@@ -45,6 +45,11 @@ def settings_with(**overrides):
 def write_encoder(directory: Path, *, model_bytes: bytes = b"onnx-graph") -> dict:
     (directory / "model.onnx").write_bytes(model_bytes)
     (directory / "tokenizer.json").write_text("{}", encoding="utf-8")
+    # Both tokenizer forms, because a prepared encoder directory carries both:
+    # tokenizer.spm is what a deployment loads and tokenizer.json is the
+    # reference it was verified against. Neither is parsed here - these tests
+    # are about manifests and configuration, not about tokenization.
+    (directory / "tokenizer.spm").write_bytes(b"spm")
 
     import hashlib
 
@@ -63,6 +68,10 @@ def write_encoder(directory: Path, *, model_bytes: bytes = b"onnx-graph") -> dic
             "tokenizer.json": {
                 "bytes": 2,
                 "sha256": hashlib.sha256(b"{}").hexdigest(),
+            },
+            "tokenizer.spm": {
+                "bytes": 3,
+                "sha256": hashlib.sha256(b"spm").hexdigest(),
             },
         },
     }

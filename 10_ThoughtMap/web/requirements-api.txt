@@ -18,6 +18,11 @@ numpy
 # Query encoder (T7). onnxruntime runs the exported graph; tokenizers is the
 # same Rust tokenizer transformers uses, without transformers' ~6 s import.
 onnxruntime
+# The production tokenizer. Holds the same 250,002-piece vocabulary as
+# `tokenizers` for 41 MB instead of 250 MB, with identical token ids.
+sentencepiece
+# The reference tokenizer, kept so the equivalence check has something to
+# compare against. Not loaded when THOUGHTMAP_ENCODER_TOKENIZER=sentencepiece.
 tokenizers
 
 # Personal Library on the Postgres backend. Not imported unless

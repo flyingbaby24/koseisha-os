@@ -38,6 +38,16 @@ ONNX_PROVIDER = "onnx"
 SENTENCE_TRANSFORMERS_PROVIDER = "sentence-transformers"
 ENCODER_PROVIDERS = (ONNX_PROVIDER, SENTENCE_TRANSFORMERS_PROVIDER)
 
+# Which implementation turns query text into token ids under the ONNX provider.
+# Both produce identical ids; they differ only in footprint, by ~207 MB.
+#
+#   sentencepiece  41 MB. The production choice.
+#   tokenizers     250 MB. The reference the SentencePiece path is verified
+#                  against, kept so that equivalence stays checkable.
+SENTENCEPIECE_TOKENIZER = "sentencepiece"
+HUGGINGFACE_TOKENIZER = "tokenizers"
+ENCODER_TOKENIZERS = (SENTENCEPIECE_TOKENIZER, HUGGINGFACE_TOKENIZER)
+
 
 def _split_csv(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
@@ -112,8 +122,17 @@ class ApiSettings:
     # Chosen by configuration, never by availability: a configured encoder that
     # cannot load fails readiness rather than quietly becoming a different one.
     encoder_provider: str = SENTENCE_TRANSFORMERS_PROVIDER
+    # Which tokenizer the ONNX provider uses. Same ids either way - the choice
+    # is 41 MB against 250 MB, and it is explicit so that a deployment cannot
+    # end up on the expensive one by accident.
+    encoder_tokenizer: str = SENTENCEPIECE_TOKENIZER
     encoder_dir: Path | None = None
     verify_encoder_checksums: bool = False
+    # Checksum the prepared /map response against the artifact at startup.
+    # ~45 ms for 16 MB, streamed, and it is the only check that survives the
+    # files being copied to a server - so it is on by default rather than
+    # opt-in like the 542 MB corpus artifact's.
+    verify_map_sidecar_checksums: bool = True
     # ONNX Runtime intra-op threads. 2 is the measured knee; raising it
     # multiplies threads per concurrent request.
     encoder_threads: int = 2
@@ -227,6 +246,17 @@ def get_settings() -> ApiSettings:
         )
         encoder_provider = SENTENCE_TRANSFORMERS_PROVIDER
 
+    encoder_tokenizer = (
+        os.getenv("THOUGHTMAP_ENCODER_TOKENIZER", "").strip().lower()
+        or SENTENCEPIECE_TOKENIZER
+    )
+    if encoder_tokenizer not in ENCODER_TOKENIZERS:
+        errors.append(
+            f"THOUGHTMAP_ENCODER_TOKENIZER={encoder_tokenizer!r} is not one of "
+            f"{', '.join(ENCODER_TOKENIZERS)}."
+        )
+        encoder_tokenizer = SENTENCEPIECE_TOKENIZER
+
     encoder_dir = _resolve_artifact_path(encoder_text)
     if encoder_provider == ONNX_PROVIDER and encoder_dir is None:
         errors.append(
@@ -252,8 +282,12 @@ def get_settings() -> ApiSettings:
         search_rate_burst=int(_env_float("THOUGHTMAP_SEARCH_RATE_BURST", 20.0)),
         trust_proxy_headers=_env_flag("THOUGHTMAP_TRUST_PROXY_HEADERS", False),
         encoder_provider=encoder_provider,
+        encoder_tokenizer=encoder_tokenizer,
         encoder_dir=encoder_dir,
         verify_encoder_checksums=_env_flag("THOUGHTMAP_VERIFY_ENCODER_CHECKSUMS", False),
+        verify_map_sidecar_checksums=_env_flag(
+            "THOUGHTMAP_VERIFY_MAP_SIDECAR_CHECKSUMS", True
+        ),
         encoder_threads=max(1, int(_env_float("THOUGHTMAP_ENCODER_THREADS", 2.0))),
         configuration_errors=tuple(errors),
     )

@@ -4,14 +4,17 @@
     python -m api.prepare_query_encoder --out /data/encoder --verify
 
 Run on a machine that has torch and sentence-transformers. The *result* needs
-neither: a deployment loads `model.onnx` with onnxruntime and `tokenizer.json`
-with the Rust tokenizer, so a deployed instance never contacts Hugging Face and
+neither: a deployment loads `model.onnx` with onnxruntime and `tokenizer.spm`
+with SentencePiece, so a deployed instance never contacts Hugging Face and
 never needs a 2.5 GB torch install (T7 #8).
 
 The output directory is a self-describing artifact:
 
     model.onnx              the graph
-    tokenizer.json          the tokenizer, exported alongside it
+    tokenizer.json          the reference tokenizer, exported alongside it
+    tokenizer.spm           the same vocabulary as a SentencePiece model, which
+                            is what a deployment loads: identical ids, 41 MB
+                            resident instead of 250 MB
     encoder_manifest.json   model id, revision, dimension, file checksums
 
 The manifest pins the exact model revision. Nothing at runtime resolves a model
@@ -113,6 +116,26 @@ def export(model_name: str, out_dir: Path, opset: int = ONNX_OPSET) -> dict[str,
         tokenizer.backend_tokenizer.save(str(tokenizer_path))
     print(f"  tokenizer written to {tokenizer_path}")
 
+    # And the SentencePiece form of the same vocabulary, which is what a
+    # deployment actually loads: 41 MB resident against 250 MB for the JSON,
+    # with identical token ids. Built here so a freshly exported encoder is
+    # immediately deployable; `prepare_query_tokenizer` does the same job for
+    # a directory exported before this step existed.
+    from .prepare_query_tokenizer import VERIFICATION_SAMPLES, build_model, compare
+    from .query_tokenizer import SPM_FILENAME
+
+    spm_path = out_dir / SPM_FILENAME
+    spm_path.write_bytes(build_model(tokenizer_path))
+    mismatches = compare(tokenizer_path, spm_path, VERIFICATION_SAMPLES)
+    if mismatches:
+        spm_path.unlink(missing_ok=True)
+        raise SystemExit(
+            f"{SPM_FILENAME} disagreed with tokenizer.json on {len(mismatches)} "
+            "samples and was not kept. The export is not usable."
+        )
+    print(f"  sentencepiece tokenizer written to {spm_path} "
+          f"({spm_path.stat().st_size / (1024 * 1024):.1f} MB, ids verified)")
+
     dimension = int(transformer.config.hidden_size)
     revision = str(getattr(transformer.config, "_commit_hash", "") or "")
 
@@ -177,11 +200,14 @@ def main(argv: list[str] | None = None) -> int:
         from .query_encoder import OnnxQueryEncoder, verify_encoder_artifacts
 
         verify_encoder_artifacts(args.out, manifest, verify_checksums=True)
+        from .query_tokenizer import SPM_FILENAME
+
         encoder = OnnxQueryEncoder(
-            args.out / "model.onnx", args.out / "tokenizer.json", manifest["model_id"]
+            args.out / "model.onnx", args.out / SPM_FILENAME, manifest["model_id"]
         )
         vector = encoder.encode(["Plato"])
-        print(f"verify    : OK, encoded shape {vector.shape}")
+        print(f"verify    : OK, encoded shape {vector.shape} "
+              f"via {encoder.tokenizer_kind}")
 
     print()
     print("Do not commit this directory to Git. Publish it as an external")

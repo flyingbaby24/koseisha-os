@@ -23,12 +23,21 @@ from __future__ import annotations
 
 import json
 import logging
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
 from .embedding_model import EmbeddingModelUnavailableError, TextEncoder
+from .query_tokenizer import (
+    TOKENIZER_HUGGINGFACE,
+    TOKENIZER_KINDS,
+    TOKENIZER_SENTENCEPIECE,
+    TokenizerUnavailableError,
+    create_query_tokenizer,
+    tokenizer_path_for,
+)
 
 
 logger = logging.getLogger("thoughtmap.encoder")
@@ -41,10 +50,6 @@ MANIFEST_FILENAME = "encoder_manifest.json"
 MODEL_FILENAME = "model.onnx"
 TOKENIZER_FILENAME = "tokenizer.json"
 
-# Matches the pooling in the model's sentence-transformers configuration. It is
-# stated here because the ONNX graph stops at token embeddings: the graph gives
-# per-token vectors, and this is what turns them into one sentence vector.
-MAX_SEQUENCE_LENGTH = 128
 
 #: Intra-op threads for ONNX Runtime. See OnnxQueryEncoder for the measurement.
 DEFAULT_INTRA_OP_THREADS = 2
@@ -69,13 +74,13 @@ class OnnxQueryEncoder:
         tokenizer_path: Path,
         model_id: str = "",
         intra_op_threads: int = DEFAULT_INTRA_OP_THREADS,
+        tokenizer_kind: str = "",
     ) -> None:
         try:
             import onnxruntime as ort
-            from tokenizers import Tokenizer
         except Exception as exc:
             raise QueryEncoderUnavailableError(
-                "The ONNX query encoder needs onnxruntime and tokenizers. "
+                "The ONNX query encoder needs onnxruntime. "
                 f"cause={type(exc).__name__}: {exc}"
             ) from exc
 
@@ -85,9 +90,15 @@ class OnnxQueryEncoder:
                 "Run `python -m api.prepare_query_encoder` or point "
                 "THOUGHTMAP_ENCODER_DIR at a prepared encoder."
             )
-        if not tokenizer_path.exists():
-            raise QueryEncoderUnavailableError(
-                f"ONNX query encoder tokenizer not found: {tokenizer_path}."
+
+        # The tokenizer file names its own implementation. `create_query_encoder`
+        # always passes the kind explicitly, from configuration; this fallback
+        # is for the direct constructor, which tests and the prepare scripts use.
+        if not tokenizer_kind:
+            tokenizer_kind = (
+                TOKENIZER_SENTENCEPIECE
+                if Path(tokenizer_path).name.endswith(".spm")
+                else TOKENIZER_HUGGINGFACE
             )
 
         options = ort.SessionOptions()
@@ -114,12 +125,24 @@ class OnnxQueryEncoder:
                 f"cause={type(exc).__name__}: {exc}"
             ) from exc
 
-        self._tokenizer = Tokenizer.from_file(str(tokenizer_path))
-        self._tokenizer.enable_truncation(max_length=MAX_SEQUENCE_LENGTH)
-        self._tokenizer.enable_padding()
+        try:
+            self._tokenizer = create_query_tokenizer(
+                Path(tokenizer_path).parent, tokenizer_kind
+            )
+        except TokenizerUnavailableError as exc:
+            # Re-raised as the encoder's own error so callers and readiness see
+            # one failure type for "the configured encoder cannot be used".
+            raise QueryEncoderUnavailableError(str(exc)) from exc
+
         self._inputs = {i.name for i in self._session.get_inputs()}
         self.model_id = model_id
-        logger.info("ONNX query encoder loaded model=%s path=%s", model_id, model_path)
+        self.tokenizer_kind = self._tokenizer.kind
+        logger.info(
+            "ONNX query encoder loaded model=%s tokenizer=%s path=%s",
+            model_id,
+            self._tokenizer.kind,
+            model_path,
+        )
 
     def encode(self, sentences: Any, show_progress_bar: bool = False) -> np.ndarray:
         """Embed one or more texts. Signature matches `TextEncoder`."""
@@ -127,9 +150,7 @@ class OnnxQueryEncoder:
         if not texts:
             return np.zeros((0, 0), dtype=np.float32)
 
-        encoded = self._tokenizer.encode_batch(texts)
-        ids = np.array([item.ids for item in encoded], dtype=np.int64)
-        mask = np.array([item.attention_mask for item in encoded], dtype=np.int64)
+        ids, mask = self._tokenizer.encode_batch(texts)
 
         feed: dict[str, np.ndarray] = {"input_ids": ids, "attention_mask": mask}
         if "token_type_ids" in self._inputs:
@@ -180,6 +201,7 @@ def describe_encoder(settings) -> dict[str, Any]:
     manifest = encoder_manifest(directory) if directory else None
     return {
         "provider": getattr(settings, "encoder_provider", PROVIDER_SENTENCE_TRANSFORMERS),
+        "tokenizer": getattr(settings, "encoder_tokenizer", TOKENIZER_SENTENCEPIECE),
         "directory": str(directory) if directory else "",
         "model_id": (manifest or {}).get("model_id", getattr(settings, "model_name", "")),
         "revision": (manifest or {}).get("revision", ""),
@@ -187,8 +209,30 @@ def describe_encoder(settings) -> dict[str, Any]:
     }
 
 
+@lru_cache(maxsize=2)
+def get_query_encoder(settings) -> TextEncoder:
+    """The encoder for this configuration, built at most once per process.
+
+    An encoder costs 364 MB resident: 93 MB for the ONNX session, 250 MB for
+    the tokenizer, and the rest runtime scratch. (The model's own weights are
+    memory-mapped from `model.onnx.data` and barely appear in that figure.)
+    Three consumers ask for an encoder - startup warmup, ranking, and the radar
+    profile - and before this cache each built its own: 1,594 MB steady where
+    one encoder needs 364 MB.
+
+    `ApiSettings` is a frozen dataclass, so it hashes by value: two callers
+    with the same configuration share a session, and a different configuration
+    (a test with a different encoder directory) correctly gets its own.
+    """
+    return create_query_encoder(settings)
+
+
 def create_query_encoder(settings) -> TextEncoder:
-    """Build the encoder this deployment is configured for.
+    """Build a NEW encoder for this deployment's configuration.
+
+    Prefer `get_query_encoder`, which caches: each call here allocates another
+    full copy of the model weights. This remains public for tests that need an
+    isolated instance.
 
     Never silently substitutes a different provider. A configured-but-broken
     encoder raises, and readiness reports it (T7 #7).
@@ -207,13 +251,21 @@ def create_query_encoder(settings) -> TextEncoder:
         manifest = encoder_manifest(directory) or {}
         verify_encoder_artifacts(directory, manifest, verify_checksums=False)
 
+        kind = getattr(settings, "encoder_tokenizer", TOKENIZER_SENTENCEPIECE)
+        if kind not in TOKENIZER_KINDS:
+            raise QueryEncoderUnavailableError(
+                f"Unknown THOUGHTMAP_ENCODER_TOKENIZER={kind!r}. "
+                f"Expected one of {', '.join(TOKENIZER_KINDS)}."
+            )
+
         return OnnxQueryEncoder(
             model_path=directory / MODEL_FILENAME,
-            tokenizer_path=directory / TOKENIZER_FILENAME,
+            tokenizer_path=tokenizer_path_for(directory, kind),
             model_id=str(manifest.get("model_id", "")),
             intra_op_threads=int(
                 getattr(settings, "encoder_threads", DEFAULT_INTRA_OP_THREADS)
             ),
+            tokenizer_kind=kind,
         )
 
     if provider == PROVIDER_SENTENCE_TRANSFORMERS:

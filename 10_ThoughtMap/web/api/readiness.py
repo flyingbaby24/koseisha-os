@@ -297,6 +297,27 @@ def evaluate_query_encoder(state: ReadinessState, settings: ApiSettings) -> None
         verify_encoder_artifacts(
             directory, manifest, verify_checksums=settings.verify_encoder_checksums
         )
+
+        # The manifest only checks files it lists. An encoder directory
+        # prepared before the SentencePiece path existed lists tokenizer.json
+        # and not tokenizer.spm, so the configured tokenizer is checked here
+        # by name - otherwise readiness would pass and the first search would
+        # be the thing that discovered the file was missing.
+        from .query_tokenizer import tokenizer_path_for
+
+        tokenizer_file = tokenizer_path_for(directory, settings.encoder_tokenizer)
+        if not tokenizer_file.exists():
+            state.set(
+                "query_encoder",
+                FAILED,
+                detail=(
+                    f"THOUGHTMAP_ENCODER_TOKENIZER={settings.encoder_tokenizer} "
+                    f"needs {tokenizer_file.name}, which is not in {directory}. "
+                    "Build it with `python -m api.prepare_query_tokenizer "
+                    f"--encoder-dir {directory}`."
+                ),
+            )
+            return
     except Exception as exc:
         state.set("query_encoder", FAILED, detail=f"{type(exc).__name__}: {exc}")
         return
@@ -306,6 +327,7 @@ def evaluate_query_encoder(state: ReadinessState, settings: ApiSettings) -> None
         "query_encoder",
         OK,
         provider=ONNX_PROVIDER,
+        tokenizer=settings.encoder_tokenizer,
         model_id=manifest.get("model_id", ""),
         revision=(manifest.get("revision", "") or "")[:12],
         encoder_version=manifest.get("encoder_version", ""),
@@ -320,8 +342,14 @@ def evaluate_projection(
 ) -> None:
     """The map is required for a public deployment and optional locally.
 
-    Only the file header is read — the node count comes from the artifact's own
-    metadata, so this stays a small read rather than a 12 MB parse.
+    Reads the prepared response's metadata, not the projection. The node count
+    and the fingerprint are both recorded there, so this is a few hundred bytes
+    and two checksums rather than a 12 MB parse into 37.5 MB of dicts — which
+    is the whole reason the response is prepared at build time.
+
+    A public deployment with no usable prepared response fails here. It must:
+    the alternative is an instance that silently rebuilds the payload in RAM,
+    costing 87 MB it does not have, and looks healthy until it is killed.
     """
     if not projection_path.exists():
         state.set(
@@ -333,14 +361,26 @@ def evaluate_projection(
         return
 
     try:
-        from .map_projection import read_artifact
+        from .map_projection import verify_map_sidecars
 
-        artifact = read_artifact(projection_path)
-        nodes = len(artifact.get("nodes", []))
-    except Exception as exc:  # unreadable or schema-invalid
+        meta, reason = verify_map_sidecars(
+            projection_path, verify_checksums=settings.verify_map_sidecar_checksums
+        )
+    except Exception as exc:  # unreadable
         state.set("map_projection", FAILED, detail=f"Projection unusable: {exc}")
         return
 
+    if meta is None:
+        # Locally this is a capability gap: /map rebuilds in memory and says
+        # so. In a public deployment it is a hard stop.
+        state.set(
+            "map_projection",
+            FAILED if settings.is_public else DEFERRED,
+            detail=reason,
+        )
+        return
+
+    nodes = int(meta.get("node_count", 0))
     if expected_nodes and nodes != expected_nodes:
         state.set(
             "map_projection",
@@ -351,7 +391,13 @@ def evaluate_projection(
         )
         return
 
-    state.set("map_projection", OK, nodes=nodes)
+    state.set(
+        "map_projection",
+        OK,
+        nodes=nodes,
+        fingerprint=str(meta.get("fingerprint", ""))[:12],
+        gzip_mb=round(int(meta.get("gzip_size", 0)) / (1024 * 1024), 1),
+    )
 
 
 def run_warmup(
@@ -359,6 +405,7 @@ def run_warmup(
     settings: ApiSettings,
     load_index: Callable[[], Any],
     load_model: Callable[[], Any],
+    prepare_map: Callable[[], Any] | None = None,
 ) -> None:
     """Do the expensive startup work once, recording each stage.
 
@@ -415,5 +462,30 @@ def run_warmup(
             log_event("warmup.model.failed", error=type(exc).__name__)
     else:
         state.set("embedding_model", DEFERRED, detail="Loads on first semantic search.")
+
+    # Build the /map payload here rather than on whoever asks for it first.
+    # It costs one parse of 12 MB of JSON and a gzip, and doing it during
+    # warmup keeps that transient away from request traffic — and off the same
+    # moment as a cold instance's first burst of visitors. Never fatal: /map
+    # answers 503 with a reason if it cannot be built, and search is unaffected.
+    if prepare_map is not None and settings.warmup in (WARMUP_CORPUS, WARMUP_FULL):
+        started = time.perf_counter()
+        try:
+            prepare_map()
+            elapsed = (time.perf_counter() - started) * 1000.0
+            state.record_stage("map_payload", elapsed)
+            log_event("warmup.map", elapsed_ms=elapsed)
+        except Exception as exc:
+            log_event("warmup.map.skipped", error=type(exc).__name__, detail=str(exc)[:200])
+
+    # Warmup is where this process allocates the most and keeps the least: the
+    # corpus parse, the merge and the vector reshape are all transient, and on
+    # glibc their arenas would otherwise stay resident for the life of the
+    # instance. This is the only moment where trimming is both worthwhile and
+    # free — nothing is in flight, and the next allocation is a request's.
+    from .process_memory import release_free_heap, resident_mb
+
+    if release_free_heap():
+        log_event("warmup.heap_trimmed", rss_mb=resident_mb())
 
     state.warmup_finished()

@@ -11,6 +11,7 @@ from __future__ import annotations
 import gzip
 import json
 import os
+import sys
 import unittest
 from contextlib import contextmanager
 from pathlib import Path
@@ -406,6 +407,89 @@ class WarmupTests(unittest.TestCase):
         run_warmup(state, settings, lambda: [1], explode)
 
         self.assertTrue(state.ready)
+
+
+class WarmupSideEffectTests(unittest.TestCase):
+    """Two things warmup does besides loading: prepare /map, and trim.
+
+    Both exist for memory, and both must be unable to break a start. A /map
+    artifact that cannot be read is a 503 on one endpoint; a warmup that
+    raised because of it would be a dead instance.
+    """
+
+    def test_the_map_payload_is_prepared_during_warmup(self) -> None:
+        # Otherwise the first visitor pays a 12 MB parse and a gzip, at the
+        # same moment as a cold instance's first burst of traffic.
+        prepared = []
+        settings = _settings(warmup=WARMUP_FULL)
+        state = ReadinessState(settings)
+        state.set("configuration", OK)
+
+        run_warmup(
+            state, settings, lambda: [1], lambda: object(), lambda: prepared.append(1)
+        )
+
+        self.assertEqual(prepared, [1])
+        self.assertIn("map_payload", state.snapshot()["startup_ms"])
+
+    def test_a_map_failure_does_not_block_readiness(self) -> None:
+        def explode():
+            raise RuntimeError("projection not generated")
+
+        settings = _settings(warmup=WARMUP_FULL, deployment_mode=PUBLIC_DEMO)
+        state = ReadinessState(settings)
+        state.set("configuration", OK)
+
+        run_warmup(state, settings, lambda: [1], lambda: object(), explode)
+
+        # Search works without a projection; /map answers 503 with a reason.
+        self.assertTrue(state.ready)
+
+    def test_nothing_is_prepared_when_warmup_is_off(self) -> None:
+        prepared = []
+        settings = _settings(warmup=WARMUP_OFF)
+        state = ReadinessState(settings)
+        state.set("configuration", OK)
+
+        run_warmup(
+            state, settings, lambda: [], lambda: None, lambda: prepared.append(1)
+        )
+
+        self.assertEqual(prepared, [])
+
+    def test_warmup_completes_without_a_map_preparer(self) -> None:
+        # The argument is optional, and every existing caller omits it.
+        settings = _settings(warmup=WARMUP_FULL)
+        state = ReadinessState(settings)
+        state.set("configuration", OK)
+
+        run_warmup(state, settings, lambda: [1], lambda: object())
+
+        self.assertTrue(state.ready)
+
+    def test_the_heap_trim_is_safe_on_every_platform(self) -> None:
+        # Returns False rather than raising where there is no malloc_trim, and
+        # never touches live objects where there is.
+        from api.process_memory import release_free_heap
+
+        first = release_free_heap()
+        second = release_free_heap()
+
+        self.assertIsInstance(first, bool)
+        self.assertEqual(first, second)
+        if not sys.platform.startswith("linux"):
+            self.assertFalse(first, "only glibc can return free heap to the OS")
+
+
+class HeapTrimVerifierTests(unittest.TestCase):
+    def test_it_refuses_to_report_a_number_it_cannot_measure(self) -> None:
+        # A trim figure from a platform that cannot trim would be quoted later
+        # as if it meant something.
+        from api.verify_heap_trim import main
+
+        if sys.platform.startswith("linux"):
+            self.skipTest("this platform can trim; nothing to refuse")
+        self.assertEqual(main(["--limit-mb", "512"]), 2)
 
 
 class MapResponseCacheTests(unittest.TestCase):

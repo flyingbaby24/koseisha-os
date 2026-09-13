@@ -6,6 +6,7 @@ the suite fast; UMAP itself is only exercised where determinism is the point.
 
 from __future__ import annotations
 
+import gzip
 import json
 import unittest
 from pathlib import Path
@@ -27,6 +28,7 @@ from api.map_projection import (
     validate_artifact,
     write_artifact,
 )
+from api.config import DEVELOPMENT, PUBLIC_DEMO
 from api.map_service import MapService, ProjectionUnavailableError
 
 
@@ -388,7 +390,39 @@ class MapServiceTests(unittest.TestCase):
             with self.assertRaises(ProjectionUnavailableError):
                 service.load()
 
-    def test_parses_once_for_an_unchanged_file(self) -> None:
+    def test_serving_never_parses_the_artifact(self) -> None:
+        """The guarantee got stronger: not "parsed once" but "never parsed".
+
+        It used to be parsed once per artifact version, to be turned into
+        bytes. Those bytes are now produced by `write_artifact` at projection
+        time, so a serving instance only opens files — which is the point, at
+        63,891 nodes a parse is 37.5 MB of transient dicts.
+        """
+        from api.map_response_cache import MapResponseCache
+
+        artifact, _ = ProjectionGenerator(lambda: make_frame(), SMALL_CONFIG).generate()
+
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "map.json"
+            write_artifact(artifact, path)
+            service = MapService(path)
+            cache = MapResponseCache()
+
+            with mock.patch("api.map_service.read_artifact", wraps=read_artifact) as spy:
+                first = cache.get_for(service)
+                second = cache.get_for(service)
+                third = cache.get_for(service)
+
+            self.assertIs(first, second)
+            self.assertIs(second, third)
+            self.assertEqual(spy.call_count, 0, "the artifact must not be parsed")
+
+    def test_the_parsed_artifact_is_not_retained(self) -> None:
+        """MapService must hand the dicts over and keep no reference.
+
+        This is the whole point of the change: at full corpus size the parsed
+        nodes are 37.5 MB, and nothing needs them after serialisation.
+        """
         artifact, _ = ProjectionGenerator(lambda: make_frame(), SMALL_CONFIG).generate()
 
         with TemporaryDirectory() as directory:
@@ -396,14 +430,49 @@ class MapServiceTests(unittest.TestCase):
             write_artifact(artifact, path)
             service = MapService(path)
 
-            with mock.patch("api.map_service.read_artifact", wraps=read_artifact) as spy:
-                first = service.load()
-                second = service.load()
-                third = service.load()
+            first = service.load()
+            second = service.load()
 
-            self.assertIs(first, second)
-            self.assertIs(second, third)
-            self.assertEqual(spy.call_count, 1)
+            self.assertIsNot(first, second, "each load must return a fresh parse")
+            # No attribute may hold a parsed artifact. `artifact_path` is a
+            # Path and is fine; a dict or a list of nodes is not.
+            retained = {
+                name: type(value).__name__
+                for name, value in vars(service).items()
+                if isinstance(value, (dict, list))
+            }
+            self.assertEqual(retained, {}, f"MapService retained parsed data: {retained}")
+
+    def test_the_response_cache_re_parses_a_regenerated_artifact(self) -> None:
+        artifact, _ = ProjectionGenerator(lambda: make_frame(), SMALL_CONFIG).generate()
+
+        from api.map_response_cache import MapResponseCache
+
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "map.json"
+            write_artifact(artifact, path)
+            service = MapService(path)
+            cache = MapResponseCache()
+
+            before = cache.get_for(service)
+
+            # Regenerate with a different fingerprint and a different mtime.
+            changed = dict(artifact)
+            changed["projection"] = {
+                **artifact["projection"],
+                "dataset_fingerprint": "f" * 64,
+            }
+            import os
+            import time
+
+            write_artifact(changed, path)
+            future = time.time() + 10
+            os.utime(path, (future, future))
+
+            after = cache.get_for(service)
+
+            self.assertNotEqual(before.etag, after.etag)
+            self.assertNotEqual(before.fingerprint, after.fingerprint)
 
     def test_picks_up_a_regenerated_artifact_without_a_restart(self) -> None:
         first_artifact, _ = ProjectionGenerator(lambda: make_frame(count=40), SMALL_CONFIG).generate()
@@ -522,6 +591,447 @@ class MapEndpointTests(unittest.TestCase):
             self.assertEqual(self.client.get("/map").status_code, 503)
             # Text search must keep working when the map cannot be served.
             self.assertEqual(self.client.get("/health").status_code, 200)
+
+
+class PreparedMapResponseTests(unittest.TestCase):
+    """The `/map` payload is a release artifact, not a runtime computation.
+
+    Producing it costs a 12 MB parse into ~37.5 MB of dicts plus a
+    re-serialisation and a gzip: 87 MB of transient, measured, and the largest
+    peak in a cold start. It is deterministic output of the projection, so
+    `write_artifact` publishes it and a serving instance only opens it.
+    """
+
+    def setUp(self) -> None:
+        from api.map_response_cache import MapResponseCache
+
+        self.directory = TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.path = Path(self.directory.name) / "map.json"
+        artifact, _ = ProjectionGenerator(lambda: make_frame(), SMALL_CONFIG).generate()
+        write_artifact(artifact, self.path)
+        self.artifact = artifact
+        self.service = MapService(self.path)
+        self.cache = MapResponseCache()
+
+    def gzip_path(self) -> Path:
+        from api.map_projection import gzip_path_for
+
+        return gzip_path_for(self.path)
+
+    def meta_path(self) -> Path:
+        from api.map_projection import meta_path_for
+
+        return meta_path_for(self.path)
+
+    # --- generation -------------------------------------------------------
+
+    def test_generation_publishes_the_response(self) -> None:
+        self.assertTrue(self.gzip_path().exists())
+        self.assertTrue(self.meta_path().exists())
+
+    def test_the_gzip_decompresses_to_the_artifact(self) -> None:
+        self.assertEqual(
+            gzip.decompress(self.gzip_path().read_bytes()), self.path.read_bytes()
+        )
+
+    def test_the_metadata_records_what_it_was_built_from(self) -> None:
+        import hashlib
+
+        meta = json.loads(self.meta_path().read_text(encoding="utf-8"))
+        raw = self.path.read_bytes()
+
+        self.assertEqual(
+            meta["fingerprint"], self.artifact["projection"]["dataset_fingerprint"]
+        )
+        self.assertEqual(meta["node_count"], len(self.artifact["nodes"]))
+        self.assertEqual(meta["raw_size"], len(raw))
+        self.assertEqual(meta["raw_sha256"], hashlib.sha256(raw).hexdigest())
+        self.assertEqual(
+            meta["gzip_sha256"],
+            hashlib.sha256(self.gzip_path().read_bytes()).hexdigest(),
+        )
+
+    def test_sidecars_can_be_suppressed_for_a_test_artifact(self) -> None:
+        path = Path(self.directory.name) / "bare.json"
+        write_artifact(self.artifact, path, sidecars=False)
+
+        from api.map_projection import gzip_path_for
+
+        self.assertTrue(path.exists())
+        self.assertFalse(gzip_path_for(path).exists())
+
+    def test_a_failed_write_publishes_nothing(self) -> None:
+        # The artifact is replaced last, so a crash while writing the response
+        # leaves the previous artifact and its previous response in place.
+        path = Path(self.directory.name) / "doomed.json"
+        with mock.patch(
+            "api.map_projection.write_map_sidecars", side_effect=OSError("disk full")
+        ):
+            with self.assertRaises(OSError):
+                write_artifact(self.artifact, path)
+
+        self.assertFalse(path.exists())
+        self.assertFalse(list(Path(self.directory.name).glob("doomed.json.tmp*")))
+
+    # --- serving ----------------------------------------------------------
+
+    def test_serving_opens_the_prepared_files(self) -> None:
+        encoded = self.cache.get_for(self.service)
+
+        self.assertTrue(encoded.on_disk)
+        self.assertIsNone(encoded.raw, "raw bytes must not be held in memory")
+        self.assertIsNone(encoded.gzipped, "gzipped bytes must not be held in memory")
+        self.assertEqual(encoded.raw_path, self.path)
+        self.assertEqual(encoded.gzip_path, self.gzip_path())
+
+    def test_the_artifact_itself_is_the_identity_response(self) -> None:
+        # `write_artifact` writes compact JSON, so there is no second copy of
+        # the uncompressed payload anywhere.
+        encoded = self.cache.get_for(self.service)
+
+        self.assertEqual(encoded.raw_size, self.path.stat().st_size)
+
+    def test_a_fresh_process_serves_without_parsing(self) -> None:
+        from api.map_response_cache import MapResponseCache
+
+        with mock.patch("api.map_service.read_artifact") as spy:
+            encoded = MapResponseCache().get_for(MapService(self.path))
+
+        spy.assert_not_called()
+        self.assertTrue(encoded.on_disk)
+        self.assertEqual(
+            encoded.fingerprint, self.artifact["projection"]["dataset_fingerprint"]
+        )
+
+    # --- validity is tied to content, not timestamps ----------------------
+
+    def test_a_copied_artifact_is_still_valid(self) -> None:
+        # Copying to a server changes every timestamp and no bytes. An
+        # mtime-keyed check would reject this; a checksum does not.
+        import os
+        import time as time_module
+
+        from api.map_response_cache import MapResponseCache
+
+        future = time_module.time() + 10_000
+        os.utime(self.path, (future, future))
+        os.utime(self.gzip_path(), (future, future))
+
+        encoded = MapResponseCache().get_for(MapService(self.path))
+
+        self.assertTrue(encoded.on_disk)
+
+    def test_a_regenerated_projection_republishes_the_response(self) -> None:
+        changed = dict(self.artifact)
+        changed["projection"] = {
+            **self.artifact["projection"],
+            "dataset_fingerprint": "f" * 64,
+        }
+        write_artifact(changed, self.path)
+
+        from api.map_response_cache import MapResponseCache
+
+        encoded = MapResponseCache().get_for(MapService(self.path))
+
+        self.assertEqual(encoded.fingerprint, "f" * 64)
+        self.assertEqual(
+            gzip.decompress(self.gzip_path().read_bytes()), self.path.read_bytes()
+        )
+
+    # --- refusal ----------------------------------------------------------
+
+    def assert_public_refuses(self, expected: str) -> None:
+        from api.map_response_cache import MapPayloadUnavailableError, MapResponseCache
+
+        cache = MapResponseCache(allow_rebuild=False)
+        with self.assertRaises(MapPayloadUnavailableError) as caught:
+            cache.get_for(MapService(self.path))
+
+        message = str(caught.exception)
+        self.assertIn(expected, message)
+        # Every refusal names the command that fixes it.
+        self.assertIn("prepare_map_sidecars", message)
+
+    def test_a_public_deployment_refuses_a_missing_response(self) -> None:
+        self.gzip_path().unlink()
+        self.meta_path().unlink()
+        self.assert_public_refuses("No prepared /map response")
+
+    def test_a_public_deployment_refuses_a_missing_gzip(self) -> None:
+        self.gzip_path().unlink()
+        self.assert_public_refuses("missing")
+
+    def test_a_public_deployment_refuses_a_corrupt_gzip(self) -> None:
+        # Same length, different bytes: only the checksum catches this.
+        payload = self.gzip_path().read_bytes()
+        self.gzip_path().write_bytes(b"\x00" * len(payload))
+        self.assert_public_refuses("corrupt")
+
+    def test_a_public_deployment_refuses_a_stale_response(self) -> None:
+        self.path.write_bytes(self.path.read_bytes() + b" ")
+        self.assert_public_refuses("stale")
+
+    def test_a_public_deployment_refuses_unreadable_metadata(self) -> None:
+        self.meta_path().write_text("{ not json", encoding="utf-8")
+        self.assert_public_refuses("No prepared /map response")
+
+    def test_a_public_deployment_refuses_a_future_sidecar_version(self) -> None:
+        meta = json.loads(self.meta_path().read_text(encoding="utf-8"))
+        meta["sidecar_version"] = 99
+        self.meta_path().write_text(json.dumps(meta), encoding="utf-8")
+        self.assert_public_refuses("sidecar version")
+
+    def test_a_public_deployment_refuses_a_response_with_no_fingerprint(self) -> None:
+        # Without one the ETag would be empty and every browser would refetch
+        # 3.7 MB on every visit.
+        meta = json.loads(self.meta_path().read_text(encoding="utf-8"))
+        meta["fingerprint"] = ""
+        self.meta_path().write_text(json.dumps(meta), encoding="utf-8")
+        self.assert_public_refuses("fingerprint")
+
+    def test_development_rebuilds_in_memory_and_still_serves(self) -> None:
+        # The escape hatch, and only here: a hand-built artifact still works
+        # locally, at the cost the sidecar exists to avoid.
+        from api.map_response_cache import MapResponseCache
+
+        self.gzip_path().unlink()
+        self.meta_path().unlink()
+
+        cache = MapResponseCache(allow_rebuild=True)
+        with self.assertLogs("thoughtmap.map", level="WARNING") as logs:
+            encoded = cache.get_for(MapService(self.path))
+
+        self.assertFalse(encoded.on_disk)
+        self.assertEqual(encoded.raw, self.path.read_bytes())
+        self.assertIn("prepare_map_sidecars", "".join(logs.output))
+
+
+class ProjectionReadinessTests(unittest.TestCase):
+    """A public instance must refuse to start rather than rebuild in RAM.
+
+    Rebuilding costs 87 MB of transient. An instance that does it quietly
+    looks healthy right up to the moment the platform kills it, which is the
+    worst possible way to find out.
+    """
+
+    def setUp(self) -> None:
+        self.directory = TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.path = Path(self.directory.name) / "map.json"
+        artifact, _ = ProjectionGenerator(lambda: make_frame(), SMALL_CONFIG).generate()
+        write_artifact(artifact, self.path)
+        self.nodes = len(artifact["nodes"])
+
+    def check(self, mode: str):
+        from api import config as config_module
+        from api.config import get_settings
+        from api.readiness import ReadinessState, evaluate_projection
+
+        import os
+
+        removed = {
+            k: os.environ.pop(k) for k in list(os.environ) if k.startswith("THOUGHTMAP_")
+        }
+        try:
+            base = get_settings()
+        finally:
+            os.environ.update(removed)
+        settings = config_module.ApiSettings(
+            **{**base.__dict__, "deployment_mode": mode}
+        )
+
+        state = ReadinessState(settings)
+        evaluate_projection(state, settings, self.path, 0)
+        return next(
+            c for c in state.snapshot()["checks"] if c["name"] == "map_projection"
+        )
+
+    def test_a_prepared_projection_is_ready(self) -> None:
+        from api.readiness import OK
+
+        check = self.check(PUBLIC_DEMO)
+
+        self.assertEqual(check["status"], OK)
+        self.assertEqual(check["nodes"], self.nodes)
+        self.assertTrue(check["fingerprint"])
+
+    def test_readiness_does_not_parse_the_projection(self) -> None:
+        # The node count comes from the sidecar. Parsing here would reintroduce
+        # the transient on a second code path.
+        with mock.patch("api.map_projection.read_artifact") as spy:
+            self.check(PUBLIC_DEMO)
+        spy.assert_not_called()
+
+    def test_a_missing_response_fails_a_public_deployment(self) -> None:
+        from api.map_projection import gzip_path_for, meta_path_for
+        from api.readiness import FAILED
+
+        gzip_path_for(self.path).unlink()
+        meta_path_for(self.path).unlink()
+
+        check = self.check(PUBLIC_DEMO)
+
+        self.assertEqual(check["status"], FAILED)
+        self.assertIn("prepare_map_sidecars", check["detail"])
+
+    def test_a_stale_response_fails_a_public_deployment(self) -> None:
+        from api.readiness import FAILED
+
+        self.path.write_bytes(self.path.read_bytes() + b" ")
+
+        check = self.check(PUBLIC_DEMO)
+
+        self.assertEqual(check["status"], FAILED)
+        self.assertIn("stale", check["detail"])
+
+    def test_the_same_gap_only_defers_in_development(self) -> None:
+        from api.map_projection import gzip_path_for, meta_path_for
+        from api.readiness import DEFERRED
+
+        gzip_path_for(self.path).unlink()
+        meta_path_for(self.path).unlink()
+
+        check = self.check(DEVELOPMENT)
+
+        self.assertEqual(check["status"], DEFERRED)
+
+
+class PrepareMapSidecarsCommandTests(unittest.TestCase):
+    """The explicit rebuild, for artifacts that arrived without a response."""
+
+    def setUp(self) -> None:
+        self.directory = TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.path = Path(self.directory.name) / "map.json"
+        artifact, _ = ProjectionGenerator(lambda: make_frame(), SMALL_CONFIG).generate()
+        write_artifact(artifact, self.path, sidecars=False)
+        self.artifact = artifact
+
+    def run_command(self, *args: str) -> int:
+        from api.prepare_map_sidecars import main
+
+        return main(["--artifact", str(self.path), *args])
+
+    def test_check_fails_before_the_response_exists(self) -> None:
+        self.assertEqual(self.run_command("--check"), 1)
+
+    def test_it_builds_a_valid_response(self) -> None:
+        from api.map_projection import gzip_path_for, verify_map_sidecars
+
+        self.assertEqual(self.run_command(), 0)
+
+        meta, reason = verify_map_sidecars(self.path)
+        self.assertIsNotNone(meta, reason)
+        self.assertEqual(
+            gzip.decompress(gzip_path_for(self.path).read_bytes()),
+            self.path.read_bytes(),
+        )
+
+    def test_it_matches_what_generation_would_have_written(self) -> None:
+        # The command and the generator must not diverge, or an artifact
+        # repaired in the field would serve different bytes.
+        from api.map_projection import gzip_path_for, meta_path_for
+
+        self.run_command()
+        by_command = gzip_path_for(self.path).read_bytes()
+        command_meta = json.loads(meta_path_for(self.path).read_text(encoding="utf-8"))
+
+        regenerated = Path(self.directory.name) / "regenerated.json"
+        write_artifact(self.artifact, regenerated)
+        by_generator = gzip_path_for(regenerated).read_bytes()
+        generator_meta = json.loads(
+            meta_path_for(regenerated).read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(by_command, by_generator)
+        for field in ("fingerprint", "node_count", "raw_size", "raw_sha256",
+                      "gzip_size", "gzip_sha256"):
+            self.assertEqual(command_meta[field], generator_meta[field], field)
+
+    def test_check_passes_once_it_is_built(self) -> None:
+        self.run_command()
+        self.assertEqual(self.run_command("--check"), 0)
+
+    def test_a_second_run_is_a_no_op(self) -> None:
+        self.run_command()
+        from api.map_projection import meta_path_for
+
+        before = meta_path_for(self.path).read_bytes()
+        self.assertEqual(self.run_command(), 0)
+        self.assertEqual(meta_path_for(self.path).read_bytes(), before)
+
+    def test_force_rebuilds_an_already_valid_response(self) -> None:
+        self.run_command()
+        self.assertEqual(self.run_command("--force"), 0)
+        from api.map_projection import verify_map_sidecars
+
+        meta, reason = verify_map_sidecars(self.path)
+        self.assertIsNotNone(meta, reason)
+
+    def test_a_missing_artifact_is_an_error_not_a_traceback(self) -> None:
+        from api.prepare_map_sidecars import main
+
+        absent = Path(self.directory.name) / "absent.json"
+        self.assertEqual(main(["--artifact", str(absent)]), 1)
+
+
+class DiskBackedMapHttpTests(unittest.TestCase):
+    """The same thing, through the real route."""
+
+    def setUp(self) -> None:
+        self.client = TestClient(api_main.app)
+        self.directory = TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.path = Path(self.directory.name) / "map.json"
+        artifact, _ = ProjectionGenerator(lambda: make_frame(), SMALL_CONFIG).generate()
+        write_artifact(artifact, self.path)
+        self.node_count = len(artifact["nodes"])
+        api_main._map_cache.clear()
+        self.addCleanup(api_main._map_cache.clear)
+        self.patcher = mock.patch.object(
+            api_main, "get_map_service", return_value=MapService(self.path)
+        )
+        self.patcher.start()
+        self.addCleanup(self.patcher.stop)
+
+    def test_gzip_clients_get_the_sidecar_and_it_decodes(self) -> None:
+        response = self.client.get("/map", headers={"Accept-Encoding": "gzip"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get("Content-Encoding"), "gzip")
+        self.assertEqual(response.headers.get("Vary"), "Accept-Encoding")
+        self.assertEqual(len(response.json()["nodes"]), self.node_count)
+
+    def test_identity_clients_get_the_artifact_itself(self) -> None:
+        response = self.client.get("/map", headers={"Accept-Encoding": "identity"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("Content-Encoding", response.headers)
+        self.assertEqual(response.content, self.path.read_bytes())
+
+    def test_the_etag_survives_being_served_from_a_file(self) -> None:
+        # FileResponse sets its own validators from the file's mtime. The
+        # projection fingerprint has to win, or a re-projection that happened
+        # to preserve mtime would be invisible to every cached browser.
+        first = self.client.get("/map")
+        etag = first.headers["ETag"]
+
+        self.assertTrue(etag.startswith('W/"map-'))
+        second = self.client.get("/map", headers={"If-None-Match": etag})
+        self.assertEqual(second.status_code, 304)
+        self.assertEqual(second.content, b"")
+
+    def test_the_body_is_not_double_compressed(self) -> None:
+        response = self.client.get("/map", headers={"Accept-Encoding": "gzip"})
+        raw = response.read() if hasattr(response, "read") else response.content
+
+        if response.headers.get("Content-Encoding") == "gzip":
+            try:
+                once = gzip.decompress(raw)
+            except Exception:
+                once = raw  # httpx already decoded it
+            self.assertIsInstance(json.loads(once), dict)
 
 
 if __name__ == "__main__":

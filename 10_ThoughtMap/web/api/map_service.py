@@ -35,15 +35,20 @@ class MapService:
 
     def __init__(self, artifact_path: str | Path | None = None) -> None:
         self.artifact_path = Path(artifact_path) if artifact_path else DEFAULT_ARTIFACT_PATH
-        self._cache_key: tuple[str, int, int] | None = None
-        self._artifact: dict[str, Any] | None = None
+
+    def current_key(self) -> tuple[str, int, int] | None:
+        """File identity: (path, mtime_ns, size). None if unreadable."""
+        return self._current_key()
 
     def load(self) -> dict[str, Any]:
-        key = self._current_key()
+        """Parse the artifact. The result is NOT retained.
 
-        if self._artifact is not None and key == self._cache_key:
-            return self._artifact
-
+        At 63,891 nodes the parsed form is 37.5 MB of Python dicts, and the
+        only thing done with it is to serialise it once per corpus version.
+        `MapResponseCache` keeps the serialised bytes instead and calls this
+        only when the file on disk has changed, so the dicts become garbage as
+        soon as they have been encoded.
+        """
         try:
             artifact = read_artifact(self.artifact_path)
         except FileNotFoundError as exc:
@@ -58,8 +63,6 @@ class MapService:
                 f"The stored 3D projection could not be used: {exc}"
             ) from exc
 
-        self._artifact = artifact
-        self._cache_key = key
         logger.info(
             "Loaded projection artifact nodes=%d fingerprint=%s",
             len(artifact.get("nodes", [])),

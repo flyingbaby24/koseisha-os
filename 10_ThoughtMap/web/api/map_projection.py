@@ -19,6 +19,7 @@ Only `n_components` is new: the historical scripts are all 2D, this is 3D.
 
 from __future__ import annotations
 
+import gzip
 import hashlib
 import json
 import logging
@@ -442,12 +443,206 @@ def validate_artifact(artifact: dict[str, Any], expected_count: int | None = Non
 # --------------------------------------------------------------------------
 
 
-def write_artifact(artifact: dict[str, Any], path: str | Path) -> Path:
-    """Write the artifact atomically.
+# --- the served form of the artifact --------------------------------------
+#
+# `/map` is the same 12.0 MB of JSON for every caller and changes only when the
+# corpus is re-projected. Producing the response therefore belongs here, with
+# the projection, and not in the server: turning 63,891 nodes into bytes costs
+# ~37.5 MB of transient dicts plus a re-serialisation, and a 512 MB instance
+# has no room to spend that on work whose answer was already known at build
+# time.
+#
+# Two files are published beside the artifact:
+#
+#   <artifact>.gz       the gzipped response body
+#   <artifact>.gzmeta   what it is, and what it was built from
+#
+# The artifact itself is already compact JSON, so it *is* the identity-encoded
+# response; there is no third copy.
+
+SIDECAR_VERSION = 1
+
+# Level 6 is zlib's default: within ~2% of level 9 on this payload for a
+# fraction of the CPU. Paid once per projection either way.
+SIDECAR_GZIP_LEVEL = 6
+
+
+def gzip_path_for(artifact_path: str | Path) -> Path:
+    path = Path(artifact_path)
+    return path.with_name(path.name + ".gz")
+
+
+def meta_path_for(artifact_path: str | Path) -> Path:
+    path = Path(artifact_path)
+    return path.with_name(path.name + ".gzmeta")
+
+
+def _sha256_of(path: Path, chunk: int = 1024 * 1024) -> str:
+    """Streamed, so hashing a 12 MB artifact costs 1 MB of memory."""
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(chunk), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _replace_atomically(target: Path, payload: bytes) -> None:
+    handle, temp_name = tempfile.mkstemp(
+        prefix=f"{target.name}.", suffix=".tmp", dir=target.parent
+    )
+    temporary = Path(temp_name)
+    try:
+        with os.fdopen(handle, "wb") as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, target)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
+
+
+def write_map_sidecars(
+    artifact_path: str | Path, raw: bytes, fingerprint: str, node_count: int
+) -> dict[str, Any]:
+    """Publish the gzipped response and its metadata, atomically.
+
+    `raw` must be the exact bytes of the artifact on disk: the metadata records
+    a checksum of them, and the server refuses to serve a pair that does not
+    match the file it is serving.
+    """
+    target = Path(artifact_path)
+    compressed = gzip.compress(raw, SIDECAR_GZIP_LEVEL)
+
+    meta = {
+        "sidecar_version": SIDECAR_VERSION,
+        "fingerprint": fingerprint,
+        "node_count": node_count,
+        "raw_size": len(raw),
+        "raw_sha256": hashlib.sha256(raw).hexdigest(),
+        "gzip_size": len(compressed),
+        "gzip_sha256": hashlib.sha256(compressed).hexdigest(),
+        "gzip_level": SIDECAR_GZIP_LEVEL,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    # The gzip first, then the metadata that vouches for it. A crash between
+    # the two leaves metadata describing an older body, which the checksum
+    # catches; the reverse would leave a body nothing vouches for.
+    _replace_atomically(gzip_path_for(target), compressed)
+    _replace_atomically(
+        meta_path_for(target), json.dumps(meta, indent=2).encode("utf-8")
+    )
+    logger.info(
+        "Map response sidecars written: %.1f MB raw, %.1f MB gzip, fingerprint %s",
+        len(raw) / (1024 * 1024),
+        len(compressed) / (1024 * 1024),
+        fingerprint[:12],
+    )
+    return meta
+
+
+def read_map_sidecar_meta(artifact_path: str | Path) -> dict[str, Any] | None:
+    """The sidecar metadata, or None when it is absent or unreadable."""
+    path = meta_path_for(artifact_path)
+    if not path.exists():
+        return None
+    try:
+        meta = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return meta if isinstance(meta, dict) else None
+
+
+def verify_map_sidecars(
+    artifact_path: str | Path, verify_checksums: bool = True
+) -> tuple[dict[str, Any] | None, str]:
+    """Check the prepared response against the artifact it claims to describe.
+
+    Returns `(meta, "")` when the pair is usable, or `(None, reason)` when it
+    is not. The reason is written to be actionable: it names the command that
+    fixes it, because "the map is unavailable" without that is a support
+    ticket.
+
+    Validity is tied to the artifact's *content*, not its timestamps. A
+    projection copied onto a server has a new mtime and the same bytes, which
+    is exactly the case mtime-keyed caching gets wrong. Hashing 12 MB costs
+    ~35 ms once per start and is streamed, so it does not trade memory for it.
+    """
+    target = Path(artifact_path)
+    rebuild = f"python -m api.prepare_map_sidecars --artifact {target}"
+
+    meta = read_map_sidecar_meta(target)
+    if meta is None:
+        return None, (
+            f"No prepared /map response beside {target.name}. "
+            f"Generate it with `{rebuild}`."
+        )
+
+    if int(meta.get("sidecar_version", 0)) != SIDECAR_VERSION:
+        return None, (
+            f"The prepared /map response was written by sidecar version "
+            f"{meta.get('sidecar_version')}, this build expects {SIDECAR_VERSION}. "
+            f"Regenerate it with `{rebuild}`."
+        )
+
+    gzip_file = gzip_path_for(target)
+    if not gzip_file.exists():
+        return None, f"{gzip_file.name} is missing. Regenerate it with `{rebuild}`."
+
+    try:
+        raw_size = target.stat().st_size
+        gzip_size = gzip_file.stat().st_size
+    except OSError as exc:
+        return None, f"The prepared /map response could not be read: {exc}"
+
+    if raw_size != int(meta.get("raw_size", -1)):
+        return None, (
+            f"The projection artifact is {raw_size:,} bytes but the prepared "
+            f"response was built from {meta.get('raw_size')!r}. It is stale; "
+            f"regenerate it with `{rebuild}`."
+        )
+    if gzip_size != int(meta.get("gzip_size", -1)):
+        return None, (
+            f"{gzip_file.name} is {gzip_size:,} bytes, not the "
+            f"{meta.get('gzip_size')!r} recorded. Regenerate it with `{rebuild}`."
+        )
+    if not str(meta.get("fingerprint", "")):
+        return None, (
+            f"The prepared /map response records no projection fingerprint, so "
+            f"its ETag cannot be trusted. Regenerate it with `{rebuild}`."
+        )
+
+    if verify_checksums:
+        if _sha256_of(target) != str(meta.get("raw_sha256", "")):
+            return None, (
+                "The projection artifact's contents do not match the prepared "
+                f"response. Regenerate it with `{rebuild}`."
+            )
+        if _sha256_of(gzip_file) != str(meta.get("gzip_sha256", "")):
+            return None, (
+                f"{gzip_file.name} is corrupt. Regenerate it with `{rebuild}`."
+            )
+
+    return meta, ""
+
+
+def write_artifact(
+    artifact: dict[str, Any], path: str | Path, sidecars: bool = True
+) -> Path:
+    """Write the artifact atomically, with its prepared `/map` response.
 
     An interrupted run leaves the previous artifact untouched. The temp file is
     closed before os.replace, which on Windows would otherwise fail with an open
     handle — the same failure mode fixed in `db_source` during T1.5.
+
+    The gzipped response is published here because this is the only place the
+    artifact's bytes exist alongside the knowledge that they are new. Doing it
+    at request time instead costs a 12 MB parse and a re-serialisation inside
+    the memory budget of a running instance; doing it here costs nothing that
+    matters, on a machine that is already running UMAP.
+
+    `sidecars=False` is for tests that want an artifact without one.
     """
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -464,8 +659,19 @@ def write_artifact(artifact: dict[str, Any], path: str | Path) -> Path:
             os.fsync(stream.fileno())
 
         # Read it back before publishing, so a truncated or corrupted write is
-        # caught here rather than by the API at request time.
-        validate_artifact(json.loads(temporary.read_text(encoding="utf-8")))
+        # caught here rather than by the API at request time. These are also
+        # the exact bytes the sidecar is built from and checksums, so the pair
+        # cannot disagree with the file.
+        raw = temporary.read_bytes()
+        validate_artifact(json.loads(raw.decode("utf-8")))
+
+        if sidecars:
+            write_map_sidecars(
+                target,
+                raw,
+                str(artifact.get("projection", {}).get("dataset_fingerprint", "")),
+                len(artifact.get("nodes", [])),
+            )
 
         os.replace(temporary, target)
     except Exception:

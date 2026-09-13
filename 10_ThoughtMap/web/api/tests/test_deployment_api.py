@@ -103,6 +103,10 @@ class MapCachingTests(unittest.TestCase):
         main_module._map_cache.clear()
         self.service = mock.Mock()
         self.service.load.return_value = stub_artifact()
+        # /map is cached on the artifact file's identity, so a double must
+        # supply one - and must change it when it serves a new artifact, just
+        # as a regenerated file on disk would.
+        self.service.current_key.return_value = ("map.json", 1, 1)
         self.patcher = mock.patch.object(
             main_module, "get_map_service", return_value=self.service
         )
@@ -138,6 +142,7 @@ class MapCachingTests(unittest.TestCase):
         # holding the old validator.
         first = self.client.get("/map").headers["ETag"]
         self.service.load.return_value = stub_artifact("0123456789abcdef", nodes=6)
+        self.service.current_key.return_value = ("map.json", 2, 2)  # file changed
         second = self.client.get("/map")
 
         self.assertNotEqual(first, second.headers["ETag"])

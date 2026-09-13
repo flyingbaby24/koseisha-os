@@ -133,11 +133,22 @@ def run(base_url: str | None, verify_checksums: bool, expected: int) -> ReleaseC
             verify_encoder_artifacts(
                 settings.encoder_dir, verify_checksums=verify_checksums
             )
+            # The configured tokenizer is checked by name: it is not always in
+            # the manifest's file list (an encoder prepared before the
+            # SentencePiece path existed lists only tokenizer.json), and a
+            # release that cannot tokenize is not a release.
+            from .query_tokenizer import tokenizer_path_for
+
+            tokenizer_file = tokenizer_path_for(
+                settings.encoder_dir, settings.encoder_tokenizer
+            )
             check.record(
                 "query encoder",
-                True,
-                f"{described['provider']} — {described['model_id']}",
+                tokenizer_file.exists(),
+                f"{described['provider']} — {described['model_id']}"
+                + ("" if tokenizer_file.exists() else f"; missing {tokenizer_file.name}"),
                 revision=described["revision"][:12] or "(unrecorded)",
+                tokenizer=described["tokenizer"],
                 checksums="verified" if verify_checksums else "size only",
             )
         else:

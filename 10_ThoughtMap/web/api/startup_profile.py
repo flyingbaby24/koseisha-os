@@ -56,7 +56,7 @@ def profile(warm_model: bool = True, sample_query: str = "Plato") -> dict[str, A
     from .repositories import create_search_index_repository  # noqa: PLC0415
     from .search_service import ThoughtMapSearchService  # noqa: PLC0415
     from .query_profile import QueryProfileService  # noqa: PLC0415
-    from .query_encoder import create_query_encoder, describe_encoder  # noqa: PLC0415
+    from .query_encoder import describe_encoder, get_query_encoder  # noqa: PLC0415
 
     stages["python_import"] = (_now() - started) * 1000.0
 
@@ -93,7 +93,7 @@ def profile(warm_model: bool = True, sample_query: str = "Plato") -> dict[str, A
 
     started = _now()
     def model_loader():
-        return create_query_encoder(settings)
+        return get_query_encoder(settings)
 
     service = ThoughtMapSearchService(
         repository=repository,
@@ -115,7 +115,7 @@ def profile(warm_model: bool = True, sample_query: str = "Plato") -> dict[str, A
     if warm_model:
         started = _now()
         try:
-            model = create_query_encoder(settings)
+            model = get_query_encoder(settings)
             stages["encoder_load"] = (_now() - started) * 1000.0
             facts["model"] = settings.model_name
             facts["resident_mb_after_encoder"] = _resident_mb()

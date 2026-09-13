@@ -168,14 +168,20 @@ def _artifact_identity(embeddings_path: Path, artifact_sha256: str = "") -> dict
     }
 
 
-def _load_cached_vectors(
-    embeddings_path: Path, artifact_sha256: str = ""
+def _read_cache(
+    embeddings_path: Path, artifact_sha256: str = "", *, want_vectors: bool = True
 ) -> dict[str, "np.ndarray"] | None:
-    """Parsed vectors for this exact artifact, or None.
+    """Validate the cache beside this artifact and return what was asked for.
 
     Parsing 63,891 JSON vectors out of a 542 MB CSV costs ~90 s every time the
     process starts. The parse is pure, so its result is cached beside the
     artifact.
+
+    `want_vectors=False` reads the doc_id order and the identity fields and
+    leaves the 93.6 MB of vectors on disk. That is what a start does first: the
+    order decides *which* matrix is wanted — the stored one as it stands, or a
+    reordering of it — and reading 93.6 MB before knowing the answer is how the
+    load ends up holding two matrices at once.
 
     Every rejection path returns None and falls back to parsing, so a stale,
     truncated or corrupt cache costs time and can never produce wrong vectors.
@@ -210,26 +216,108 @@ def _load_cached_vectors(
             else:
                 matched_by = "mtime"
 
-            doc_id = data["doc_id"]
-            vectors = data["vectors"]
+            # `doc_id` is ~1.7 MB and is always read: it is the cache's index.
+            doc_id = np.asarray(data["doc_id"])
+            if len(doc_id) == 0:
+                logger.warning("Vector cache ignored: no documents; reparsing.")
+                return None
+
+            if not want_vectors:
+                return {"doc_id": doc_id, "matched_by": matched_by}
+
+            vectors = np.asarray(data["vectors"])
 
             # Corruption detection. np.load validates the zip container and each
             # array header, but not that the two arrays still describe each
-            # other, which is what a partial write actually breaks.
-            if vectors.ndim != 2 or len(doc_id) != len(vectors) or len(doc_id) == 0:
+            # other, which is what a partial write actually breaks. Checked
+            # here, before any caller indexes one by the other.
+            if vectors.ndim != 2 or len(doc_id) != len(vectors):
                 logger.warning("Vector cache ignored: array shapes disagree; reparsing.")
                 return None
 
             # Materialise inside the `with` so nothing depends on the file
             # handle after it closes.
-            return {
-                "doc_id": np.asarray(doc_id),
-                "vectors": np.asarray(vectors),
-                "matched_by": matched_by,
-            }
+            return {"doc_id": doc_id, "vectors": vectors, "matched_by": matched_by}
     except Exception as exc:
         logger.warning("Vector cache unreadable (%s); reparsing.", type(exc).__name__)
         return None
+
+
+def _load_cached_vectors(
+    embeddings_path: Path, artifact_sha256: str = ""
+) -> dict[str, "np.ndarray"] | None:
+    """The whole cache: doc_ids and the vectors they index."""
+    return _read_cache(embeddings_path, artifact_sha256, want_vectors=True)
+
+
+def _load_cache_order(
+    embeddings_path: Path, artifact_sha256: str = ""
+) -> dict[str, "np.ndarray"] | None:
+    """The cache's doc_id order, without reading its vectors."""
+    return _read_cache(embeddings_path, artifact_sha256, want_vectors=False)
+
+
+def cache_positions(doc_ids, cached_doc_ids) -> tuple["np.ndarray", "np.ndarray"]:
+    """Where each wanted doc_id sits in the cache.
+
+    Returns `(keep, positions)`: `keep` marks the rows the cache covers, and
+    `positions[i]` is the cache row for wanted row *i* (-1 where absent).
+
+    `positions[keep] == arange(keep.sum())` is the question the whole ordered-
+    cache design turns on — it means the stored matrix is already this frame's
+    matrix, row for row, and can be used without a reordering copy.
+    """
+    import numpy as np
+
+    index = {doc: position for position, doc in enumerate(cached_doc_ids.tolist())}
+    positions = np.fromiter(
+        (index.get(doc, -1) for doc in doc_ids),
+        dtype=np.int64,
+        count=len(doc_ids),
+    )
+    return positions >= 0, positions
+
+
+def is_identity_order(positions: "np.ndarray") -> bool:
+    """Whether these positions are 0, 1, 2, … — i.e. no reorder is needed."""
+    import numpy as np
+
+    return bool(np.array_equal(positions, np.arange(len(positions), dtype=np.int64)))
+
+
+def _load_cache_vectors_checked(
+    embeddings_path: Path, artifact_sha256: str, expected_doc_ids: "np.ndarray"
+) -> "np.ndarray | None":
+    """Read the cached matrix, re-proving it still belongs to `expected_doc_ids`.
+
+    The order is read in one open and the vectors in another, so in between the
+    file could in principle have been replaced — by a concurrent start that
+    rewrote it, most plausibly. Identity is therefore re-validated on the second
+    open, and the doc_id order is compared against the one the positions were
+    computed from. A mismatch returns None and the caller parses instead, which
+    is slow and right rather than fast and wrong.
+    """
+    import numpy as np
+
+    cached = _load_cached_vectors(embeddings_path, artifact_sha256)
+    if cached is None:
+        logger.warning("Vector cache became unreadable between reads; reparsing.")
+        return None
+
+    if not np.array_equal(cached["doc_id"], expected_doc_ids):
+        logger.warning("Vector cache changed between reads; reparsing.")
+        return None
+
+    vectors = cached["vectors"]
+    if vectors.dtype != np.float32:
+        # Every writer stores float32. Anything else is a cache this code did
+        # not write, and converting it would silently change the values ranking
+        # depends on.
+        logger.warning(
+            "Vector cache holds %s, not float32; reparsing.", vectors.dtype
+        )
+        return None
+    return vectors
 
 
 def _store_cached_vectors(
@@ -271,6 +359,69 @@ def _store_cached_vectors(
             temporary.unlink(missing_ok=True)
         except OSError:
             pass
+
+
+#: Columns the search runtime actually reads. Everything else is dropped after
+#: the corpus is loaded.
+#:
+#: The documents master carries 40 columns because it is also the ingestion and
+#: reconciliation record - provenance, external identifiers, timestamps, import
+#: status. None of that reaches an API response or influences a ranking, and at
+#: 63,891 rows the unread columns cost 33 MB of resident memory.
+#:
+#: Derived from, and kept in step with:
+#:   search_utils.RESULT_COLUMNS            what a result row carries
+#:   search_utils.OPTIONAL_PARAMETER_COLUMNS the radar payload
+#:   search_service.KEYWORD_COLUMNS          what keyword search scores against
+#:   the metadata filters (source, category)
+RUNTIME_COLUMNS: frozenset[str] = frozenset(
+    {
+        # identity and result payload
+        "doc_id",
+        "title",
+        "author",
+        "source",
+        "source_url",
+        "url",
+        "gutenberg_id",
+        "category",
+        "subcategory",
+        "model_name",
+        # keyword scoring
+        "tags",
+        "notes",
+        # radar payload
+        "parameters",
+        "parameter_scores",
+        "filter_scores",
+        "composition",
+        "thought_composition",
+        "scores",
+        # vectors
+        "embedding",
+        "_embedding_vec",
+        "_matrix_row",
+    }
+)
+
+
+def _drop_unused_columns(frame: pd.DataFrame) -> pd.DataFrame:
+    """Keep only the columns the runtime reads.
+
+    Returns a frame that no longer references the dropped column data, so the
+    strings behind them become collectable. Uses a copy rather than an in-place
+    drop: an in-place drop on a frame built by `merge` can leave the original
+    block manager alive and free nothing.
+    """
+    unused = [column for column in frame.columns if column not in RUNTIME_COLUMNS]
+    if not unused:
+        return frame
+
+    kept = frame.drop(columns=unused).copy()
+    logger.info(
+        "Dropped %d unused corpus columns, kept %d", len(unused), len(kept.columns)
+    )
+    return kept
 
 
 def _official_documents_path(db_dir: Path | None) -> Path:
@@ -365,7 +516,10 @@ class CsvSearchIndexRepository:
                 documents = load_documents(_official_documents_path(self.db_dir))
 
             with self._stage("vector_cache"):
-                self._cached_vectors = _load_cached_vectors(
+                # Order only. The vectors are read later, once the merge has
+                # settled and it is known whether the stored matrix is already
+                # the one this frame needs.
+                self._cached_vectors = _load_cache_order(
                     self.embeddings_path, self._artifact_sha256
                 )
 
@@ -416,13 +570,24 @@ class CsvSearchIndexRepository:
             merged = merged.copy()
 
         with self._stage("vectors"):
-            merged["_embedding_vec"] = self._parse_vectors(merged)
-            merged = merged[merged["_embedding_vec"].notna()].reset_index(drop=True)
+            merged, prepared_matrix = self._vectors_from_cache(merged)
+            if prepared_matrix is None:
+                merged["_embedding_vec"] = self._parse_vectors(merged)
+                merged = merged[merged["_embedding_vec"].notna()].reset_index(drop=True)
+
+        # Narrow the frame before anything else holds a reference to it.
+        with self._stage("drop_unused_columns"):
+            merged = _drop_unused_columns(merged)
 
         # Stack the embedding matrix once, here, rather than once per search.
-        # This is the only place it is built (T7 #10-#11).
+        # This is the only place it is built (T7 #10-#11). When the cache was
+        # already in this frame's order, `prepared_matrix` *is* that matrix and
+        # nothing is stacked at all.
         with self._stage("matrix"):
-            self._corpus = build_search_corpus(merged, self._corpus_version)
+            self._corpus = build_search_corpus(
+                merged, self._corpus_version, matrix=prepared_matrix
+            )
+            prepared_matrix = None
 
         # The corpus frame *is* the index. Keeping `merged` as well would hold
         # a second DataFrame plus the 63,891 independently allocated vectors
@@ -470,6 +635,91 @@ class CsvSearchIndexRepository:
             and self._cached_vectors is not None
             and self._cached_vectors.get("matched_by") == "sha256"
         )
+
+    def _vectors_from_cache(
+        self, merged: pd.DataFrame
+    ) -> tuple[pd.DataFrame, "np.ndarray | None"]:
+        """Serve the search matrix straight out of the cache when the order fits.
+
+        The expensive moment in a corpus load used to be here. The cache stored
+        vectors in whatever order the artifact happened to have; the frame
+        wanted them in corpus order; so the load built a second 93.6 MB matrix
+        by reordering the first, and for as long as that took, the process held
+        both. Measured, `build_search_corpus` spiked +189 MB against 308 MB
+        retained — the largest transient in the whole startup.
+
+        So the cache is written in corpus order instead. When it still matches —
+        which is every start after the first — `positions` is 0, 1, 2, … and
+        the array that comes off disk *is* the search matrix. Nothing is
+        stacked, nothing is reordered, and exactly one matrix exists.
+
+        When it does not match, this reorders once and rewrites the cache in the
+        new order, so the next start is back on the fast path. That is also how
+        a cache written before this change migrates: no rebuild from the 542 MB
+        artifact, just one reordering write.
+
+        Returns `(frame, matrix)`. A `None` matrix means "fall back to parsing",
+        and the frame comes back untouched so the caller can do exactly that.
+        """
+        import numpy as np
+
+        cached = self._cached_vectors
+        if cached is None:
+            return merged, None
+
+        keep, positions = cache_positions(merged["doc_id"], cached["doc_id"])
+        covered = int(keep.sum())
+        if covered == 0:
+            # The cache and the documents have nothing in common. Something is
+            # badly misconfigured; parsing will produce the right answer or a
+            # clear failure, and either beats guessing here.
+            logger.warning("Vector cache covers none of the merged documents; reparsing.")
+            return merged, None
+
+        if covered != len(merged):
+            # Rows the cache does not cover are exactly the rows the old
+            # `notna()` filter dropped.
+            merged = merged[keep].reset_index(drop=True)
+            positions = positions[keep]
+
+        vectors = _load_cache_vectors_checked(
+            self.embeddings_path, self._artifact_sha256, cached["doc_id"]
+        )
+        if vectors is None:
+            return merged, None
+
+        self.load_stages["vector_source"] = 1.0  # cache hit
+
+        if is_identity_order(positions):
+            matrix = vectors
+            self.load_stages["vector_reorder"] = 0.0
+            logger.info(
+                "Vector cache is in corpus order: %d vectors used as the search "
+                "matrix directly, no reorder copy.",
+                len(matrix),
+            )
+        else:
+            # One copy, unavoidable: a permutation cannot be applied in place.
+            # `vectors` dies with this frame, leaving only `matrix`.
+            started = time.perf_counter()
+            matrix = np.ascontiguousarray(vectors[positions], dtype=np.float32)
+            del vectors
+            self.load_stages["vector_reorder"] = (time.perf_counter() - started) * 1000.0
+            logger.info(
+                "Vector cache was not in corpus order; reordered %d vectors and "
+                "rewriting the cache so the next start does not have to.",
+                len(matrix),
+            )
+            _store_cached_vectors(
+                self.embeddings_path,
+                merged["doc_id"].tolist(),
+                matrix,
+                self._artifact_sha256,
+            )
+
+        # The doc_id index has done its job; the matrix is the only copy now.
+        self._cached_vectors = None
+        return merged, matrix
 
     def _parse_vectors(self, merged: pd.DataFrame) -> pd.Series:
         """Vectors for the merged frame, from cache when it is valid."""

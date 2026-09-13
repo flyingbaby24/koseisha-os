@@ -69,8 +69,62 @@ class BuildTests(unittest.TestCase):
 
     def test_vectors_become_views_into_the_matrix(self) -> None:
         # Otherwise the corpus costs a second full copy of the embeddings.
+        #
+        # `shares_memory`, not `.base is matrix`: numpy collapses the base
+        # chain to whichever array owns the buffer, so when the matrix is
+        # itself a view — which it is on a zero-copy load from the vector
+        # cache — a row's `.base` is that underlying buffer rather than the
+        # matrix object. One allocation either way, and that is the property.
         corpus = build_search_corpus(frame_of(8))
-        self.assertIs(corpus.frame["_embedding_vec"].iloc[0].base, corpus.matrix)
+        self.assertTrue(
+            np.shares_memory(corpus.frame["_embedding_vec"].iloc[0], corpus.matrix)
+        )
+
+    def test_a_prepared_matrix_is_used_without_being_copied(self) -> None:
+        # The point of the ordered vector cache: the array that came off disk
+        # becomes the search matrix, rather than the source for a second one.
+        frame = frame_of(8).drop(columns=["_embedding_vec"])
+        prepared = np.ascontiguousarray(
+            np.random.default_rng(3).standard_normal((8, 4)), dtype=np.float32
+        )
+
+        corpus = build_search_corpus(frame, matrix=prepared)
+
+        self.assertTrue(np.shares_memory(corpus.matrix, prepared))
+        self.assertTrue(np.array_equal(corpus.matrix, prepared))
+        self.assertTrue(
+            np.shares_memory(corpus.frame["_embedding_vec"].iloc[0], prepared)
+        )
+
+    def test_a_prepared_matrix_is_validated_not_trusted(self) -> None:
+        # A matrix that does not line up with its frame produces confident,
+        # plausible, wrong rankings, so it may not be constructible.
+        frame = frame_of(8).drop(columns=["_embedding_vec"])
+
+        with self.assertRaises(ValueError):  # wrong row count
+            build_search_corpus(frame, matrix=np.zeros((7, 4), dtype=np.float32))
+
+        with self.assertRaises(ValueError):  # wrong dtype
+            build_search_corpus(frame, matrix=np.zeros((8, 4), dtype=np.float64))
+
+        with self.assertRaises(ValueError):  # not a matrix
+            build_search_corpus(frame, matrix=np.zeros((8,), dtype=np.float32))
+
+    def test_a_prepared_matrix_gives_the_same_corpus_as_stacking(self) -> None:
+        frame = frame_of(12)
+        stacked = build_search_corpus(frame)
+        prepared = build_search_corpus(
+            frame.drop(columns=["_embedding_vec"]), matrix=stacked.matrix.copy()
+        )
+
+        self.assertTrue(np.array_equal(stacked.matrix, prepared.matrix))
+        self.assertTrue(np.array_equal(stacked.norms, prepared.norms))
+        self.assertTrue(
+            np.array_equal(
+                stacked.frame[MATRIX_ROW_COLUMN].to_numpy(),
+                prepared.frame[MATRIX_ROW_COLUMN].to_numpy(),
+            )
+        )
 
     def test_an_empty_frame_is_not_an_error(self) -> None:
         corpus = build_search_corpus(pd.DataFrame())
@@ -242,6 +296,82 @@ class InternalColumnTests(unittest.TestCase):
     def test_stripping_is_safe_on_a_plain_frame(self) -> None:
         frame = pd.DataFrame({"doc_id": ["a"]})
         self.assertEqual(list(strip_internal_columns(frame).columns), ["doc_id"])
+
+
+class ParameterCoverageTests(unittest.TestCase):
+    """The dicts are dropped, so what they told us has to survive them.
+
+    `build_search_corpus` folds `parameter_scores` into a float64 matrix and
+    drops the column. Integrity checks used to count non-empty dicts; after the
+    fold there is nothing to count, and in the matrix "no profile" and "every
+    axis is genuinely 0.0" are the same row of zeros. `parameter_coverage` is
+    counted while the dicts still exist. Without it the corpus-integrity gate
+    reports 0 of 63,891 and fails a healthy corpus — which is exactly what it
+    did until `release_check` caught it.
+    """
+
+    AXES = ("logic", "ethics", "aesthetics")
+
+    def frame_with_profiles(self, profiles: list[dict | None]) -> pd.DataFrame:
+        frame = frame_of(len(profiles))
+        frame["parameter_scores"] = profiles
+        return frame
+
+    def test_every_row_profiled_counts_every_row(self) -> None:
+        profiles = [dict(zip(self.AXES, (0.1, 0.2, 0.3))) for _ in range(6)]
+        corpus = build_search_corpus(self.frame_with_profiles(profiles))
+
+        self.assertEqual(corpus.parameter_coverage, 6)
+        self.assertEqual(corpus.parameter_axes, self.AXES)
+
+    def test_an_all_zero_profile_still_counts_as_present(self) -> None:
+        # The distinction the matrix cannot make, and the reason this field
+        # exists: these rows are zeros either way.
+        profiles = [dict(zip(self.AXES, (0.0, 0.0, 0.0))) for _ in range(4)]
+        corpus = build_search_corpus(self.frame_with_profiles(profiles))
+
+        self.assertEqual(corpus.parameter_coverage, 4)
+        self.assertTrue((corpus.parameter_matrix == 0.0).all())
+
+    def test_missing_and_empty_profiles_are_not_counted(self) -> None:
+        profiles = [
+            dict(zip(self.AXES, (0.5, 0.5, 0.5))),
+            None,
+            {},
+            dict(zip(self.AXES, (0.1, 0.2, 0.3))),
+        ]
+        corpus = build_search_corpus(self.frame_with_profiles(profiles))
+
+        self.assertEqual(corpus.parameter_coverage, 2)
+
+    def test_the_column_is_dropped_once_it_has_been_folded(self) -> None:
+        profiles = [dict(zip(self.AXES, (0.1, 0.2, 0.3))) for _ in range(3)]
+        corpus = build_search_corpus(self.frame_with_profiles(profiles))
+
+        self.assertNotIn("parameter_scores", corpus.frame.columns)
+        self.assertIsNotNone(corpus.parameter_matrix)
+
+    def test_a_corpus_with_no_profiles_reports_no_coverage(self) -> None:
+        corpus = build_search_corpus(frame_of(5))
+
+        self.assertEqual(corpus.parameter_coverage, 0)
+        self.assertIsNone(corpus.parameter_matrix)
+
+    def test_coverage_matches_what_counting_the_dicts_would_have_said(self) -> None:
+        # The property the integrity gate actually asserts, stated directly.
+        profiles = [
+            dict(zip(self.AXES, (0.1, 0.2, 0.3))),
+            {},
+            None,
+            dict(zip(self.AXES, (0.0, 0.0, 0.0))),
+            dict(zip(self.AXES, (0.9, 0.1, 0.0))),
+        ]
+        frame = self.frame_with_profiles(profiles)
+        before = int(frame["parameter_scores"].map(bool).sum())
+
+        corpus = build_search_corpus(frame)
+
+        self.assertEqual(corpus.parameter_coverage, before)
 
 
 if __name__ == "__main__":

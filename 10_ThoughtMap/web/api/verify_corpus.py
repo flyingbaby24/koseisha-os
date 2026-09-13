@@ -152,13 +152,32 @@ def verify(compare_load_paths: bool = False) -> Report:
     )
 
     # --- parameters -------------------------------------------------------
-    with_parameters = 0
-    if "parameter_scores" in index.columns:
-        with_parameters = int(index["parameter_scores"].map(bool).sum())
+    #
+    # The count comes from the corpus, not from the frame. `build_search_corpus`
+    # folds the 63,891 ten-key dicts into one float64 matrix and drops the
+    # column, so `parameter_scores` is no longer there to count — and in the
+    # matrix a document with no profile is indistinguishable from one whose
+    # axes are all genuinely zero. `parameter_coverage` is counted at the one
+    # moment the dicts still exist.
+    corpus = repository.load_corpus()
+    if corpus.parameter_matrix is not None:
+        with_parameters = corpus.parameter_coverage
+        held_as = f"{len(corpus.parameter_axes)} axes as a float64 matrix"
+    else:
+        # Frames that still carry the column: a personal corpus, or a build
+        # from before the matrix existed.
+        with_parameters = (
+            int(index["parameter_scores"].map(bool).sum())
+            if "parameter_scores" in index.columns
+            else 0
+        )
+        held_as = "per-row dicts"
+
     report.add(
         "parameter_scores",
         with_parameters == len(index),
         f"{with_parameters:,} of {len(index):,} documents carry a parameter profile",
+        held_as=held_as,
     )
 
     # --- embedding dimension ---------------------------------------------

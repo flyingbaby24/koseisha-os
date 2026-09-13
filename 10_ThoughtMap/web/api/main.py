@@ -10,13 +10,17 @@ from typing import Literal
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from .config import WARMUP_OFF, get_settings
 from .embedding_model import EmbeddingModelUnavailableError
-from .query_encoder import create_query_encoder, describe_encoder
+from .query_encoder import describe_encoder, get_query_encoder
 from .map_projection import DEFAULT_ARTIFACT_PATH
-from .map_response_cache import MapResponseCache, accepts_gzip
+from .map_response_cache import (
+    MapPayloadUnavailableError,
+    MapResponseCache,
+    accepts_gzip,
+)
 from .map_service import ProjectionUnavailableError, get_map_service
 from .observability import (
     configure_logging,
@@ -57,7 +61,13 @@ configure_logging()
 install_access_log_redaction()
 
 readiness = ReadinessState(settings)
-_map_cache = MapResponseCache()
+# Rebuilding the /map payload costs an 87 MB transient. Development may pay it
+# to keep a hand-built artifact working; a public instance may not, and says so
+# through readiness instead.
+_map_cache = MapResponseCache(
+    allow_rebuild=not settings.is_public,
+    verify_checksums=settings.verify_map_sidecar_checksums,
+)
 _search_limiter = RateLimiter(settings.search_rate_limit, settings.search_rate_burst)
 
 
@@ -115,7 +125,8 @@ async def lifespan(app: FastAPI):
                 readiness,
                 settings,
                 lambda: get_search_service().repository.load_corpus().frame,
-                lambda: create_query_encoder(settings),
+                lambda: get_query_encoder(settings),
+                lambda: _map_cache.get_for(get_map_service()),
             ),
             name="thoughtmap-warmup",
             daemon=True,
@@ -318,11 +329,13 @@ def search(
 def map_projection(request: Request) -> Response:
     started = time.perf_counter()
     try:
-        artifact = get_map_service().load()
-    except ProjectionUnavailableError as exc:
+        # Opens the response prepared at projection time. In a public
+        # deployment this never parses the artifact; a missing or stale
+        # prepared response is a 503 with the command that fixes it, which
+        # readiness has already reported.
+        encoded = _map_cache.get_for(get_map_service())
+    except (ProjectionUnavailableError, MapPayloadUnavailableError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-    encoded = _map_cache.get(artifact)
 
     # The map changes only when the corpus is re-projected, and the artifact
     # already carries a content fingerprint of exactly that. Using it as the
@@ -338,23 +351,34 @@ def map_projection(request: Request) -> Response:
             log_event("map.not_modified", elapsed_ms=(time.perf_counter() - started) * 1000.0)
             return Response(status_code=304, headers=headers)
 
-    if accepts_gzip(request.headers.get("accept-encoding", "")):
-        body = encoded.gzipped
+    wants_gzip = accepts_gzip(request.headers.get("accept-encoding", ""))
+    if wants_gzip:
         headers["Content-Encoding"] = "gzip"
         # Compressed responses vary by request header, so a shared cache must
         # not hand a gzip body to a client that cannot read one.
         headers["Vary"] = "Accept-Encoding"
-    else:
-        body = encoded.raw
 
+    size = encoded.gzipped_bytes if wants_gzip else encoded.raw_bytes
     log_event(
         "map",
         nodes=encoded.node_count,
         fingerprint=encoded.fingerprint[:12],
-        bytes=len(body),
+        bytes=size,
         encoding=headers.get("Content-Encoding", "identity"),
+        source="disk" if encoded.on_disk else "memory",
         elapsed_ms=(time.perf_counter() - started) * 1000.0,
     )
+
+    if encoded.on_disk:
+        # Streamed by the kernel from the page cache: file-backed, evictable
+        # memory instead of 15.5 MB of heap the process can never give back.
+        return FileResponse(
+            encoded.gzip_path if wants_gzip else encoded.raw_path,
+            media_type="application/json",
+            headers=headers,
+        )
+
+    body = encoded.gzipped if wants_gzip else encoded.raw
     return Response(content=body, media_type="application/json", headers=headers)
 
 

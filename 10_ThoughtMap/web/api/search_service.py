@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from search_utils import (
+    MATRIX_ROW_COLUMN,
     format_similarity,
     normalize_text,
     parse_embedding,
@@ -25,7 +26,7 @@ from search_utils import (
 from .config import ApiSettings, get_settings
 from .embedding_model import TextEncoder, load_embedding_model
 from .observability import stage
-from .query_encoder import create_query_encoder
+from .query_encoder import get_query_encoder
 from .query_profile import QueryProfileService
 from .repositories import SearchIndexRepository, create_search_index_repository
 from .schemas import ParameterScore, SearchResponse, SearchResult
@@ -151,7 +152,7 @@ class ThoughtMapSearchService:
         counts["source"] = len(index)
         index = apply_metadata_filter(index, "category", category, multi=True)
         counts["category"] = len(index)
-        index = apply_parameter_filter(index, filter_name)
+        index = apply_parameter_filter(index, filter_name, corpus)
         counts["parameter"] = len(index)
 
         if index.empty:
@@ -172,7 +173,7 @@ class ThoughtMapSearchService:
             return []
 
         with stage("response_build_ms"):
-            output = self._to_search_results(results)
+            output = self._to_search_results(results, corpus)
         logger.info("page=api mode=%s source=%r category=%r parameter=%r counts=%s candidates=%d results=%d elapsed=%.4f", mode, source, category, filter_name, counts, len(index), len(output), time.perf_counter()-started)
         return output
 
@@ -622,14 +623,14 @@ class ThoughtMapSearchService:
             return 0.75
         return 0.65
 
-    def _to_search_results(self, results: pd.DataFrame) -> list[SearchResult]:
+    def _to_search_results(self, results: pd.DataFrame, corpus=None) -> list[SearchResult]:
         output: list[SearchResult] = []
 
         if results is None or results.empty:
             return output
 
         for _, row in results.iterrows():
-            parameters = self._extract_parameters(row)
+            parameters = self._extract_parameters(row, corpus)
             output.append(
                 SearchResult(
                     doc_id=str(row.get("doc_id", "") or ""),
@@ -644,7 +645,18 @@ class ThoughtMapSearchService:
 
         return output
 
-    def _extract_parameters(self, row: pd.Series) -> list[dict] | None:
+    def _extract_parameters(self, row: pd.Series, corpus=None) -> list[dict] | None:
+        # Preferred: the corpus matrix, via the row position carried through
+        # ranking. Costs one small list per returned row.
+        if corpus is not None and MATRIX_ROW_COLUMN in row.index:
+            position = row.get(MATRIX_ROW_COLUMN)
+            if position is not None and not pd.isna(position):
+                parameters = corpus.parameters_for(int(position))
+                if parameters:
+                    return parameters
+
+        # Fallback for frames that still carry the values inline: personal
+        # documents, and any caller that builds its own frame.
         for column in PARAMETER_COLUMNS:
             if column not in row.index:
                 continue
@@ -773,9 +785,11 @@ class ThoughtMapSearchService:
 
 def create_search_service(settings: ApiSettings) -> ThoughtMapSearchService:
     repository = create_search_index_repository(settings)
-    # One encoder per service, built from configuration. Ranking never learns
-    # which runtime produced the vector (T7 #4).
-    model_loader = lambda: create_query_encoder(settings)
+    # One encoder per configuration, shared by ranking and the radar profile.
+    # They are separate consumers with separate caches, so handing them an
+    # uncached factory gave each its own session and its own copy of the
+    # weights.
+    model_loader = lambda: get_query_encoder(settings)
     return ThoughtMapSearchService(
         repository=repository,
         model_name=settings.model_name,

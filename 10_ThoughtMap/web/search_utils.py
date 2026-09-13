@@ -120,14 +120,35 @@ def _parameter_score_map(row: pd.Series) -> dict[str, float]:
     return {}
 
 
-def apply_parameter_filter(df: pd.DataFrame, selected: object) -> pd.DataFrame:
-    """Keep works whose highest-scoring (representative) parameter is selected."""
+def apply_parameter_filter(df: pd.DataFrame, selected: object, corpus=None) -> pd.DataFrame:
+    """Keep works whose highest-scoring (representative) parameter is selected.
+
+    With a `corpus`, the dominant axis comes from its parameter matrix in one
+    vectorised pass. Without one, the original per-row path runs, so a frame
+    that still carries `parameter_scores` dicts - a personal-document frame, or
+    a test double - behaves exactly as before.
+    """
     if df is None or df.empty or is_no_filter(selected):
         return df
     wanted = normalize_filter_value(selected)
+
+    dominant = getattr(corpus, "dominant_axis", None)
+    axes = tuple(getattr(corpus, "parameter_axes", ()) or ())
+    if dominant is not None and axes and MATRIX_ROW_COLUMN in df.columns:
+        positions = subset_positions(df, len(corpus.parameter_matrix))
+        if positions is not None:
+            try:
+                wanted_index = [normalize_key(a) for a in axes].index(wanted)
+            except ValueError:
+                # An axis nobody has: no row can be dominated by it.
+                return df.iloc[0:0].copy().reset_index(drop=True)
+            mask = dominant()[positions] == wanted_index
+            return df[mask].copy().reset_index(drop=True)
+
     def matches(row: pd.Series) -> bool:
         scores = _parameter_score_map(row)
         return bool(scores) and max(scores, key=scores.get) == wanted
+
     return df[df.apply(matches, axis=1)].copy().reset_index(drop=True)
 
 
@@ -410,6 +431,10 @@ def work_similarity_by_vector(
     # from the input still appears, filled with "", because `row.get(col, "")`
     # did that.
     data = {"similarity": similarities[order]}
+    if MATRIX_ROW_COLUMN in selected.columns:
+        # Carried through so the caller can look up this row's Thought
+        # Composition without the frame holding 63,891 dicts.
+        data[MATRIX_ROW_COLUMN] = selected[MATRIX_ROW_COLUMN].to_numpy()
     for column in RESULT_COLUMNS:
         data[column] = selected[column].to_numpy() if column in selected.columns else ""
 

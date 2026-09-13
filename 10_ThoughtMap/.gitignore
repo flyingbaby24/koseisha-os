@@ -37,3 +37,11 @@ threejs/stats.html
 # Claude Code local tooling configuration (dev-server launch config).
 # Not part of ThoughtMap and not needed to build, test or deploy it.
 .claude/
+
+# Pre-encoded /map response, written beside the projection artifact. Derived
+# data: rebuilt from the artifact, invalidated by its mtime and size, and kept
+# on disk precisely so it does not occupy the process's heap.
+*.json.gz
+*.json.gzmeta
+*.json.gz.tmp*
+*.json.gzmeta.tmp*

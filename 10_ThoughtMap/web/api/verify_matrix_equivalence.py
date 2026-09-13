@@ -89,8 +89,14 @@ def _checks() -> list[tuple[str, bool, str]]:
     # The per-row vectors must be views into the matrix, not a second copy.
     # If this regresses, resident memory quietly grows by another 93.6 MB and
     # nothing else fails, so it is asserted rather than assumed.
+    #
+    # Asked as "do these two share storage", not "is `.base` the matrix
+    # object". numpy collapses the base chain to whichever array owns the
+    # buffer, so when the matrix is itself a view — a zero-copy load reshapes
+    # the flat array that comes off the vector cache — a row's `.base` is that
+    # flat buffer and not the matrix. Same one allocation; different object.
     sample = frame["_embedding_vec"].iloc[0]
-    shares_memory = getattr(sample, "base", None) is corpus.matrix
+    shares_memory = bool(np.shares_memory(sample, corpus.matrix))
     record(
         "vectors_are_matrix_views",
         shares_memory,

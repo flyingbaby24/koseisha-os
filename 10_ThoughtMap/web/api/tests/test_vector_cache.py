@@ -19,9 +19,13 @@ import numpy as np
 
 from api.repositories import (
     VECTOR_CACHE_VERSION,
+    _load_cache_order,
+    _load_cache_vectors_checked,
     _load_cached_vectors,
     _store_cached_vectors,
     _vector_cache_path,
+    cache_positions,
+    is_identity_order,
 )
 
 
@@ -187,6 +191,138 @@ class VectorCacheTests(unittest.TestCase):
     def test_the_cache_sits_beside_the_artifact(self) -> None:
         self.assertEqual(
             _vector_cache_path(self.artifact).name, "embeddings.csv.vectors.npz"
+        )
+
+
+class CacheOrderTests(unittest.TestCase):
+    """The cache is addressed by position, so its order is load-bearing.
+
+    A cache in corpus order can be handed to the search matrix as it stands.
+    A cache in any other order has to be permuted first, and for the length of
+    that permutation the process holds two full matrices — 187 MB at corpus
+    size, and the largest transient in startup. These tests pin the decision
+    that separates the two.
+    """
+
+    def test_identical_order_needs_no_reorder(self) -> None:
+        cached = np.array(["a", "b", "c"], dtype="U")
+        keep, positions = cache_positions(["a", "b", "c"], cached)
+
+        self.assertTrue(keep.all())
+        self.assertTrue(is_identity_order(positions))
+
+    def test_a_permutation_is_detected(self) -> None:
+        cached = np.array(["a", "b", "c"], dtype="U")
+        keep, positions = cache_positions(["c", "a", "b"], cached)
+
+        self.assertTrue(keep.all())
+        self.assertEqual(positions.tolist(), [2, 0, 1])
+        self.assertFalse(is_identity_order(positions))
+
+    def test_uncovered_rows_are_marked_not_guessed(self) -> None:
+        cached = np.array(["a", "c"], dtype="U")
+        keep, positions = cache_positions(["a", "b", "c"], cached)
+
+        self.assertEqual(keep.tolist(), [True, False, True])
+        self.assertEqual(positions[1], -1)
+
+    def test_a_prefix_of_the_cache_is_still_identity(self) -> None:
+        # Documents dropped from the end: the surviving rows are still 0..n-1,
+        # so the stored matrix's leading rows are usable as they are.
+        cached = np.array(["a", "b", "c", "d"], dtype="U")
+        keep, positions = cache_positions(["a", "b"], cached)
+
+        self.assertTrue(is_identity_order(positions[keep]))
+
+    def test_a_gap_in_the_middle_is_not_identity(self) -> None:
+        cached = np.array(["a", "b", "c"], dtype="U")
+        keep, positions = cache_positions(["a", "c"], cached)
+
+        self.assertEqual(positions[keep].tolist(), [0, 2])
+        self.assertFalse(is_identity_order(positions[keep]))
+
+    def test_an_empty_wanted_list_is_identity_vacuously(self) -> None:
+        cached = np.array(["a"], dtype="U")
+        keep, positions = cache_positions([], cached)
+
+        self.assertEqual(len(positions), 0)
+        self.assertTrue(is_identity_order(positions))
+
+
+class CacheOrderOnlyReadTests(unittest.TestCase):
+    """Reading the order must not read the 93.6 MB of vectors with it."""
+
+    def setUp(self) -> None:
+        self.directory = TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.artifact = Path(self.directory.name) / "embeddings.csv"
+        self.artifact.write_text("doc_id,embedding\n", encoding="utf-8")
+        self.doc_ids = [f"doc_{i}" for i in range(5)]
+        self.vectors = np.arange(20, dtype=np.float32).reshape(5, 4)
+        _store_cached_vectors(self.artifact, self.doc_ids, self.vectors, SHA)
+
+    def test_order_only_returns_doc_ids_and_no_vectors(self) -> None:
+        order = _load_cache_order(self.artifact, SHA)
+
+        self.assertIsNotNone(order)
+        self.assertEqual(list(order["doc_id"]), self.doc_ids)
+        self.assertNotIn("vectors", order)
+
+    def test_order_only_applies_the_same_identity_rules(self) -> None:
+        self.assertIsNone(_load_cache_order(self.artifact, OTHER_SHA))
+
+    def test_order_only_rejects_an_empty_cache(self) -> None:
+        _store_cached_vectors(self.artifact, [], np.zeros((0, 4), dtype=np.float32), SHA)
+        self.assertIsNone(_load_cache_order(self.artifact, SHA))
+
+    def test_order_and_full_read_agree(self) -> None:
+        order = _load_cache_order(self.artifact, SHA)
+        full = _load_cached_vectors(self.artifact, SHA)
+
+        self.assertEqual(list(order["doc_id"]), list(full["doc_id"]))
+        self.assertEqual(order["matched_by"], full["matched_by"])
+
+
+class CacheRereadTests(unittest.TestCase):
+    """The order and the vectors come from two separate opens."""
+
+    def setUp(self) -> None:
+        self.directory = TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.artifact = Path(self.directory.name) / "embeddings.csv"
+        self.artifact.write_text("doc_id,embedding\n", encoding="utf-8")
+        self.doc_ids = [f"doc_{i}" for i in range(5)]
+        self.vectors = np.arange(20, dtype=np.float32).reshape(5, 4)
+        _store_cached_vectors(self.artifact, self.doc_ids, self.vectors, SHA)
+
+    def test_a_matching_reread_returns_the_vectors(self) -> None:
+        order = _load_cache_order(self.artifact, SHA)
+        vectors = _load_cache_vectors_checked(self.artifact, SHA, order["doc_id"])
+
+        self.assertTrue(np.array_equal(vectors, self.vectors))
+        self.assertEqual(vectors.dtype, np.float32)
+
+    def test_a_cache_replaced_between_reads_is_refused(self) -> None:
+        # Another process rewriting the cache between the two opens would
+        # otherwise hand back vectors indexed by somebody else's order.
+        order = _load_cache_order(self.artifact, SHA)
+        _store_cached_vectors(
+            self.artifact,
+            list(reversed(self.doc_ids)),
+            self.vectors[::-1].copy(),
+            SHA,
+        )
+
+        self.assertIsNone(
+            _load_cache_vectors_checked(self.artifact, SHA, order["doc_id"])
+        )
+
+    def test_a_cache_deleted_between_reads_is_refused(self) -> None:
+        order = _load_cache_order(self.artifact, SHA)
+        _vector_cache_path(self.artifact).unlink()
+
+        self.assertIsNone(
+            _load_cache_vectors_checked(self.artifact, SHA, order["doc_id"])
         )
 
 
