@@ -1,0 +1,4 @@
+/* Reuse the Jinn Project shell, cards, buttons and responsive grids. */
+.thoughtmap-intro h1{font-size:clamp(2.6rem,7vw,5.4rem);line-height:1;letter-spacing:-.045em;margin:0;overflow-wrap:anywhere}
+.thoughtmap-intro .section:first-child{padding-top:calc(var(--header) + 70px)}
+.thoughtmap-intro .section-head>div>p:not(.eyebrow){color:var(--muted)}

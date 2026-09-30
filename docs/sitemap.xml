@@ -25,4 +25,6 @@
   <url><loc>https://www.jinn-project.com/jinnsp-android/</loc></url>
   <url><loc>https://www.jinn-project.com/kunizukuri/</loc><xhtml:link rel="alternate" hreflang="ja" href="https://www.jinn-project.com/kunizukuri/"/><xhtml:link rel="alternate" hreflang="en" href="https://www.jinn-project.com/kunizukuri/index-en.html"/></url>
   <url><loc>https://www.jinn-project.com/kunizukuri/index-en.html</loc><xhtml:link rel="alternate" hreflang="ja" href="https://www.jinn-project.com/kunizukuri/"/><xhtml:link rel="alternate" hreflang="en" href="https://www.jinn-project.com/kunizukuri/index-en.html"/></url>
+  <url><loc>https://www.jinn-project.com/research/thoughtmap/</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.jinn-project.com/research/thoughtmap/"/><xhtml:link rel="alternate" hreflang="ja" href="https://www.jinn-project.com/research/thoughtmap/index-ja.html"/></url>
+  <url><loc>https://www.jinn-project.com/research/thoughtmap/index-ja.html</loc><xhtml:link rel="alternate" hreflang="en" href="https://www.jinn-project.com/research/thoughtmap/"/><xhtml:link rel="alternate" hreflang="ja" href="https://www.jinn-project.com/research/thoughtmap/index-ja.html"/></url>
 </urlset>
