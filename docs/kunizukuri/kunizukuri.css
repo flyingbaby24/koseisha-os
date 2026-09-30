@@ -1,0 +1,36 @@
+/* The Jinn shell stays dark; only the work's reading surface becomes paper. */
+.kunizukuri-page{background:#f1eee4;color:#282d2c;font-family:"Yu Mincho","Hiragino Mincho ProN","Noto Serif JP",Georgia,serif;line-height:1.95}
+.kunizukuri-page .site-header{background:#070b10;border-bottom:1px solid #1c2a35;color:#eef5f7;font-family:Inter,Arial,sans-serif}
+.kunizukuri-page main{padding-top:var(--header);background:linear-gradient(90deg,rgba(106,92,65,.035),transparent 12%,transparent 88%,rgba(106,92,65,.035))}
+.kunizukuri-page a:focus-visible,.kunizukuri-page button:focus-visible{outline:3px solid #a33f2b;outline-offset:5px}
+.scroll-hero{max-width:1440px;margin:auto;padding:clamp(40px,7vw,100px) 5vw 52px;display:grid;grid-template-columns:1fr 1.65fr;gap:4vw;align-items:center;min-height:calc(90svh - var(--header))}
+.work-label{font:500 .875rem/1.6 var(--mono);letter-spacing:.12em;color:#6d6257;margin:0 0 20px}
+.scroll-title{font-weight:400;font-size:clamp(5rem,9vw,9rem);line-height:1.22;letter-spacing:.12em;margin:0 0 4px}
+.roman-title{font:400 .875rem/1.8 Georgia,serif;letter-spacing:.17em;color:#5c625f;margin:0 0 28px}
+.scroll-lead{font-size:clamp(1.125rem,1.6vw,1.5rem);line-height:1.9;margin:0 0 20px;text-wrap:balance}
+.hero-invitation{font-size:1rem;color:#505752;margin:0 0 24px}
+.alpha-link{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:10px 24px;border:1px solid #923a28;background:#923a28;color:#fff9ed;font-family:inherit;font-size:1rem;line-height:1.5;transition:background .2s}
+.alpha-link:hover{background:#6c2a1e;border-color:#6c2a1e}
+.alpha-status{display:block;margin-top:12px;color:#6b6258;font:400 .875rem/1.6 var(--mono)}
+.hero-screen{margin:0;min-width:0}.hero-screen img{display:block;width:100%;height:auto;border:1px solid #c8c4b8}.hero-screen figcaption,.scroll-figure figcaption{font-size:.875rem;line-height:1.7;color:#666b63;margin-top:12px}
+.scroll-index{max-width:1180px;margin:0 auto;display:flex;gap:24px;flex-wrap:wrap;padding:24px 0;border-top:1px solid #cbc6b7;border-bottom:1px solid #cbc6b7;font-size:.875rem;line-height:1.7}
+.scroll-index a{padding:8px 0;color:#515750;border-bottom:1px solid transparent}.scroll-index a:hover{border-color:#923a28;color:#923a28}
+.scroll-section{max-width:1180px;margin:0 auto;padding:clamp(72px,10vw,140px) 0;border-bottom:1px solid #d1ccbe;scroll-margin-top:calc(var(--header) + 20px)}
+.scroll-chapter{display:grid;grid-template-columns:60px 1fr;gap:30px}.chapter-mark{color:#923a28;font-size:1.25rem;writing-mode:vertical-rl;letter-spacing:.3em;padding-top:7px;justify-self:start}
+.chapter-body{min-width:0}.scroll-section h2{font-weight:400;font-size:clamp(1.75rem,3.2vw,2.8rem);line-height:1.6;letter-spacing:.06em;margin:0 0 36px;text-wrap:balance}
+.scroll-section h3{font-weight:400;font-size:1.375rem;line-height:1.7;margin:0 0 20px}
+.scroll-section p{font-size:1.0625rem;max-width:720px;margin:0 0 24px}.body-actions{font-size:clamp(1.3rem,2.7vw,2rem)!important;line-height:2.2;letter-spacing:.06em}
+.scroll-section .quiet-emphasis{font-size:clamp(1.25rem,2.5vw,1.75rem);line-height:1.85;border-left:2px solid #a64732;padding-left:26px;margin:40px 0}
+.scroll-figure{margin:48px 0 0}.scroll-figure img{display:block;width:100%;height:auto;border:1px solid #c8c4b8}
+.two-readings{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:55px}.two-readings p{font-size:1rem}
+.lore-flow{list-style:none;display:flex;gap:0;flex-wrap:wrap;max-width:950px;padding:0;margin:48px 0;font-size:1.125rem;line-height:2.4}
+.lore-flow li{display:flex;align-items:center;white-space:nowrap}.lore-flow li:not(:last-child):after{content:"／";color:#a64732;padding:0 14px}.lore-flow li:last-child{color:#923a28}
+.scroll-section .lore-note{font-size:1rem;color:#5c625b}
+.making{max-width:1180px;margin:0 auto;padding:70px 0 50px;border-bottom:1px solid #d1ccbe}.making h2{font-weight:400;font-size:1.5rem;line-height:1.7;margin:0 0 30px}.making dl{display:grid;grid-template-columns:180px 1fr;gap:18px 35px;margin:0}.making dt{font-size:.9375rem;color:#5d625b}.making dd{font-size:1rem;margin:0;max-width:760px}.making p{font-size:.9375rem;line-height:1.9;color:#5d625b;margin:30px 0 0}
+.scroll-end{max-width:1180px;margin:auto;padding:80px 0 100px;text-align:center}.scroll-end h2{font-size:clamp(1.75rem,3.2vw,2.8rem);font-weight:400;line-height:1.7;margin:0 0 18px}.scroll-end>p{font-size:1.0625rem;margin:0 0 30px}.return-link{display:block;font-size:.9375rem;color:#555e58;margin-top:32px;text-decoration:underline;text-underline-offset:5px}
+.kunizukuri-page footer{color:#eef5f7;font-family:Inter,Arial,sans-serif}.kunizukuri-page .footer-brand p{font-size:.9375rem}.kunizukuri-page .footer-links a{font-size:.875rem}.kunizukuri-page .footer-links strong,.kunizukuri-page .footer-bottom{font-size:.75rem}
+.kunizukuri-page .site-nav a{font-size:.75rem}.kunizukuri-page .site-nav{gap:13px}.kunizukuri-page .logo{font-size:.75rem}.kunizukuri-page .logo small{font-size:.6rem}
+@media(max-width:1300px){.scroll-index,.scroll-section,.making,.scroll-end{margin-left:5vw;margin-right:5vw}.kunizukuri-page .site-header{padding-left:20px;padding-right:20px}.kunizukuri-page .site-nav{gap:10px}.kunizukuri-page .site-nav a{font-size:.7rem}}
+@media(max-width:1100px){.kunizukuri-page .nav-toggle{display:block;margin-left:auto;margin-right:14px}.kunizukuri-page .site-nav{display:none;position:absolute;top:var(--header);left:0;right:0;background:#070b10;padding:24px;flex-direction:column;align-items:flex-start}.kunizukuri-page .site-nav.open{display:flex}.kunizukuri-page .site-nav a{font-size:.875rem;line-height:1.8}.scroll-hero{grid-template-columns:1fr 1.2fr}.scroll-title{font-size:6rem}.two-readings{gap:30px}}
+@media(max-width:760px){.scroll-hero{grid-template-columns:1fr;gap:34px;padding:44px 6vw 34px;min-height:auto}.scroll-title{font-size:5.4rem}.scroll-lead{font-size:1.2rem}.roman-title{margin-bottom:22px}.scroll-index{gap:8px 20px;margin:0 6vw;padding:18px 0}.scroll-section,.making,.scroll-end{margin-left:6vw;margin-right:6vw}.scroll-chapter{grid-template-columns:24px 1fr;gap:16px}.chapter-mark{font-size:1rem}.scroll-section{padding:70px 0}.scroll-section h2{font-size:1.7rem;letter-spacing:.03em;margin-bottom:28px}.scroll-section p{font-size:1rem}.two-readings{grid-template-columns:1fr;gap:24px}.lore-flow{font-size:1rem;margin:28px 0}.lore-flow li:not(:last-child):after{padding:0 10px}.scroll-figure{margin-top:32px}.making dl{grid-template-columns:1fr;gap:8px}.making dd{margin-bottom:18px}.scroll-end{padding:60px 0 75px}.scroll-end h2{font-size:1.7rem}.kunizukuri-page .logo small{font-size:.55rem}}
+@media(prefers-reduced-motion:reduce){.kunizukuri-page *{scroll-behavior:auto!important;transition:none!important}}
