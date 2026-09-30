@@ -1,4 +1,45 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>更新履歴 — Source of Thought</title><link rel="stylesheet" href="style.css"><link rel="canonical" href="https://www.jinn-project.com/research/source-of-thought/changelog-ja.html"><link rel="alternate" hreflang="en" href="https://www.jinn-project.com/research/source-of-thought/changelog.html"><link rel="alternate" hreflang="ja" href="https://www.jinn-project.com/research/source-of-thought/changelog-ja.html"><link rel="alternate" hreflang="x-default" href="https://www.jinn-project.com/research/source-of-thought/changelog.html"><meta property="og:type" content="website"><meta property="og:site_name" content="Source of Thought"><meta property="og:locale" content="ja_JP"><meta property="og:title" content="更新履歴 — Source of Thought"><meta property="og:description" content="Source of ThoughtのBattle Prep、Resonance、フォーメーションなどの実装変更を記録しています。"><meta property="og:url" content="https://www.jinn-project.com/research/source-of-thought/changelog-ja.html"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="更新履歴 — Source of Thought"><meta name="twitter:description" content="Source of ThoughtのBattle Prep、Resonance、フォーメーションなどの実装変更を記録しています。"><link rel="stylesheet" href="../../i18n/language-switch.css"></head><body class="lang-ja">
-<header class="site-header"><a class="brand" href="index-ja.html"><span class="brand-mark">S/T</span><span>SOURCE OF THOUGHT<small>開発中</small></span></a><button class="nav-toggle" aria-label="メニューを開く" aria-expanded="false">メニュー</button><nav class="site-nav"><a href="index-ja.html#game">ゲーム</a><a href="index-ja.html#screenshots">スクリーンショット</a><a href="gallery-ja.html">ギャラリー</a><a href="devblog/index-ja.html">開発ブログ</a><a href="roadmap-ja.html">ロードマップ</a></nav><div class="language-switch" aria-label="Language"><span aria-hidden="true">🌐</span><a lang="en" hreflang="en" href="changelog.html">EN</a><span aria-hidden="true">|</span><a lang="ja" hreflang="ja" href="changelog-ja.html" aria-current="true">JP</a></div></header>
-<main><section class="page-hero"><div><p class="eyebrow">プロジェクト更新履歴</p><h1>変更内容。</h1><p>実装単位の変更を簡潔に記録します。設計判断や実験の背景は開発ブログをご覧ください。</p></div></section><div class="changelog-wrap"><article class="changelog-entry"><div><span class="version">v0.3.0</span><time datetime="2026-07-13">2026.07.13</time></div><div><h2>配置深度とResonanceプレビュー</h2><ul><li>5×5フォーメーション全体へ配置補正を拡張。</li><li>縦方向と横方向の補正を統合。</li><li>隣接CardのResonanceを最終値プレビューへ追加。</li></ul></div></article><article class="changelog-entry"><div><span class="version">v0.2.0</span><time datetime="2026-07-12">2026.07.12</time></div><div><h2>Battle Prep製品UI</h2><ul><li>Deck、Card詳細、生成スキル、フォーメーションの各パネルを追加。</li><li>1920×1080での視認性と能力値表示を改善。</li><li>製品用Battle Prepをシミュレーション／デバッグUIから分離。</li></ul></div></article><article class="changelog-entry"><div><span class="version">v0.1.0</span><time datetime="2026-07-06">2026.07.06</time></div><div><h2>Source of Thoughtプロトタイプ</h2><ul><li>10枚のDeckと5枚の配置ルールを確立。</li><li>Mind、Human、System、Karma中立の相性を定義。</li><li>ThoughtMapのパラメータデータをCard能力値へ接続。</li></ul></div></article></div></main>
-<footer><a class="brand" href="index-ja.html"><span class="brand-mark">S/T</span><span>SOURCE OF THOUGHT</span></a><p>技術的な変更を、読みやすく記録します。</p><div><a href="https://github.com/flyingbaby24/koseisha-os" target="_blank" rel="noopener">GitHub ↗</a><a href="devblog/index-ja.html">開発ブログ</a><a href="roadmap-ja.html">ロードマップ</a><a href="changelog-ja.html">更新履歴</a></div><small>© 2026 Jinn Project.</small></footer><script src="../../i18n/language-switch.js"></script><script src="script.js"></script></body></html>
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#070b10">
+  <title>変更履歴 — Source of Thought | Jinn Project</title>
+  <meta name="description" content="公開Web版の現況と初期開発の変更履歴。">
+  <link rel="canonical" href="https://www.jinn-project.com/research/source-of-thought/changelog-ja.html">
+  <link rel="alternate" hreflang="en" href="https://www.jinn-project.com/research/source-of-thought/changelog.html">
+  <link rel="alternate" hreflang="ja" href="https://www.jinn-project.com/research/source-of-thought/changelog-ja.html">
+  <link rel="alternate" hreflang="x-default" href="https://www.jinn-project.com/research/source-of-thought/changelog.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Jinn Project">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:title" content="変更履歴 — Source of Thought">
+  <meta property="og:description" content="公開Web版の現況と初期開発の変更履歴。">
+  <meta property="og:url" content="https://www.jinn-project.com/research/source-of-thought/changelog-ja.html">
+  <meta property="og:image" content="https://www.jinn-project.com/research/source-of-thought/screenshots/web-v1/stratagem.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../../images/logo.png">
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="stylesheet" href="../../i18n/language-switch.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="sot-site lang-ja sot-history">
+  <a class="skip-link" href="#main">本文へ移動</a>
+  <header class="site-header">
+    <a class="logo" href="../../index-ja.html#top" aria-label="Jinn Projectホーム"><img src="../../images/logo.png" alt=""><span>JINN PROJECT<small>研究・開発</small></span></a>
+    <button class="nav-toggle" type="button" aria-label="ナビゲーションを開く" aria-expanded="false"><span></span><span></span></button>
+    <nav class="site-nav" aria-label="メインナビゲーション">
+      <a href="../../index-ja.html#top">ホーム</a><a href="../../index-ja.html#research">研究</a><a href="../../index-ja.html#projects">プロジェクト</a><a href="../../mandalizm/">MANDALIZM</a><a href="../../jinnsp-android/">JINNSP</a><a href="../../research/source-of-thought/index-ja.html">SOURCE OF THOUGHT</a><a href="../../research/source-of-thought/devblog/index-ja.html">開発ブログ</a><a href="../../index-ja.html#publications">研究成果</a><a href="https://github.com/flyingbaby24/koseisha-os" target="_blank" rel="noopener noreferrer">Jinn GitHub ↗</a><a href="../../index-ja.html#contact">お問い合わせ</a>
+    </nav>
+    <div class="language-switch" aria-label="Language"><a lang="en" hreflang="en" href="changelog.html">EN</a><span aria-hidden="true">|</span><a lang="ja" hreflang="ja" href="changelog-ja.html" aria-current="true">JP</a></div>
+  </header>
+  <main id="main">
+    <nav class="project-subnav sot-subnav" aria-label="Source of Thought内のナビゲーション"><a href="index-ja.html">ゲーム紹介</a><a href="gallery-ja.html">実画面</a><a href="devblog/index-ja.html">開発履歴</a><a href="roadmap-ja.html">開発状況</a><a href="changelog-ja.html">変更履歴</a></nav>
+<section class="section sot-page-head"><p class="eyebrow">PUBLIC WEB / CHANGE RECORD</p><h1>変化の記録。</h1><p>現行Web版の紹介ページは2026-09-30に確認・更新。以下のv0.x記録は初期開発の履歴です。</p><div class="actions"><a class="button primary" href="https://sot-web.onrender.com/" target="_blank" rel="noopener noreferrer">Source of Thoughtをプレイ ↗</a></div></section><section class="section"><h2>現在の公開Web版</h2><p>Three.js / Web · Deck / Members / Formation · family-affinity-v1 · 36 Stratagems · current combat presentation · Victory / Result</p><p class="sot-archive-note">過去の開発記録は履歴として保持しています。初期試作の達成率や配布計画は現在のWeb版の状態を示しません。</p></section><section class="sot-history-content"><h2>Archive / 初期変更記録</h2><div class="changelog-wrap"><article class="changelog-entry"><div><span class="version">v0.3.0</span><time datetime="2026-07-13">2026.07.13</time></div><div><h2>配置深度とResonanceプレビュー</h2><ul><li>5×5フォーメーション全体へ配置補正を拡張。</li><li>縦方向と横方向の補正を統合。</li><li>隣接CardのResonanceを最終値プレビューへ追加。</li></ul></div></article><article class="changelog-entry"><div><span class="version">v0.2.0</span><time datetime="2026-07-12">2026.07.12</time></div><div><h2>Battle Prep製品UI</h2><ul><li>Deck、Card詳細、生成スキル、フォーメーションの各パネルを追加。</li><li>1920×1080での視認性と能力値表示を改善。</li><li>製品用Battle Prepをシミュレーション／デバッグUIから分離。</li></ul></div></article><article class="changelog-entry"><div><span class="version">v0.1.0</span><time datetime="2026-07-06">2026.07.06</time></div><div><h2>Source of Thoughtプロトタイプ</h2><ul><li>10枚のDeckと5枚の配置ルールを確立。</li><li>Mind、Human、System、Karma中立の相性を定義。</li><li>ThoughtMapのパラメータデータをCard能力値へ接続。</li></ul></div></article></div></section>
+  </main>
+  <footer id="contact"><div class="footer-brand"><a class="logo" href="../../index-ja.html#top"><img src="../../images/logo.png" alt=""><span>JINN PROJECT</span></a><p>見えない構造を可視化するための独立研究、オープンシステム、ゲーム開発。</p></div><div class="footer-links"><div><strong>プロジェクト</strong><a href="../../kunizukuri/">国創 — Daidarabotchi</a><a href="../../mandalizm/">Mandalizm</a><a href="../../jinnsp-android/">JinnSP</a><a href="index-ja.html">Source of Thought</a><a href="devblog/index-ja.html">開発履歴</a><a href="../../research/thoughtmap/index-ja.html">ThoughtMap</a></div><div><strong>研究</strong><a href="../../index-ja.html#publications">研究成果</a><a href="../../research/stratagems/">Stratagems Atlas</a><a href="https://github.com/flyingbaby24/koseisha-os" target="_blank" rel="noopener noreferrer">Jinn Project GitHub ↗</a></div><div><strong>お問い合わせ</strong><a href="https://linktr.ee/Jinn_project" target="_blank" rel="noopener noreferrer">すべてのリンク ↗</a><a href="https://www.patreon.com/cw/JinnProject" target="_blank" rel="noopener noreferrer">Patreon ↗</a></div></div><div class="footer-bottom"><span>© 2026 Jinn Project</span><span>思想 / 身体 / 素材 / システム</span></div></footer>
+  <script src="../../i18n/language-switch.js"></script>
+  <script src="../../kunizukuri/shell.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

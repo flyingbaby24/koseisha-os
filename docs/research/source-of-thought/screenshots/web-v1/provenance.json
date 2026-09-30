@@ -1,0 +1,71 @@
+{
+  "version": "sot-jinn-site-captures-v1",
+  "recordedAt": "2026-09-30",
+  "playableAuthority": "https://sot-web.onrender.com/",
+  "pvEvidence": "SoT workspace docs/videos/pv-v1/PV_CAPTURE_INDEX.md",
+  "pvSeed": 101,
+  "pvPreset": "mode=app&combatPresentation=latest&stratagemUi=effects",
+  "notes": [
+    "Actual game captures only. No generated UI, concept render, or PV editorial overlay.",
+    "Cropped Formation and Resonance frames are labeled as cropped gameplay captures. Original recordings remain unchanged.",
+    "Screenshots document observed visuals; they are not evidence of audio correctness or account/cloud feature availability."
+  ],
+  "images": [
+    {
+      "file": "preparation.png",
+      "bytes": 101885,
+      "sha256": "41251ebe9e9d6384f5cc016e00514bfc7a239abf25e8c0e2cd0247ac712b8b06",
+      "authority": "https://sot-web.onrender.com/",
+      "processing": "Browser capture of actual public Preparation; no UI reconstruction.",
+      "synthetic": false
+    },
+    {
+      "file": "formation.jpg",
+      "bytes": 77292,
+      "sha256": "8f5ce58a9744eb095d21eb3d6c69ae500f7f32f59afed2937d97429665733cff",
+      "authority": "PV_CAPTURE_INDEX.md / take P / takeP.webm / 40.0 seconds",
+      "processing": "Crop 2048:1152:880:780 from 3840×2160 recording, resized to 1280×720.",
+      "synthetic": false
+    },
+    {
+      "file": "resonance.jpg",
+      "bytes": 79321,
+      "sha256": "939aba14b03125eafbf9b00ffedcdeafe05f0c528a36e45e8aa9d42e1563767f",
+      "authority": "PV_CAPTURE_INDEX.md / take P / takeP.webm / 44.0 seconds",
+      "processing": "Crop 2048:1152:880:780 from 3840×2160 recording, resized to 1280×720.",
+      "synthetic": false
+    },
+    {
+      "file": "battle.jpg",
+      "bytes": 181594,
+      "sha256": "e9f7d1e70b266bb16ba58dbea15ce82b11e179ba232e7303fab6f206bc13668c",
+      "authority": "PV_CAPTURE_INDEX.md / take C / takeC.webm / 65.4 seconds",
+      "processing": "Actual 5 vs 5 combat; full frame resized to 1280×720.",
+      "synthetic": false
+    },
+    {
+      "file": "stratagem.jpg",
+      "bytes": 165908,
+      "sha256": "1ba83c3b4b04d17ef5960a3da952aaab846286b6ebb93b7b787d646733f21e18",
+      "authority": "PV_CAPTURE_INDEX.md / take C / takeC.webm / 117.5 seconds",
+      "processing": "Actual 005 Burning House formation; full frame resized to 1280×720.",
+      "synthetic": false
+    },
+    {
+      "file": "victory.jpg",
+      "bytes": 234586,
+      "sha256": "485af3a0d4e5470cf415e77a22e247ffe35f51a2b4da1cf686e231f1ce897428",
+      "authority": "PV_CAPTURE_INDEX.md / take C / takeC_victory.png",
+      "processing": "Existing gameplay keyframe converted to JPEG; resized to 1280×720.",
+      "synthetic": false
+    },
+    {
+      "file": "result.jpg",
+      "bytes": 80279,
+      "sha256": "a3a6014e7c454c74ab4761a58e28bbeb7fd1213d8d576a2cd894ff4a1d36aeb9",
+      "authority": "PV_CAPTURE_INDEX.md / take C / takeC_result.png",
+      "processing": "Existing gameplay keyframe converted to JPEG; resized to 1280×720.",
+      "synthetic": false
+    }
+  ]
+}

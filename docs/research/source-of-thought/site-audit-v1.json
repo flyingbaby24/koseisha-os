@@ -1,0 +1,84 @@
+{
+  "version": "sot-jinn-site-rebuild-v1",
+  "baseCommit": "dcab12b98e28e969840111cc6ab5530131dc9e3e",
+  "scope": "Jinn Project public introduction only",
+  "gameplayAuthority": "https://sot-web.onrender.com/",
+  "gameplaySource": {
+    "repository": "flyingbaby24/sot-web",
+    "visibility": "private",
+    "publicGameplayGitHubCTA": false
+  },
+  "classification": {
+    "current": [
+      "index.html",
+      "index-ja.html",
+      "gallery.html",
+      "gallery-ja.html",
+      "roadmap.html",
+      "roadmap-ja.html"
+    ],
+    "mixedCurrentAndExplicitHistory": [
+      "changelog.html",
+      "changelog-ja.html"
+    ],
+    "historyIndex": [
+      "devblog/index.html",
+      "devblog/index-ja.html"
+    ],
+    "historical": [
+      {
+        "path": "devblog/articles/hate-targeting-system.html",
+        "bodyPreserved": true
+      },
+      {
+        "path": "devblog/articles/hate-targeting-system-ja.html",
+        "bodyPreserved": true
+      },
+      {
+        "path": "devblog/articles/resonance-system.html",
+        "bodyPreserved": true
+      },
+      {
+        "path": "devblog/articles/resonance-system-ja.html",
+        "bodyPreserved": true
+      },
+      {
+        "path": "devblog/articles/why-build-a-game-from-thought.html",
+        "bodyPreserved": true
+      },
+      {
+        "path": "devblog/articles/why-build-a-game-from-thought-ja.html",
+        "bodyPreserved": true
+      },
+      {
+        "path": "devblog/articles/skill-generation-pipeline.html",
+        "bodyPreserved": true
+      },
+      {
+        "path": "devblog/articles/skill-generation-pipeline-ja.html",
+        "bodyPreserved": true
+      }
+    ],
+    "archiveTechnicalIndex": "README.md",
+    "authoringOnly": [
+      "devblog/post-template.html",
+      "devblog/post-template-ja.html"
+    ],
+    "outdatedClaimsRemovedFromCurrentPages": [
+      "Unity / PC platform labels",
+      "Steam Wishlist / coming soon CTA",
+      "Screenshot placeholders",
+      "Unverified old milestone percentages and future Steam schedule"
+    ]
+  },
+  "boundaries": {
+    "gameplayChanged": false,
+    "personalDbChanged": false,
+    "authChanged": false,
+    "thoughtMapApplicationChanged": false,
+    "dnsChanged": false
+  },
+  "tools": {
+    "localizedPages": "Read-only shared-shell/metadata validation; no longer overwrites shared sitemap or reintroduces old microsite."
+  }
+}

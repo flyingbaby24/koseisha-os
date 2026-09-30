@@ -1,4 +1,6 @@
-# Source of Thought — Technical Architecture and Progress
+# Source of Thought — Historical Technical Architecture
+
+> ARCHIVE / DEVELOPMENT HISTORY. The text below records the Unity-era architecture reviewed on 2026-08-08. It is not the specification or implementation status of the current public Web build. For the current introduction, use [Source of Thought](./index.html); the playable authority is [the public Web application](https://sot-web.onrender.com/). Historical details are retained, not silently adopted as current claims.
 
 Source of Thought is a knowledge-driven card battle project built on ThoughtMap data. This page is the technical index for the current Unity implementation. It separates production-ready foundations from work that is still planned.
 

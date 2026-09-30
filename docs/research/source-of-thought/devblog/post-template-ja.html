@@ -1,6 +1,45 @@
 <!doctype html>
-<!-- devblog/articles/へコピーし、../ を ../../ へ変更してください。英語記事と同じslugに -ja.html を付け、両言語を tools/generate-localized-pages.mjs へ登録します。 -->
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="記事の概要を入力してください。"><title>記事タイトル — Source of Thought</title><link rel="stylesheet" href="../style.css"></head><body class="lang-ja">
-<header class="site-header"><a class="brand" href="../index-ja.html"><span class="brand-mark">S/T</span><span>SOURCE OF THOUGHT<small>開発ブログ</small></span></a><button class="nav-toggle" aria-label="メニューを開く" aria-expanded="false">メニュー</button><nav class="site-nav"><a href="index-ja.html">記事一覧</a><a href="../gallery-ja.html">ギャラリー</a><a href="../roadmap-ja.html">ロードマップ</a></nav><div class="language-switch" aria-label="Language"><span aria-hidden="true">🌐</span><a lang="en" hreflang="en" href="post-template.html">EN</a><span aria-hidden="true">|</span><a lang="ja" hreflang="ja" href="post-template-ja.html" aria-current="true">JP</a></div></header>
-<main><article class="article"><header class="article-header"><p class="eyebrow">システム · カテゴリー</p><h1>実装内容が分かる具体的なタイトル</h1><p class="article-meta"><time datetime="YYYY-MM-DD">YYYY年MM月DD日</time> · 読了0分 · 実装済み／開発中</p></header><div class="article-body"><p>実際に何を実装し、なぜ必要だったのかを記述します。</p><h2>実装上の課題</h2><p>データ、UI、ゲームプレイ上の具体的な制約を説明します。</p><h2>現在のシステム</h2><p>実装済みの挙動、制限、責務の境界を説明します。</p><blockquote>中心となる設計判断を一文で記録します。</blockquote><h2>今後の作業</h2><p>完成済みの機能と計画中の作業を分離し、将来案を実装済みとして記載しないようにします。</p></div><nav class="article-nav" aria-label="記事ナビゲーション"><a href="#">← 前の記事：リンクを設定</a><a href="#">次の記事：リンクを設定 →</a></nav></article></main>
-<footer><a class="brand" href="../index-ja.html"><span class="brand-mark">S/T</span><span>SOURCE OF THOUGHT</span></a><p>実際の開発内容を記録する、進行中ビルドの実装ノートです。</p><div><a href="index-ja.html">開発ブログ</a><a href="../roadmap-ja.html">ロードマップ</a><a href="../changelog-ja.html">更新履歴</a></div><small>© 2026 Jinn Project.</small></footer><script src="../i18n/routes.js"></script><script src="../script.js"></script></body></html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#070b10">
+  <title>開発記事テンプレート | Jinn Project</title>
+  <meta name="description" content="内部執筆用テンプレート。">
+  <link rel="canonical" href="https://www.jinn-project.com/research/source-of-thought/devblog/post-template-ja.html">
+  <link rel="alternate" hreflang="en" href="https://www.jinn-project.com/research/source-of-thought/devblog/post-template.html">
+  <link rel="alternate" hreflang="ja" href="https://www.jinn-project.com/research/source-of-thought/devblog/post-template-ja.html">
+  <link rel="alternate" hreflang="x-default" href="https://www.jinn-project.com/research/source-of-thought/devblog/post-template.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Jinn Project">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:title" content="開発記事テンプレート">
+  <meta property="og:description" content="内部執筆用テンプレート。">
+  <meta property="og:url" content="https://www.jinn-project.com/research/source-of-thought/devblog/post-template-ja.html">
+  <meta property="og:image" content="https://www.jinn-project.com/research/source-of-thought/screenshots/web-v1/stratagem.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../../../images/logo.png">
+  <link rel="stylesheet" href="../../../style.css">
+  <link rel="stylesheet" href="../../../i18n/language-switch.css">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body class="sot-site lang-ja sot-history">
+  <a class="skip-link" href="#main">本文へ移動</a>
+  <header class="site-header">
+    <a class="logo" href="../../../index-ja.html#top" aria-label="Jinn Projectホーム"><img src="../../../images/logo.png" alt=""><span>JINN PROJECT<small>研究・開発</small></span></a>
+    <button class="nav-toggle" type="button" aria-label="ナビゲーションを開く" aria-expanded="false"><span></span><span></span></button>
+    <nav class="site-nav" aria-label="メインナビゲーション">
+      <a href="../../../index-ja.html#top">ホーム</a><a href="../../../index-ja.html#research">研究</a><a href="../../../index-ja.html#projects">プロジェクト</a><a href="../../../mandalizm/">MANDALIZM</a><a href="../../../jinnsp-android/">JINNSP</a><a href="../../../research/source-of-thought/index-ja.html">SOURCE OF THOUGHT</a><a href="../../../research/source-of-thought/devblog/index-ja.html">開発ブログ</a><a href="../../../index-ja.html#publications">研究成果</a><a href="https://github.com/flyingbaby24/koseisha-os" target="_blank" rel="noopener noreferrer">Jinn GitHub ↗</a><a href="../../../index-ja.html#contact">お問い合わせ</a>
+    </nav>
+    <div class="language-switch" aria-label="Language"><a lang="en" hreflang="en" href="post-template.html">EN</a><span aria-hidden="true">|</span><a lang="ja" hreflang="ja" href="post-template-ja.html" aria-current="true">JP</a></div>
+  </header>
+  <main id="main">
+    <nav class="project-subnav sot-subnav" aria-label="Source of Thought内のナビゲーション"><a href="../index-ja.html">ゲーム紹介</a><a href="../gallery-ja.html">実画面</a><a href="../devblog/index-ja.html">開発履歴</a><a href="../roadmap-ja.html">開発状況</a><a href="../changelog-ja.html">変更履歴</a></nav>
+<div class="sot-archive-note">執筆用テンプレート。公開版のゲーム紹介・実装証拠ではありません。</div><article class="article"><header class="article-header"><p class="eyebrow">システム · カテゴリー</p><h1>実装内容が分かる具体的なタイトル</h1><p class="article-meta"><time datetime="YYYY-MM-DD">YYYY年MM月DD日</time> · 読了0分 · 実装済み／開発中</p></header><div class="article-body"><p>実際に何を実装し、なぜ必要だったのかを記述します。</p><h2>実装上の課題</h2><p>データ、UI、ゲームプレイ上の具体的な制約を説明します。</p><h2>現在のシステム</h2><p>実装済みの挙動、制限、責務の境界を説明します。</p><blockquote>中心となる設計判断を一文で記録します。</blockquote><h2>今後の作業</h2><p>完成済みの機能と計画中の作業を分離し、将来案を実装済みとして記載しないようにします。</p></div><nav class="article-nav" aria-label="記事ナビゲーション"><a href="#">← 前の記事：リンクを設定</a><a href="#">次の記事：リンクを設定 →</a></nav></article>
+  </main>
+  <footer id="contact"><div class="footer-brand"><a class="logo" href="../../../index-ja.html#top"><img src="../../../images/logo.png" alt=""><span>JINN PROJECT</span></a><p>見えない構造を可視化するための独立研究、オープンシステム、ゲーム開発。</p></div><div class="footer-links"><div><strong>プロジェクト</strong><a href="../../../kunizukuri/">国創 — Daidarabotchi</a><a href="../../../mandalizm/">Mandalizm</a><a href="../../../jinnsp-android/">JinnSP</a><a href="../index-ja.html">Source of Thought</a><a href="../devblog/index-ja.html">開発履歴</a><a href="../../../research/thoughtmap/index-ja.html">ThoughtMap</a></div><div><strong>研究</strong><a href="../../../index-ja.html#publications">研究成果</a><a href="../../../research/stratagems/">Stratagems Atlas</a><a href="https://github.com/flyingbaby24/koseisha-os" target="_blank" rel="noopener noreferrer">Jinn Project GitHub ↗</a></div><div><strong>お問い合わせ</strong><a href="https://linktr.ee/Jinn_project" target="_blank" rel="noopener noreferrer">すべてのリンク ↗</a><a href="https://www.patreon.com/cw/JinnProject" target="_blank" rel="noopener noreferrer">Patreon ↗</a></div></div><div class="footer-bottom"><span>© 2026 Jinn Project</span><span>思想 / 身体 / 素材 / システム</span></div></footer>
+  <script src="../../../i18n/language-switch.js"></script>
+  <script src="../../../kunizukuri/shell.js"></script>
+  <script src="../script.js"></script>
+</body>
+</html>
