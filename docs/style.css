@@ -22,3 +22,18 @@ footer{padding:80px max(5vw,24px) 28px;border-top:1px solid var(--line);backgrou
 .project-mandalizm:after{background:radial-gradient(circle at 78% 18%,rgba(255,79,216,.2),transparent 27%),radial-gradient(circle at 20% 72%,rgba(66,217,245,.13),transparent 24%)}.project-mandalizm>span{color:#ff70dd}.project-sole:after{background:radial-gradient(circle at 78% 18%,rgba(158,183,138,.16),transparent 28%)}.project-sole>span{color:#a9c697}
 /* Real SoT gameplay previews; retain the existing Top layout. */
 .sot-top-preview>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.sot-top-preview .visual-ui{background:linear-gradient(transparent,rgba(4,8,12,.94))}.sot-top-screen{min-height:0;justify-content:center;padding:0;background:var(--surface)}.sot-top-screen>a{display:block}.sot-top-screen img{display:block;width:100%;height:auto}.sot-top-screen>strong{padding:18px 22px}
+
+/* Site-wide brand & accessibility fixes (see site-redesign/AUDIT.md).
+   The ink logo is black on transparency: invert it so it is visible on the dark header.
+   Raise the smallest navigation/footer labels to legible sizes and WCAG AA contrast. */
+.logo img{filter:invert(1);opacity:.92}
+.site-nav a{font-size:.64rem}
+@media(max-width:1280px){.site-nav{gap:16px}}
+.site-header>.logo{flex:none;margin-right:28px}
+@media(min-width:1001px) and (max-width:1180px){.site-header>.logo small{display:none}.site-header>.logo{margin-right:18px}.site-nav{gap:11px}.site-nav a{letter-spacing:.03em}.site-header .language-switch{margin-left:14px}}
+.footer-links strong{color:#8a9aa4;font-size:.64rem}
+.footer-bottom{color:#8a9aa4;font-size:.64rem}
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+/* Ten-item navigation does not fit beside the logo below 1000px: use the menu button there too. */
+@media(max-width:1000px){.nav-toggle{display:block;order:3}.site-header>.logo{order:1}.site-header .language-switch{order:2;margin-left:auto;margin-right:10px}.site-nav{order:4;display:none;position:absolute;top:var(--header);left:0;right:0;padding:25px;background:rgba(7,11,16,.97);border-bottom:1px solid var(--line);flex-direction:column;align-items:flex-start;gap:14px}.site-nav.open{display:flex}.site-nav a{font-size:.8rem;padding:6px 0}}

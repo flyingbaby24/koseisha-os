@@ -1,0 +1,43 @@
+name: Site CI
+
+# Static checks for the www.jinn-project.com pages under docs/.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "tests/**"
+      - ".github/workflows/site-ci.yml"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "tests/**"
+      - ".github/workflows/site-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: site-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Site regression tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Top pages are generated from docs/index.html
+        run: |
+          node docs/tools/generate-index-ja.mjs
+          git diff --exit-code -- docs/index.html docs/index-ja.html
+
+      - name: Regression tests
+        run: node --test tests/*.mjs
