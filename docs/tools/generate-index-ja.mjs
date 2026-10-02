@@ -78,7 +78,7 @@ const tr = {
   "<span class=\"status status-dev\">In development</span>":"<span class=\"status status-dev\">開発中</span>",
   " Source of Thought, public web build</a>":" Source of Thought Web版</a>",
   " Kunizukuri — Daidarabotchi<span":" 国創 — Daidarabotchi<span",
-  " ThoughtMap, 32,695+ works<span":" ThoughtMap — 32,695件以上の作品<span",
+  " ThoughtMap, 64,000+ works<span":" ThoughtMap — 64,000件以上の作品<span",
   "<span class=\"sr-only\"> (opens in a new tab)</span>":"<span class=\"sr-only\">（新しいタブで開きます）</span>",
 
   // Flagship
@@ -113,7 +113,7 @@ const tr = {
   "<span>App · Installable PWA</span>":"<span>アプリ · インストール可能なPWA</span>",
   "<span>Product</span>":"<span>プロダクト</span>",
   "A strategy card game where ideas compete by meaning, affinity and resonance.":"思想が意味・相性・Resonanceで競い合う戦略カードゲーム。",
-  "Search and compare 32,695+ works by meaning rather than keywords.":"32,695件以上の作品を、キーワードではなく意味で検索・比較。",
+  "Search and compare 64,000+ works by meaning rather than keywords.":"64,000件以上の作品を、キーワードではなく意味で検索・比較。",
   "Launch ThoughtMap":"ThoughtMapを開く",
   "The Thirty-Six Stratagems read through cognitive bias and behavioural economics.":"兵法三十六計を、認知バイアスと行動経済学から読み解く。",
   "Open the Atlas":"Atlasを開く",
@@ -134,7 +134,7 @@ const tr = {
   "<p class=\"loop-step\">Corpus</p>":"<p class=\"loop-step\">コーパス</p>",
   "<h3>Research database</h3>":"<h3>研究データベース</h3>",
   "Literature, philosophy, science and history, stored with semantic embeddings.":"文学・哲学・科学・歴史の作品を、意味ベクトル（embedding）とともに蓄積。",
-  "<strong>32,695+</strong> works":"<strong>32,695+</strong> 作品",
+  "<strong>64,000+</strong> works":"<strong>64,000+</strong> 作品",
   "<p class=\"loop-step\">Semantic layer</p>":"<p class=\"loop-step\">意味レイヤー</p>",
   "Search by meaning, compare how works are composed, and navigate the corpus as a landscape.":"意味で検索し、作品の思想構成を比較し、コーパス全体を地形のように探索する。",
   "Explore ThoughtMap →":"ThoughtMapについて →",

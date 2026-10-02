@@ -37,7 +37,9 @@ Every anchor that sub-pages link to (`#top`, `#projects`, `#research`,
 
 Removed on purpose: "65% Source of Thought" (no unit or meaning) and
 "1,200+ GitHub commits" (not verifiable from the repository). Remaining figures
-come from content already published on the site.
+come from content already published on the site, except the ThoughtMap corpus
+figure, 64,000+, which is the public-facing figure supplied by the project
+owner (the database holds about 64,000 works).
 
 ## Design system — `docs/assets/site.css`
 

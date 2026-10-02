@@ -114,3 +114,11 @@ test('the top page loads only self-hosted fonts and a single stylesheet', () => 
   assert.doesNotMatch(css, /@import/);
   for (const [, font] of css.matchAll(/url\((fonts\/[^)]+)\)/g)) assert.ok(fs.existsSync(path.join(docs, 'assets', font)), font);
 });
+
+test('the top pages show the current ThoughtMap corpus figure in every place', () => {
+  for (const p of tops) {
+    const html = read(p);
+    assert.doesNotMatch(html, /32,695/, p);
+    assert.equal(html.split('64,000').length - 1, 4, p);
+  }
+});

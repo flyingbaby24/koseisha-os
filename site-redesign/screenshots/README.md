@@ -3,7 +3,9 @@
 Evidence for the redesign PR. Documentation only: nothing here is served by
 GitHub Pages, and these files can be dropped before or after merge.
 
-- **before** = `main` at `efe653a`; **after** = `claude/brave-pasteur-p7xcqp` at `25d22a6`.
+- **before** = `main` at `efe653a`; **after** = `claude/brave-pasteur-p7xcqp` at `25d22a6`,
+  re-captured with the same settings after the ThoughtMap corpus figure was
+  updated to 64,000+. The before images keep the figure `main` still shows.
 - Captured with Playwright + Chromium 1194 against a local static server.
 - `*-fold`: first viewport (desktop 1440×900, mobile 390×844), normal motion,
   2.5 s after load so entrance animations have settled.
