@@ -39,5 +39,10 @@ jobs:
           node docs/tools/generate-index-ja.mjs
           git diff --exit-code -- docs/index.html docs/index-ja.html
 
+      - name: Stratagems Atlas is generated from its data
+        run: |
+          node docs/tools/build-stratagems.mjs
+          git diff --exit-code -- docs/research/stratagems/index.html
+
       - name: Regression tests
         run: node --test tests/*.mjs

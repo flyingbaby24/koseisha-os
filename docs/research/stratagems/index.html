@@ -1,67 +1,383 @@
 <!doctype html>
-<html lang="ja">
+<html lang="ja" class="no-js">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>36 Stratagems Cognitive Bias Atlas | Jinn Project</title>
-  <meta name="description" content="A cognitive bias reinterpretation of the Thirty-Six Stratagems through behavioral economics and modern decision theory." />
-  <link rel="stylesheet" href="style.css" />
+  <meta name="description" content="A cognitive bias reinterpretation of the Thirty-Six Stratagems through behavioral economics and modern decision theory.">
+  <meta name="theme-color" content="#f3eee4">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Jinn Project">
+  <meta property="og:title" content="36 Stratagems Cognitive Bias Atlas">
+  <meta property="og:description" content="A cognitive bias reinterpretation of the Thirty-Six Stratagems through behavioral economics and modern decision theory.">
+  <meta property="og:url" content="https://www.jinn-project.com/research/stratagems/">
+  <link rel="icon" href="../../favicon.ico" sizes="any">
+  <link rel="icon" href="../../assets/img/icon-32.png" type="image/png">
+  <link rel="apple-touch-icon" href="../../assets/img/apple-touch-icon.png">
+  <script>(function(d){var l='ja';try{var p=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('stratagems-language')}catch(e){}var n=String(navigator.language||'').toLowerCase();l=p==='ja'||p==='en'?p:s==='ja'||s==='en'?s:n?(n.indexOf('ja')===0?'ja':'en'):'ja'}catch(e){}d.lang=l;d.className='js';var w=matchMedia('(min-width: 700px)').matches,f=l==='ja'?['fonts/atlas-han-600.woff2']:['../../assets/fonts/instrument-serif-latin.woff2'].concat(w?['fonts/atlas-han-600.woff2']:[]);f.forEach(function(h){var k=document.createElement('link');k.rel='preload';k.as='font';k.type='font/woff2';k.crossOrigin='anonymous';k.href=h;document.head.appendChild(k)})})(document.documentElement)</script>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="site-header">
-    <a class="brand" href="../../"><span class="mark">品</span><span>Jinn Project</span></a>
-    <nav><a href="#concept" data-i18n="navConcept">Concept</a><a href="#atlas" data-i18n="navAtlas">Atlas</a><a href="#categories" data-i18n="navCategories">Categories</a><a href="#notes" data-i18n="navNotes">Notes</a></nav>
-    <div class="language-switcher" role="group" aria-label="Language">
-      <button id="languageJa" class="language-button" type="button" data-language="ja" aria-pressed="false">JA</button>
-      <button id="languageEn" class="language-button" type="button" data-language="en" aria-pressed="false">EN</button>
+  <a class="skip-link" href="#atlas"><span data-l="ja" lang="ja">アトラスへスキップ</span><span data-l="en" lang="en">Skip to the atlas</span></a>
+  <header class="masthead">
+    <a class="brand" href="../../" data-home-en="../../" data-home-ja="../../index-ja.html"><img src="../../assets/img/jinn-mark-96.webp" width="32" height="32" alt=""><span>Jinn Project</span><span class="sr-only"> — <span data-l="ja" lang="ja">Jinn Project トップへ</span><span data-l="en" lang="en">Jinn Project home</span></span></a>
+    <span class="masthead-title" aria-hidden="true"><span data-l="ja" lang="ja">三十六計アトラス</span><span data-l="en" lang="en">Stratagems Atlas</span></span>
+    <nav class="masthead-nav" aria-label="三十六計アトラス" data-aria="pageName">
+      <a href="#atlas"><span data-l="ja" lang="ja">アトラス</span><span data-l="en" lang="en">Atlas</span></a><a href="#categories"><span data-l="ja" lang="ja">カテゴリ</span><span data-l="en" lang="en">Categories</span></a><a href="#concept"><span data-l="ja" lang="ja">概念</span><span data-l="en" lang="en">Concept</span></a><a href="#notes"><span data-l="ja" lang="ja">注記</span><span data-l="en" lang="en">Notes</span></a>
+    </nav>
+    <div class="language-switcher" role="group" aria-label="Language / 言語">
+      <button id="languageJa" class="language-button" type="button" data-language="ja" lang="ja" aria-pressed="false">日本語</button>
+      <button id="languageEn" class="language-button" type="button" data-language="en" lang="en" aria-pressed="false">EN</button>
     </div>
   </header>
-  <main>
-    <section class="hero">
-      <p class="eyebrow" data-i18n="heroEyebrow">Ancient Strategy / Cognitive Science / Behavioral Economics</p>
-      <h1 data-i18n-html="heroTitle">36 Stratagems<br><span>Cognitive Bias Atlas</span></h1>
-      <p class="lead" data-i18n="heroLead">三十六計を「兵法」だけでなく、人間の判断ミス・認知バイアス・行動経済学の実践的ケーススタディとして読み直す実験的マップ。</p>
-      <div class="hero-actions"><a class="button primary" href="#atlas" data-i18n="openAtlas">Open Atlas</a><a class="button secondary" href="#categories" data-i18n="viewCategories">View Categories</a></div>
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-text">
+        <p class="kicker"><span data-l="ja" lang="ja">古代兵法 / 認知科学 / 行動経済学</span><span data-l="en" lang="en">Ancient Strategy / Cognitive Science / Behavioral Economics</span></p>
+        <h1 id="hero-title"><span data-l="ja" lang="ja">三十六計<br><span>認知バイアス・アトラス</span></span><span data-l="en" lang="en">36 Stratagems<br><span>Cognitive Bias Atlas</span></span></h1>
+        <p class="lead"><span data-l="ja" lang="ja">三十六計を兵法だけでなく、人間の判断・認知バイアス・行動経済学の実践的ケーススタディとして読み直す実験的マップ。</span><span data-l="en" lang="en">An experimental map that rereads the Thirty-Six Stratagems as practical cases in judgment, cognitive bias, and behavioral economics.</span></p>
+        <p class="hero-actions"><a class="button button-ink" href="#atlas"><span data-l="ja" lang="ja">アトラスを開く</span><span data-l="en" lang="en">Open Atlas</span></a><a class="button" href="#categories"><span data-l="ja" lang="ja">カテゴリを見る</span><span data-l="en" lang="en">View Categories</span></a></p>
+      </div>
+      <div class="hero-slip" aria-hidden="true"><span class="hero-han">三十六計</span><span class="hero-seal">計</span></div>
+      <ul class="hero-facts">
+        <li><strong>36</strong><span data-l="ja" lang="ja">計略</span><span data-l="en" lang="en">Stratagems</span></li>
+        <li><strong>36</strong><span data-l="ja" lang="ja">認知カテゴリ</span><span data-l="en" lang="en">Cognitive Categories</span></li>
+        <li><strong>1</strong><span data-l="ja" lang="ja">人間の認知仕様</span><span data-l="en" lang="en">Human Firmware</span></li>
+      </ul>
     </section>
-    <section id="concept" class="panel concept"><div><p class="eyebrow" data-i18n="conceptEyebrow">Concept</p><h2 data-i18n="conceptTitle">兵法は、認知仕様書としても読める。</h2></div><p data-i18n="conceptBody">三十六計は、敵を欺くための戦略集として知られる。しかしそれぞれの計略が成立する理由を分解すると、「人は何を信じやすいのか」「どこで判断を誤るのか」「どの条件で注意が逸れるのか」という認知パターンが見えてくる。このページは、古代兵法を現代の認知科学・行動経済学の言葉で再配置する試みである。</p></section>
-    <section class="stats"><div><strong>36</strong><span data-i18n="stratagems">計略</span></div><div><strong id="categoryCount">0</strong><span data-i18n="categories">認知カテゴリ</span></div><div><strong>1</strong><span data-i18n="humanFirmware">Human Firmware</span></div></section>
-    <section id="categories" class="section"><p class="eyebrow" data-i18n="categories">認知カテゴリ</p><h2 data-i18n="categoriesTitle">36個の計略を、認知原理として再分類する。</h2><div id="categoryCards" class="category-grid"></div></section>
-    <section id="atlas" class="section atlas-section">
-      <p class="eyebrow" data-i18n="atlasEyebrow">Interactive Atlas</p>
-      <h2 data-i18n="atlasTitle">Search / Filter / Compare</h2>
-      <div class="toolbar">
-        <label class="sr-only" for="search" data-i18n="searchPlaceholder">計略・概念・バイアスを検索</label>
-        <input id="search" type="search" placeholder="計略・概念・バイアスを検索" />
-        <label class="sr-only" for="category" data-i18n="categories">認知カテゴリ</label>
-        <select id="category"><option value="all">All Categories</option></select>
-        <div class="view-toggle" role="group" aria-label="Atlas view">
-          <button id="treeViewButton" class="toggle-button active" type="button">認知体系ツリー</button>
-          <button id="listViewButton" class="toggle-button" type="button">三十六計一覧</button>
+
+    <section id="atlas" class="atlas" aria-labelledby="atlas-title" tabindex="-1">
+      <div class="section-head">
+        <p class="kicker"><span data-l="ja" lang="ja">インタラクティブ・アトラス</span><span data-l="en" lang="en">Interactive Atlas</span></p>
+        <h2 id="atlas-title"><span data-l="ja" lang="ja">検索 / 絞り込み / 比較</span><span data-l="en" lang="en">Search / Filter / Compare</span></h2>
+      </div>
+      <div class="atlas-layout">
+        <div class="atlas-panel">
+          <form class="tools js-only" role="search" aria-label="絞り込み" data-aria="filters" id="tools">
+            <div class="field field-search"><label for="search"><span data-l="ja" lang="ja">検索</span><span data-l="en" lang="en">Search</span></label><input id="search" type="search" autocomplete="off" spellcheck="false" enterkeyhint="search"></div>
+            <details class="filters" id="filters" open>
+              <summary><span data-l="ja" lang="ja">絞り込み</span><span data-l="en" lang="en">Filters</span><span class="filter-badge" id="filterBadge" hidden></span></summary>
+              <div class="filter-fields">
+                <div class="field"><label for="chapter"><span data-l="ja" lang="ja">套（章）</span><span data-l="en" lang="en">Chapter</span></label><select id="chapter"><option value="all">すべての套</option><option value="1">第一套 勝戦計</option><option value="2">第二套 敵戦計</option><option value="3">第三套 攻戦計</option><option value="4">第四套 混戦計</option><option value="5">第五套 併戦計</option><option value="6">第六套 敗戦計</option></select></div>
+                <div class="field"><label for="group"><span data-l="ja" lang="ja">認知グループ</span><span data-l="en" lang="en">Cognitive group</span></label><select id="group"><option value="all">すべてのグループ</option><option value="perception">認知を作る</option><option value="judgment">判断をずらす</option><option value="social">社会を動かす</option><option value="information">情報を操る</option><option value="structure">構造を崩す</option><option value="transformation">撤退と変換</option></select></div>
+                <div class="field"><label for="category"><span data-l="ja" lang="ja">認知カテゴリ</span><span data-l="en" lang="en">Cognitive Categories</span></label><select id="category"><option value="all">すべて</option><option value="Ability Estimation / Cognitive Shortcut">Ability Estimation / Cognitive Shortcut</option><option value="Action Cost / Choice Architecture">Action Cost / Choice Architecture</option><option value="Attention / Indirect Pressure">Attention / Indirect Pressure</option><option value="Attention / Priority">Attention / Priority</option><option value="Background / Gradual Change">Background / Gradual Change</option><option value="Background / Infrastructure">Background / Infrastructure</option><option value="Background / Stable Infrastructure">Background / Stable Infrastructure</option><option value="Choice / Cognitive Task">Choice / Cognitive Task</option><option value="Commitment / Exit Cost">Commitment / Exit Cost</option><option value="Community / Relationship Cost">Community / Relationship Cost</option><option value="Context / Environment">Context / Environment</option><option value="Continuity / Cognitive Model">Continuity / Cognitive Model</option><option value="Decision / Cognitive Load">Decision / Cognitive Load</option><option value="Decision Network / Centrality">Decision Network / Centrality</option><option value="Dependency / Negotiation Power">Dependency / Negotiation Power</option><option value="Dependency / Systems">Dependency / Systems</option><option value="Evaluation / Entry Cost">Evaluation / Entry Cost</option><option value="Evaluation / Signaling">Evaluation / Signaling</option><option value="Fatigue / Timing">Fatigue / Timing</option><option value="Friend-Foe Recognition">Friend-Foe Recognition</option><option value="Generalization / Cognitive Model">Generalization / Cognitive Model</option><option value="Inference / Uncertainty">Inference / Uncertainty</option><option value="Loss / Crisis">Loss / Crisis</option><option value="Management / Capacity">Management / Capacity</option><option value="Meta Cognition / Cognitive Frame">Meta Cognition / Cognitive Frame</option><option value="Normality / Habit">Normality / Habit</option><option value="Reality Construction / Social Attention">Reality Construction / Social Attention</option><option value="Reward / Motivation">Reward / Motivation</option><option value="Search Space / Exploration">Search Space / Exploration</option><option value="Social / Responsibility">Social / Responsibility</option><option value="Social Norm / Group Pressure">Social Norm / Group Pressure</option><option value="Success Memory / Legacy">Success Memory / Legacy</option><option value="Threshold / Detection">Threshold / Detection</option><option value="Trust / Costly Signaling">Trust / Costly Signaling</option><option value="Trust / Information Channel">Trust / Information Channel</option><option value="Value / Commitment">Value / Commitment</option></select></div>
+                <button type="button" class="link-button" id="clearFilters" hidden><span data-l="ja" lang="ja">条件をクリア</span><span data-l="en" lang="en">Clear filters</span></button>
+              </div>
+            </details>
+          </form>
+          <div class="board-bar js-only">
+            <p class="result-count" id="resultCount" role="status"></p>
+            <div class="view-switch" role="group" aria-label="表示" data-aria="viewLabel">
+              <button type="button" data-view="board" aria-pressed="true"><span data-l="ja" lang="ja">盤面</span><span data-l="en" lang="en">Board</span></button><button type="button" data-view="list" aria-pressed="false"><span data-l="ja" lang="ja">一覧</span><span data-l="en" lang="en">List</span></button>
+            </div>
+          </div>
+          <div class="board" id="board" data-view="board" role="group" aria-labelledby="board-label" aria-describedby="board-hint">
+            <p class="sr-only" id="board-label"><span data-l="ja" lang="ja">三十六計の盤面</span><span data-l="en" lang="en">Board of the 36 stratagems</span></p>
+            <p class="sr-only js-only" id="board-hint"><span data-l="ja" lang="ja">矢印キーで移動し、Enterで開きます。</span><span data-l="en" lang="en">Arrow keys move between stratagems; Enter opens one.</span></p>
+            <svg class="board-lines" id="boardLines" aria-hidden="true" focusable="false"></svg>
+          <div class="chapter" role="group" aria-labelledby="chapter-1"><h3 class="chapter-head" id="chapter-1"><span class="chapter-num" aria-hidden="true">一</span><span class="chapter-short" aria-hidden="true"><span data-l="ja" lang="ja">勝戦計</span><span data-l="en" lang="en">Winning</span></span><span class="chapter-name"><span data-l="ja" lang="ja">第一套 勝戦計</span><span data-l="en" lang="en">I · Winning Stratagems</span></span></h3><ol class="cells"><li><a class="cell" href="#stratagem-1" data-id="1"><span class="cell-no">01</span><span class="cell-han" lang="ja">瞞天過海</span><span class="cell-sub"><span data-l="ja" lang="ja">まんてんかかい · Deceive the heavens to cross the sea</span><span data-l="en" lang="en">Deceive the Heavens to Cross the Sea</span></span><span class="cell-cat"><span lang="en">Normality / Habit</span></span></a></li><li><a class="cell" href="#stratagem-2" data-id="2"><span class="cell-no">02</span><span class="cell-han" lang="ja">囲魏救趙</span><span class="cell-sub"><span data-l="ja" lang="ja">いぎきゅうちょう · Besiege Wei to rescue Zhao</span><span data-l="en" lang="en">Besiege Wei to Rescue Zhao</span></span><span class="cell-cat"><span lang="en">Attention / Indirect Pressure</span></span></a></li><li><a class="cell" href="#stratagem-3" data-id="3"><span class="cell-no">03</span><span class="cell-han" lang="ja">借刀殺人</span><span class="cell-sub"><span data-l="ja" lang="ja">しゃくとうさつじん · Kill with a borrowed knife</span><span data-l="en" lang="en">Kill with a Borrowed Knife</span></span><span class="cell-cat"><span lang="en">Social / Responsibility</span></span></a></li><li><a class="cell" href="#stratagem-4" data-id="4"><span class="cell-no">04</span><span class="cell-han" lang="ja">以逸待労</span><span class="cell-sub"><span data-l="ja" lang="ja">いいつたいろう · Wait at ease for the exhausted enemy</span><span data-l="en" lang="en">Wait at Ease for the Exhausted Enemy</span></span><span class="cell-cat"><span lang="en">Fatigue / Timing</span></span></a></li><li><a class="cell" href="#stratagem-5" data-id="5"><span class="cell-no">05</span><span class="cell-han" lang="ja">趁火打劫</span><span class="cell-sub"><span data-l="ja" lang="ja">ちんかだこう · Loot a burning house</span><span data-l="en" lang="en">Loot a Burning House</span></span><span class="cell-cat"><span lang="en">Loss / Crisis</span></span></a></li><li><a class="cell" href="#stratagem-6" data-id="6"><span class="cell-no">06</span><span class="cell-han" lang="ja">声東撃西</span><span class="cell-sub"><span data-l="ja" lang="ja">せいとうげきせい · Make noise in the east, attack in the west</span><span data-l="en" lang="en">Make Noise in the East, Attack in the West</span></span><span class="cell-cat"><span lang="en">Attention / Priority</span></span></a></li></ol></div>
+          <div class="chapter" role="group" aria-labelledby="chapter-2"><h3 class="chapter-head" id="chapter-2"><span class="chapter-num" aria-hidden="true">二</span><span class="chapter-short" aria-hidden="true"><span data-l="ja" lang="ja">敵戦計</span><span data-l="en" lang="en">Enemy dealing</span></span><span class="chapter-name"><span data-l="ja" lang="ja">第二套 敵戦計</span><span data-l="en" lang="en">II · Enemy Dealing Stratagems</span></span></h3><ol class="cells"><li><a class="cell" href="#stratagem-7" data-id="7"><span class="cell-no">07</span><span class="cell-han" lang="ja">無中生有</span><span class="cell-sub"><span data-l="ja" lang="ja">むちゅうしょうゆう · Create something from nothing</span><span data-l="en" lang="en">Create Something from Nothing</span></span><span class="cell-cat"><span lang="en">Reality Construction / Social Attention</span></span></a></li><li><a class="cell" href="#stratagem-8" data-id="8"><span class="cell-no">08</span><span class="cell-han" lang="ja">暗渡陳倉</span><span class="cell-sub"><span data-l="ja" lang="ja">あんとちんそう · Secretly cross at Chencang</span><span data-l="en" lang="en">Secretly Cross at Chencang</span></span><span class="cell-cat"><span lang="en">Search Space / Exploration</span></span></a></li><li><a class="cell" href="#stratagem-9" data-id="9"><span class="cell-no">09</span><span class="cell-han" lang="ja">隔岸観火</span><span class="cell-sub"><span data-l="ja" lang="ja">かくがんか · Watch the fire from across the river</span><span data-l="en" lang="en">Watch the Fire from Across the River</span></span><span class="cell-cat"><span lang="en">Value / Commitment</span></span></a></li><li><a class="cell" href="#stratagem-10" data-id="10"><span class="cell-no">10</span><span class="cell-han" lang="ja">笑裏蔵刀</span><span class="cell-sub"><span data-l="ja" lang="ja">しょうりぞうとう · Hide a knife behind a smile</span><span data-l="en" lang="en">Hide a Knife Behind a Smile</span></span><span class="cell-cat"><span lang="en">Friend-Foe Recognition</span></span></a></li><li><a class="cell" href="#stratagem-11" data-id="11"><span class="cell-no">11</span><span class="cell-han" lang="ja">李代桃僵</span><span class="cell-sub"><span data-l="ja" lang="ja">りだいとうきょう · Sacrifice the plum tree to preserve the peach tree</span><span data-l="en" lang="en">Sacrifice the Plum Tree to Preserve the Peach Tree</span></span><span class="cell-cat"><span lang="en">Management / Capacity</span></span></a></li><li><a class="cell" href="#stratagem-12" data-id="12"><span class="cell-no">12</span><span class="cell-han" lang="ja">順手牽羊</span><span class="cell-sub"><span data-l="ja" lang="ja">じゅんしゅけんよう · Take the opportunity to steal a goat</span><span data-l="en" lang="en">Take the Opportunity to Steal a Goat</span></span><span class="cell-cat"><span lang="en">Background / Gradual Change</span></span></a></li></ol></div>
+          <div class="chapter" role="group" aria-labelledby="chapter-3"><h3 class="chapter-head" id="chapter-3"><span class="chapter-num" aria-hidden="true">三</span><span class="chapter-short" aria-hidden="true"><span data-l="ja" lang="ja">攻戦計</span><span data-l="en" lang="en">Attacking</span></span><span class="chapter-name"><span data-l="ja" lang="ja">第三套 攻戦計</span><span data-l="en" lang="en">III · Attacking Stratagems</span></span></h3><ol class="cells"><li><a class="cell" href="#stratagem-13" data-id="13"><span class="cell-no">13</span><span class="cell-han" lang="ja">打草驚蛇</span><span class="cell-sub"><span data-l="ja" lang="ja">だそうきょうだ · Beat the grass to startle the snake</span><span data-l="en" lang="en">Beat the Grass to Startle the Snake</span></span><span class="cell-cat"><span lang="en">Threshold / Detection</span></span></a></li><li><a class="cell" href="#stratagem-14" data-id="14"><span class="cell-no">14</span><span class="cell-han" lang="ja">借屍還魂</span><span class="cell-sub"><span data-l="ja" lang="ja">しゃくしかんこん · Borrow a corpse to revive the soul</span><span data-l="en" lang="en">Borrow a Corpse to Revive the Soul</span></span><span class="cell-cat"><span lang="en">Success Memory / Legacy</span></span></a></li><li><a class="cell" href="#stratagem-15" data-id="15"><span class="cell-no">15</span><span class="cell-han" lang="ja">調虎離山</span><span class="cell-sub"><span data-l="ja" lang="ja">ちょうこりざん · Lure the tiger away from the mountain</span><span data-l="en" lang="en">Lure the Tiger Away from the Mountain</span></span><span class="cell-cat"><span lang="en">Context / Environment</span></span></a></li><li><a class="cell" href="#stratagem-16" data-id="16"><span class="cell-no">16</span><span class="cell-han" lang="ja">欲擒故縦</span><span class="cell-sub"><span data-l="ja" lang="ja">よくきんこしょう · To capture, first let go</span><span data-l="en" lang="en">To Capture, First Let Go</span></span><span class="cell-cat"><span lang="en">Choice / Cognitive Task</span></span></a></li><li><a class="cell" href="#stratagem-17" data-id="17"><span class="cell-no">17</span><span class="cell-han" lang="ja">抛磚引玉</span><span class="cell-sub"><span data-l="ja" lang="ja">ほうせんいんぎょく · Throw a brick to attract jade</span><span data-l="en" lang="en">Throw a Brick to Attract Jade</span></span><span class="cell-cat"><span lang="en">Evaluation / Entry Cost</span></span></a></li><li><a class="cell" href="#stratagem-18" data-id="18"><span class="cell-no">18</span><span class="cell-han" lang="ja">擒賊擒王</span><span class="cell-sub"><span data-l="ja" lang="ja">きんぞくきんおう · Capture the leader to capture the bandits</span><span data-l="en" lang="en">Capture the Leader to Capture the Bandits</span></span><span class="cell-cat"><span lang="en">Decision Network / Centrality</span></span></a></li></ol></div>
+          <div class="chapter" role="group" aria-labelledby="chapter-4"><h3 class="chapter-head" id="chapter-4"><span class="chapter-num" aria-hidden="true">四</span><span class="chapter-short" aria-hidden="true"><span data-l="ja" lang="ja">混戦計</span><span data-l="en" lang="en">Chaos</span></span><span class="chapter-name"><span data-l="ja" lang="ja">第四套 混戦計</span><span data-l="en" lang="en">IV · Chaos Stratagems</span></span></h3><ol class="cells"><li><a class="cell" href="#stratagem-19" data-id="19"><span class="cell-no">19</span><span class="cell-han" lang="ja">釜底抽薪</span><span class="cell-sub"><span data-l="ja" lang="ja">ふていちゅうしん · Remove the firewood from under the pot</span><span data-l="en" lang="en">Remove the Firewood from Under the Pot</span></span><span class="cell-cat"><span lang="en">Background / Infrastructure</span></span></a></li><li><a class="cell" href="#stratagem-20" data-id="20"><span class="cell-no">20</span><span class="cell-han" lang="ja">渾水摸魚</span><span class="cell-sub"><span data-l="ja" lang="ja">こんすいぼぎょ · Fish in troubled waters</span><span data-l="en" lang="en">Fish in Troubled Waters</span></span><span class="cell-cat"><span lang="en">Decision / Cognitive Load</span></span></a></li><li><a class="cell" href="#stratagem-21" data-id="21"><span class="cell-no">21</span><span class="cell-han" lang="ja">金蝉脱殻</span><span class="cell-sub"><span data-l="ja" lang="ja">きんせんだっかく · Shed the shell like a golden cicada</span><span data-l="en" lang="en">Shed the Shell Like a Golden Cicada</span></span><span class="cell-cat"><span lang="en">Continuity / Cognitive Model</span></span></a></li><li><a class="cell" href="#stratagem-22" data-id="22"><span class="cell-no">22</span><span class="cell-han" lang="ja">関門捉賊</span><span class="cell-sub"><span data-l="ja" lang="ja">かんもんそくぞく · Shut the door to catch the thief</span><span data-l="en" lang="en">Shut the Door to Catch the Thief</span></span><span class="cell-cat"><span lang="en">Action Cost / Choice Architecture</span></span></a></li><li><a class="cell" href="#stratagem-23" data-id="23"><span class="cell-no">23</span><span class="cell-han" lang="ja">遠交近攻</span><span class="cell-sub"><span data-l="ja" lang="ja">えんこうきんこう · Befriend distant states while attacking nearby ones</span><span data-l="en" lang="en">Befriend Distant States While Attacking Nearby Ones</span></span><span class="cell-cat"><span lang="en">Community / Relationship Cost</span></span></a></li><li><a class="cell" href="#stratagem-24" data-id="24"><span class="cell-no">24</span><span class="cell-han" lang="ja">仮道伐虢</span><span class="cell-sub"><span data-l="ja" lang="ja">かどうばっかく · Borrow a path to attack Guo</span><span data-l="en" lang="en">Borrow a Path to Attack Guo</span></span><span class="cell-cat"><span lang="en">Generalization / Cognitive Model</span></span></a></li></ol></div>
+          <div class="chapter" role="group" aria-labelledby="chapter-5"><h3 class="chapter-head" id="chapter-5"><span class="chapter-num" aria-hidden="true">五</span><span class="chapter-short" aria-hidden="true"><span data-l="ja" lang="ja">併戦計</span><span data-l="en" lang="en">Proximate</span></span><span class="chapter-name"><span data-l="ja" lang="ja">第五套 併戦計</span><span data-l="en" lang="en">V · Proximate Stratagems</span></span></h3><ol class="cells"><li><a class="cell" href="#stratagem-25" data-id="25"><span class="cell-no">25</span><span class="cell-han" lang="ja">偸梁換柱</span><span class="cell-sub"><span data-l="ja" lang="ja">とうりょうかんちゅう · Replace the beams and pillars</span><span data-l="en" lang="en">Replace the Beams and Pillars</span></span><span class="cell-cat"><span lang="en">Background / Stable Infrastructure</span></span></a></li><li><a class="cell" href="#stratagem-26" data-id="26"><span class="cell-no">26</span><span class="cell-han" lang="ja">指桑罵槐</span><span class="cell-sub"><span data-l="ja" lang="ja">しそうばかい · Point at the mulberry, curse the locust</span><span data-l="en" lang="en">Point at the Mulberry, Curse the Locust</span></span><span class="cell-cat"><span lang="en">Social Norm / Group Pressure</span></span></a></li><li><a class="cell" href="#stratagem-27" data-id="27"><span class="cell-no">27</span><span class="cell-han" lang="ja">仮痴不癲</span><span class="cell-sub"><span data-l="ja" lang="ja">かちふてん · Feign foolishness without going mad</span><span data-l="en" lang="en">Feign Foolishness Without Going Mad</span></span><span class="cell-cat"><span lang="en">Ability Estimation / Cognitive Shortcut</span></span></a></li><li><a class="cell" href="#stratagem-28" data-id="28"><span class="cell-no">28</span><span class="cell-han" lang="ja">上屋抽梯</span><span class="cell-sub"><span data-l="ja" lang="ja">じょうおくちゅうてい · Remove the ladder after ascending the roof</span><span data-l="en" lang="en">Remove the Ladder After Ascending the Roof</span></span><span class="cell-cat"><span lang="en">Commitment / Exit Cost</span></span></a></li><li><a class="cell" href="#stratagem-29" data-id="29"><span class="cell-no">29</span><span class="cell-han" lang="ja">樹上開花</span><span class="cell-sub"><span data-l="ja" lang="ja">じゅじょうかいか · Decorate the tree with blossoms</span><span data-l="en" lang="en">Decorate the Tree with Blossoms</span></span><span class="cell-cat"><span lang="en">Evaluation / Signaling</span></span></a></li><li><a class="cell" href="#stratagem-30" data-id="30"><span class="cell-no">30</span><span class="cell-han" lang="ja">反客為主</span><span class="cell-sub"><span data-l="ja" lang="ja">はんかくいしゅ · Turn from guest into host</span><span data-l="en" lang="en">Turn from Guest into Host</span></span><span class="cell-cat"><span lang="en">Dependency / Negotiation Power</span></span></a></li></ol></div>
+          <div class="chapter" role="group" aria-labelledby="chapter-6"><h3 class="chapter-head" id="chapter-6"><span class="chapter-num" aria-hidden="true">六</span><span class="chapter-short" aria-hidden="true"><span data-l="ja" lang="ja">敗戦計</span><span data-l="en" lang="en">Desperate</span></span><span class="chapter-name"><span data-l="ja" lang="ja">第六套 敗戦計</span><span data-l="en" lang="en">VI · Desperate Stratagems</span></span></h3><ol class="cells"><li><a class="cell" href="#stratagem-31" data-id="31"><span class="cell-no">31</span><span class="cell-han" lang="ja">美人計</span><span class="cell-sub"><span data-l="ja" lang="ja">びじんけい · The Beauty Trap</span><span data-l="en" lang="en">The Beauty Trap</span></span><span class="cell-cat"><span lang="en">Reward / Motivation</span></span></a></li><li><a class="cell" href="#stratagem-32" data-id="32"><span class="cell-no">32</span><span class="cell-han" lang="ja">空城計</span><span class="cell-sub"><span data-l="ja" lang="ja">くうじょうけい · The Empty Fort Strategy</span><span data-l="en" lang="en">The Empty Fort Strategy</span></span><span class="cell-cat"><span lang="en">Inference / Uncertainty</span></span></a></li><li><a class="cell" href="#stratagem-33" data-id="33"><span class="cell-no">33</span><span class="cell-han" lang="ja">反間計</span><span class="cell-sub"><span data-l="ja" lang="ja">はんかんけい · Counter-Espionage / Reverse Use of Trusted Channels</span><span data-l="en" lang="en">Turn Trusted Channels Against the Target</span></span><span class="cell-cat"><span lang="en">Trust / Information Channel</span></span></a></li><li><a class="cell" href="#stratagem-34" data-id="34"><span class="cell-no">34</span><span class="cell-han" lang="ja">苦肉計</span><span class="cell-sub"><span data-l="ja" lang="ja">くにくけい · Inflict injury on oneself to gain the enemy's trust</span><span data-l="en" lang="en">Inflict Injury on Oneself to Win Trust</span></span><span class="cell-cat"><span lang="en">Trust / Costly Signaling</span></span></a></li><li><a class="cell" href="#stratagem-35" data-id="35"><span class="cell-no">35</span><span class="cell-han" lang="ja">連環計</span><span class="cell-sub"><span data-l="ja" lang="ja">れんかんけい · Chain Stratagem</span><span data-l="en" lang="en">Chain Stratagems Together</span></span><span class="cell-cat"><span lang="en">Dependency / Systems</span></span></a></li><li><a class="cell" href="#stratagem-36" data-id="36"><span class="cell-no">36</span><span class="cell-han" lang="ja">走為上</span><span class="cell-sub"><span data-l="ja" lang="ja">そういじょう · If all else fails, retreat</span><span data-l="en" lang="en">If All Else Fails, Retreat</span></span><span class="cell-cat"><span data-l="ja" lang="ja">Meta Cognition / Cognitive Frame</span><span data-l="en" lang="en">Metacognition / Cognitive Frame</span></span></a></li></ol></div>
+          </div>
+          <p class="board-caption js-only" id="boardCaption" aria-hidden="true"></p>
+          <p class="board-legend js-only"><span class="legend-line" aria-hidden="true"></span><span class="legend-line legend-dotted" aria-hidden="true"></span><span data-l="ja" lang="ja">実線は選択中の計が挙げる関連計、点線はこの計を関連として挙げる計を示します。</span><span data-l="en" lang="en">Solid lines lead to the stratagems this one lists as related; dotted lines come from stratagems that list it.</span></p>
+        </div>
+        <div class="reader" id="reader">
+          <noscript><div class="entries-static">
+            <p class="static-note">JavaScriptを有効にすると、各計略の全文・図・関連を読めます。</p>
+        <article class="entry-static" id="stratagem-1" aria-labelledby="static-title-1">
+          <p class="es-meta">第一套 勝戦計 · 1 / 36</p>
+          <h3 id="static-title-1"><span class="es-no">01</span> <span class="es-han">瞞天過海</span> <span class="es-name">まんてんかかい · <span lang="en">Deceive the heavens to cross the sea</span></span></h3>
+          <p>あまりにも日常的なものは疑われにくい。反復と慣れを利用する計略。</p>
+          <p><a href="https://note.com/flying_baby/n/nc73a19124331" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-2" aria-labelledby="static-title-2">
+          <p class="es-meta">第一套 勝戦計 · 2 / 36</p>
+          <h3 id="static-title-2"><span class="es-no">02</span> <span class="es-han">囲魏救趙</span> <span class="es-name">いぎきゅうちょう · <span lang="en">Besiege Wei to rescue Zhao</span></span></h3>
+          <p>正面から助けるのではなく、相手の別の重要地点を突いて行動を変えさせる。</p>
+          <p><a href="https://note.com/flying_baby/n/naad914606937" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-3" aria-labelledby="static-title-3">
+          <p class="es-meta">第一套 勝戦計 · 3 / 36</p>
+          <h3 id="static-title-3"><span class="es-no">03</span> <span class="es-han">借刀殺人</span> <span class="es-name">しゃくとうさつじん · <span lang="en">Kill with a borrowed knife</span></span></h3>
+          <p>自分の手を汚さず、他者の力・権威・怒りを利用する。</p>
+          <p><a href="https://note.com/flying_baby/n/n22f89c8558ea" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-4" aria-labelledby="static-title-4">
+          <p class="es-meta">第一套 勝戦計 · 4 / 36</p>
+          <h3 id="static-title-4"><span class="es-no">04</span> <span class="es-han">以逸待労</span> <span class="es-name">いいつたいろう · <span lang="en">Wait at ease for the exhausted enemy</span></span></h3>
+          <p>余裕を保ち、相手の疲労や焦りが判断を鈍らせるのを待つ。</p>
+          <p><a href="https://note.com/flying_baby/n/n550b83e1cf00" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-5" aria-labelledby="static-title-5">
+          <p class="es-meta">第一套 勝戦計 · 5 / 36</p>
+          <h3 id="static-title-5"><span class="es-no">05</span> <span class="es-han">趁火打劫</span> <span class="es-name">ちんかだこう · <span lang="en">Loot a burning house</span></span></h3>
+          <p>危機によって優先順位が変化し、守れなくなった場所を突く。</p>
+          <p><a href="https://note.com/flying_baby/n/n03c2bb2b2e40" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-6" aria-labelledby="static-title-6">
+          <p class="es-meta">第一套 勝戦計 · 6 / 36</p>
+          <h3 id="static-title-6"><span class="es-no">06</span> <span class="es-han">声東撃西</span> <span class="es-name">せいとうげきせい · <span lang="en">Make noise in the east, attack in the west</span></span></h3>
+          <p>重要ではないものを重要だと思わせ、本命の優先順位を下げさせる。</p>
+          <p><a href="https://note.com/flying_baby/n/n747686dc1bfd" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-7" aria-labelledby="static-title-7">
+          <p class="es-meta">第二套 敵戦計 · 7 / 36</p>
+          <h3 id="static-title-7"><span class="es-no">07</span> <span class="es-han">無中生有</span> <span class="es-name">むちゅうしょうゆう · <span lang="en">Create something from nothing</span></span></h3>
+          <p>集団の注目を利用し、実体が薄いものに重要度を構築する。</p>
+          <p><a href="https://note.com/flying_baby/n/n1e27db01aab8" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-8" aria-labelledby="static-title-8">
+          <p class="es-meta">第二套 敵戦計 · 8 / 36</p>
+          <h3 id="static-title-8"><span class="es-no">08</span> <span class="es-han">暗渡陳倉</span> <span class="es-name">あんとちんそう · <span lang="en">Secretly cross at Chencang</span></span></h3>
+          <p>相手の探索範囲を限定し、見えない経路を検討させなくする。</p>
+          <p><a href="https://note.com/flying_baby/n/n9b053aec8f19" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-9" aria-labelledby="static-title-9">
+          <p class="es-meta">第二套 敵戦計 · 9 / 36</p>
+          <h3 id="static-title-9"><span class="es-no">09</span> <span class="es-han">隔岸観火</span> <span class="es-name">かくがんか · <span lang="en">Watch the fire from across the river</span></span></h3>
+          <p>相手が撤退できなくなる認知を利用し、時間による消耗を待つ。</p>
+          <p><a href="https://note.com/flying_baby/n/n51d39f292ec2" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-10" aria-labelledby="static-title-10">
+          <p class="es-meta">第二套 敵戦計 · 10 / 36</p>
+          <h3 id="static-title-10"><span class="es-no">10</span> <span class="es-han">笑裏蔵刀</span> <span class="es-name">しょうりぞうとう · <span lang="en">Hide a knife behind a smile</span></span></h3>
+          <p>味方シグナルを利用し、敵味方認識を操作して警戒を解除させる。</p>
+          <p><a href="https://note.com/flying_baby/n/n44d85cb0464b" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-11" aria-labelledby="static-title-11">
+          <p class="es-meta">第二套 敵戦計 · 11 / 36</p>
+          <h3 id="static-title-11"><span class="es-no">11</span> <span class="es-han">李代桃僵</span> <span class="es-name">りだいとうきょう · <span lang="en">Sacrifice the plum tree to preserve the peach tree</span></span></h3>
+          <p>管理能力には限界があることを理解し、全体を守るために管理対象を整理する。</p>
+          <p><a href="https://note.com/flying_baby/n/n2abf16217ae5" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-12" aria-labelledby="static-title-12">
+          <p class="es-meta">第二套 敵戦計 · 12 / 36</p>
+          <h3 id="static-title-12"><span class="es-no">12</span> <span class="es-han">順手牽羊</span> <span class="es-name">じゅんしゅけんよう · <span lang="en">Take the opportunity to steal a goat</span></span></h3>
+          <p>認知閾値を下回る小さな変化を積み重ね、背景となった変化によって認識を書き換える。</p>
+          <p><a href="https://note.com/flying_baby/n/n1d83888847ae" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-13" aria-labelledby="static-title-13">
+          <p class="es-meta">第三套 攻戦計 · 13 / 36</p>
+          <h3 id="static-title-13"><span class="es-no">13</span> <span class="es-han">打草驚蛇</span> <span class="es-name">だそうきょうだ · <span lang="en">Beat the grass to startle the snake</span></span></h3>
+          <p>小さな刺激を与え、相手がどの変化を無視できず反応するのかを測定する。</p>
+          <p><a href="https://note.com/flying_baby/n/nad135c902aa0" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-14" aria-labelledby="static-title-14">
+          <p class="es-meta">第三套 攻戦計 · 14 / 36</p>
+          <h3 id="static-title-14"><span class="es-no">14</span> <span class="es-han">借屍還魂</span> <span class="es-name">しゃくしかんこん · <span lang="en">Borrow a corpse to revive the soul</span></span></h3>
+          <p>過去に成功した記憶を再利用し、新しい対象へ信頼や期待を転移させる。</p>
+          <p><a href="https://editor.note.com/notes/n7f9edbb0ab75/edit/" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-15" aria-labelledby="static-title-15">
+          <p class="es-meta">第三套 攻戦計 · 15 / 36</p>
+          <h3 id="static-title-15"><span class="es-no">15</span> <span class="es-han">調虎離山</span> <span class="es-name">ちょうこりざん · <span lang="en">Lure the tiger away from the mountain</span></span></h3>
+          <p>能力ではなく、その能力を成立させる認知環境を崩す。</p>
+          <p><a href="https://note.com/flying_baby/n/n680ea4736142" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-16" aria-labelledby="static-title-16">
+          <p class="es-meta">第三套 攻戦計 · 16 / 36</p>
+          <h3 id="static-title-16"><span class="es-no">16</span> <span class="es-han">欲擒故縦</span> <span class="es-name">よくきんこしょう · <span lang="en">To capture, first let go</span></span></h3>
+          <p>答えを与えるのではなく、相手自身に認知課題を解決させる。</p>
+          <p><a href="https://note.com/flying_baby/n/n949e121f4ccf" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-17" aria-labelledby="static-title-17">
+          <p class="es-meta">第三套 攻戦計 · 17 / 36</p>
+          <h3 id="static-title-17"><span class="es-no">17</span> <span class="es-han">抛磚引玉</span> <span class="es-name">ほうせんいんぎょく · <span lang="en">Throw a brick to attract jade</span></span></h3>
+          <p>価値を渡るのではなく、認知コストの低い入口を設計する。</p>
+          <p><a href="https://note.com/flying_baby/n/n4f413f72b970" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-18" aria-labelledby="static-title-18">
+          <p class="es-meta">第三套 攻戦計 · 18 / 36</p>
+          <h3 id="static-title-18"><span class="es-no">18</span> <span class="es-han">擒賊擒王</span> <span class="es-name">きんぞくきんおう · <span lang="en">Capture the leader to capture the bandits</span></span></h3>
+          <p>肩書きではなく、意思決定が集約される中心を支配する。</p>
+          <p><a href="https://note.com/flying_baby/n/ne78d8d9fe5f4" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-19" aria-labelledby="static-title-19">
+          <p class="es-meta">第四套 混戦計 · 19 / 36</p>
+          <h3 id="static-title-19"><span class="es-no">19</span> <span class="es-han">釜底抽薪</span> <span class="es-name">ふていちゅうしん · <span lang="en">Remove the firewood from under the pot</span></span></h3>
+          <p>背景化された基盤へ介入し、表面現象そのものを成立させなくする。</p>
+          <p><a href="https://note.com/flying_baby/n/n8fdaac4a18b8" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-20" aria-labelledby="static-title-20">
+          <p class="es-meta">第四套 混戦計 · 20 / 36</p>
+          <h3 id="static-title-20"><span class="es-no">20</span> <span class="es-han">渾水摸魚</span> <span class="es-name">こんすいぼぎょ · <span lang="en">Fish in troubled waters</span></span></h3>
+          <p>判断軸を曖昧にし、認知負荷を高めることで正常な意思決定を困難にする。</p>
+          <p><a href="https://note.com/flying_baby/" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-21" aria-labelledby="static-title-21">
+          <p class="es-meta">第四套 混戦計 · 21 / 36</p>
+          <h3 id="static-title-21"><span class="es-no">21</span> <span class="es-han">金蝉脱殻</span> <span class="es-name">きんせんだっかく · <span lang="en">Shed the shell like a golden cicada</span></span></h3>
+          <p>相手の認知モデルを更新させず、継続性を維持させる。</p>
+          <p><a href="https://note.com/flying_baby/n/n317720c624cd" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-22" aria-labelledby="static-title-22">
+          <p class="es-meta">第四套 混戦計 · 22 / 36</p>
+          <h3 id="static-title-22"><span class="es-no">22</span> <span class="es-han">関門捉賊</span> <span class="es-name">かんもんそくぞく · <span lang="en">Shut the door to catch the thief</span></span></h3>
+          <p>実行コストを操作し、実質的な選択肢を制御する。</p>
+          <p><a href="https://note.com/flying_baby/n/n89e0e2d28def" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-23" aria-labelledby="static-title-23">
+          <p class="es-meta">第四套 混戦計 · 23 / 36</p>
+          <h3 id="static-title-23"><span class="es-no">23</span> <span class="es-han">遠交近攻</span> <span class="es-name">えんこうきんこう · <span lang="en">Befriend distant states while attacking nearby ones</span></span></h3>
+          <p>共同体に発生する関係維持コストを最適化し、競争と協力の境界を設計する。</p>
+          <p><a href="https://note.com/flying_baby/n/n646f410976f7" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-24" aria-labelledby="static-title-24">
+          <p class="es-meta">第四套 混戦計 · 24 / 36</p>
+          <h3 id="static-title-24"><span class="es-no">24</span> <span class="es-han">仮道伐虢</span> <span class="es-name">かどうばっかく · <span lang="en">Borrow a path to attack Guo</span></span></h3>
+          <p>一度形成された認知モデルを普遍化させ、小さな許可を前提へ変える。</p>
+          <p><a href="https://note.com/flying_baby/n/n0c425763e918" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-25" aria-labelledby="static-title-25">
+          <p class="es-meta">第五套 併戦計 · 25 / 36</p>
+          <h3 id="static-title-25"><span class="es-no">25</span> <span class="es-han">偸梁換柱</span> <span class="es-name">とうりょうかんちゅう · <span lang="en">Replace the beams and pillars</span></span></h3>
+          <p>変わらないと思われている基盤を背景化させ、その構造を書き換える。</p>
+          <p><a href="https://note.com/flying_baby/n/n8503e3f9ef6c" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-26" aria-labelledby="static-title-26">
+          <p class="es-meta">第五套 併戦計 · 26 / 36</p>
+          <h3 id="static-title-26"><span class="es-no">26</span> <span class="es-han">指桑罵槐</span> <span class="es-name">しそうばかい · <span lang="en">Point at the mulberry, curse the locust</span></span></h3>
+          <p>集団規範を想起させ、排除リスクを認知させることで行動を修正させる。</p>
+          <p><a href="https://note.com/flying_baby/n/nb69b2930c03b" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-27" aria-labelledby="static-title-27">
+          <p class="es-meta">第五套 併戦計 · 27 / 36</p>
+          <h3 id="static-title-27"><span class="es-no">27</span> <span class="es-han">仮痴不癲</span> <span class="es-name">かちふてん · <span lang="en">Feign foolishness without going mad</span></span></h3>
+          <p>能力そのものではなく、能力推定に使われる認知のショートカットを操作する。</p>
+          <p><a href="https://note.com/flying_baby/" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-28" aria-labelledby="static-title-28">
+          <p class="es-meta">第五套 併戦計 · 28 / 36</p>
+          <h3 id="static-title-28"><span class="es-no">28</span> <span class="es-han">上屋抽梯</span> <span class="es-name">じょうおくちゅうてい · <span lang="en">Remove the ladder after ascending the roof</span></span></h3>
+          <p>コミット後の認知を利用し、撤退コストを認知させることで継続を選ばせる。</p>
+          <p><a href="https://note.com/flying_baby/n/nf4bb20b3981b" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-29" aria-labelledby="static-title-29">
+          <p class="es-meta">第五套 併戦計 · 29 / 36</p>
+          <h3 id="static-title-29"><span class="es-no">29</span> <span class="es-han">樹上開花</span> <span class="es-name">じゅじょうかいか · <span lang="en">Decorate the tree with blossoms</span></span></h3>
+          <p>評価システムが採用する代理シグナルを操作し、実体以上の評価を獲得する。</p>
+          <p><a href="https://note.com/flying_baby/n/n19639fa94482" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-30" aria-labelledby="static-title-30">
+          <p class="es-meta">第五套 併戦計 · 30 / 36</p>
+          <h3 id="static-title-30"><span class="es-no">30</span> <span class="es-han">反客為主</span> <span class="es-name">はんかくいしゅ · <span lang="en">Turn from guest into host</span></span></h3>
+          <p>依存関係を形成し、その依存から生まれる交渉力によって潜在的な主導権を顕在化させる。</p>
+          <p><a href="https://note.com/flying_baby/n/nba46c6578022" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-31" aria-labelledby="static-title-31">
+          <p class="es-meta">第六套 敗戦計 · 31 / 36</p>
+          <h3 id="static-title-31"><span class="es-no">31</span> <span class="es-han">美人計</span> <span class="es-name">びじんけい · <span lang="en">The Beauty Trap</span></span></h3>
+          <p>人間の報酬系を刺激し、欲望によって判断の重み付けを変える。</p>
+          <p><a href="https://note.com/flying_baby/n/n58e5a0431144" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-32" aria-labelledby="static-title-32">
+          <p class="es-meta">第六套 敗戦計 · 32 / 36</p>
+          <h3 id="static-title-32"><span class="es-no">32</span> <span class="es-han">空城計</span> <span class="es-name">くうじょうけい · <span lang="en">The Empty Fort Strategy</span></span></h3>
+          <p>情報の空白を利用し、相手自身に推論させることで判断を迷わせる。</p>
+          <p><a href="https://note.com/flying_baby/n/n7c0c92d99d35" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-33" aria-labelledby="static-title-33">
+          <p class="es-meta">第六套 敗戦計 · 33 / 36</p>
+          <h3 id="static-title-33"><span class="es-no">33</span> <span class="es-han">反間計</span> <span class="es-name">はんかんけい · <span lang="en">Counter-Espionage / Reverse Use of Trusted Channels</span></span></h3>
+          <p>信頼された情報経路を逆利用し、誤った認知を形成させる。</p>
+          <p><a href="https://note.com/flying_baby/n/n8601783986cb" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-34" aria-labelledby="static-title-34">
+          <p class="es-meta">第六套 敗戦計 · 34 / 36</p>
+          <h3 id="static-title-34"><span class="es-no">34</span> <span class="es-han">苦肉計</span> <span class="es-name">くにくけい · <span lang="en">Inflict injury on oneself to gain the enemy's trust</span></span></h3>
+          <p>自己犠牲を信頼の証拠として利用し、相手の推論を誘導する。</p>
+          <p><a href="https://note.com/flying_baby/n/n1eab3f7fc434" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-35" aria-labelledby="static-title-35">
+          <p class="es-meta">第六套 敗戦計 · 35 / 36</p>
+          <h3 id="static-title-35"><span class="es-no">35</span> <span class="es-han">連環計</span> <span class="es-name">れんかんけい · <span lang="en">Chain Stratagem</span></span></h3>
+          <p>複数の依存関係を設計し、一部ではなく全体を拘束する構造を作る。</p>
+          <p><a href="https://note.com/flying_baby/n/na35449d39615" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+        <article class="entry-static" id="stratagem-36" aria-labelledby="static-title-36">
+          <p class="es-meta">第六套 敗戦計 · 36 / 36</p>
+          <h3 id="static-title-36"><span class="es-no">36</span> <span class="es-han">走為上</span> <span class="es-name">そういじょう · <span lang="en">If all else fails, retreat</span></span></h3>
+          <p>相手が設計した認知フレームから離脱し、自ら選択権を取り戻す。</p>
+          <p><a href="https://note.com/flying_baby/n/n771bd2cedaf0" target="_blank" rel="noopener noreferrer">noteで全文を読む ↗<span class="sr-only">（新しいタブで開きます）</span></a></p>
+        </article>
+          </div></noscript>
         </div>
       </div>
-      <div class="stratagem-workspace">
-        <aside class="stratagem-navigation" aria-label="Stratagem navigation">
-          <div id="cards" class="stratagem-list"></div>
-        </aside>
-        <section id="detailPane" class="stratagem-detail-pane" aria-live="polite"></section>
-      </div>
-      <div id="mobileDetailDrawer" class="mobile-detail-drawer" aria-hidden="true">
-        <div class="mobile-detail-scrim" data-close-detail></div>
-        <article class="mobile-detail-panel" role="dialog" aria-modal="true" aria-labelledby="mobileDetailTitle">
-          <div class="mobile-detail-bar">
-            <button id="closeDetailButton" class="drawer-close" type="button">← 一覧へ戻る</button>
-            <span id="mobileDetailNumber" class="drawer-number">#01</span>
-          </div>
-          <div id="mobileDetailContent" class="mobile-detail-content"></div>
-        </article>
-      </div>
     </section>
-    <section id="notes" class="panel notes"><p class="eyebrow" data-i18n="notesEyebrow">Research Note</p><h2 data-i18n="notesTitle">これは歴史的断定ではなく、現代的な再解釈である。</h2><p data-i18n="notesBody">この対応表は「三十六計が当時から認知科学として作られた」と主張するものではない。あくまで、現代の認知科学・行動経済学・情報設計の視点から読むと、古典兵法が人間の認知バイアスの実践例集としても見える、という仮説的マッピングである。</p></section>
+
+    <section id="categories" class="section categories" aria-labelledby="categories-title">
+      <div class="section-head">
+        <p class="kicker"><span data-l="ja" lang="ja">認知カテゴリ</span><span data-l="en" lang="en">Cognitive Categories</span></p>
+        <h2 id="categories-title"><span data-l="ja" lang="ja">36個の計略を、認知原理として再分類する。</span><span data-l="en" lang="en">Reclassifying 36 stratagems by their cognitive principles.</span></h2>
+      </div>
+      <ol class="groups">
+        <li class="group" id="group-perception">
+          <div class="group-head"><span class="group-no" aria-hidden="true">01</span><h3><span data-l="ja" lang="ja">認知を作る</span><span data-l="en" lang="en">Construct Perception</span></h3>
+          <p><span data-l="ja" lang="ja">正常性・背景・注目・認知モデルを形成する</span><span data-l="en" lang="en">Shape normality, background assumptions, attention, and cognitive models.</span></p>
+          <button type="button" class="link-button js-only" data-show-group="perception"><span data-l="ja" lang="ja">盤面で表示</span><span data-l="en" lang="en">Show on the board</span></button></div>
+          <ul class="subgroups"><li><h4><span data-l="ja" lang="ja">正常・背景を作る</span><span data-l="en" lang="en">Construct Normality and Background</span></h4><ul class="members"><li><a href="#stratagem-1"><span class="m-no">01</span><span class="m-han" lang="ja">瞞天過海</span><span class="m-name" data-l="en" lang="en">Deceive the Heavens to Cross the Sea</span></a></li><li><a href="#stratagem-12"><span class="m-no">12</span><span class="m-han" lang="ja">順手牽羊</span><span class="m-name" data-l="en" lang="en">Take the Opportunity to Steal a Goat</span></a></li><li><a href="#stratagem-25"><span class="m-no">25</span><span class="m-han" lang="ja">偸梁換柱</span><span class="m-name" data-l="en" lang="en">Replace the Beams and Pillars</span></a></li></ul></li><li><h4><span data-l="ja" lang="ja">注目・重要度を作る</span><span data-l="en" lang="en">Construct Attention and Importance</span></h4><ul class="members"><li><a href="#stratagem-6"><span class="m-no">06</span><span class="m-han" lang="ja">声東撃西</span><span class="m-name" data-l="en" lang="en">Make Noise in the East, Attack in the West</span></a></li><li><a href="#stratagem-7"><span class="m-no">07</span><span class="m-han" lang="ja">無中生有</span><span class="m-name" data-l="en" lang="en">Create Something from Nothing</span></a></li><li><a href="#stratagem-29"><span class="m-no">29</span><span class="m-han" lang="ja">樹上開花</span><span class="m-name" data-l="en" lang="en">Decorate the Tree with Blossoms</span></a></li></ul></li><li><h4><span data-l="ja" lang="ja">認知モデルを作る</span><span data-l="en" lang="en">Construct Cognitive Models</span></h4><ul class="members"><li><a href="#stratagem-8"><span class="m-no">08</span><span class="m-han" lang="ja">暗渡陳倉</span><span class="m-name" data-l="en" lang="en">Secretly Cross at Chencang</span></a></li><li><a href="#stratagem-13"><span class="m-no">13</span><span class="m-han" lang="ja">打草驚蛇</span><span class="m-name" data-l="en" lang="en">Beat the Grass to Startle the Snake</span></a></li><li><a href="#stratagem-32"><span class="m-no">32</span><span class="m-han" lang="ja">空城計</span><span class="m-name" data-l="en" lang="en">The Empty Fort Strategy</span></a></li></ul></li></ul>
+        </li>
+        <li class="group" id="group-judgment">
+          <div class="group-head"><span class="group-no" aria-hidden="true">02</span><h3><span data-l="ja" lang="ja">判断をずらす</span><span data-l="en" lang="en">Shift Judgment</span></h3>
+          <p><span data-l="ja" lang="ja">疲労・損失・選択肢・優先順位を操作する</span><span data-l="en" lang="en">Manipulate fatigue, loss, available choices, and priority allocation.</span></p>
+          <button type="button" class="link-button js-only" data-show-group="judgment"><span data-l="ja" lang="ja">盤面で表示</span><span data-l="en" lang="en">Show on the board</span></button></div>
+          <ul class="subgroups"><li><h4><span data-l="ja" lang="ja">疲労・時間を使う</span><span data-l="en" lang="en">Use Fatigue and Time</span></h4><ul class="members"><li><a href="#stratagem-4"><span class="m-no">04</span><span class="m-han" lang="ja">以逸待労</span><span class="m-name" data-l="en" lang="en">Wait at Ease for the Exhausted Enemy</span></a></li><li><a href="#stratagem-19"><span class="m-no">19</span><span class="m-han" lang="ja">釜底抽薪</span><span class="m-name" data-l="en" lang="en">Remove the Firewood from Under the Pot</span></a></li></ul></li><li><h4><span data-l="ja" lang="ja">損失・危機を使う</span><span data-l="en" lang="en">Use Loss and Crisis</span></h4><ul class="members"><li><a href="#stratagem-5"><span class="m-no">05</span><span class="m-han" lang="ja">趁火打劫</span><span class="m-name" data-l="en" lang="en">Loot a Burning House</span></a></li><li><a href="#stratagem-36"><span class="m-no">36</span><span class="m-han" lang="ja">走為上</span><span class="m-name" data-l="en" lang="en">If All Else Fails, Retreat</span></a></li></ul></li><li><h4><span data-l="ja" lang="ja">選択肢を設計する</span><span data-l="en" lang="en">Design the Choice Set</span></h4><ul class="members"><li><a href="#stratagem-16"><span class="m-no">16</span><span class="m-han" lang="ja">欲擒故縦</span><span class="m-name" data-l="en" lang="en">To Capture, First Let Go</span></a></li><li><a href="#stratagem-22"><span class="m-no">22</span><span class="m-han" lang="ja">関門捉賊</span><span class="m-name" data-l="en" lang="en">Shut the Door to Catch the Thief</span></a></li></ul></li><li><h4><span data-l="ja" lang="ja">優先順位を変える</span><span data-l="en" lang="en">Change Priorities</span></h4><ul class="members"><li><a href="#stratagem-2"><span class="m-no">02</span><span class="m-han" lang="ja">囲魏救趙</span><span class="m-name" data-l="en" lang="en">Besiege Wei to Rescue Zhao</span></a></li><li><a href="#stratagem-6"><span class="m-no">06</span><span class="m-han" lang="ja">声東撃西</span><span class="m-name" data-l="en" lang="en">Make Noise in the East, Attack in the West</span></a></li></ul></li></ul>
+        </li>
+        <li class="group" id="group-social">
+          <div class="group-head"><span class="group-no" aria-hidden="true">03</span><h3><span data-l="ja" lang="ja">社会を動かす</span><span data-l="en" lang="en">Move Social Systems</span></h3>
+          <p><span data-l="ja" lang="ja">責任・信頼・依存・報酬によって人の行動を誘導する</span><span data-l="en" lang="en">Guide behavior through responsibility, trust, dependency, and reward.</span></p>
+          <button type="button" class="link-button js-only" data-show-group="social"><span data-l="ja" lang="ja">盤面で表示</span><span data-l="en" lang="en">Show on the board</span></button></div>
+          <ul class="subgroups"><li><h4><span data-l="ja" lang="ja">責任・代理を使う</span><span data-l="en" lang="en">Use Responsibility and Agency</span></h4><ul class="members"><li><a href="#stratagem-3"><span class="m-no">03</span><span class="m-han" lang="ja">借刀殺人</span><span class="m-name" data-l="en" lang="en">Kill with a Borrowed Knife</span></a></li><li><a href="#stratagem-24"><span class="m-no">24</span><span class="m-han" lang="ja">仮道伐虢</span><span class="m-name" data-l="en" lang="en">Borrow a Path to Attack Guo</span></a></li></ul></li><li><h4><span data-l="ja" lang="ja">信頼・権威を使う</span><span data-l="en" lang="en">Use Trust and Authority</span></h4><ul class="members"><li><a href="#stratagem-10"><span class="m-no">10</span><span class="m-han" lang="ja">笑裏蔵刀</span><span class="m-name" data-l="en" lang="en">Hide a Knife Behind a Smile</span></a></li><li><a href="#stratagem-14"><span class="m-no">14</span><span class="m-han" lang="ja">借屍還魂</span><span class="m-name" data-l="en" lang="en">Borrow a Corpse to Revive the Soul</span></a></li><li><a href="#stratagem-33"><span class="m-no">33</span><span class="m-han" lang="ja">反間計</span><span class="m-name" data-l="en" lang="en">Turn Trusted Channels Against the Target</span></a></li><li><a href="#stratagem-34"><span class="m-no">34</span><span class="m-han" lang="ja">苦肉計</span><span class="m-name" data-l="en" lang="en">Inflict Injury on Oneself to Win Trust</span></a></li></ul></li><li><h4><span data-l="ja" lang="ja">依存関係を使う</span><span data-l="en" lang="en">Build Dependency</span></h4><ul class="members"><li><a href="#stratagem-23"><span class="m-no">23</span><span class="m-han" lang="ja">遠交近攻</span><span class="m-name" data-l="en" lang="en">Befriend Distant States While Attacking Nearby Ones</span></a></li><li><a href="#stratagem-30"><span class="m-no">30</span><span class="m-han" lang="ja">反客為主</span><span class="m-name" data-l="en" lang="en">Turn from Guest into Host</span></a></li></ul></li><li><h4><span data-l="ja" lang="ja">報酬・欲望を使う</span><span data-l="en" lang="en">Use Reward and Desire</span></h4><ul class="members"><li><a href="#stratagem-31"><span class="m-no">31</span><span class="m-han" lang="ja">美人計</span><span class="m-name" data-l="en" lang="en">The Beauty Trap</span></a></li></ul></li></ul>
+        </li>
+        <li class="group" id="group-information">
+          <div class="group-head"><span class="group-no" aria-hidden="true">04</span><h3><span data-l="ja" lang="ja">情報を操る</span><span data-l="en" lang="en">Manipulate Information</span></h3>
+          <p><span data-l="ja" lang="ja">虚実・情報経路・観測不能性・陽動で解釈を変える</span><span data-l="en" lang="en">Change interpretation through truth and illusion, channels, uncertainty, and misdirection.</span></p>
+          <button type="button" class="link-button js-only" data-show-group="information"><span data-l="ja" lang="ja">盤面で表示</span><span data-l="en" lang="en">Show on the board</span></button></div>
+          <ul class="subgroups"><li><h4><span data-l="ja" lang="ja">虚実を入れ替える</span><span data-l="en" lang="en">Exchange Truth and Illusion</span></h4><ul class="members"><li><a href="#stratagem-1"><span class="m-no">01</span><span class="m-han" lang="ja">瞞天過海</span><span class="m-name" data-l="en" lang="en">Deceive the Heavens to Cross the Sea</span></a></li><li><a href="#stratagem-7"><span class="m-no">07</span><span class="m-han" lang="ja">無中生有</span><span class="m-name" data-l="en" lang="en">Create Something from Nothing</span></a></li><li><a href="#stratagem-21"><span class="m-no">21</span><span class="m-han" lang="ja">金蝉脱殻</span><span class="m-name" data-l="en" lang="en">Shed the Shell Like a Golden Cicada</span></a></li></ul></li><li><h4><span data-l="ja" lang="ja">情報経路を使う</span><span data-l="en" lang="en">Use Information Channels</span></h4><ul class="members"><li><a href="#stratagem-13"><span class="m-no">13</span><span class="m-han" lang="ja">打草驚蛇</span><span class="m-name" data-l="en" lang="en">Beat the Grass to Startle the Snake</span></a></li><li><a href="#stratagem-27"><span class="m-no">27</span><span class="m-han" lang="ja">仮痴不癲</span><span class="m-name" data-l="en" lang="en">Feign Foolishness Without Going Mad</span></a></li><li><a href="#stratagem-33"><span class="m-no">33</span><span class="m-han" lang="ja">反間計</span><span class="m-name" data-l="en" lang="en">Turn Trusted Channels Against the Target</span></a></li></ul></li><li><h4><span data-l="ja" lang="ja">観測不能を使う</span><span data-l="en" lang="en">Use Unobservability</span></h4><ul class="members"><li><a href="#stratagem-8"><span class="m-no">08</span><span class="m-han" lang="ja">暗渡陳倉</span><span class="m-name" data-l="en" lang="en">Secretly Cross at Chencang</span></a></li><li><a href="#stratagem-20"><span class="m-no">20</span><span class="m-han" lang="ja">渾水摸魚</span><span class="m-name" data-l="en" lang="en">Fish in Troubled Waters</span></a></li><li><a href="#stratagem-32"><span class="m-no">32</span><span class="m-han" lang="ja">空城計</span><span class="m-name" data-l="en" lang="en">The Empty Fort Strategy</span></a></li></ul></li><li><h4><span data-l="ja" lang="ja">陽動・注意誘導</span><span data-l="en" lang="en">Redirect Attention</span></h4><ul class="members"><li><a href="#stratagem-2"><span class="m-no">02</span><span class="m-han" lang="ja">囲魏救趙</span><span class="m-name" data-l="en" lang="en">Besiege Wei to Rescue Zhao</span></a></li><li><a href="#stratagem-6"><span class="m-no">06</span><span class="m-han" lang="ja">声東撃西</span><span class="m-name" data-l="en" lang="en">Make Noise in the East, Attack in the West</span></a></li></ul></li></ul>
+        </li>
+        <li class="group" id="group-structure">
+          <div class="group-head"><span class="group-no" aria-hidden="true">05</span><h3><span data-l="ja" lang="ja">構造を崩す</span><span data-l="en" lang="en">Break Structures</span></h3>
+          <p><span data-l="ja" lang="ja">分断・資源・連鎖・置換によって相手の仕組みを崩す</span><span data-l="en" lang="en">Disrupt systems through isolation, resources, chains, and substitution.</span></p>
+          <button type="button" class="link-button js-only" data-show-group="structure"><span data-l="ja" lang="ja">盤面で表示</span><span data-l="en" lang="en">Show on the board</span></button></div>
+          <ul class="subgroups"><li><h4><span data-l="ja" lang="ja">分断・隔離</span><span data-l="en" lang="en">Divide and Isolate</span></h4><ul class="members"><li><a href="#stratagem-11"><span class="m-no">11</span><span class="m-han" lang="ja">李代桃僵</span><span class="m-name" data-l="en" lang="en">Sacrifice the Plum Tree to Preserve the Peach Tree</span></a></li><li><a href="#stratagem-18"><span class="m-no">18</span><span class="m-han" lang="ja">擒賊擒王</span><span class="m-name" data-l="en" lang="en">Capture the Leader to Capture the Bandits</span></a></li></ul></li><li><h4><span data-l="ja" lang="ja">資源・補給を突く</span><span data-l="en" lang="en">Target Resources and Supply</span></h4><ul class="members"><li><a href="#stratagem-15"><span class="m-no">15</span><span class="m-han" lang="ja">調虎離山</span><span class="m-name" data-l="en" lang="en">Lure the Tiger Away from the Mountain</span></a></li><li><a href="#stratagem-19"><span class="m-no">19</span><span class="m-han" lang="ja">釜底抽薪</span><span class="m-name" data-l="en" lang="en">Remove the Firewood from Under the Pot</span></a></li></ul></li><li><h4><span data-l="ja" lang="ja">システム連鎖</span><span data-l="en" lang="en">Build System Chains</span></h4><ul class="members"><li><a href="#stratagem-35"><span class="m-no">35</span><span class="m-han" lang="ja">連環計</span><span class="m-name" data-l="en" lang="en">Chain Stratagems Together</span></a></li></ul></li><li><h4><span data-l="ja" lang="ja">置換・偽装</span><span data-l="en" lang="en">Substitute and Disguise</span></h4><ul class="members"><li><a href="#stratagem-21"><span class="m-no">21</span><span class="m-han" lang="ja">金蝉脱殻</span><span class="m-name" data-l="en" lang="en">Shed the Shell Like a Golden Cicada</span></a></li><li><a href="#stratagem-25"><span class="m-no">25</span><span class="m-han" lang="ja">偸梁換柱</span><span class="m-name" data-l="en" lang="en">Replace the Beams and Pillars</span></a></li><li><a href="#stratagem-26"><span class="m-no">26</span><span class="m-han" lang="ja">指桑罵槐</span><span class="m-name" data-l="en" lang="en">Point at the Mulberry, Curse the Locust</span></a></li></ul></li></ul>
+        </li>
+        <li class="group" id="group-transformation">
+          <div class="group-head"><span class="group-no" aria-hidden="true">06</span><h3><span data-l="ja" lang="ja">撤退と変換</span><span data-l="en" lang="en">Withdraw and Transform</span></h3>
+          <p><span data-l="ja" lang="ja">機会・変身・出口・終局処理として戦略を畳み直す</span><span data-l="en" lang="en">Reframe strategy through opportunity, adaptation, exit, and endgame decisions.</span></p>
+          <button type="button" class="link-button js-only" data-show-group="transformation"><span data-l="ja" lang="ja">盤面で表示</span><span data-l="en" lang="en">Show on the board</span></button></div>
+          <ul class="subgroups"><li><h4><span data-l="ja" lang="ja">機会利用</span><span data-l="en" lang="en">Exploit Opportunity</span></h4><ul class="members"><li><a href="#stratagem-5"><span class="m-no">05</span><span class="m-han" lang="ja">趁火打劫</span><span class="m-name" data-l="en" lang="en">Loot a Burning House</span></a></li><li><a href="#stratagem-9"><span class="m-no">09</span><span class="m-han" lang="ja">隔岸観火</span><span class="m-name" data-l="en" lang="en">Watch the Fire from Across the River</span></a></li><li><a href="#stratagem-12"><span class="m-no">12</span><span class="m-han" lang="ja">順手牽羊</span><span class="m-name" data-l="en" lang="en">Take the Opportunity to Steal a Goat</span></a></li></ul></li><li><h4><span data-l="ja" lang="ja">変身・適応</span><span data-l="en" lang="en">Transform and Adapt</span></h4><ul class="members"><li><a href="#stratagem-17"><span class="m-no">17</span><span class="m-han" lang="ja">抛磚引玉</span><span class="m-name" data-l="en" lang="en">Throw a Brick to Attract Jade</span></a></li><li><a href="#stratagem-27"><span class="m-no">27</span><span class="m-han" lang="ja">仮痴不癲</span><span class="m-name" data-l="en" lang="en">Feign Foolishness Without Going Mad</span></a></li><li><a href="#stratagem-28"><span class="m-no">28</span><span class="m-han" lang="ja">上屋抽梯</span><span class="m-name" data-l="en" lang="en">Remove the Ladder After Ascending the Roof</span></a></li></ul></li><li><h4><span data-l="ja" lang="ja">出口・撤退</span><span data-l="en" lang="en">Exit and Withdraw</span></h4><ul class="members"><li><a href="#stratagem-36"><span class="m-no">36</span><span class="m-han" lang="ja">走為上</span><span class="m-name" data-l="en" lang="en">If All Else Fails, Retreat</span></a></li></ul></li></ul>
+        </li>
+      </ol>
+    </section>
+
+    <section id="concept" class="section essay" aria-labelledby="concept-title">
+      <p class="kicker"><span data-l="ja" lang="ja">概念</span><span data-l="en" lang="en">Concept</span></p>
+      <h2 id="concept-title"><span data-l="ja" lang="ja">兵法は、認知仕様書としても読める。</span><span data-l="en" lang="en">Strategy can also be read as a specification of cognition.</span></h2>
+      <p><span data-l="ja" lang="ja">三十六計の成立理由を分解すると、人が何を信じ、どこで判断を誤り、どの条件で注意を逸らすのかという認知パターンが見えてくる。古代兵法を現代の認知科学・行動経済学の言葉で再配置する試みである。</span><span data-l="en" lang="en">When we examine why each stratagem works, recurring patterns appear: what people readily believe, where judgment fails, and when attention is redirected. This project reframes ancient strategy through modern cognitive science and behavioral economics.</span></p>
+    </section>
+
+    <section id="notes" class="section essay essay-note" aria-labelledby="notes-title">
+      <p class="kicker"><span data-l="ja" lang="ja">研究上の注記</span><span data-l="en" lang="en">Research Note</span></p>
+      <h2 id="notes-title"><span data-l="ja" lang="ja">これは歴史的断定ではなく、現代的な再解釈である。</span><span data-l="en" lang="en">A modern interpretation, not a historical claim.</span></h2>
+      <p><span data-l="ja" lang="ja">三十六計が当時から認知科学として作られたと主張するものではない。現代の認知科学・行動経済学・情報設計の視点から、古典兵法を認知バイアスの実践例として読む仮説的マッピングである。</span><span data-l="en" lang="en">This map does not claim that the Thirty-Six Stratagems were originally designed as cognitive science. It is a hypothesis-driven reinterpretation through cognitive science, behavioral economics, and information design.</span></p>
+    </section>
   </main>
-  <footer><span>© Jinn Project</span><span>Visualizing hidden structures in thought and behavior.</span></footer>
-  <script src="stratagems-en.js"></script>
-  <script src="i18n.js"></script>
-  <script src="stratagems.js"></script>
+  <nav class="pager-bar js-only" id="pagerBar" aria-label="三十六計中の位置" data-aria="positionLabel" hidden>
+    <button type="button" class="pager-step" data-step="-1"><span aria-hidden="true">‹</span><span class="sr-only"><span data-l="ja" lang="ja">前の計</span><span data-l="en" lang="en">Previous</span></span></button>
+    <button type="button" class="pager-index" id="pagerIndex"><span class="pager-pos" id="pagerPos"></span><span class="pager-name" id="pagerName" lang="ja"></span><span class="sr-only"><span data-l="ja" lang="ja">盤面へ戻る</span><span data-l="en" lang="en">Back to the board</span></span></button>
+    <button type="button" class="pager-step" data-step="1"><span aria-hidden="true">›</span><span class="sr-only"><span data-l="ja" lang="ja">次の計</span><span data-l="en" lang="en">Next</span></span></button>
+  </nav>
+  <footer class="footer">
+    <span>© Jinn Project</span>
+    <span>Visualizing hidden structures in thought and behavior.</span>
+    <a href="../../" data-home-en="../../" data-home-ja="../../index-ja.html"><span data-l="ja" lang="ja">Jinn Project トップへ</span><span data-l="en" lang="en">Jinn Project home</span></a>
+  </footer>
+  <p class="sr-only" id="announcer" role="status" aria-live="polite"></p>
+  <script>(function(){var done=false;function go(){if(done)return;done=true;['stratagems.js','stratagems-en.js','i18n.js','atlas.js'].forEach(function(src){var s=document.createElement('script');s.src=src;s.async=false;document.body.appendChild(s)})}try{new PerformanceObserver(function(list,o){if(list.getEntries().some(function(e){return e.name==='first-contentful-paint'})){o.disconnect();setTimeout(go,0)}}).observe({type:'paint',buffered:true})}catch(e){}addEventListener('load',function(){setTimeout(go,0)})})()</script>
 
   <!-- Cloudflare Web Analytics -->
 <script defer
@@ -69,6 +385,5 @@ src="https://static.cloudflareinsights.com/beacon.min.js"
 data-cf-beacon='{"token":"7da53f8ef3544cf0967279ebd140ff89"}'>
 </script>
 <!-- End Cloudflare Web Analytics -->
-  
 </body>
 </html>
