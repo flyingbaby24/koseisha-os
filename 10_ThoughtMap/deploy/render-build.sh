@@ -8,4 +8,3 @@ VITE_THOUGHTMAP_API_BASE_URL=/ npm --prefix threejs run build
 test -s threejs/dist/index.html
 cd web
 python -m pip install -r requirements-api.txt
-python -m alembic -c alembic.ini upgrade head

@@ -10,11 +10,11 @@ from functools import lru_cache
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
 from .config import WARMUP_OFF, get_settings
+from .guest_search_cors import install_guest_search_cors
 from .embedding_model import EmbeddingModelUnavailableError
 from .query_encoder import describe_encoder, get_query_encoder
 from .map_projection import DEFAULT_ARTIFACT_PATH
@@ -173,16 +173,9 @@ def _require_library() -> UserLibraryService:
 # uncompressed, where the CPU cost would outweigh the gain.
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 
-# Explicit origins outside development. `config` refuses to expand an unset
-# variable into "*", so a public deployment that forgot to configure this
-# allows nothing and says so in /ready rather than allowing everything.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=list(settings.allowed_origins),
-    allow_credentials=False,
-    allow_methods=["GET", "POST", "DELETE"],
-    allow_headers=["*"],
-)
+# Public Guest CORS is exact-origin, anonymous, and limited to /search GET.
+# Existing same-origin routes and development CORS retain their behavior.
+install_guest_search_cors(app, settings)
 
 
 @app.exception_handler(Exception)
