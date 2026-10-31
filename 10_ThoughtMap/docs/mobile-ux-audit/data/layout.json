@@ -1,0 +1,782 @@
+{
+ "320": {
+  "initial": {
+   "viewport": [
+    320,
+    568
+   ],
+   "view": "list",
+   "topBarH": 56,
+   "mapWindow": [
+    304,
+    192
+   ],
+   "mapAreaPct": 32,
+   "detailPanelH": 0,
+   "radarTopInPanel": null,
+   "radarVisibleWithoutScroll": null,
+   "overflowX": false,
+   "targetsUnder24": [],
+   "targetsUnder44": [
+    "Search query (114x42)",
+    "Search (77x42)",
+    "OptionsSemantic · Top 100 (83x42)",
+    "Results (70x36)",
+    "Library (68x36)",
+    "virtue and happiness (145x28)",
+    "the nature of time (126x28)",
+    "Plato (54x28)",
+    "Reset camera (38x38)",
+    "Fit all (38x38)",
+    "Fit results (38x38)"
+   ],
+   "targetCount": 11
+  },
+  "inputStillFocusedAfterSearch": true,
+  "results": {
+   "viewport": [
+    320,
+    568
+   ],
+   "view": "list",
+   "topBarH": 56,
+   "mapWindow": [
+    304,
+    192
+   ],
+   "mapAreaPct": 32,
+   "detailPanelH": 0,
+   "radarTopInPanel": null,
+   "radarVisibleWithoutScroll": null,
+   "overflowX": false,
+   "targetsUnder24": [],
+   "targetsUnder44": [
+    "Search query (114x42)",
+    "Search (77x42)",
+    "OptionsSemantic · Top 100 (83x42)",
+    "Results10 (102x38)",
+    "Library (68x38)",
+    "Reset camera (38x38)",
+    "Fit all (38x38)",
+    "Fit results (38x38)"
+   ],
+   "targetCount": 12
+  },
+  "detail": {
+   "viewport": [
+    320,
+    568
+   ],
+   "view": "detail",
+   "topBarH": 56,
+   "mapWindow": [
+    304,
+    192
+   ],
+   "mapAreaPct": 32,
+   "detailPanelH": 288,
+   "radarTopInPanel": 444,
+   "radarVisibleWithoutScroll": false,
+   "overflowX": false,
+   "targetsUnder24": [
+    {
+     "label": "Set a Library ID",
+     "w": 87,
+     "h": 18
+    }
+   ],
+   "targetsUnder44": [
+    "Search query (114x42)",
+    "Search (77x42)",
+    "OptionsSemantic · Top 100 (83x42)",
+    "Back to the list (79x28)",
+    "Save (74x32)",
+    "Show in map (122x32)",
+    "Open source (120x32)",
+    "Reset camera (38x38)",
+    "Fit all (38x38)",
+    "Fit results (38x38)"
+   ],
+   "targetCount": 11
+  }
+ },
+ "375": {
+  "initial": {
+   "viewport": [
+    375,
+    667
+   ],
+   "view": "list",
+   "topBarH": 56,
+   "mapWindow": [
+    359,
+    232
+   ],
+   "mapAreaPct": 33,
+   "detailPanelH": 0,
+   "radarTopInPanel": null,
+   "radarVisibleWithoutScroll": null,
+   "overflowX": false,
+   "targetsUnder24": [],
+   "targetsUnder44": [
+    "Search query (169x42)",
+    "Search (77x42)",
+    "OptionsSemantic · Top 100 (83x42)",
+    "Results (70x36)",
+    "Library (68x36)",
+    "virtue and happiness (145x28)",
+    "the nature of time (126x28)",
+    "Plato (54x28)",
+    "Reset camera (38x38)",
+    "Fit all (38x38)",
+    "Fit results (38x38)"
+   ],
+   "targetCount": 11
+  },
+  "inputStillFocusedAfterSearch": true,
+  "results": {
+   "viewport": [
+    375,
+    667
+   ],
+   "view": "list",
+   "topBarH": 56,
+   "mapWindow": [
+    359,
+    232
+   ],
+   "mapAreaPct": 33,
+   "detailPanelH": 0,
+   "radarTopInPanel": null,
+   "radarVisibleWithoutScroll": null,
+   "overflowX": false,
+   "targetsUnder24": [],
+   "targetsUnder44": [
+    "Search query (169x42)",
+    "Search (77x42)",
+    "OptionsSemantic · Top 100 (83x42)",
+    "Results10 (102x38)",
+    "Library (68x38)",
+    "Reset camera (38x38)",
+    "Fit all (38x38)",
+    "Fit results (38x38)"
+   ],
+   "targetCount": 13
+  },
+  "detail": {
+   "viewport": [
+    375,
+    667
+   ],
+   "view": "detail",
+   "topBarH": 56,
+   "mapWindow": [
+    359,
+    232
+   ],
+   "mapAreaPct": 33,
+   "detailPanelH": 347,
+   "radarTopInPanel": 426,
+   "radarVisibleWithoutScroll": false,
+   "overflowX": false,
+   "targetsUnder24": [
+    {
+     "label": "Set a Library ID",
+     "w": 87,
+     "h": 18
+    }
+   ],
+   "targetsUnder44": [
+    "Search query (169x42)",
+    "Search (77x42)",
+    "OptionsSemantic · Top 100 (83x42)",
+    "Back to the list (79x28)",
+    "Save (74x32)",
+    "Show in map (122x32)",
+    "Open source (120x32)",
+    "Reset camera (38x38)",
+    "Fit all (38x38)",
+    "Fit results (38x38)"
+   ],
+   "targetCount": 11
+  }
+ },
+ "390": {
+  "initial": {
+   "viewport": [
+    390,
+    844
+   ],
+   "view": "list",
+   "topBarH": 56,
+   "mapWindow": [
+    374,
+    302
+   ],
+   "mapAreaPct": 34,
+   "detailPanelH": 0,
+   "radarTopInPanel": null,
+   "radarVisibleWithoutScroll": null,
+   "overflowX": false,
+   "targetsUnder24": [],
+   "targetsUnder44": [
+    "Search query (184x42)",
+    "Search (77x42)",
+    "OptionsSemantic · Top 100 (83x42)",
+    "Results (70x36)",
+    "Library (68x36)",
+    "virtue and happiness (145x28)",
+    "the nature of time (126x28)",
+    "Plato (54x28)",
+    "Reset camera (38x38)",
+    "Fit all (38x38)",
+    "Fit results (38x38)"
+   ],
+   "targetCount": 11
+  },
+  "inputStillFocusedAfterSearch": true,
+  "results": {
+   "viewport": [
+    390,
+    844
+   ],
+   "view": "list",
+   "topBarH": 56,
+   "mapWindow": [
+    374,
+    302
+   ],
+   "mapAreaPct": 34,
+   "detailPanelH": 0,
+   "radarTopInPanel": null,
+   "radarVisibleWithoutScroll": null,
+   "overflowX": false,
+   "targetsUnder24": [],
+   "targetsUnder44": [
+    "Search query (184x42)",
+    "Search (77x42)",
+    "OptionsSemantic · Top 100 (83x42)",
+    "Results10 (102x38)",
+    "Library (68x38)",
+    "Reset camera (38x38)",
+    "Fit all (38x38)",
+    "Fit results (38x38)"
+   ],
+   "targetCount": 14
+  },
+  "detail": {
+   "viewport": [
+    390,
+    844
+   ],
+   "view": "detail",
+   "topBarH": 56,
+   "mapWindow": [
+    374,
+    302
+   ],
+   "mapAreaPct": 34,
+   "detailPanelH": 454,
+   "radarTopInPanel": 386,
+   "radarVisibleWithoutScroll": true,
+   "overflowX": false,
+   "targetsUnder24": [
+    {
+     "label": "Set a Library ID",
+     "w": 87,
+     "h": 18
+    }
+   ],
+   "targetsUnder44": [
+    "Search query (184x42)",
+    "Search (77x42)",
+    "OptionsSemantic · Top 100 (83x42)",
+    "Back to the list (79x28)",
+    "Save (74x32)",
+    "Show in map (122x32)",
+    "Open source (120x32)",
+    "Reset camera (38x38)",
+    "Fit all (38x38)",
+    "Fit results (38x38)"
+   ],
+   "targetCount": 11
+  },
+  "optionsOpen": {
+   "viewport": [
+    390,
+    844
+   ],
+   "view": "list",
+   "topBarH": 298,
+   "mapWindow": [
+    374,
+    206
+   ],
+   "mapAreaPct": 23,
+   "detailPanelH": 0,
+   "radarTopInPanel": null,
+   "radarVisibleWithoutScroll": null,
+   "overflowX": false,
+   "targetsUnder24": [],
+   "targetsUnder44": [
+    "Search query (184x42)",
+    "Search (77x42)",
+    "OptionsSemantic · Top 100 (83x42)",
+    "Mode (170x34)",
+    "Source (170x34)",
+    "Filter (170x34)",
+    "Results (170x34)",
+    "Results10 (102x38)",
+    "Library (68x38)",
+    "Reset camera (38x38)",
+    "Fit all (38x38)",
+    "Fit results (38x38)"
+   ],
+   "targetCount": 16
+  },
+  "keyboardResize": {
+   "viewport": [
+    390,
+    508
+   ],
+   "view": "list",
+   "topBarH": 56,
+   "mapWindow": [
+    374,
+    168
+   ],
+   "mapAreaPct": 32,
+   "detailPanelH": 0,
+   "radarTopInPanel": null,
+   "radarVisibleWithoutScroll": null,
+   "overflowX": false,
+   "targetsUnder24": [],
+   "targetsUnder44": [
+    "Search query (184x42)",
+    "Search (77x42)",
+    "OptionsSemantic · Top 100 (83x42)",
+    "Results10 (102x38)",
+    "Library (68x38)",
+    "Reset camera (38x38)",
+    "Fit all (38x38)",
+    "Fit results (38x38)"
+   ],
+   "targetCount": 11
+  }
+ },
+ "430": {
+  "initial": {
+   "viewport": [
+    430,
+    932
+   ],
+   "view": "list",
+   "topBarH": 56,
+   "mapWindow": [
+    414,
+    338
+   ],
+   "mapAreaPct": 35,
+   "detailPanelH": 0,
+   "radarTopInPanel": null,
+   "radarVisibleWithoutScroll": null,
+   "overflowX": false,
+   "targetsUnder24": [],
+   "targetsUnder44": [
+    "Search query (224x42)",
+    "Search (77x42)",
+    "OptionsSemantic · Top 100 (83x42)",
+    "Results (70x36)",
+    "Library (68x36)",
+    "virtue and happiness (145x28)",
+    "the nature of time (126x28)",
+    "Plato (54x28)",
+    "Reset camera (38x38)",
+    "Fit all (38x38)",
+    "Fit results (38x38)"
+   ],
+   "targetCount": 11
+  },
+  "inputStillFocusedAfterSearch": true,
+  "results": {
+   "viewport": [
+    430,
+    932
+   ],
+   "view": "list",
+   "topBarH": 56,
+   "mapWindow": [
+    414,
+    338
+   ],
+   "mapAreaPct": 35,
+   "detailPanelH": 0,
+   "radarTopInPanel": null,
+   "radarVisibleWithoutScroll": null,
+   "overflowX": false,
+   "targetsUnder24": [],
+   "targetsUnder44": [
+    "Search query (224x42)",
+    "Search (77x42)",
+    "OptionsSemantic · Top 100 (83x42)",
+    "Results10 (102x38)",
+    "Library (68x38)",
+    "Reset camera (38x38)",
+    "Fit all (38x38)",
+    "Fit results (38x38)"
+   ],
+   "targetCount": 15
+  },
+  "detail": {
+   "viewport": [
+    430,
+    932
+   ],
+   "view": "detail",
+   "topBarH": 56,
+   "mapWindow": [
+    414,
+    338
+   ],
+   "mapAreaPct": 35,
+   "detailPanelH": 506,
+   "radarTopInPanel": 386,
+   "radarVisibleWithoutScroll": true,
+   "overflowX": false,
+   "targetsUnder24": [
+    {
+     "label": "Set a Library ID",
+     "w": 87,
+     "h": 18
+    }
+   ],
+   "targetsUnder44": [
+    "Search query (224x42)",
+    "Search (77x42)",
+    "OptionsSemantic · Top 100 (83x42)",
+    "Back to the list (79x28)",
+    "Save (74x32)",
+    "Show in map (122x32)",
+    "Open source (120x32)",
+    "Reset camera (38x38)",
+    "Fit all (38x38)",
+    "Fit results (38x38)"
+   ],
+   "targetCount": 11
+  }
+ },
+ "768": {
+  "initial": {
+   "viewport": [
+    768,
+    1024
+   ],
+   "view": "list",
+   "topBarH": 58,
+   "mapWindow": [
+    425,
+    930
+   ],
+   "mapAreaPct": 50,
+   "detailPanelH": 262,
+   "radarTopInPanel": null,
+   "radarVisibleWithoutScroll": null,
+   "overflowX": false,
+   "targetsUnder24": [
+    {
+     "label": "Values by axis",
+     "w": 90,
+     "h": 23
+    }
+   ],
+   "targetsUnder44": [
+    "Search query (506x40)",
+    "Search (89x40)",
+    "OptionsSemantic · Top 100 (87x40)",
+    "Results (70x36)",
+    "Library (68x36)",
+    "virtue and happiness (145x28)",
+    "the nature of time (126x28)",
+    "Plato (54x28)",
+    "Reset Camera (106x30)",
+    "Fit All (58x30)",
+    "Fit Results (85x30)"
+   ],
+   "targetCount": 12
+  },
+  "inputStillFocusedAfterSearch": true,
+  "results": {
+   "viewport": [
+    768,
+    1024
+   ],
+   "view": "list",
+   "topBarH": 58,
+   "mapWindow": [
+    425,
+    930
+   ],
+   "mapAreaPct": 50,
+   "detailPanelH": 488,
+   "radarTopInPanel": 183,
+   "radarVisibleWithoutScroll": true,
+   "overflowX": false,
+   "targetsUnder24": [
+    {
+     "label": "Values by axis",
+     "w": 90,
+     "h": 23
+    }
+   ],
+   "targetsUnder44": [
+    "Search query (506x40)",
+    "Search (89x40)",
+    "OptionsSemantic · Top 100 (87x40)",
+    "Results10 (102x38)",
+    "Library (68x38)",
+    "Reset Camera (106x30)",
+    "Fit All (58x30)",
+    "Fit Results (85x30)"
+   ],
+   "targetCount": 19
+  },
+  "detail": {
+   "viewport": [
+    768,
+    1024
+   ],
+   "view": "detail",
+   "topBarH": 58,
+   "mapWindow": [
+    425,
+    930
+   ],
+   "mapAreaPct": 50,
+   "detailPanelH": 594,
+   "radarTopInPanel": 432,
+   "radarVisibleWithoutScroll": true,
+   "overflowX": false,
+   "targetsUnder24": [
+    {
+     "label": "Set a Library ID",
+     "w": 87,
+     "h": 18
+    }
+   ],
+   "targetsUnder44": [
+    "Search query (506x40)",
+    "Search (89x40)",
+    "OptionsSemantic · Top 100 (87x40)",
+    "Results10 (102x38)",
+    "Library (68x38)",
+    "Save (74x32)",
+    "Show in map (122x32)",
+    "Open source (120x32)",
+    "Reset Camera (106x30)",
+    "Fit All (58x30)",
+    "Fit Results (85x30)"
+   ],
+   "targetCount": 22
+  }
+ },
+ "land-667x375": {
+  "initial": {
+   "viewport": [
+    667,
+    375
+   ],
+   "view": "list",
+   "topBarH": 56,
+   "mapWindow": [
+    651,
+    140
+   ],
+   "mapAreaPct": 36,
+   "detailPanelH": 0,
+   "radarTopInPanel": null,
+   "radarVisibleWithoutScroll": null,
+   "overflowX": false,
+   "targetsUnder24": [],
+   "targetsUnder44": [
+    "Search query (461x42)",
+    "Search (77x42)",
+    "OptionsSemantic · Top 100 (83x42)",
+    "Results (70x36)",
+    "Library (68x36)",
+    "Reset camera (38x38)",
+    "Fit all (38x38)",
+    "Fit results (38x38)"
+   ],
+   "targetCount": 8
+  },
+  "inputStillFocusedAfterSearch": true,
+  "results": {
+   "viewport": [
+    667,
+    375
+   ],
+   "view": "list",
+   "topBarH": 56,
+   "mapWindow": [
+    651,
+    140
+   ],
+   "mapAreaPct": 36,
+   "detailPanelH": 0,
+   "radarTopInPanel": null,
+   "radarVisibleWithoutScroll": null,
+   "overflowX": false,
+   "targetsUnder24": [],
+   "targetsUnder44": [
+    "Search query (461x42)",
+    "Search (77x42)",
+    "OptionsSemantic · Top 100 (83x42)",
+    "Results10 (102x38)",
+    "Library (68x38)",
+    "Reset camera (38x38)",
+    "Fit all (38x38)",
+    "Fit results (38x38)"
+   ],
+   "targetCount": 10
+  },
+  "detail": {
+   "viewport": [
+    667,
+    375
+   ],
+   "view": "detail",
+   "topBarH": 56,
+   "mapWindow": [
+    651,
+    140
+   ],
+   "mapAreaPct": 36,
+   "detailPanelH": 147,
+   "radarTopInPanel": 368,
+   "radarVisibleWithoutScroll": false,
+   "overflowX": false,
+   "targetsUnder24": [],
+   "targetsUnder44": [
+    "Search query (461x42)",
+    "Search (77x42)",
+    "OptionsSemantic · Top 100 (83x42)",
+    "Back to the list (79x28)",
+    "Save (74x32)",
+    "Show in map (122x32)",
+    "Open source (120x32)",
+    "Reset camera (38x38)",
+    "Fit all (38x38)",
+    "Fit results (38x38)"
+   ],
+   "targetCount": 10
+  }
+ },
+ "land-844x390": {
+  "initial": {
+   "viewport": [
+    844,
+    390
+   ],
+   "view": "list",
+   "topBarH": 58,
+   "mapWindow": [
+    470,
+    296
+   ],
+   "mapAreaPct": 42,
+   "detailPanelH": 226,
+   "radarTopInPanel": null,
+   "radarVisibleWithoutScroll": null,
+   "overflowX": false,
+   "targetsUnder24": [
+    {
+     "label": "Values by axis",
+     "w": 90,
+     "h": 23
+    }
+   ],
+   "targetsUnder44": [
+    "Search query (582x40)",
+    "Search (89x40)",
+    "OptionsSemantic · Top 100 (87x40)",
+    "Results (70x36)",
+    "Library (68x36)",
+    "virtue and happiness (145x28)",
+    "the nature of time (126x28)",
+    "Plato (54x28)",
+    "Reset Camera (106x30)",
+    "Fit All (58x30)",
+    "Fit Results (85x30)"
+   ],
+   "targetCount": 12
+  },
+  "inputStillFocusedAfterSearch": true,
+  "results": {
+   "viewport": [
+    844,
+    390
+   ],
+   "view": "list",
+   "topBarH": 58,
+   "mapWindow": [
+    470,
+    296
+   ],
+   "mapAreaPct": 42,
+   "detailPanelH": 226,
+   "radarTopInPanel": 183,
+   "radarVisibleWithoutScroll": true,
+   "overflowX": false,
+   "targetsUnder24": [],
+   "targetsUnder44": [
+    "Search query (582x40)",
+    "Search (89x40)",
+    "OptionsSemantic · Top 100 (87x40)",
+    "Results10 (102x38)",
+    "Library (68x38)",
+    "Reset Camera (106x30)",
+    "Fit All (58x30)",
+    "Fit Results (85x30)"
+   ],
+   "targetCount": 12
+  },
+  "detail": {
+   "viewport": [
+    844,
+    390
+   ],
+   "view": "detail",
+   "topBarH": 58,
+   "mapWindow": [
+    470,
+    296
+   ],
+   "mapAreaPct": 42,
+   "detailPanelH": 226,
+   "radarTopInPanel": 432,
+   "radarVisibleWithoutScroll": false,
+   "overflowX": false,
+   "targetsUnder24": [
+    {
+     "label": "Set a Library ID",
+     "w": 87,
+     "h": 18
+    }
+   ],
+   "targetsUnder44": [
+    "Search query (582x40)",
+    "Search (89x40)",
+    "OptionsSemantic · Top 100 (87x40)",
+    "Results10 (102x38)",
+    "Library (68x38)",
+    "Save (74x32)",
+    "Show in map (122x32)",
+    "Open source (120x32)",
+    "Reset Camera (106x30)",
+    "Fit All (58x30)",
+    "Fit Results (85x30)"
+   ],
+   "targetCount": 17
+  }
+ }
+}
