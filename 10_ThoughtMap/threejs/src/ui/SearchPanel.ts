@@ -18,6 +18,8 @@ import {
 
 export interface SearchPanelCallbacks {
   onSearch: () => void;
+  /** The query field gained or lost focus (the phone layout makes room). */
+  onFocusChange?: (focused: boolean) => void;
 }
 
 let panelSequence = 0;
@@ -148,6 +150,8 @@ export class SearchPanel {
     });
 
     this.input.addEventListener("input", () => this.state.setQuery(this.input.value));
+    this.input.addEventListener("focus", () => this.callbacks.onFocusChange?.(true));
+    this.input.addEventListener("blur", () => this.callbacks.onFocusChange?.(false));
 
     this.modeSelect.addEventListener("change", () => {
       const value = this.modeSelect.value;
@@ -245,6 +249,11 @@ export class SearchPanel {
 
   focus(): void {
     this.input.focus();
+  }
+
+  /** Leave the query field, which closes a phone's on-screen keyboard. */
+  blur(): void {
+    this.input.blur();
   }
 
   /** Focus and select the query, ready to be replaced. */

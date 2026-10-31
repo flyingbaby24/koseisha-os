@@ -122,6 +122,38 @@ export function pickNearestNode(
   return { index: bestIndex, distancePx: Math.sqrt(bestDistanceSquared) };
 }
 
+/**
+ * How many on-screen nodes lie within `radiusPx` of a point, stopping at `cap`.
+ *
+ * Tells a finger tap that can only hit one of many overlapping documents —
+ * where any choice would be arbitrary — from one that has a clear target.
+ * Same screen buffer and the same depth rule as `pickNearestNode`.
+ */
+export function countWithinRadius(
+  screen: Float32Array,
+  count: number,
+  px: number,
+  py: number,
+  radiusPx: number,
+  cap = Number.POSITIVE_INFINITY,
+): number {
+  const radiusSquared = radiusPx * radiusPx;
+  let found = 0;
+  for (let index = 0; index < count && found < cap; index += 1) {
+    const offset = index * 3;
+    const depth = screen[offset + 2]!;
+    if (depth < -1 || depth > 1) {
+      continue;
+    }
+    const dx = screen[offset]! - px;
+    const dy = screen[offset + 1]! - py;
+    if (dx * dx + dy * dy <= radiusSquared) {
+      found += 1;
+    }
+  }
+  return found;
+}
+
 /** Convert NDC (-1..1) to CSS pixel coordinates with the y axis flipped. */
 export function ndcToScreen(
   ndcX: number,

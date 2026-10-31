@@ -174,3 +174,14 @@ describe("tooltip placement", () => {
     expect(Number.isFinite(placed.y)).toBe(true);
   });
 });
+
+describe("countWithinRadius", () => {
+  it("counts on-screen nodes inside the radius, skipping clipped ones, up to a cap", async () => {
+    const { countWithinRadius } = await import("../src/scene/picking");
+    // [x, y, depth] triples: three near (10,10), one far, one behind the camera.
+    const screen = new Float32Array([10, 10, 0, 12, 11, 0.5, 14, 9, 0.2, 200, 200, 0, 10, 10, 2]);
+    expect(countWithinRadius(screen, 5, 10, 10, 6)).toBe(3);
+    expect(countWithinRadius(screen, 5, 10, 10, 6, 2)).toBe(2);
+    expect(countWithinRadius(screen, 5, 100, 100, 6)).toBe(0);
+  });
+});

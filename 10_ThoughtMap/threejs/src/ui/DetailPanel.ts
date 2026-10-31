@@ -13,6 +13,8 @@ export interface DetailPanelCallbacks {
   onBack?: () => void;
   /** Take the reader to where a Library ID is entered. */
   onRequestLibrary?: () => void;
+  /** Step to the previous (-1) or next (+1) document in the result list. */
+  onStep?: (delta: -1 | 1) => void;
 }
 
 /** How long "Saved to your Library" stays before it gives way. */
@@ -49,6 +51,11 @@ export class DetailPanel {
   private readonly saveNote: HTMLElement;
   private readonly saveError: HTMLElement;
   private readonly libraryPrompt: HTMLElement;
+  private readonly prevButton: HTMLButtonElement;
+  private readonly nextButton: HTMLButtonElement;
+  private readonly position: HTMLElement;
+  /** The header row; the phone layout also drags the sheet by it. */
+  readonly headElement: HTMLElement;
 
   private callbacks: DetailPanelCallbacks;
   private lastSavePhase: SavePhase = "idle";
@@ -77,7 +84,20 @@ export class DetailPanel {
     heading.className = "tm-panel-title";
     heading.textContent = "Selected document";
 
-    head.append(back, heading);
+    // Step through the results without going back to the list: comparing
+    // documents was two taps and a scroll per document on a phone.
+    const stepper = document.createElement("div");
+    stepper.className = "tm-detail-stepper";
+    this.prevButton = stepButton("tm-step is-prev", "Previous result");
+    this.nextButton = stepButton("tm-step is-next", "Next result");
+    this.position = document.createElement("span");
+    this.position.className = "tm-step-position";
+    this.prevButton.addEventListener("click", () => this.callbacks.onStep?.(-1));
+    this.nextButton.addEventListener("click", () => this.callbacks.onStep?.(1));
+    stepper.append(this.prevButton, this.position, this.nextButton);
+
+    head.append(back, heading, stepper);
+    this.headElement = head;
 
     this.emptyNote = document.createElement("p");
     this.emptyNote.className = "tm-note tm-detail-empty";
@@ -214,6 +234,7 @@ export class DetailPanel {
     ]);
 
     this.element.classList.toggle("has-selection", selected !== null);
+    this.renderStepper(snapshot, selected);
 
     if (!selected) {
       this.emptyNote.hidden = false;
@@ -243,6 +264,25 @@ export class DetailPanel {
     this.renderLink(selected.url ?? undefined);
     this.renderSaveAction(snapshot, selected);
     this.trackSavePhase(snapshot, selected);
+  }
+
+  /** "3 / 10" and the previous / next buttons, against the current results. */
+  private renderStepper(snapshot: AppStateSnapshot, selected: SelectedDocumentView | null): void {
+    const total = snapshot.results.length;
+    const index = selected ? snapshot.results.findIndex((r) => r.doc_id === selected.doc_id) : -1;
+    const hidden = total === 0 || selected === null;
+    this.prevButton.parentElement!.hidden = hidden;
+    if (hidden) {
+      return;
+    }
+    // Outside the results (picked from the map), "next" starts at the first.
+    this.prevButton.disabled = index <= 0;
+    this.nextButton.disabled = index >= total - 1;
+    this.position.textContent = index === -1 ? `– / ${total}` : `${index + 1} / ${total}`;
+    this.position.setAttribute(
+      "aria-label",
+      index === -1 ? `Not among the ${total} results` : `Result ${index + 1} of ${total}`,
+    );
   }
 
   private renderBadges(snapshot: AppStateSnapshot, selected: SelectedDocumentView): void {
@@ -381,6 +421,15 @@ export function isSafeExternalUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+function stepButton(className: string, label: string): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.setAttribute("aria-label", label);
+  button.title = label;
+  return button;
 }
 
 function badge(className: string): HTMLElement {

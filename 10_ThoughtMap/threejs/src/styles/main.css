@@ -1026,6 +1026,40 @@ summary:focus-visible,
   opacity: 0.75;
 }
 
+/* --- phone sheet handle (shown by the phone layout only) ------------------ */
+
+.tm-sheet-handle {
+  display: none;
+}
+
+/* --- map notice ------------------------------------------------------------ */
+
+.tm-map-notice {
+  position: absolute;
+  bottom: 84px;
+  left: 50%;
+  z-index: 3;
+  max-width: calc(100% - 24px);
+  margin: 0;
+  padding: 8px 14px;
+  border: 1px solid var(--tm-border-strong);
+  border-radius: 12px;
+  background: rgba(6, 10, 18, 0.92);
+  box-shadow: var(--tm-shadow);
+  color: var(--tm-text);
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-align: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: tm-reveal 200ms var(--tm-ease);
+}
+
+.tm-layout.is-map-suspended .tm-map-notice {
+  border-color: rgba(255, 176, 64, 0.45);
+  color: #ffd9a3;
+}
+
 /* --- detail --------------------------------------------------------------- */
 
 .tm-detail-head {
@@ -1037,6 +1071,60 @@ summary:focus-visible,
 
 .tm-detail-head .tm-panel-title {
   margin: 0;
+}
+
+/* Previous / next result, and where this document sits among them. */
+.tm-detail-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.tm-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--tm-border);
+  border-radius: var(--tm-radius-sm);
+  background: transparent;
+  color: var(--tm-text);
+  cursor: pointer;
+}
+
+.tm-step::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-left: 3px;
+  border-bottom: 1.6px solid currentColor;
+  border-left: 1.6px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.tm-step.is-next::before {
+  margin: 0 3px 0 0;
+  transform: rotate(-135deg);
+}
+
+.tm-step:hover:not(:disabled) {
+  background: var(--tm-hover);
+}
+
+.tm-step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.tm-step-position {
+  min-width: 48px;
+  font-family: var(--tm-mono);
+  font-size: 11.5px;
+  color: var(--tm-text-dim);
+  text-align: center;
 }
 
 .tm-detail.has-selection .tm-detail-head .tm-panel-title {
@@ -2120,27 +2208,27 @@ summary:focus-visible,
   }
 }
 
-/* Phone: the map window on top, one panel sheet below — the result list or
-   the selected document, with a way back. */
-@media (max-width: 720px) {
-  :root {
-    --tm-gap: 8px;
-  }
+/* ===========================================================================
+   Phones. The thought space is the screen; one panel holds the result list or
+   the document. Upright, it is a sheet over the bottom of the map with three
+   resting heights (data-sheet: peek / half / full, height in --tm-sheet-h, set
+   by BottomSheet.ts). Sideways, it is a panel on the right.
+   =========================================================================== */
 
-  .tm-layout {
-    padding: 8px;
-  }
-
-  .tm-topbar {
-    padding: 6px;
-  }
-
+/* Shared by both phone layouts: what is inside the panel. */
+@media (max-width: 720px), (max-height: 500px) and (orientation: landscape) {
   .tm-brand {
     display: none;
   }
 
+  .tm-topbar {
+    position: relative;
+    padding: 6px;
+    gap: 6px;
+  }
+
   .tm-search-input {
-    height: 42px;
+    height: 44px;
     font-size: 16px; /* stops iOS zooming the page on focus */
   }
 
@@ -2150,7 +2238,8 @@ summary:focus-visible,
 
   .tm-search-button,
   .tm-options-toggle {
-    height: 42px;
+    height: 44px;
+    min-width: 44px;
   }
 
   .tm-search-button {
@@ -2161,28 +2250,36 @@ summary:focus-visible,
     padding: 0 10px;
   }
 
-  .tm-layout-columns {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(140px, 0.8fr) minmax(0, 1.2fr);
+  /* Options open over the map instead of pushing everything down. */
+  .tm-search-controls {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    left: 0;
+    z-index: 20;
+    max-height: min(70vh, 520px);
+    overflow-y: auto;
+    padding: 14px;
+    border: 1px solid var(--tm-border-strong);
+    border-radius: var(--tm-radius-lg);
+    background: var(--tm-panel-solid);
+    box-shadow: var(--tm-shadow);
   }
 
-  .tm-layout-centre {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .tm-sheet {
-    display: flex;
-    flex-direction: column;
-    grid-column: 1;
-    grid-row: 2;
-    min-height: 0;
+  .tm-select {
+    height: 44px;
   }
 
   .tm-left,
   .tm-detail {
     flex: 1 1 auto;
+    min-height: 0;
     max-height: none;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
   }
 
   .tm-layout[data-view="detail"] .tm-left,
@@ -2190,8 +2287,88 @@ summary:focus-visible,
     display: none;
   }
 
+  .tm-tab {
+    min-height: 44px;
+    padding: 0 14px;
+  }
+
+  .tm-chip,
+  .tm-library-button,
+  .tm-button {
+    min-height: 44px;
+  }
+
+  .tm-library-remove {
+    width: 44px;
+    height: 44px;
+  }
+
+  .tm-result {
+    min-height: 56px;
+  }
+
+  /* The document: header row (Back, previous / next) pinned while scrolling,
+     then title, actions and the radar before the catalogue fields, so the
+     comparison is on screen at half height. */
+  .tm-detail {
+    gap: 10px;
+    padding: 0 16px 24px;
+    overflow-y: auto;
+  }
+
+  .tm-detail-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    margin: 0 -16px;
+    padding: 0 10px 4px;
+    background: var(--tm-panel-solid);
+    touch-action: none;
+  }
+
+  .tm-detail-head .tm-panel-title {
+    display: none;
+  }
+
   .tm-detail-back {
     display: inline-flex;
+    min-height: 44px;
+  }
+
+  .tm-step {
+    width: 44px;
+    height: 44px;
+  }
+
+  .tm-detail-body {
+    display: contents;
+  }
+
+  .tm-detail-empty { order: 1; }
+  .tm-detail-title { order: 2; }
+  .tm-detail-badges { order: 3; }
+  .tm-detail-actions { order: 4; }
+  .tm-save-note,
+  .tm-inline-error,
+  .tm-library-prompt { order: 5; }
+  .tm-detail-origin { order: 6; }
+  .tm-detail .tm-radar { order: 7; }
+  .tm-detail-fields { order: 8; }
+
+  .tm-detail-actions > * {
+    min-height: 44px;
+  }
+
+  .tm-radar-svg {
+    max-width: 100%;
+  }
+
+  .tm-radar-label {
+    font-size: 14px;
+  }
+
+  .tm-radar-ring-label {
+    font-size: 11px;
   }
 
   .tm-detail-field {
@@ -2207,7 +2384,7 @@ summary:focus-visible,
   }
 
   .tm-map-legend {
-    padding: 6px 9px;
+    padding: 5px 9px;
     font-size: 11px;
   }
 
@@ -2219,12 +2396,12 @@ summary:focus-visible,
     flex-direction: row;
     align-items: flex-end;
     justify-content: space-between;
-    padding: 0 2px;
+    padding: 0 2px 6px;
   }
 
   .tm-map-hint {
     flex: 1 1 auto;
-    padding: 0 0 6px;
+    padding: 0 0 4px;
     font-size: 10.5px;
     text-align: left;
   }
@@ -2238,17 +2415,189 @@ summary:focus-visible,
   }
 
   .tm-camera-compact button {
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
   }
 
-  .tm-radar-svg {
-    max-width: 100%;
+  .tm-map-notice {
+    bottom: 60px;
   }
 
   .tm-backend-banner {
     padding: 6px 10px;
     font-size: 12px;
+  }
+}
+
+/* Upright: the bottom sheet. */
+@media (max-width: 720px) {
+  :root {
+    --tm-gap: 8px;
+  }
+
+  .tm-layout {
+    gap: 8px;
+    padding: 8px 8px 0;
+  }
+
+  .tm-search-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tm-layout-columns {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) var(--tm-sheet-h, 112px);
+    gap: 0;
+  }
+
+  .tm-layout:not(.is-sheet-dragging) .tm-layout-columns {
+    transition: grid-template-rows 240ms var(--tm-ease);
+  }
+
+  .tm-layout-centre {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .tm-sheet {
+    display: flex;
+    flex-direction: column;
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 0;
+    margin: 0 -8px;
+    overflow: hidden;
+    border: 1px solid var(--tm-border-strong);
+    border-bottom: none;
+    border-radius: 18px 18px 0 0;
+    background: var(--tm-panel-solid);
+    box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.4);
+    pointer-events: auto;
+  }
+
+  .tm-sheet-handle {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 44px; /* a full-width, finger-height target; the pill is the hint */
+    margin-bottom: -8px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .tm-sheet-handle::before {
+    content: "";
+    width: 40px;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  .tm-sheet-handle:focus-visible {
+    outline-offset: -4px;
+  }
+
+  .tm-sheet .tm-tabs {
+    touch-action: none;
+  }
+
+  /* With the panel at full height the map is hidden; so are its controls. */
+  .tm-layout[data-sheet="full"] .tm-map-legend,
+  .tm-layout[data-sheet="full"] .tm-map-dock,
+  .tm-layout[data-sheet="full"] .tm-map-notice {
+    visibility: hidden;
+  }
+}
+
+/* Narrow phones: Options becomes an icon so the query keeps its width. */
+@media (max-width: 400px) {
+  .tm-options-toggle {
+    position: relative;
+    justify-content: center;
+    width: 44px;
+    padding: 0;
+  }
+
+  .tm-options-label {
+    font-size: 0;
+  }
+
+  .tm-options-label::after {
+    content: none;
+  }
+
+  .tm-options-label::before {
+    content: "";
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%23e3ebf6' stroke-width='1.7' stroke-linecap='round'%3E%3Cpath d='M3 5h14M3 10h14M3 15h14'/%3E%3Ccircle cx='7' cy='5' r='2' fill='%230b111d'/%3E%3Ccircle cx='13' cy='10' r='2' fill='%230b111d'/%3E%3Ccircle cx='8' cy='15' r='2' fill='%230b111d'/%3E%3C/svg%3E") no-repeat center / 20px 20px;
+  }
+
+  .tm-options-badge {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+  }
+}
+
+/* Sideways: the panel moves to the right edge and the map keeps the height. */
+@media (max-height: 500px) and (orientation: landscape) {
+  :root {
+    --tm-gap: 6px;
+  }
+
+  .tm-layout {
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .tm-search-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tm-layout-columns {
+    grid-template-columns: minmax(0, 1fr) min(360px, 46vw);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 6px;
+    transition: none;
+  }
+
+  .tm-layout-centre {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .tm-sheet {
+    display: flex;
+    flex-direction: column;
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 0;
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--tm-border);
+    border-radius: var(--tm-radius-lg);
+    background: var(--tm-panel-solid);
+    box-shadow: var(--tm-shadow);
+    pointer-events: auto;
+  }
+
+  .tm-sheet-handle {
+    display: none;
+  }
+
+  .tm-map-hint {
+    display: none;
+  }
+
+  .tm-map-legend {
+    font-size: 10.5px;
   }
 }
 

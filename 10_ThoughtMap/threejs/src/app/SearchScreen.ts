@@ -3,6 +3,7 @@ import { ThoughtMapApiClient } from "../api/ThoughtMapApiClient";
 import { DetailPanel } from "../ui/DetailPanel";
 import { LibraryPanel } from "../ui/LibraryPanel";
 import { BackendStatusBanner } from "../ui/BackendStatusBanner";
+import { BottomSheet, isCoarsePrimaryPointer, type SheetMode } from "../ui/BottomSheet";
 import { MapStatusView } from "../ui/MapStatusView";
 import { ResultPanel } from "../ui/ResultPanel";
 import { SearchPanel } from "../ui/SearchPanel";
@@ -47,6 +48,11 @@ export class SearchScreen {
   private readonly root: HTMLElement;
   private readonly centre: HTMLElement;
   private readonly dock: HTMLElement;
+  private readonly notice: HTMLElement;
+  private noticeTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The phone layout's panel; inert on tablets and desktops. */
+  readonly sheet: BottomSheet;
+  private readonly coarsePointer: () => boolean;
   /** Mirrors features.library_enabled, so the DOM is touched only on change. */
   private libraryVisible = true;
   private activeTab: "results" | "library" = "results";
@@ -56,7 +62,9 @@ export class SearchScreen {
     mount: HTMLElement,
     client: ThoughtMapApiClient = new ThoughtMapApiClient(),
     libraryClient: PersonalLibraryClient = new PersonalLibraryClient(),
+    options: SearchScreenOptions = {},
   ) {
+    this.coarsePointer = options.coarsePointer ?? isCoarsePrimaryPointer;
     this.state = new AppState();
     this.search = new SearchController(this.state, client);
     this.selection = new SelectionController(this.state);
@@ -64,7 +72,20 @@ export class SearchScreen {
     this.library = new LibraryController(this.state, libraryClient);
 
     this.searchPanel = new SearchPanel(this.state, {
-      onSearch: () => void this.search.search(),
+      onSearch: () => {
+        // On a phone, close the keyboard so the results it would cover show.
+        if (this.coarsePointer()) {
+          this.searchPanel.blur();
+        }
+        void this.search.search();
+      },
+      // Typing needs the map and the search bar, not the panel: the keyboard
+      // is about to take the bottom of the screen.
+      onFocusChange: (focused) => {
+        if (focused && this.sheet.layoutMode === "bottom") {
+          this.sheet.setSnap("peek");
+        }
+      },
     });
     this.resultPanel = new ResultPanel({
       // Selection has exactly one path, here and for the 3D scene in T4.
@@ -86,6 +107,7 @@ export class SearchScreen {
         this.setView("list");
         this.libraryPanel.focusIdentity();
       },
+      onStep: (delta) => this.stepResult(delta),
     });
     this.mapStatusView = new MapStatusView();
     this.backendBanner = new BackendStatusBanner();
@@ -155,7 +177,15 @@ export class SearchScreen {
     this.dock.className = "tm-map-dock";
     this.dock.append(hint);
 
-    this.centre.append(this.mapStatusView.element, this.dock);
+    // One short line over the map for things the map itself says: a crowded
+    // tap that zoomed instead of guessing, or a paused 3D view.
+    this.notice = document.createElement("p");
+    this.notice.className = "tm-map-notice";
+    this.notice.setAttribute("role", "status");
+    this.notice.setAttribute("aria-live", "polite");
+    this.notice.hidden = true;
+
+    this.centre.append(this.mapStatusView.element, this.notice, this.dock);
 
     // Results and Library share the left column as tabs. Search / Collect
     // stays one screen; nothing here belongs to Battle Prep.
@@ -204,7 +234,12 @@ export class SearchScreen {
     // sheet under the map window, showing the list or the document.
     const sheet = document.createElement("div");
     sheet.className = "tm-sheet";
-    sheet.append(left, this.detailPanel.element);
+    // The grab handle exists at every width but is only shown, and only
+    // does anything, in the phone layout.
+    const handle = document.createElement("button");
+    handle.type = "button";
+    handle.className = "tm-sheet-handle";
+    sheet.append(handle, left, this.detailPanel.element);
 
     const columns = document.createElement("div");
     columns.className = "tm-layout-columns";
@@ -215,6 +250,14 @@ export class SearchScreen {
     this.root.dataset["view"] = "list";
     this.root.append(top, columns);
     mount.append(this.root);
+
+    this.sheet = new BottomSheet({
+      root: this.root,
+      handle,
+      dragZones: [tabBar, this.detailPanel.headElement],
+      topEdge: () => top.getBoundingClientRect().bottom,
+      ...(options.sheetMode ? { mode: options.sheetMode } : {}),
+    });
 
     this.unsubscribe = this.state.subscribe((snapshot) => {
       this.searchPanel.render(snapshot);
@@ -232,12 +275,16 @@ export class SearchScreen {
       if (snapshot.status === "searching" && this.lastStatus !== "searching") {
         this.setView("list");
         this.showTab("results");
+        this.raiseSheetFromPeek();
       }
       this.lastStatus = snapshot.status;
 
       if (snapshot.selectedDocId !== this.lastSelectedDocId) {
         this.lastSelectedDocId = snapshot.selectedDocId;
         this.setView(snapshot.selectedDocId === null ? "list" : "detail");
+        if (snapshot.selectedDocId !== null) {
+          this.raiseSheetFromPeek();
+        }
         for (const listener of this.selectionListeners) {
           listener(snapshot.selectedDocId);
         }
@@ -247,7 +294,81 @@ export class SearchScreen {
     document.addEventListener("keydown", this.handleShortcut);
 
     this.showTab("results");
-    this.searchPanel.focus();
+    // On a phone, focusing on load can raise the keyboard over the map before
+    // anyone asked to type.
+    if (!this.coarsePointer()) {
+      this.searchPanel.focus();
+    }
+  }
+
+  /**
+   * A drag or pinch on the map has begun (never a mere touch-down): give the
+   * map the screen. Called by the interaction layer only once a gesture is
+   * known not to be a tap, so a tap never moves the layout under the finger.
+   */
+  onMapGesture(): void {
+    if (this.sheet.layoutMode === "bottom" && this.sheet.snap !== "peek") {
+      this.sheet.setSnap("peek");
+    }
+  }
+
+  /** Show a short message over the map; `persist` keeps it until replaced. */
+  showMapNotice(text: string, persist = false): void {
+    if (this.noticeTimer !== null) {
+      clearTimeout(this.noticeTimer);
+      this.noticeTimer = null;
+    }
+    this.notice.textContent = text;
+    this.notice.hidden = false;
+    if (!persist) {
+      this.noticeTimer = setTimeout(() => this.hideMapNotice(), 2800);
+    }
+  }
+
+  hideMapNotice(): void {
+    if (this.noticeTimer !== null) {
+      clearTimeout(this.noticeTimer);
+      this.noticeTimer = null;
+    }
+    this.notice.hidden = true;
+    this.notice.textContent = "";
+  }
+
+  /** The browser took the WebGL context away (or gave it back). */
+  setMapSuspended(suspended: boolean): void {
+    this.root.classList.toggle("is-map-suspended", suspended);
+    if (suspended) {
+      this.showMapNotice(
+        "The browser paused the 3D view to save resources. It will return on its own; search and documents still work.",
+        true,
+      );
+    } else {
+      this.hideMapNotice();
+    }
+  }
+
+  /**
+   * Select the previous or next result. From a document that is not among
+   * the results, "next" starts at the first one.
+   */
+  stepResult(delta: -1 | 1): void {
+    const { results, selectedDocId } = this.state.getState();
+    if (results.length === 0) {
+      return;
+    }
+    const index = results.findIndex((result) => result.doc_id === selectedDocId);
+    const target = index === -1 ? (delta > 0 ? 0 : -1) : index + delta;
+    const next = results[target];
+    if (next) {
+      this.selection.select(next.doc_id);
+    }
+  }
+
+  /** A search or a selection wants the panel readable, not just its header. */
+  private raiseSheetFromPeek(): void {
+    if (this.sheet.layoutMode === "bottom" && this.sheet.snap === "peek") {
+      this.sheet.setSnap("half");
+    }
   }
 
   /** The visible part of the map, between the panels. */
@@ -421,6 +542,8 @@ export class SearchScreen {
   }
 
   dispose(): void {
+    this.sheet.dispose();
+    this.hideMapNotice();
     document.removeEventListener("keydown", this.handleShortcut);
     this.selectionListeners.clear();
     this.locateListeners.clear();
@@ -447,4 +570,11 @@ function hintText(className: string, text: string): HTMLElement {
   span.className = className;
   span.textContent = text;
   return span;
+}
+
+export interface SearchScreenOptions {
+  /** Which panel layout applies. Defaults to the viewport's media queries. */
+  sheetMode?: () => SheetMode;
+  /** Whether the primary pointer is a finger. Defaults to `(pointer: coarse)`. */
+  coarsePointer?: () => boolean;
 }
