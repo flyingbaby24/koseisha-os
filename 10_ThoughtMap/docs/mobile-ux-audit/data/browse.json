@@ -1,0 +1,50 @@
+{
+ "listScroll": {
+  "before": {
+   "top": 600,
+   "h": 407,
+   "sh": 1269
+  },
+  "after": {
+   "top": 589,
+   "h": 407,
+   "sh": 1269
+  },
+  "selectedRowVisibleAfterBack": false
+ },
+ "radarInSheet": {
+  "panelBottom": 836,
+  "radarTop": 768,
+  "radarBottom": 1030,
+  "legendBottom": 1101,
+  "scrollNeededToSeeRadarAndLegend": 265
+ },
+ "tapsToVisitThreeDocuments": 5,
+ "heapMB": {
+  "start": 21.2,
+  "after20Cycles": 21.4
+ },
+ "gestureFps": {
+  "seconds": 9.23,
+  "frames": 121,
+  "fps": 13.1,
+  "note": "SwiftShader (CPU) at 390x844 @2x"
+ },
+ "orientationCentreErrorPx": {
+  "portrait": 0,
+  "landscape": 0,
+  "backToPortrait": 0
+ },
+ "afterFreezeResumeTapSelects": false,
+ "contextLoss": {
+  "normalPngBytes": 232478,
+  "lostPngBytes": 1654,
+  "uiMessageWhileLost": null,
+  "restoredNoInteractionPngBytes": 1654,
+  "afterInteractionPngBytes": 247542,
+  "events": {
+   "lost": 1,
+   "restored": 1
+  }
+ }
+}
