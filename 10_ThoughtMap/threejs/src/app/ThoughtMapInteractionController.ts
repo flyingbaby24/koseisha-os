@@ -162,7 +162,11 @@ export class ThoughtMapInteractionController {
       return false;
     }
 
-    this.scene.camera.focusPoint(position, this.scene.nodes.worldExtent);
+    // A glide rather than a cut, so the reader sees where the document is
+    // relative to where they were looking.
+    this.scene.camera.focusPoint(position, this.scene.nodes.worldExtent, undefined, {
+      animate: true,
+    });
     this.scene.requestRender();
     return true;
   }
@@ -179,7 +183,12 @@ export class ThoughtMapInteractionController {
       return false;
     }
 
-    const fitted = this.scene.camera.fitPoints(positions, this.scene.nodes.worldExtent);
+    const fitted = this.scene.camera.fitPoints(
+      positions,
+      this.scene.nodes.worldExtent,
+      undefined,
+      { animate: true },
+    );
     if (fitted) {
       this.scene.requestRender();
     }

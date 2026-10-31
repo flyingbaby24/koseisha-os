@@ -9,6 +9,15 @@
 /**
  * Visual states in ascending precedence. A node gets exactly one, and higher
  * always wins, so the outcome never depends on evaluation order.
+ *
+ * Importance, as the reader should perceive it: selected document → search
+ * results → saved documents → everything else. Hover is transient feedback and
+ * sits just under selection so pointing never hides what is selected.
+ *
+ * Saved membership is the one property that survives being outranked: it is
+ * also carried as a separate flag (`VisualState.saved`), so a saved document
+ * that is also a result, hovered or selected keeps a saved rim instead of
+ * silently losing that meaning.
  */
 export const NodeState = {
   /** Not a search result, while a search is active. Still visible. */
@@ -57,6 +66,17 @@ export interface VisualState {
    * scales brightness and size slightly, and never moves anything.
    */
   emphasis: Float32Array;
+  /**
+   * 1 for documents in the Personal Library, 0 otherwise — independent of
+   * `state`, so it is preserved underneath result, hover and selection.
+   */
+  saved: Float32Array;
+  /**
+   * Node indices drawn by the emphasis layer (every node at Saved or above),
+   * in ascending state order. Later entries draw on top, so the selected node
+   * is always the last thing painted. O(saved + results), never O(nodes).
+   */
+  emphasised: number[];
   /** Result doc_ids that exist in the current projection. */
   joinedCount: number;
   /** Result doc_ids with no node in the current projection. */
@@ -85,6 +105,9 @@ export function computeNodeVisualState(input: VisualStateInput): VisualState {
 
   const state = new Float32Array(nodeCount);
   const emphasis = new Float32Array(nodeCount);
+  const saved = new Float32Array(nodeCount);
+  /** Every index that may end up at Saved or above; deduplicated below. */
+  const candidates: number[] = [];
 
   // Base layer: everything dims under an active search, otherwise rests.
   state.fill(hasSearchEmphasis ? NodeState.Dimmed : NodeState.Normal);
@@ -96,6 +119,8 @@ export function computeNodeVisualState(input: VisualStateInput): VisualState {
       const index = docIdToNodeIndex.get(docId);
       if (index !== undefined) {
         state[index] = NodeState.Saved;
+        saved[index] = 1;
+        candidates.push(index);
       }
     }
   }
@@ -116,6 +141,7 @@ export function computeNodeVisualState(input: VisualStateInput): VisualState {
     }
 
     joinedCount += 1;
+    candidates.push(index);
     state[index] = rank === 0 ? NodeState.TopResult : NodeState.Result;
     emphasis[index] =
       resultCount === 1
@@ -129,6 +155,7 @@ export function computeNodeVisualState(input: VisualStateInput): VisualState {
     const index = docIdToNodeIndex.get(hoveredDocId);
     if (index !== undefined) {
       state[index] = NodeState.Hovered;
+      candidates.push(index);
     }
   }
 
@@ -136,10 +163,13 @@ export function computeNodeVisualState(input: VisualStateInput): VisualState {
     const index = docIdToNodeIndex.get(selectedDocId);
     if (index !== undefined) {
       state[index] = NodeState.Selected;
+      candidates.push(index);
     }
   }
 
-  return { state, emphasis, joinedCount, missingDocIds };
+  const emphasised = [...new Set(candidates)].sort((a, b) => state[a]! - state[b]! || a - b);
+
+  return { state, emphasis, saved, emphasised, joinedCount, missingDocIds };
 }
 
 /** Diagnostics for the search ↔ map join, reported in development. */

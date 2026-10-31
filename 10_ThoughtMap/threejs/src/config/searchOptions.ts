@@ -113,3 +113,37 @@ export const PARAMETER_AXIS_LABELS: Readonly<Record<string, string>> = {
 export function axisLabel(key: string): string {
   return PARAMETER_AXIS_LABELS[key] ?? key;
 }
+
+/**
+ * One-line explanations shown under the search options.
+ *
+ * They describe what the backend does (`web/api/search_service.py`), not what
+ * we wish it did: keyword matching runs over catalogue fields, and hybrid
+ * takes keyword matches as candidates and ranks them mostly by meaning
+ * (falling back to meaning alone when nothing matches by keyword).
+ */
+export const MODE_DESCRIPTIONS: Readonly<Record<SearchMode, string>> = {
+  semantic: "Ranks by meaning, so related ideas match without sharing words.",
+  keyword: "Matches your words in titles, authors and catalogue fields.",
+  hybrid: "Keyword matches, ranked mostly by meaning.",
+};
+
+export const SOURCE_DESCRIPTION = "Search every collection, or just one.";
+
+export const TOP_DESCRIPTION = "How many ranked results to return.";
+
+/** What the selected filter does, in the backend's own terms. */
+export function describeFilter(value: string): string {
+  if (value === "") {
+    return "No narrowing by Thought Composition.";
+  }
+  if (value === "general") {
+    return "All ten axes — no narrowing.";
+  }
+  return `Only works whose strongest axis is ${axisLabel(value)}.`;
+}
+
+/** Short label for an option value, for the collapsed options summary. */
+export function optionLabel(options: readonly SelectOption[], value: string): string {
+  return options.find((option) => option.value === value)?.label ?? value;
+}

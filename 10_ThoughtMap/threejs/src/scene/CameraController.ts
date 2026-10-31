@@ -7,9 +7,44 @@ import {
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
-import { computeClippingPlanes, computeFitDistance, computeFocusDistance } from "./cameraFraming";
+import {
+  NO_INSETS,
+  computeClippingPlanes,
+  computeFitDistance,
+  computeFocusDistance,
+  computeViewWindow,
+  easeInOutCubic,
+  type ViewInsets,
+} from "./cameraFraming";
 
 const DEFAULT_FOV = 50;
+
+/** Length of a programmatic move. Long enough to follow, short enough not to wait on. */
+const TRANSITION_MS = 720;
+
+/** Options shared by every programmatic camera move. */
+export interface MoveOptions {
+  /**
+   * Glide to the destination instead of jumping. Ignored (always a jump) when
+   * the viewer has asked for reduced motion.
+   */
+  animate?: boolean;
+}
+
+interface Transition {
+  started: number;
+  duration: number;
+  fromTarget: Vector3;
+  toTarget: Vector3;
+  fromDirection: Vector3;
+  toDirection: Vector3;
+  fromDistance: number;
+  toDistance: number;
+  /** Extra pull-back at mid-flight, as a fraction of distance. */
+  lift: number;
+  near: number;
+  far: number;
+}
 const DEFAULT_POSITION = new Vector3(0, 0, 90);
 const DEFAULT_TARGET = new Vector3(0, 0, 0);
 
@@ -28,6 +63,12 @@ const DEFAULT_VIEW_DIRECTION = new Vector3(0, 0, 1);
  */
 export class CameraController {
   readonly camera: PerspectiveCamera;
+  /**
+   * The field of view the scene is designed around. `camera.fov` can be wider
+   * while a view offset is active (see `setViewport`); point sizing and
+   * framing always use this.
+   */
+  readonly baseFov = DEFAULT_FOV;
 
   private readonly controls: OrbitControls;
   private readonly listeners = new Set<() => void>();
@@ -39,12 +80,19 @@ export class CameraController {
   private readonly scratchSize = new Vector3();
   private readonly scratchCenter = new Vector3();
   private readonly scratchDirection = new Vector3();
+  private readonly scratchTarget = new Vector3();
+  private readonly scratchPosition = new Vector3();
+  /** Vertical fov and aspect of the visible map window, used for framing. */
+  private fitFov = DEFAULT_FOV;
+  private fitAspect: number;
+  private transition: Transition | null = null;
   private motionQuery: MediaQueryList | null = null;
   private handleMotionPreference: (() => void) | null = null;
 
   constructor(domElement: HTMLElement, aspect: number) {
     this.camera = new PerspectiveCamera(DEFAULT_FOV, aspect, 0.1, 4000);
     this.camera.position.copy(this.homePosition);
+    this.fitAspect = aspect > 0 && Number.isFinite(aspect) ? aspect : 1;
 
     this.controls = new OrbitControls(this.camera, domElement);
     this.controls.target.copy(this.homeTarget);
@@ -58,9 +106,14 @@ export class CameraController {
     this.controls.zoomSpeed = 0.9;
     this.controls.panSpeed = 0.8;
     this.controls.screenSpacePanning = true;
+    // Zoom toward what is under the pointer, as map software does. Exploring a
+    // dense region no longer means zooming and then panning to correct.
+    this.controls.zoomToCursor = true;
     this.controls.minDistance = 1;
     this.controls.maxDistance = 2000;
     this.controls.addEventListener("change", this.handleChange);
+    // The person's hand always wins over a programmatic glide.
+    this.controls.addEventListener("start", this.cancelTransition);
     this.controls.update();
 
     // Honour the preference changing while the page is open.
@@ -80,18 +133,69 @@ export class CameraController {
   }
 
   /**
-   * Advance damping. Returns true while the camera is still settling, so the
-   * caller knows another frame is required.
+   * Advance damping or an in-flight move. Returns true while the camera is
+   * still settling, so the caller knows another frame is required.
    */
-  update(): boolean {
+  update(now: number = performance.now()): boolean {
+    if (this.transition) {
+      this.stepTransition(now);
+      return true;
+    }
     return this.controls.update();
+  }
+
+  /** True while a programmatic move is gliding. */
+  get isTransitioning(): boolean {
+    return this.transition !== null;
+  }
+
+  /** Distance from the camera to the point it orbits. */
+  get focusDistance(): number {
+    return this.camera.position.distanceTo(this.controls.target);
   }
 
   setAspect(aspect: number): void {
     if (!Number.isFinite(aspect) || aspect <= 0) {
       return;
     }
+    this.camera.clearViewOffset();
+    this.camera.fov = this.baseFov;
     this.camera.aspect = aspect;
+    this.fitFov = this.baseFov;
+    this.fitAspect = aspect;
+    this.camera.updateProjectionMatrix();
+  }
+
+  /**
+   * Size the camera to the canvas, centred on the part of it that is visible.
+   *
+   * `insets` is the space panels cover on each edge. The optical centre moves
+   * to the middle of what is left, so focusing a document puts it where the
+   * reader is looking instead of behind a panel, and framing fits the visible
+   * window rather than the whole canvas. Pixel scale is unchanged.
+   */
+  setViewport(width: number, height: number, insets: ViewInsets = NO_INSETS): void {
+    if (!(width > 0) || !(height > 0)) {
+      return;
+    }
+    const view = computeViewWindow(width, height, insets, this.baseFov);
+
+    this.camera.fov = view.fov;
+    this.camera.aspect = view.aspect;
+    if (view.active) {
+      this.camera.setViewOffset(
+        view.fullWidth,
+        view.fullHeight,
+        view.offsetX,
+        view.offsetY,
+        width,
+        height,
+      );
+    } else {
+      this.camera.clearViewOffset();
+    }
+    this.fitFov = view.visibleFov;
+    this.fitAspect = view.visibleAspect;
     this.camera.updateProjectionMatrix();
   }
 
@@ -114,19 +218,20 @@ export class CameraController {
    * viewing angle as well as the framing; Fit All re-frames from wherever the
    * user is currently looking.
    */
-  reset(): void {
+  reset(options: MoveOptions = {}): void {
     this.discardPendingInput();
-    this.camera.position.copy(this.homePosition);
-    this.controls.target.copy(this.homeTarget);
-    this.camera.updateProjectionMatrix();
-    this.controls.update();
-    this.emitChange();
+    const distance = this.homePosition.distanceTo(this.homeTarget);
+    const planes = computeClippingPlanes(distance, distance);
+    this.moveTo(this.homePosition, this.homeTarget, options, {
+      near: Math.min(this.camera.near, planes.near),
+      far: Math.max(this.camera.far, planes.far),
+    });
   }
 
   /** Frame an explicit bounding box, keeping the current viewing direction. */
-  fitBox(box: Box3, padding = 1.2): void {
+  fitBox(box: Box3, padding = 1.2, options: MoveOptions = {}): void {
     if (box.isEmpty()) {
-      this.reset();
+      this.reset(options);
       return;
     }
 
@@ -137,17 +242,17 @@ export class CameraController {
     box.getSize(this.scratchSize);
     box.getCenter(this.scratchCenter);
 
+    // Framed against the visible map window, not the whole canvas, so the
+    // fitted content is not partly behind a panel.
     const distance = computeFitDistance({
       size: { x: this.scratchSize.x, y: this.scratchSize.y, z: this.scratchSize.z },
-      fovDegrees: this.camera.fov,
-      aspect: this.camera.aspect,
+      fovDegrees: this.fitFov,
+      aspect: this.fitAspect,
       padding,
     });
 
     box.getBoundingSphere(this.scratchSphere);
     const planes = computeClippingPlanes(distance, this.scratchSphere.radius);
-    this.camera.near = planes.near;
-    this.camera.far = planes.far;
 
     // Keep the user's current angle; only the distance and target change.
     this.scratchDirection.subVectors(this.camera.position, this.controls.target);
@@ -156,11 +261,8 @@ export class CameraController {
     }
     this.scratchDirection.normalize().multiplyScalar(distance);
 
-    this.controls.target.copy(this.scratchCenter);
-    this.camera.position.copy(this.scratchCenter).add(this.scratchDirection);
-    this.camera.updateProjectionMatrix();
-    this.controls.update();
-    this.emitChange();
+    const position = this.scratchPosition.copy(this.scratchCenter).add(this.scratchDirection);
+    this.moveTo(position, this.scratchCenter, options, planes);
   }
 
   /**
@@ -172,7 +274,12 @@ export class CameraController {
    * distance comes from the map's own extent, not a constant tuned to one
    * corpus.
    */
-  focusPoint(point: Vector3, mapExtent: number, fraction?: number): void {
+  focusPoint(
+    point: Vector3,
+    mapExtent: number,
+    fraction?: number,
+    options: MoveOptions = {},
+  ): void {
     this.discardPendingInput();
 
     const distance = computeFocusDistance(mapExtent, fraction);
@@ -184,14 +291,9 @@ export class CameraController {
     this.scratchDirection.normalize().multiplyScalar(distance);
 
     const planes = computeClippingPlanes(distance, Math.max(mapExtent, distance));
-    this.camera.near = planes.near;
-    this.camera.far = planes.far;
-
-    this.controls.target.copy(point);
-    this.camera.position.copy(point).add(this.scratchDirection);
-    this.camera.updateProjectionMatrix();
-    this.controls.update();
-    this.emitChange();
+    this.scratchTarget.copy(point);
+    const position = this.scratchPosition.copy(point).add(this.scratchDirection);
+    this.moveTo(position, this.scratchTarget, options, planes);
   }
 
   /**
@@ -200,13 +302,18 @@ export class CameraController {
    * One point degenerates to a focus rather than a zero-sized box, which would
    * otherwise put the camera inside the node.
    */
-  fitPoints(points: readonly Vector3[], mapExtent: number, padding = 1.4): boolean {
+  fitPoints(
+    points: readonly Vector3[],
+    mapExtent: number,
+    padding = 1.4,
+    options: MoveOptions = {},
+  ): boolean {
     if (points.length === 0) {
       return false;
     }
 
     if (points.length === 1) {
-      this.focusPoint(points[0]!, mapExtent);
+      this.focusPoint(points[0]!, mapExtent, undefined, options);
       return true;
     }
 
@@ -231,18 +338,18 @@ export class CameraController {
 
     if (extent < computeFocusDistance(mapExtent)) {
       this.scratchBox.getCenter(this.scratchCenter);
-      this.focusPoint(this.scratchCenter, mapExtent);
+      this.focusPoint(this.scratchCenter, mapExtent, undefined, options);
       return true;
     }
 
-    this.fitBox(this.scratchBox, padding);
+    this.fitBox(this.scratchBox, padding, options);
     return true;
   }
 
   /** Frame everything renderable under `object`. */
-  fitObject(object: Object3D, padding = 1.2): void {
+  fitObject(object: Object3D, padding = 1.2, options: MoveOptions = {}): void {
     this.scratchBox.setFromObject(object);
-    this.fitBox(this.scratchBox, padding);
+    this.fitBox(this.scratchBox, padding, options);
   }
 
   /**
@@ -258,6 +365,7 @@ export class CameraController {
 
     // Face the map down -Z, the same orientation the default view used, so a
     // first load is predictable rather than depending on any earlier drag.
+    this.transition = null;
     this.discardPendingInput();
     box.getCenter(this.scratchCenter);
     this.controls.target.copy(this.scratchCenter);
@@ -274,7 +382,9 @@ export class CameraController {
     if (this.motionQuery && this.handleMotionPreference) {
       this.motionQuery.removeEventListener("change", this.handleMotionPreference);
     }
+    this.transition = null;
     this.controls.removeEventListener("change", this.handleChange);
+    this.controls.removeEventListener("start", this.cancelTransition);
     this.controls.dispose();
     this.listeners.clear();
   }
@@ -296,6 +406,108 @@ export class CameraController {
     this.controls.update();
     this.controls.enableDamping = damping;
   }
+
+  /**
+   * Place the camera, either at once or by gliding there.
+   *
+   * The glide keeps the motion legible: the target slides, the viewing
+   * direction turns along the shorter arc, distance changes geometrically (so
+   * zooming feels even at every scale), and a long hop pulls back slightly at
+   * mid-flight so the surroundings stay in view and the reader keeps their
+   * bearings instead of being teleported.
+   */
+  private moveTo(
+    position: Vector3,
+    target: Vector3,
+    options: MoveOptions,
+    planes: { near: number; far: number },
+  ): void {
+    const animate = options.animate === true && !prefersReducedMotion();
+    const fromDistance = this.camera.position.distanceTo(this.controls.target);
+    const toDistance = position.distanceTo(target);
+    const fromDirection = this.camera.position.clone().sub(this.controls.target);
+    const toDirection = position.clone().sub(target);
+    const degenerate =
+      fromDistance < 1e-6 ||
+      toDistance < 1e-6 ||
+      fromDirection.normalize().dot(toDirection.normalize()) < -0.95;
+
+    if (!animate || degenerate) {
+      this.transition = null;
+      this.camera.near = planes.near;
+      this.camera.far = planes.far;
+      this.controls.target.copy(target);
+      this.camera.position.copy(position);
+      this.camera.updateProjectionMatrix();
+      this.controls.update();
+      this.emitChange();
+      return;
+    }
+
+    const travel = this.controls.target.distanceTo(target);
+    const lift = Math.min(0.6, (travel / Math.max(fromDistance, toDistance)) * 0.2);
+
+    this.transition = {
+      started: performance.now(),
+      duration: TRANSITION_MS,
+      fromTarget: this.controls.target.clone(),
+      toTarget: target.clone(),
+      fromDirection,
+      toDirection,
+      fromDistance,
+      toDistance,
+      lift,
+      near: planes.near,
+      far: planes.far,
+    };
+
+    // Planes wide enough for the whole flight, tightened again on arrival.
+    this.camera.near = Math.min(this.camera.near, planes.near);
+    this.camera.far = Math.max(this.camera.far, planes.far * (1 + lift));
+    this.camera.updateProjectionMatrix();
+    this.emitChange();
+  }
+
+  private stepTransition(now: number): void {
+    const flight = this.transition;
+    if (!flight) {
+      return;
+    }
+
+    const t = Math.min(1, Math.max(0, (now - flight.started) / flight.duration));
+    const e = easeInOutCubic(t);
+
+    this.controls.target.lerpVectors(flight.fromTarget, flight.toTarget, e);
+    this.scratchDirection.lerpVectors(flight.fromDirection, flight.toDirection, e).normalize();
+    const distance =
+      Math.exp(Math.log(flight.fromDistance) * (1 - e) + Math.log(flight.toDistance) * e) *
+      (1 + flight.lift * Math.sin(Math.PI * e));
+
+    this.camera.position.copy(this.controls.target).addScaledVector(this.scratchDirection, distance);
+
+    if (t >= 1) {
+      this.transition = null;
+      this.controls.target.copy(flight.toTarget);
+      this.camera.position.copy(flight.toTarget).addScaledVector(flight.toDirection, flight.toDistance);
+      this.camera.near = flight.near;
+      this.camera.far = flight.far;
+      this.camera.updateProjectionMatrix();
+    }
+
+    this.controls.update();
+    this.emitChange();
+  }
+
+  /** Stop a glide where it is; the user has taken over. */
+  private readonly cancelTransition = (): void => {
+    const flight = this.transition;
+    if (!flight) {
+      return;
+    }
+    this.transition = null;
+    this.camera.far = Math.max(this.camera.far, flight.far);
+    this.camera.updateProjectionMatrix();
+  };
 
   private readonly handleChange = (): void => {
     this.emitChange();

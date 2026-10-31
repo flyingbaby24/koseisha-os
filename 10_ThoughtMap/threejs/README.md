@@ -25,6 +25,43 @@ that deployable: separate health and readiness, a corpus-version gate, cached
 has the environment variables, the artifact procedure, the host requirements
 and the measurements behind every choice.
 
+### UI/UX overhaul (T8)
+
+The same screen, the same API contract, ranking, `doc_id` identity, single
+selection path and lazy Three.js load — reorganised so that search → select →
+understand is direct. Before/after captures are in
+[`../docs/screenshots/threejs-ux-overhaul/`](../docs/screenshots/threejs-ux-overhaul/).
+
+- **One vocabulary of meaning** across list, map and radar: query and results
+  are cyan, the selected document is gold, saved works are mint.
+- **Map states** in importance order — selected (gold reticle, minimum on-screen
+  size) → results (cyan glow by rank) → saved (mint ring) → everything else. A
+  saved document that is also a result or selected keeps a mint rim, so saving
+  is never hidden by precedence (`VisualState.saved`). Emphasised nodes are
+  drawn by a small second `Points` layer on top of the cloud, never per-node
+  objects. Points recede with depth; the background dust is round.
+- **The camera centres on the visible map window**, not the canvas behind the
+  panels (`PerspectiveCamera.setViewOffset`, pixel scale unchanged), so a
+  focused document lands where the reader is looking at every width. Focus,
+  Fit Results, Fit All and Reset glide (eased, pulling back on long hops);
+  reduced motion keeps them instant. Wheel zoom goes toward the cursor.
+- **Search**: one row — query, Search, and an Options button that states the
+  mode/source/filter/count in effect; the four options keep their values and
+  gain one-line explanations of what the backend does with them.
+- **Results** distinguish waiting, searching (skeleton), failed (message +
+  Try again, beside the list) and matched-nothing (suggestions). Rows show a
+  similarity bar, Saved and "Not in map" flags; hovering a row lights its node.
+- **Document panel**: source / in-map / saved badges, Save with confirmation,
+  Show in map, and a direct route to set a Library ID.
+- **Radar**: query dashed, document solid; ring percentages on the chart; each
+  profile's strongest axis named in the legend. Calculation, axis order and
+  shared scale are unchanged.
+- **Narrow screens** keep the map visible: a sidebar beside it below 1100px,
+  and on phones the map above a sheet that shows the list or the document.
+
+Keyboard: `/` focuses search, `Esc` clears the selection, arrow keys move
+through results and between the Results/Library tabs.
+
 ### Running it locally
 
 The embedding artifact is not in version control. Point the API at it:
@@ -39,7 +76,7 @@ rather than silently serving the 4,584-document legacy snapshot.
 
 ### Build output
 
-The entry chunk is 14.8 kB gzipped. Three.js (118.1 kB gzipped) is a separate
+The entry chunk is 20.2 kB gzipped (CSS 6.9 kB). Three.js (118.2 kB gzipped) is a separate
 vendor chunk loaded *after* the search UI is interactive, and the 3.7 MB map
 starts downloading later still — so search is usable long before the thought
 space appears. Nothing here waits for the map.
@@ -68,8 +105,9 @@ The Personal Library and the radar arrived in T5. In a public deployment the lib
 - **Fit Results** — frame the current search results (disabled when none are in
   the map)
 
-Below 1100px these are replaced by compact circular controls (T5); result-click
-focus works at every width.
+They sit under the visible map window at every width. On phones (≤720px) they
+become compact circular controls; result-click focus works at every width, and
+choosing an already-selected document again re-centres it.
 
 ## The map
 
@@ -121,6 +159,18 @@ Start the backend separately (from `10_ThoughtMap/web`):
 $env:THOUGHTMAP_BACKEND = "csv"
 python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
 ```
+
+## Known dependency advisories
+
+`npm audit` reports advisories in **development-only** packages; none of them is
+in the production bundle.
+
+- `happy-dom` 20.14.0 (the test DOM): GHSA-834v-8h66-3h79, GHSA-c8p4-j97h-3vg8
+  and GHSA-5fpq-26gf-qwcr affect versions ≤ 21.0.3. The fix is 21.0.4, a major
+  version bump, so it was deliberately left out of the T8 UI change. Upgrade it
+  on its own and re-run `npm run test`.
+- `vitest` / `@vitest/mocker` / `tinypool` and `source-map-js` (build and test
+  tooling) carry further advisories; the `vitest` fix is also a major bump.
 
 ## Verify
 

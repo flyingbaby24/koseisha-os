@@ -19,9 +19,15 @@ export interface RadarProfile {
   variant: "query" | "document";
 }
 
-const RADIUS = 100;
-const LABEL_OFFSET = 20;
-const VIEWBOX = 320;
+const RADIUS = 96;
+const LABEL_OFFSET = 14;
+/**
+ * Wider than tall: the longest labels ("Philosophy", "Psychology",
+ * "Economics") sit left and right of the chart, so horizontal room is what
+ * keeps them inside the viewBox instead of being clipped by the panel.
+ */
+const VIEW_WIDTH = 372;
+const VIEW_HEIGHT = 286;
 
 /**
  * Ten-axis Thought Composition radar, in SVG.
@@ -56,7 +62,10 @@ export class ParameterRadar {
     this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     // A viewBox with no fixed pixel size lets CSS scale the chart to any
     // column width without overflowing or needing a ResizeObserver.
-    this.svg.setAttribute("viewBox", `${-VIEWBOX / 2} ${-VIEWBOX / 2} ${VIEWBOX} ${VIEWBOX}`);
+    this.svg.setAttribute(
+      "viewBox",
+      `${-VIEW_WIDTH / 2} ${-VIEW_HEIGHT / 2} ${VIEW_WIDTH} ${VIEW_HEIGHT}`,
+    );
     this.svg.setAttribute("class", "tm-radar-svg");
     this.svg.setAttribute("role", "img");
     this.svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
@@ -79,7 +88,7 @@ export class ParameterRadar {
     const details = document.createElement("details");
     details.className = "tm-radar-details";
     const summary = document.createElement("summary");
-    summary.textContent = "Values";
+    summary.textContent = "Values by axis";
     details.append(summary, this.table);
 
     this.element.append(heading, this.svg, this.legend, this.note, details);
@@ -112,7 +121,8 @@ export class ParameterRadar {
     const children: SVGElement[] = [
       ...this.buildRings(domain),
       ...this.buildSpokes(),
-      ...this.buildLabels(),
+      ...this.buildLabels(present),
+      ...this.buildRingLabels(domain),
     ];
 
     for (const profile of present) {
@@ -152,6 +162,23 @@ export class ParameterRadar {
     return ordered.map((s) => `${axisLabel(s.key)} ${formatShare(s.value)}`).join(", ");
   }
 
+  /**
+   * The scale, written on the chart: each ring's share along the top spoke.
+   * The reader no longer has to work out what the outer ring means.
+   */
+  private buildRingLabels(domain: number): SVGElement[] {
+    const rings = computeRings(domain);
+    return rings.map((value, index) => {
+      const text = svgEl("text");
+      text.setAttribute("class", "tm-radar-ring-label");
+      text.setAttribute("x", "4");
+      text.setAttribute("y", String(-(RADIUS * (index + 1)) / rings.length + 3));
+      text.setAttribute("aria-hidden", "true");
+      text.textContent = formatRingValue(value);
+      return text;
+    });
+  }
+
   private buildRings(domain: number): SVGElement[] {
     return computeRings(domain).map((_value, index, all) => {
       const circle = svgEl("circle");
@@ -175,10 +202,15 @@ export class ParameterRadar {
     });
   }
 
-  private buildLabels(): SVGElement[] {
+  private buildLabels(profiles: readonly RadarProfile[]): SVGElement[] {
+    // An axis that is some profile's strongest is named in bold, so the
+    // headline of the comparison is readable without hovering anything.
+    const peaks = new Set(
+      profiles.map((profile) => peakOf(profile.scores)?.key).filter(Boolean) as string[],
+    );
     return this.axes.map((axis) => {
       const text = svgEl("text");
-      text.setAttribute("class", "tm-radar-label");
+      text.setAttribute("class", peaks.has(axis.key) ? "tm-radar-label is-peak" : "tm-radar-label");
       text.setAttribute("x", String(axis.labelAnchor.x));
       text.setAttribute("y", String(axis.labelAnchor.y));
       text.setAttribute("text-anchor", axis.textAnchor);
@@ -195,14 +227,19 @@ export class ParameterRadar {
     polygon.setAttribute("class", `tm-radar-shape is-${profile.variant}`);
     polygon.setAttribute("points", toPolygonPoints(points));
 
+    const peakKey = peakOf(profile.scores)?.key;
     const vertices = points.map((point, index) => {
+      const axis = this.axes[index];
+      const isPeak = axis?.key === peakKey;
       const dot = svgEl("circle");
-      dot.setAttribute("class", `tm-radar-vertex is-${profile.variant}`);
+      dot.setAttribute(
+        "class",
+        `tm-radar-vertex is-${profile.variant}${isPeak ? " is-peak" : ""}`,
+      );
       dot.setAttribute("cx", String(point.x));
       dot.setAttribute("cy", String(point.y));
-      dot.setAttribute("r", "2.5");
+      dot.setAttribute("r", isPeak ? "4" : "2.5");
 
-      const axis = this.axes[index];
       const score = profile.scores?.find((s) => s.key === axis?.key);
       const title = svgEl("title");
       title.textContent = `${profile.label} — ${axis?.label ?? ""}: ${
@@ -217,16 +254,28 @@ export class ParameterRadar {
 
   private renderLegend(profiles: readonly RadarProfile[], domain: number): void {
     const items = profiles.map((profile) => {
-      const item = document.createElement("span");
+      const item = document.createElement("div");
       item.className = `tm-radar-legend-item is-${profile.variant}`;
 
+      // A line, not a block: it matches how the profile is drawn (the query
+      // dashed, the document solid), so the key works without colour too.
       const swatch = document.createElement("span");
       swatch.className = `tm-radar-swatch is-${profile.variant}`;
+      swatch.setAttribute("aria-hidden", "true");
 
       const label = document.createElement("span");
+      label.className = "tm-radar-legend-label";
       label.textContent = profile.label;
+      label.title = profile.label;
 
-      item.append(swatch, label);
+      const peak = peakOf(profile.scores);
+      const strongest = document.createElement("span");
+      strongest.className = "tm-radar-legend-peak";
+      strongest.textContent = peak
+        ? `strongest: ${axisLabel(peak.key)} ${formatShare(peak.value)}`
+        : "no profile";
+
+      item.append(swatch, label, strongest);
       return item;
     });
 
@@ -234,7 +283,7 @@ export class ParameterRadar {
     scale.className = "tm-radar-scale";
     // The shared domain is stated, so the chart is never silently rescaled
     // without the reader knowing.
-    scale.textContent = `outer ring ${formatShare(domain)}`;
+    scale.textContent = `Shared scale · outer ring ${formatShare(domain)}`;
 
     this.legend.replaceChildren(...items, scale);
   }
@@ -243,15 +292,17 @@ export class ParameterRadar {
     const head = document.createElement("tr");
     head.append(th("Axis"), ...profiles.map((profile) => th(profile.label)));
 
+    const peaks = profiles.map((profile) => peakOf(profile.scores)?.key);
     const rows = PARAMETER_AXIS_ORDER.map((key) => {
       const row = document.createElement("tr");
       row.append(th(axisLabel(key), "row"));
-      for (const profile of profiles) {
+      profiles.forEach((profile, index) => {
         const score = profile.scores?.find((s) => s.key === key);
         const cell = document.createElement("td");
+        cell.className = `is-${profile.variant}${peaks[index] === key ? " is-peak" : ""}`;
         cell.textContent = score ? formatShare(score.value) : "—";
         row.append(cell);
-      }
+      });
       return row;
     });
 
@@ -262,6 +313,25 @@ export class ParameterRadar {
 
     this.table.replaceChildren(thead, tbody);
   }
+}
+
+/** The axis a profile leans on most, or null when it has no positive value. */
+function peakOf(
+  scores: readonly ParameterScore[] | null | undefined,
+): ParameterScore | null {
+  let best: ParameterScore | null = null;
+  for (const score of scores ?? []) {
+    if (Number.isFinite(score.value) && score.value > 0 && (!best || score.value > best.value)) {
+      best = score;
+    }
+  }
+  return best;
+}
+
+/** Ring labels are guides, not data: whole percentages read faster. */
+function formatRingValue(value: number): string {
+  const percent = value * 100;
+  return Number.isInteger(Math.round(percent * 10) / 10) ? `${Math.round(percent)}%` : `${percent.toFixed(1)}%`;
 }
 
 function svgEl<K extends keyof SVGElementTagNameMap>(name: K): SVGElementTagNameMap[K] {

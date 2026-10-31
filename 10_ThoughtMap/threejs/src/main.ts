@@ -33,6 +33,10 @@ function main(): void {
 
   const client = new ThoughtMapApiClient();
   const screen = new SearchScreen(uiMount, client);
+  screen.adoptMapControls(
+    document.getElementById("tm-camera-controls"),
+    document.getElementById("tm-camera-compact"),
+  );
 
   // What this deployment offers, and whether it is ready. Neither blocks the
   // UI: search is usable while both are still in flight.
@@ -129,6 +133,8 @@ async function startScene(
     return null;
   }
 
+  // Centre the camera on the part of the canvas the panels leave visible.
+  scene.setSafeArea(screen.mapWindow);
   scene.start();
 
   const tooltip = new MapTooltip(viewport);
@@ -160,6 +166,7 @@ async function startScene(
       interaction.focusDocument(docId);
     }
   });
+  const unwatchLocate = screen.onLocateRequest((docId) => interaction.focusDocument(docId));
 
   // Started only now, so the map download never competes with the assets the
   // first interaction needs. A map failure is reported in the UI and must not
@@ -171,6 +178,7 @@ async function startScene(
     interaction,
     dispose: () => {
       unwatchSelection();
+      unwatchLocate();
       unsubscribe();
       tooltip.hide();
     },

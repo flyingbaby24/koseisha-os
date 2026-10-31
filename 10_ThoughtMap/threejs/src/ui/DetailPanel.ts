@@ -1,20 +1,41 @@
-import type { AppStateSnapshot } from "../app/AppState";
+import type { AppStateSnapshot, SavePhase } from "../app/AppState";
 import type { SelectedDocumentView } from "../app/DocumentSelectionResolver";
+import { mapMembership } from "../app/mapMembership";
+import { sourceStyle } from "../config/sourceStyles";
 import { formatSimilarity, orDash } from "./format";
 import { ParameterRadar } from "./ParameterRadar";
+import { cssColor } from "./ResultPanel";
+
+export interface DetailPanelCallbacks {
+  /** Bring the selected document back into view in the map. */
+  onLocate?: (docId: string) => void;
+  /** Leave the detail view (narrow layouts show one panel at a time). */
+  onBack?: () => void;
+  /** Take the reader to where a Library ID is entered. */
+  onRequestLibrary?: () => void;
+}
+
+/** How long "Saved to your Library" stays before it gives way. */
+const FEEDBACK_MS = 2600;
 
 /**
  * The selected document, plus the query profile.
  *
  * Reads selection from the shared state snapshot; it never tracks its own.
+ *
+ * Search failures are reported in the results list, beside the action that
+ * caused them; this panel is about one document and keeps showing it.
  */
 export class DetailPanel {
   readonly element: HTMLElement;
 
-  private readonly errorBox: HTMLElement;
   private readonly emptyNote: HTMLElement;
   private readonly body: HTMLElement;
   private readonly title: HTMLElement;
+  private readonly badges: HTMLElement;
+  private readonly sourceBadge: HTMLElement;
+  private readonly mapBadge: HTMLElement;
+  private readonly savedBadge: HTMLElement;
   private readonly author: HTMLElement;
   private readonly source: HTMLElement;
   private readonly similarity: HTMLElement;
@@ -24,32 +45,61 @@ export class DetailPanel {
   private readonly originNote: HTMLElement;
   private readonly radar: ParameterRadar;
   private readonly saveButton: HTMLButtonElement;
+  private readonly locateButton: HTMLButtonElement;
   private readonly saveNote: HTMLElement;
+  private readonly saveError: HTMLElement;
+  private readonly libraryPrompt: HTMLElement;
 
-  constructor() {
+  private callbacks: DetailPanelCallbacks;
+  private lastSavePhase: SavePhase = "idle";
+  private lastSavePhaseDocId: string | null = null;
+  private feedbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(callbacks: DetailPanelCallbacks = {}) {
+    this.callbacks = callbacks;
+
     this.element = document.createElement("section");
     this.element.className = "tm-panel tm-detail";
+    this.element.setAttribute("aria-label", "Selected document");
+
+    const head = document.createElement("div");
+    head.className = "tm-detail-head";
+
+    // Only shown where the list and the detail share one panel slot.
+    const back = document.createElement("button");
+    back.type = "button";
+    back.className = "tm-detail-back";
+    back.textContent = "Results";
+    back.setAttribute("aria-label", "Back to the list");
+    back.addEventListener("click", () => this.callbacks.onBack?.());
 
     const heading = document.createElement("h2");
     heading.className = "tm-panel-title";
-    heading.textContent = "Detail";
+    heading.textContent = "Selected document";
 
-    this.errorBox = document.createElement("p");
-    this.errorBox.className = "tm-error";
-    this.errorBox.hidden = true;
-    this.errorBox.setAttribute("role", "alert");
+    head.append(back, heading);
 
     this.emptyNote = document.createElement("p");
-    this.emptyNote.className = "tm-note";
-    this.emptyNote.textContent = "Select a result to see its detail.";
+    this.emptyNote.className = "tm-note tm-detail-empty";
+    this.emptyNote.textContent =
+      "Select a result, a saved work, or a point in the map to read its details.";
 
     this.title = document.createElement("h3");
     this.title.className = "tm-detail-title";
+
+    this.sourceBadge = badge("tm-badge is-source");
+    this.mapBadge = badge("tm-badge is-map");
+    this.savedBadge = badge("tm-badge is-saved");
+    this.savedBadge.textContent = "In your Library";
+    this.badges = document.createElement("div");
+    this.badges.className = "tm-detail-badges";
+    this.badges.append(this.sourceBadge, this.mapBadge, this.savedBadge);
 
     this.author = createField("Author");
     this.source = createField("Source");
     this.similarity = createField("Similarity");
     this.docId = createField("Document ID");
+    this.docId.classList.add("is-id");
 
     const fields = document.createElement("dl");
     fields.className = "tm-detail-fields";
@@ -57,7 +107,7 @@ export class DetailPanel {
 
     this.link = document.createElement("a");
     this.link.className = "tm-link-button";
-    this.link.textContent = "Open Link";
+    this.link.textContent = "Open source";
     // Opening an external document must not give the target page a handle on
     // this window, and must not leak the artifact URL as a referrer.
     this.link.target = "_blank";
@@ -76,14 +126,41 @@ export class DetailPanel {
     this.saveButton.className = "tm-save-button";
     this.saveButton.textContent = "Save";
 
-    this.saveNote = document.createElement("span");
-    this.saveNote.className = "tm-save-note";
-    this.saveNote.hidden = true;
+    this.locateButton = document.createElement("button");
+    this.locateButton.type = "button";
+    this.locateButton.className = "tm-locate-button";
+    this.locateButton.textContent = "Show in map";
+    this.locateButton.addEventListener("click", () => {
+      const docId = this.locateButton.dataset["docId"];
+      if (docId) {
+        this.callbacks.onLocate?.(docId);
+      }
+    });
 
     const actions = document.createElement("div");
     actions.className = "tm-detail-actions";
-    actions.append(this.saveButton, this.saveNote, this.link, this.linkUnavailable);
+    actions.append(this.saveButton, this.locateButton, this.link, this.linkUnavailable);
 
+    this.saveNote = document.createElement("p");
+    this.saveNote.className = "tm-save-note";
+    this.saveNote.setAttribute("role", "status");
+    this.saveNote.hidden = true;
+
+    // A failed save would otherwise only be reported in the Library tab, which
+    // may not be the one on screen.
+    this.saveError = document.createElement("p");
+    this.saveError.className = "tm-inline-error";
+    this.saveError.hidden = true;
+
+    this.libraryPrompt = document.createElement("p");
+    this.libraryPrompt.className = "tm-library-prompt";
+    this.libraryPrompt.hidden = true;
+    const promptButton = document.createElement("button");
+    promptButton.type = "button";
+    promptButton.className = "tm-text-button";
+    promptButton.textContent = "Set a Library ID";
+    promptButton.addEventListener("click", () => this.callbacks.onRequestLibrary?.());
+    this.libraryPrompt.append(promptButton, " to save documents.");
 
     this.originNote = document.createElement("p");
     this.originNote.className = "tm-note tm-detail-origin";
@@ -93,9 +170,23 @@ export class DetailPanel {
 
     this.body = document.createElement("div");
     this.body.className = "tm-detail-body";
-    this.body.append(this.title, fields, this.originNote, actions);
+    this.body.append(
+      this.title,
+      this.badges,
+      actions,
+      this.saveNote,
+      this.saveError,
+      this.libraryPrompt,
+      fields,
+      this.originNote,
+    );
 
-    this.element.append(heading, this.errorBox, this.emptyNote, this.body, this.radar.element);
+    this.element.append(head, this.emptyNote, this.body, this.radar.element);
+  }
+
+  /** Register panel callbacks after construction. */
+  setCallbacks(callbacks: DetailPanelCallbacks): void {
+    this.callbacks = { ...this.callbacks, ...callbacks };
   }
 
   /** Register the Save/Remove handler. The panel never calls the API itself. */
@@ -109,14 +200,6 @@ export class DetailPanel {
   }
 
   render(snapshot: AppStateSnapshot, selected: SelectedDocumentView | null): void {
-    if (snapshot.status === "error" && snapshot.error) {
-      this.errorBox.hidden = false;
-      this.errorBox.textContent = snapshot.error;
-    } else {
-      this.errorBox.hidden = true;
-      this.errorBox.textContent = "";
-    }
-
     // Query and document share one radar and one scale.
     this.radar.render([
       { label: "Query", scores: snapshot.queryParameters, variant: "query" },
@@ -127,9 +210,12 @@ export class DetailPanel {
       },
     ]);
 
+    this.element.classList.toggle("has-selection", selected !== null);
+
     if (!selected) {
-      this.emptyNote.hidden = snapshot.status === "error";
+      this.emptyNote.hidden = false;
       this.body.hidden = true;
+      this.trackSavePhase(snapshot, null);
       return;
     }
 
@@ -150,8 +236,33 @@ export class DetailPanel {
 
     this.originNote.hidden = selected.origin !== "map";
 
+    this.renderBadges(snapshot, selected);
     this.renderLink(selected.url ?? undefined);
     this.renderSaveAction(snapshot, selected);
+    this.trackSavePhase(snapshot, selected);
+  }
+
+  private renderBadges(snapshot: AppStateSnapshot, selected: SelectedDocumentView): void {
+    const style = sourceStyle(selected.source);
+    this.sourceBadge.textContent = style.label;
+    this.sourceBadge.style.setProperty("--tm-dot", cssColor(style.color));
+
+    const membership = mapMembership(snapshot);
+    const inMap = membership?.has(selected.doc_id) ?? false;
+    this.mapBadge.hidden = membership === null;
+    this.mapBadge.textContent = inMap ? "In map" : "Not in map";
+    this.mapBadge.classList.toggle("is-missing", !inMap);
+    this.mapBadge.title = inMap
+      ? "This document has a position in the 3D thought space."
+      : "This document has no position in the current projection.";
+
+    this.locateButton.dataset["docId"] = selected.doc_id;
+    this.locateButton.disabled = !inMap;
+    this.locateButton.title = inMap
+      ? "Centre the map on this document"
+      : "This document has no position in the map";
+
+    this.savedBadge.hidden = !snapshot.savedDocIds.has(selected.doc_id);
   }
 
   /**
@@ -167,11 +278,15 @@ export class DetailPanel {
     if (!snapshot.features.library_enabled) {
       this.saveButton.hidden = true;
       this.saveNote.hidden = true;
+      this.saveError.hidden = true;
+      this.libraryPrompt.hidden = true;
       return;
     }
     this.saveButton.hidden = false;
 
     const hasIdentity = snapshot.libraryIdentity !== "";
+    this.saveError.hidden = !(hasIdentity && snapshot.libraryError);
+    this.saveError.textContent = hasIdentity ? (snapshot.libraryError ?? "") : "";
     const saved = snapshot.savedDocIds.has(selected.doc_id);
     const busy =
       snapshot.savePhaseDocId === selected.doc_id && snapshot.savePhase !== "idle";
@@ -180,20 +295,62 @@ export class DetailPanel {
     this.saveButton.dataset["saved"] = String(saved);
     this.saveButton.disabled = !hasIdentity || busy;
     this.saveButton.classList.toggle("is-saved", saved);
+    this.saveButton.classList.toggle("is-busy", busy);
+    this.saveButton.setAttribute("aria-pressed", String(saved));
 
     if (busy) {
       this.saveButton.textContent =
         snapshot.savePhase === "saving" ? "Saving…" : "Removing…";
     } else if (saved) {
       this.saveButton.textContent = "Saved";
-      this.saveButton.title = "Remove from your Personal Library";
+      this.saveButton.title = "Saved — select to remove from your Personal Library";
     } else {
       this.saveButton.textContent = "Save";
       this.saveButton.title = "Save to your Personal Library";
     }
 
-    this.saveNote.hidden = hasIdentity;
-    this.saveNote.textContent = hasIdentity ? "" : "Set a Library ID to save";
+    this.libraryPrompt.hidden = hasIdentity;
+  }
+
+  /**
+   * Confirm a finished save or removal in words.
+   *
+   * The button flipping to "Saved" is easy to miss and says nothing to a
+   * screen reader; a short status line does both, then gets out of the way.
+   */
+  private trackSavePhase(snapshot: AppStateSnapshot, selected: SelectedDocumentView | null): void {
+    const finished =
+      this.lastSavePhase !== "idle" &&
+      snapshot.savePhase === "idle" &&
+      this.lastSavePhaseDocId !== null;
+
+    if (finished && selected && this.lastSavePhaseDocId === selected.doc_id) {
+      const saved = snapshot.savedDocIds.has(selected.doc_id);
+      if (this.lastSavePhase === "saving" && saved) {
+        this.flash("Saved to your Library. It is marked with a mint ring in the map.");
+      } else if (this.lastSavePhase === "removing" && !saved) {
+        this.flash("Removed from your Library.");
+      }
+    }
+
+    this.lastSavePhase = snapshot.savePhase;
+    this.lastSavePhaseDocId = snapshot.savePhaseDocId ?? this.lastSavePhaseDocId;
+    if (snapshot.savePhase === "idle") {
+      this.lastSavePhaseDocId = null;
+    }
+  }
+
+  private flash(message: string): void {
+    if (this.feedbackTimer !== null) {
+      clearTimeout(this.feedbackTimer);
+    }
+    this.saveNote.textContent = message;
+    this.saveNote.hidden = false;
+    this.feedbackTimer = setTimeout(() => {
+      this.feedbackTimer = null;
+      this.saveNote.hidden = true;
+      this.saveNote.textContent = "";
+    }, FEEDBACK_MS);
   }
 
   /** A missing URL shows an explicit unavailable note, never a dead button. */
@@ -223,6 +380,12 @@ export function isSafeExternalUrl(value: string): boolean {
   }
 }
 
+function badge(className: string): HTMLElement {
+  const element = document.createElement("span");
+  element.className = className;
+  return element;
+}
+
 function createField(label: string): HTMLElement {
   const wrapper = document.createElement("div");
   wrapper.className = "tm-detail-field";
@@ -243,7 +406,6 @@ function setFieldValue(field: HTMLElement, value: string): void {
     target.textContent = value;
   }
 }
-
 
 /** Keep the radar legend readable for very long titles. */
 function shortLabel(title: string): string {
