@@ -3,6 +3,7 @@ import { Vector3 } from "three";
 import type { ThoughtMapScene } from "../scene/ThoughtMapScene";
 import { computeNodeVisualState, joinMetrics } from "../scene/nodeVisualState";
 import {
+  DRAG_THRESHOLD_PX,
   exceedsDragThreshold,
   pickNearestNode,
   pickRadiusForPointer,
@@ -34,6 +35,14 @@ export interface InteractionCallbacks {
  */
 const STALE_HOVER_FRAME_MS = 250;
 
+/** Finger and stylus: imprecise contact, so taps get the forgiving rules. */
+function isCoarsePointer(pointerType: string): boolean {
+  return pointerType === "touch" || pointerType === "pen";
+}
+
+/** Touch slop: Android uses ~8 dp; a finger tap that wobbles less is still a tap. */
+const TOUCH_DRAG_THRESHOLD_PX = 10;
+
 /**
  * Turns pointer input on the canvas into application state, and application
  * state into renderer commands.
@@ -45,10 +54,17 @@ const STALE_HOVER_FRAME_MS = 250;
 export class ThoughtMapInteractionController {
   private readonly scratchPoint = new Vector3();
 
-  private pointerOrigin: PointerOrigin | null = null;
-  private pointerId: number | null = null;
+  /** Every pointer currently down, by pointerId, with where it went down. */
+  private readonly pointers = new Map<number, PointerOrigin>();
   private pointerType = "mouse";
+  /** Any pointer in the current gesture travelled past the slop. */
   private dragging = false;
+  /** More than one pointer took part in the current gesture (pinch / pan). */
+  private multiTouch = false;
+  /** Node under the first pointer when it went down, for a tap to select. */
+  private downPick = -1;
+  /** The first press of this gesture stopped a camera glide (touch only). */
+  private stoppedGlide = false;
 
   /** Hover picking is deferred to a frame so a fast drag cannot flood it. */
   private hoverFrame = 0;
@@ -271,17 +287,37 @@ export class ThoughtMapInteractionController {
   // --- pointer handling ---------------------------------------------------
 
   private readonly handlePointerDown = (event: PointerEvent): void => {
-    this.pointerId = event.pointerId;
+    if (this.pointers.size === 0) {
+      this.dragging = false;
+      this.multiTouch = false;
+    }
     this.pointerType = event.pointerType || "mouse";
-    this.pointerOrigin = { x: event.clientX, y: event.clientY };
-    this.dragging = false;
+    this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (this.pointers.size === 1) {
+      // What the finger landed on. OrbitControls starts rotating on the first
+      // move, so by release a wobbling finger can sit over a neighbour.
+      const point = this.toCanvasPoint(event.clientX, event.clientY);
+      this.downPick = this.pick(point.x, point.y, pickRadiusForPointer(this.pointerType));
+      // A finger aimed at a node that was still gliding lands where the node
+      // used to be. On touch, the press that stops a glide only stops it.
+      const interrupted = this.scene.camera.consumeInterruptedGlide();
+      this.stoppedGlide = interrupted && isCoarsePointer(this.pointerType);
+    }
+    if (this.pointers.size > 1) {
+      // A second finger makes this a pinch or a pan: it can no longer end as a tap.
+      this.multiTouch = true;
+      this.clearHover();
+    }
   };
 
   private readonly handlePointerMove = (event: PointerEvent): void => {
     // A gesture becomes a camera drag once it travels far enough; from then on
     // the release must not select anything.
-    if (this.pointerOrigin && event.pointerId === this.pointerId && !this.dragging) {
-      if (exceedsDragThreshold(this.pointerOrigin, { x: event.clientX, y: event.clientY })) {
+    const origin = this.pointers.get(event.pointerId);
+    if (origin && !this.dragging) {
+      // A finger wobbles more than a mouse; give touch a wider slop.
+      const slop = event.pointerType === "touch" ? TOUCH_DRAG_THRESHOLD_PX : DRAG_THRESHOLD_PX;
+      if (exceedsDragThreshold(origin, { x: event.clientX, y: event.clientY }, slop)) {
         this.dragging = true;
         this.clearHover();
       }
@@ -296,30 +332,42 @@ export class ThoughtMapInteractionController {
   };
 
   private readonly handlePointerUp = (event: PointerEvent): void => {
-    const wasDragging = this.dragging;
-    const origin = this.pointerOrigin;
+    // Match the release to its own pointer; an unknown pointer is not ours.
+    if (!this.pointers.delete(event.pointerId)) {
+      return;
+    }
+    const wasTap = !this.dragging && !this.multiTouch;
+    if (this.pointers.size === 0) {
+      this.dragging = false;
+      this.multiTouch = false;
+    }
 
-    this.pointerOrigin = null;
-    this.pointerId = null;
-    this.dragging = false;
-
-    // OrbitControls owns this gesture; releasing from a drag must never select.
-    if (wasDragging || !origin) {
+    // OrbitControls owns drags and multi-finger gestures; releasing from one
+    // must never select.
+    if (!wasTap) {
       return;
     }
 
-    const point = this.toCanvasPoint(event.clientX, event.clientY);
-    const index = this.pick(point.x, point.y, pickRadiusForPointer(event.pointerType));
+    const index = this.downPick;
 
     // A click either selects (and the camera glides the node to the centre)
     // or clears. Either way the point under a still pointer is about to move,
     // so the tooltip goes now and returns with the next pointer move.
     this.clearHover();
 
+    if (this.stoppedGlide) {
+      return;
+    }
+
     if (index === -1) {
-      // Empty space clears the selection, which is how you get back to the
-      // whole map without hunting for a control.
-      this.selection.clear();
+      // With a mouse, empty space clears the selection: it is how you get back
+      // to the whole map without hunting for a control, and a mouse rarely
+      // misses by accident. A finger often does — and on a phone, clearing
+      // also takes away the document being read — so touch leaves it alone.
+      // Tapping another document replaces it; Back returns to the list.
+      if (!isCoarsePointer(this.pointerType)) {
+        this.selection.clear();
+      }
       return;
     }
 
@@ -338,10 +386,12 @@ export class ThoughtMapInteractionController {
     this.clearHover();
   };
 
-  private readonly handlePointerCancel = (): void => {
-    this.pointerOrigin = null;
-    this.pointerId = null;
-    this.dragging = false;
+  private readonly handlePointerCancel = (event: PointerEvent): void => {
+    this.pointers.delete(event.pointerId);
+    if (this.pointers.size === 0) {
+      this.dragging = false;
+      this.multiTouch = false;
+    }
     this.clearHover();
   };
 

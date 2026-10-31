@@ -111,6 +111,8 @@ export class CameraController {
   private fitFov = DEFAULT_FOV;
   private fitAspect: number;
   private transition: Transition | null = null;
+  /** When user input last cut a glide short, for `consumeInterruptedGlide`. */
+  private glideInterruptedAt = Number.NEGATIVE_INFINITY;
   private motionQuery: MediaQueryList | null = null;
   private handleMotionPreference: (() => void) | null = null;
 
@@ -172,6 +174,21 @@ export class CameraController {
   /** True while a programmatic move is gliding. */
   get isTransitioning(): boolean {
     return this.transition !== null;
+  }
+
+  /**
+   * Whether the press being handled right now is the one that stopped a glide.
+   *
+   * OrbitControls cancels the glide (through its `start` event) inside its own
+   * pointerdown handler, before any later listener runs, so by then
+   * `isTransitioning` is already false. This answers the question that is
+   * left — and answers it once: a second call, or a call for some later
+   * press, gets false.
+   */
+  consumeInterruptedGlide(now: number = performance.now()): boolean {
+    const interrupted = now - this.glideInterruptedAt < 50;
+    this.glideInterruptedAt = Number.NEGATIVE_INFINITY;
+    return interrupted;
   }
 
   /** Distance from the camera to the point it orbits. */
@@ -530,6 +547,7 @@ export class CameraController {
       return;
     }
     this.transition = null;
+    this.glideInterruptedAt = performance.now();
     this.camera.far = Math.max(this.camera.far, flight.far);
     this.camera.updateProjectionMatrix();
   };

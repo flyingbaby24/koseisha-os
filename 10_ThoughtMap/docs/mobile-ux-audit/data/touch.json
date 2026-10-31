@@ -1,0 +1,165 @@
+{
+ "mapWindow": {
+  "cx": 195,
+  "cy": 223.1953125,
+  "top": 72,
+  "bottom": 374.390625
+ },
+ "densityAtCentre": 24421,
+ "start": {
+  "d": 12,
+  "az": 0,
+  "tx": 11.77,
+  "ty": 8.72,
+  "sel": "gutendex:doc_000294",
+  "view": "detail"
+ },
+ "rotate": {
+  "before": {
+   "d": 12,
+   "az": 0,
+   "tx": 11.77,
+   "ty": 8.72,
+   "sel": "gutendex:doc_000294",
+   "view": "detail"
+  },
+  "after": {
+   "d": 12,
+   "az": -0.496,
+   "tx": 11.77,
+   "ty": 8.72,
+   "sel": "gutendex:doc_000294",
+   "view": "detail"
+  }
+ },
+ "pinchBoth": {
+  "before": {
+   "d": 12,
+   "az": -0.496,
+   "tx": 11.77,
+   "ty": 8.72,
+   "sel": "gutendex:doc_000294",
+   "view": "detail"
+  },
+  "after": {
+   "d": 3.73,
+   "az": -0.625,
+   "tx": 11.74,
+   "ty": 8.71,
+   "sel": "gutendex:doc_000294",
+   "view": "detail"
+  }
+ },
+ "pan": {
+  "before": {
+   "d": 3.73,
+   "az": -0.625,
+   "tx": 11.74,
+   "ty": 8.71,
+   "sel": "gutendex:doc_000294",
+   "view": "detail"
+  },
+  "after": {
+   "d": 3.73,
+   "az": -0.625,
+   "tx": 11.74,
+   "ty": 9.05,
+   "sel": "gutendex:doc_000294",
+   "view": "detail"
+  }
+ },
+ "releaseBug": {
+  "pointerLog": "down#9 down#10 up#10 up#9",
+  "before": {
+   "d": 3.73,
+   "az": -0.625,
+   "tx": 11.74,
+   "ty": 9.1,
+   "sel": "gutendex:doc_000294",
+   "view": "detail"
+  },
+  "afterFirstLift": {
+   "d": 1.78,
+   "az": -0.625,
+   "tx": 11.8,
+   "ty": 9.18,
+   "sel": null,
+   "view": "list"
+  },
+  "after": {
+   "d": 1.78,
+   "az": -0.625,
+   "tx": 11.82,
+   "ty": 9.21,
+   "sel": null,
+   "view": "list"
+  },
+  "selectionChanged": true
+ },
+ "releaseControl": {
+  "after": {
+   "d": 5.74,
+   "az": -0.625,
+   "tx": 12.03,
+   "ty": 9.05,
+   "sel": "gutendex:doc_000294",
+   "view": "detail"
+  },
+  "selectionChanged": false
+ },
+ "tapNode": {
+  "target": "gutendex:doc_000446",
+  "d": 12,
+  "az": -0.625,
+  "tx": 11.58,
+  "ty": 8.57,
+  "sel": "gutendex:doc_000446",
+  "view": "detail",
+  "hit": true
+ },
+ "wobblyTap": {
+  "target": "gutendex:doc_045959",
+  "d": 12,
+  "az": -0.649,
+  "tx": 11.58,
+  "ty": 8.57,
+  "sel": "gutendex:doc_000446",
+  "view": "detail",
+  "hit": false
+ },
+ "emptyPointFound": [
+  235,
+  223.1953125
+ ],
+ "emptyTap": {
+  "viewBefore": "detail",
+  "viewAfter": "list",
+  "selection": null
+ },
+ "rapidTaps": {
+  "wanted": "gutendex:doc_002721",
+  "d": 12,
+  "az": -0.651,
+  "tx": 11.54,
+  "ty": 8.55,
+  "sel": "gutendex:doc_045959",
+  "view": "detail",
+  "stuck": false
+ },
+ "reset": {
+  "d": 370.62,
+  "az": 0,
+  "tx": 0,
+  "ty": 0,
+  "sel": "gutendex:doc_045959",
+  "view": "detail"
+ },
+ "fitResults": {
+  "d": 12,
+  "az": 0,
+  "tx": 11.52,
+  "ty": 8.5,
+  "sel": "gutendex:doc_045959",
+  "view": "detail"
+ }
+}
