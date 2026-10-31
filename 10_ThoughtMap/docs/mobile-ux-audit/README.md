@@ -74,10 +74,12 @@
 
 動画: [media/m01-pinch-release-changes-document.mp4](media/m01-pinch-release-changes-document.mp4)（ピンク色の円が指）
 
-**再現テスト**（[`tests/mobileTouch.test.ts`](../../threejs/tests/mobileTouch.test.ts)）
-- 2 通りの離し順を `it.fails` として記録した。不具合がある限りテストは成功し、修正されると失敗に変わる。修正後は `it` に戻す。
-- 比較用として、後から置いた指を動かすケースは通常のテストで成功する。
-- 通常のテストに書き換えて実行すると、2 件とも `expected null to be 'a'`（選択が解除される）で失敗することを確認済み。
+**回帰テスト**（[`tests/mobileTouch.test.ts`](../../threejs/tests/mobileTouch.test.ts)）
+- 監査時は 2 通りの離し順を `it.fails`（不具合の記録）として置いた。修正後は通常のテストに変えた。
+- M-02・M-03・M-14 と、マウス操作が変わらないことの確認を加え、全 15 件にした。
+- 修正前のコードでは、タッチの不具合に当たる 7 件が失敗し、マウスと比較用のケースは成功することを確認済み。
+
+**修正後**: 動画 [media/m01-fixed-pinch-release-keeps-document.mp4](media/m01-fixed-pinch-release-keeps-document.mp4)。同じ操作をしても文書が保たれる。
 
 ### M-03（High）: 対象から外れたタップで、読んでいた文書が置き換わる
 
@@ -184,20 +186,14 @@
 
 | 順位 | 内容 | 規模 | 状態 |
 | --- | --- | --- | --- |
-| 1 | **M-01 / M-02**：pointer の追跡を指ごとにし、`pointerup` を照合する。2 本指操作はタップ扱いしない。タッチ時の許容ぶれを 10 px にし、指が触れた瞬間の対象を選ぶ | 1 ファイル（+50／−20 行） | **修正案あり**: [`proposed-fix-touch-gestures.patch`](proposed-fix-touch-gestures.patch)。main にそのまま適用でき、適用して `it.fails` を `it` に戻すと全 355 テストが通る（確認済み）。実ブラウザでもピンチ後の離し・通常のタップ・7 px のぶれのいずれも正しく動くことを確認済み。**本体のコードには反映していない**（判断待ち） |
-| 2 | M-03：タッチ操作では、何もない場所のタップで選択を解除しない | 数行 | 案のみ |
+| 1 | **M-01 / M-02**：pointer の追跡を指ごとにし、`pointerup` を照合する。2 本指操作はタップ扱いしない。タッチ時の許容ぶれを 10 px にし、指が触れた瞬間の対象を選ぶ | 1 ファイル | **修正済み**（第 1 段階のタッチ操作修正 PR） |
+| 2 | M-03：タッチ操作では、何もない場所のタップで選択を解除しない | 数行 | **修正済み**（同 PR。マウスでは従来どおり解除する） |
 | 3 | M-06：タッチ端末では検索実行後に `input.blur()` してキーボードを閉じる | 1 行 | 案のみ（実機で確認が必要） |
 | 4 | M-10：`webglcontextlost` で「再読み込み中」と表示し、`webglcontextrestored` で `requestRender()` を呼ぶ | 約 20 行 | 案のみ |
-| 5 | M-14：カメラ移動中の最初のタップは停止だけにする | 数行 | 案のみ |
+| 5 | M-14：カメラ移動中の最初のタップは停止だけにする | 数行 | **修正済み**（同 PR。マウスでは従来どおり選択する） |
 | 6 | M-04 / M-05 / M-07 / M-08 / M-09 / M-11 / M-12 / M-13：案 B で画面構成を作り直す | 中 | 設計案 |
 
-修正案を適用するには、リポジトリのルートで次を実行する。
-
-```bash
-git apply 10_ThoughtMap/docs/mobile-ux-audit/proposed-fix-touch-gestures.patch
-```
-
-適用後、`tests/mobileTouch.test.ts` の `it.fails` を `it` に変える。
+監査時に添付していた修正案のパッチは、第 1 段階の PR で本体に取り込んだため削除した。
 
 ---
 
