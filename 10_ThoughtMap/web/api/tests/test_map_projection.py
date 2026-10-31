@@ -32,6 +32,22 @@ from api.config import DEVELOPMENT, PUBLIC_DEMO
 from api.map_service import MapService, ProjectionUnavailableError
 
 
+def vary_fields(response) -> set[str]:
+    """The field names a response's Vary header lists, lower-cased.
+
+    Vary is a comma-separated list whose order carries no meaning, and field
+    names are case-insensitive (RFC 9110 §12.5.5, §5.1). Other layers may
+    legitimately add to it: Starlette's CORSMiddleware appends ``Origin`` to
+    every response since it began handling requests without an Origin header.
+    So the contract a test can rely on is membership, not the exact string.
+    """
+    return {
+        field.strip().lower()
+        for field in response.headers.get("Vary", "").split(",")
+        if field.strip()
+    }
+
+
 def make_frame(count: int = 40, dimension: int = 12, seed: int = 7) -> pd.DataFrame:
     """A synthetic corpus with clearly separated groups, so UMAP behaves."""
     rng = np.random.default_rng(seed)
@@ -1004,7 +1020,7 @@ class DiskBackedMapHttpTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("Content-Encoding"), "gzip")
-        self.assertEqual(response.headers.get("Vary"), "Accept-Encoding")
+        self.assertIn("accept-encoding", vary_fields(response))
         self.assertEqual(len(response.json()["nodes"]), self.node_count)
 
     def test_identity_clients_get_the_artifact_itself(self) -> None:
