@@ -46,9 +46,23 @@ import {
  */
 export class NodeRenderer {
   readonly object: Points;
+  /**
+   * The emphasis layer: only nodes at Saved or above (results, saved works,
+   * hover, selection) — tens to hundreds of points, never the corpus.
+   *
+   * Drawn after the cloud without depth testing, so a selected document deep
+   * inside a dense region is never hidden behind thousands of neighbours, and
+   * in state order, so the selection is always painted last. A second draw
+   * call of a few hundred points is the whole cost; there is no post-process
+   * and no per-node object.
+   */
+  readonly emphasisObject: Points;
 
   private readonly geometry: BufferGeometry;
   private readonly material: ShaderMaterial;
+  private readonly emphasisGeometry: BufferGeometry;
+  private readonly emphasisMaterial: ShaderMaterial;
+  private emphasisCapacity = 0;
 
   private currentIndex: NodeIndex = buildNodeIndex([]);
   private currentBounds: ProjectionBounds = computeBounds([]);
@@ -67,6 +81,18 @@ export class NodeRenderer {
     // T4 installs real picking. Until then nothing should resolve a hit here.
     this.object.raycast = () => {};
     this.object.visible = false;
+
+    this.emphasisGeometry = new BufferGeometry();
+    this.emphasisGeometry.setDrawRange(0, 0);
+    this.emphasisMaterial = createEmphasisMaterial(this.material);
+    this.emphasisObject = new Points(this.emphasisGeometry, this.emphasisMaterial);
+    this.emphasisObject.name = "ThoughtMapEmphasis";
+    this.emphasisObject.raycast = () => {};
+    // A handful of points whose positions change with every search: a
+    // bounding sphere would cost more to maintain than drawing them does.
+    this.emphasisObject.frustumCulled = false;
+    this.emphasisObject.renderOrder = 2;
+    this.emphasisObject.visible = false;
   }
 
   get nodeIndex(): NodeIndex {
@@ -87,6 +113,7 @@ export class NodeRenderer {
 
   addTo(scene: Scene): void {
     scene.add(this.object);
+    scene.add(this.emphasisObject);
   }
 
   /**
@@ -98,11 +125,29 @@ export class NodeRenderer {
    * an arbitrary constant and end up sub-pixel at a normal viewing distance —
    * drawn, counted by the renderer, and invisible.
    */
-  setViewportScale(drawingBufferHeight: number, fovDegrees: number): void {
+  setViewportScale(drawingBufferHeight: number, fovDegrees: number, pixelRatio = 1): void {
     const fov = Math.min(179, Math.max(1, fovDegrees));
     const halfFov = (fov * Math.PI) / 360;
     const scale = Math.max(1, drawingBufferHeight) / (2 * Math.tan(halfFov));
+    // Uniform objects are shared with the emphasis material, so one write
+    // keeps both layers on the same scale.
     this.material.uniforms["uProjectionScale"]!.value = scale;
+    this.material.uniforms["uPixelRatio"]!.value =
+      Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1;
+  }
+
+  /**
+   * Depth cue: nodes beyond what the camera is looking at recede.
+   *
+   * Two uniform writes per rendered frame, nothing per node. Without it a
+   * 64k-point cloud reads as a flat texture; with it the near side of the
+   * space is visibly in front of the far side while orbiting.
+   */
+  setDepthCue(focusDistance: number): void {
+    const extent = Math.max(1e-3, this.worldExtent);
+    const near = Math.max(0, focusDistance - extent * 0.08);
+    this.material.uniforms["uFadeNear"]!.value = near;
+    this.material.uniforms["uFadeFar"]!.value = near + extent * 0.9;
   }
 
   /**
@@ -115,6 +160,9 @@ export class NodeRenderer {
     this.currentIndex = buildNodeIndex(nodes);
     this.currentBounds = computeBounds(nodes);
     this.currentTransform = computeTransform(this.currentBounds);
+
+    this.emphasisGeometry.setDrawRange(0, 0);
+    this.emphasisObject.visible = false;
 
     if (nodes.length === 0) {
       this.geometry.setDrawRange(0, 0);
@@ -141,15 +189,15 @@ export class NodeRenderer {
       colors[offset + 2] = b;
     }
 
-    // Visual state lives in its own attributes so a search only rewrites
-    // these two small arrays — positions and colours are never touched again.
+    // Visual state lives in its own attribute so a search only rewrites this
+    // one small array — positions and colours are never touched again. Rank
+    // emphasis and the saved flag only matter to the emphasis layer, which
+    // carries its own copies for the few nodes it draws.
     const state = new Float32Array(nodes.length).fill(NodeState.Normal);
-    const emphasis = new Float32Array(nodes.length);
 
     this.geometry.setAttribute("position", new BufferAttribute(positions, 3));
     this.geometry.setAttribute("color", new BufferAttribute(colors, 3));
     this.geometry.setAttribute("aState", new BufferAttribute(state, 1));
-    this.geometry.setAttribute("aEmphasis", new BufferAttribute(emphasis, 1));
     this.geometry.setDrawRange(0, nodes.length);
     this.geometry.computeBoundingSphere();
     this.geometry.computeBoundingBox();
@@ -164,32 +212,105 @@ export class NodeRenderer {
     this.object.position.set(offset.x, offset.y, offset.z);
     this.object.updateMatrixWorld(true);
 
+    // Same raw coordinates, same transform: the layers can never drift apart.
+    this.emphasisObject.scale.copy(this.object.scale);
+    this.emphasisObject.position.copy(this.object.position);
+    this.emphasisObject.updateMatrixWorld(true);
+
     this.object.visible = true;
   }
 
   /**
    * Apply new visual state.
    *
-   * Copies into the existing attribute arrays and flags them dirty. No
-   * geometry is recreated, so a search costs two Float32Array writes rather
-   * than rebuilding 4,915 positions.
+   * Copies into the existing state array and flags it dirty; no cloud
+   * geometry is recreated, so a search costs one Float32Array write rather
+   * than rebuilding 63,891 positions. The emphasis layer is rewritten in
+   * place for the handful of nodes it draws.
    */
   applyVisualState(visual: VisualState): void {
     const stateAttribute = this.geometry.getAttribute("aState") as BufferAttribute | undefined;
-    const emphasisAttribute = this.geometry.getAttribute("aEmphasis") as
-      | BufferAttribute
-      | undefined;
-
-    if (!stateAttribute || !emphasisAttribute) {
+    if (!stateAttribute) {
       return;
     }
 
     const count = Math.min(this.count, visual.state.length);
     (stateAttribute.array as Float32Array).set(visual.state.subarray(0, count));
-    (emphasisAttribute.array as Float32Array).set(visual.emphasis.subarray(0, count));
-
     stateAttribute.needsUpdate = true;
-    emphasisAttribute.needsUpdate = true;
+
+    this.writeEmphasis(visual, count);
+  }
+
+  /** Number of nodes the emphasis layer is currently drawing. */
+  get emphasisCount(): number {
+    return this.emphasisGeometry.drawRange.count;
+  }
+
+  private writeEmphasis(visual: VisualState, nodeCount: number): void {
+    const source = this.geometry.getAttribute("position") as BufferAttribute | undefined;
+    const sourceColor = this.geometry.getAttribute("color") as BufferAttribute | undefined;
+    const indices = visual.emphasised.filter((index) => index >= 0 && index < nodeCount);
+
+    if (!source || !sourceColor || indices.length === 0) {
+      this.emphasisGeometry.setDrawRange(0, 0);
+      this.emphasisObject.visible = false;
+      return;
+    }
+
+    this.ensureEmphasisCapacity(indices.length);
+
+    const positions = this.emphasisGeometry.getAttribute("position") as BufferAttribute;
+    const colors = this.emphasisGeometry.getAttribute("color") as BufferAttribute;
+    const states = this.emphasisGeometry.getAttribute("aState") as BufferAttribute;
+    const emphasis = this.emphasisGeometry.getAttribute("aEmphasis") as BufferAttribute;
+    const saved = this.emphasisGeometry.getAttribute("aSaved") as BufferAttribute;
+
+    const sourcePositions = source.array as Float32Array;
+    const sourceColors = sourceColor.array as Float32Array;
+    const outPositions = positions.array as Float32Array;
+    const outColors = colors.array as Float32Array;
+
+    for (let slot = 0; slot < indices.length; slot += 1) {
+      const index = indices[slot]!;
+      const from = index * 3;
+      const to = slot * 3;
+      outPositions[to] = sourcePositions[from]!;
+      outPositions[to + 1] = sourcePositions[from + 1]!;
+      outPositions[to + 2] = sourcePositions[from + 2]!;
+      outColors[to] = sourceColors[from]!;
+      outColors[to + 1] = sourceColors[from + 1]!;
+      outColors[to + 2] = sourceColors[from + 2]!;
+      (states.array as Float32Array)[slot] = visual.state[index]!;
+      (emphasis.array as Float32Array)[slot] = visual.emphasis[index]!;
+      (saved.array as Float32Array)[slot] = visual.saved[index]!;
+    }
+
+    for (const attribute of [positions, colors, states, emphasis, saved]) {
+      attribute.needsUpdate = true;
+    }
+    this.emphasisGeometry.setDrawRange(0, indices.length);
+    this.emphasisObject.visible = true;
+  }
+
+  /** Grow (never per update) the emphasis buffers to hold `count` nodes. */
+  private ensureEmphasisCapacity(count: number): void {
+    if (count <= this.emphasisCapacity) {
+      return;
+    }
+    let capacity = Math.max(64, this.emphasisCapacity);
+    while (capacity < count) {
+      capacity *= 2;
+    }
+    this.emphasisCapacity = capacity;
+
+    this.emphasisGeometry.setAttribute(
+      "position",
+      new BufferAttribute(new Float32Array(capacity * 3), 3),
+    );
+    this.emphasisGeometry.setAttribute("color", new BufferAttribute(new Float32Array(capacity * 3), 3));
+    this.emphasisGeometry.setAttribute("aState", new BufferAttribute(new Float32Array(capacity), 1));
+    this.emphasisGeometry.setAttribute("aEmphasis", new BufferAttribute(new Float32Array(capacity), 1));
+    this.emphasisGeometry.setAttribute("aSaved", new BufferAttribute(new Float32Array(capacity), 1));
   }
 
   /**
@@ -255,7 +376,10 @@ export class NodeRenderer {
   dispose(): void {
     this.geometry.dispose();
     this.material.dispose();
+    this.emphasisGeometry.dispose();
+    this.emphasisMaterial.dispose();
     this.object.removeFromParent();
+    this.emphasisObject.removeFromParent();
   }
 }
 
@@ -285,11 +409,17 @@ export function pointSizeForCount(count: number): number {
 }
 
 /**
- * Soft round luminous points with distance attenuation.
+ * The document cloud: soft round points with distance attenuation and a depth
+ * cue.
  *
- * Normal blending with depth writing, not additive: additive would saturate
- * dense regions to flat white and destroy exactly the density structure the
- * map exists to show.
+ * Normal blending without depth writes. Additive blending would saturate dense
+ * regions to flat white and destroy exactly the density structure the map
+ * exists to show; depth *writes* would let each soft sprite's transparent
+ * corners punch dark holes in the points behind it, which is what made dense
+ * regions read as blotches. Without them, density reads as colour that
+ * deepens where documents gather.
+ *
+ * Nodes at Saved or above are skipped here: the emphasis layer draws them.
  */
 function createNodeMaterial(): ShaderMaterial {
   return new ShaderMaterial({
@@ -302,76 +432,72 @@ function createNodeMaterial(): ShaderMaterial {
       // Replaced on the first resize; this default matches a 900px viewport at
       // 50° so the very first frame is already sized sensibly.
       uProjectionScale: { value: 965.0 },
+      uPixelRatio: { value: 1.0 },
+      // CSS pixels; multiplied by the pixel ratio in the shader so a point
+      // looks the same size on a standard and a high-density display.
       uMinSize: { value: 1.25 },
       // Ceiling for an ordinary node. Emphasised states multiply this by their
       // own scale, so a selected node still stands out when zoomed in, but the
       // background cloud can no longer balloon into overlapping blobs.
       uMaxSize: { value: 9.0 },
-      uOpacity: { value: 0.95 },
+      uOpacity: { value: 0.8 },
+      // View-space depth band over which nodes recede. Set per frame from the
+      // camera's distance to its target (`setDepthCue`).
+      uFadeNear: { value: 60.0 },
+      uFadeFar: { value: 160.0 },
     },
     vertexShader: /* glsl */ `
       attribute vec3 color;
       attribute float aState;
-      attribute float aEmphasis;
 
       varying vec3 vColor;
-      varying float vState;
       varying float vAlpha;
 
       uniform float uPointWorldSize;
       uniform float uProjectionScale;
+      uniform float uPixelRatio;
       uniform float uMinSize;
       uniform float uMaxSize;
       uniform float uOpacity;
+      uniform float uFadeNear;
+      uniform float uFadeFar;
 
       // Must match NodeState in nodeVisualState.ts.
-      const float STATE_DIMMED     = 0.0;
-      const float STATE_NORMAL     = 1.0;
-      const float STATE_SAVED      = 2.0;
-      const float STATE_RESULT     = 3.0;
-      const float STATE_TOP_RESULT = 4.0;
-      const float STATE_HOVERED    = 5.0;
-      const float STATE_SELECTED   = 6.0;
+      const float STATE_DIMMED = 0.0;
+      const float STATE_SAVED  = 2.0;
+
+      // Cool slate that non-results drift toward while a search is active, so
+      // the structure stays legible but stops competing for attention.
+      const vec3 RECEDE = vec3(0.30, 0.38, 0.52);
 
       void main() {
-        vState = aState;
-
-        // Size and opacity per state. Dimmed nodes stay visible so the
-        // surrounding thought space keeps providing context.
-        float sizeScale = 1.0;
-        float alpha = uOpacity;
-        float lift = 0.0;
-
-        if (aState < STATE_NORMAL - 0.5) {          // dimmed
-          sizeScale = 0.72;
-          alpha = uOpacity * 0.26;
-        } else if (aState < STATE_SAVED - 0.5) {    // normal
-          sizeScale = 1.0;
-        } else if (aState < STATE_RESULT - 0.5) {   // saved
-          // Deliberately gentle: a large library must stay legible as a
-          // scattering of marked points, never compete with search results.
-          sizeScale = 1.25;
-          lift = 0.18;
-        } else if (aState < STATE_TOP_RESULT - 0.5) { // result
-          sizeScale = 1.5 + 0.5 * aEmphasis;
-          lift = 0.35 + 0.25 * aEmphasis;
-        } else if (aState < STATE_HOVERED - 0.5) {  // top result
-          sizeScale = 2.35;
-          lift = 0.75;
-        } else if (aState < STATE_SELECTED - 0.5) { // hovered
-          sizeScale = 2.1;
-          lift = 0.6;
-        } else {                                     // selected
-          sizeScale = 2.9;
-          lift = 0.95;
+        if (aState > STATE_SAVED - 0.5) {
+          // Drawn, larger and on top, by the emphasis layer.
+          vColor = vec3(0.0);
+          vAlpha = 0.0;
+          gl_PointSize = 0.0;
+          gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+          return;
         }
 
-        // Brighten toward white rather than replacing the source colour, so a
-        // node keeps its source identity while emphasised.
-        vColor = mix(color, vec3(1.0), lift * 0.55);
-        vAlpha = alpha;
-
         vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        float depth = max(0.001, -mvPosition.z);
+        // 1 at and in front of the focus, falling to 0 at the far side.
+        float near = 1.0 - smoothstep(uFadeNear, uFadeFar, depth);
+
+        float sizeScale = 1.0;
+        float alpha = uOpacity;
+        vec3 rgb = color;
+
+        if (aState < STATE_DIMMED + 0.5) {
+          // Dimmed, never removed: the surrounding space is still context.
+          sizeScale = 0.78;
+          alpha = uOpacity * 0.24;
+          rgb = mix(color, RECEDE, 0.5);
+        }
+
+        vColor = rgb * mix(0.5, 1.0, near);
+        vAlpha = alpha * mix(0.42, 1.0, near);
 
         // Perspective attenuation in real pixels: nearer documents read
         // larger, which is the main depth cue while orbiting.
@@ -379,46 +505,192 @@ function createNodeMaterial(): ShaderMaterial {
         // mvPosition already carries the object's uniform scale, so
         // uPointWorldSize is used as-is — applying the scale again here would
         // double-count it and inflate every point.
-        float size = uPointWorldSize * sizeScale * uProjectionScale / max(0.001, -mvPosition.z);
+        float size = uPointWorldSize * sizeScale * uProjectionScale / depth;
+        gl_PointSize = clamp(size, uMinSize * uPixelRatio, uMaxSize * sizeScale * uPixelRatio);
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      varying vec3 vColor;
+      varying float vAlpha;
 
-        gl_PointSize = clamp(size, uMinSize, uMaxSize * sizeScale);
+      void main() {
+        float distance = length(gl_PointCoord - vec2(0.5));
+        if (distance > 0.5) {
+          discard;
+        }
+        // Round sprite with a soft edge and a slightly brighter core.
+        float falloff = smoothstep(0.5, 0.12, distance);
+        float core = smoothstep(0.24, 0.0, distance);
+        gl_FragColor = vec4(vColor * (0.88 + 0.3 * core), vAlpha * falloff);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+  });
+}
+
+/**
+ * The emphasis layer's material. Shares the cloud's uniform objects, so size,
+ * pixel ratio and depth cue can never disagree between the two layers.
+ *
+ * One glyph per meaning, readable without colour as well as with it:
+ *
+ *   saved      mint ring around a small source-coloured core
+ *   result     cyan-tinted glowing dot, stronger with rank (top: white rim)
+ *   hovered    white ring
+ *   selected   gold reticle — ring, gap, bright core — and a minimum size
+ *
+ * A saved document that is also a result, hovered or selected keeps a thin
+ * mint outer rim, so being outranked never erases "this is in your library".
+ */
+function createEmphasisMaterial(base: ShaderMaterial): ShaderMaterial {
+  return new ShaderMaterial({
+    uniforms: base.uniforms,
+    vertexShader: /* glsl */ `
+      attribute vec3 color;
+      attribute float aState;
+      attribute float aEmphasis;
+      attribute float aSaved;
+
+      varying vec3 vColor;
+      varying float vState;
+      varying float vEmphasis;
+      varying float vSaved;
+      varying float vNear;
+
+      uniform float uPointWorldSize;
+      uniform float uProjectionScale;
+      uniform float uPixelRatio;
+      uniform float uMaxSize;
+      uniform float uFadeNear;
+      uniform float uFadeFar;
+
+      void main() {
+        vColor = color;
+        vState = aState;
+        vEmphasis = aEmphasis;
+        vSaved = aSaved;
+
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        float depth = max(0.001, -mvPosition.z);
+        vNear = 1.0 - smoothstep(uFadeNear, uFadeFar, depth);
+
+        // Size relative to an ordinary node, and a floor in CSS pixels so an
+        // emphasised node never shrinks out of sight when zoomed out.
+        float sizeScale;
+        float minPx;
+        if (aState < 2.5) {          // saved
+          sizeScale = 1.9;
+          minPx = 7.0;
+        } else if (aState < 3.5) {   // result
+          sizeScale = 2.0 + 0.7 * aEmphasis;
+          minPx = 6.0 + 3.0 * aEmphasis;
+        } else if (aState < 4.5) {   // top result
+          sizeScale = 2.9;
+          minPx = 11.0;
+        } else if (aState < 5.5) {   // hovered
+          sizeScale = 3.0;
+          minPx = 13.0;
+        } else {                     // selected
+          sizeScale = 3.8;
+          minPx = 18.0;
+        }
+        if (aSaved > 0.5 && aState > 2.5) {
+          // Room for the saved rim outside the state's own glyph.
+          sizeScale *= 1.15;
+          minPx += 3.0;
+        }
+
+        float size = uPointWorldSize * sizeScale * uProjectionScale / depth;
+        float lower = minPx * uPixelRatio;
+        float upper = max(lower, uMaxSize * sizeScale * uPixelRatio);
+        gl_PointSize = clamp(size, lower, upper);
         gl_Position = projectionMatrix * mvPosition;
       }
     `,
     fragmentShader: /* glsl */ `
       varying vec3 vColor;
       varying float vState;
-      varying float vAlpha;
+      varying float vEmphasis;
+      varying float vSaved;
+      varying float vNear;
+
+      // Semantic colours. Must match --tm-query, --tm-document and
+      // --tm-saved in main.css, so the map, the result list and the radar use
+      // one vocabulary.
+      const vec3 QUERY = vec3(0.31, 0.82, 1.0);
+      const vec3 DOCUMENT = vec3(1.0, 0.77, 0.42);
+      const vec3 SAVED = vec3(0.61, 0.91, 0.77);
+
+      // Anti-aliased annulus between two radii (sprite space, 0..0.5).
+      float band(float d, float inner, float outer) {
+        return smoothstep(inner - 0.035, inner, d) * (1.0 - smoothstep(outer, outer + 0.035, d));
+      }
 
       void main() {
-        vec2 offset = gl_PointCoord - vec2(0.5);
-        float distance = length(offset);
-        if (distance > 0.5) {
+        float d = length(gl_PointCoord - vec2(0.5));
+        if (d > 0.5) {
           discard;
         }
 
-        // Round the square point sprite and give it a soft core.
-        float falloff = smoothstep(0.5, 0.08, distance);
+        bool saved = vSaved > 0.5;
+        float edge = saved && vState > 2.5 ? 0.41 : 0.5;
+        vec3 rgb;
+        float alpha;
 
-        // Selected and hovered nodes get a bright ring, which stays legible
-        // even where the cloud is dense and a brighter dot would be lost.
-        float ring = 0.0;
-        if (vState > 4.5) {
-          ring = smoothstep(0.5, 0.42, distance) * smoothstep(0.30, 0.40, distance);
-        } else if (vState > 1.5 && vState < 2.5) {
-          // Saved: a faint outer halo. Present enough to spot, quiet enough
-          // that a thousand of them do not read as noise.
-          ring = smoothstep(0.5, 0.44, distance) * smoothstep(0.34, 0.44, distance) * 0.35;
+        if (vState < 2.5) {
+          // Saved: ring and a small core in the document's own source colour.
+          float ring = band(d, 0.30, 0.44);
+          float core = 1.0 - smoothstep(0.12, 0.17, d);
+          rgb = mix(vColor, SAVED, ring);
+          alpha = max(ring * 0.95, core * 0.85);
+        } else if (vState < 4.5) {
+          // Result: the query's colour, glowing in proportion to rank.
+          vec3 tint = mix(vColor, QUERY, 0.6);
+          float core = 1.0 - smoothstep(0.10, 0.22, d);
+          float glow = pow(1.0 - smoothstep(0.0, edge, d), 2.0) * (0.35 + 0.35 * vEmphasis);
+          rgb = mix(tint, vec3(1.0), core * (0.3 + 0.45 * vEmphasis));
+          alpha = clamp(core + glow, 0.0, 1.0);
+          if (vState > 3.5) {
+            float rim = band(d, edge - 0.11, edge - 0.04);
+            rgb = mix(rgb, vec3(1.0), rim);
+            alpha = max(alpha, rim);
+          }
+        } else if (vState < 5.5) {
+          // Hovered: a white ring; the core keeps its source identity.
+          float ring = band(d, 0.29, 0.38);
+          float core = 1.0 - smoothstep(0.12, 0.19, d);
+          rgb = mix(mix(vColor, vec3(1.0), 0.45), vec3(1.0), ring);
+          alpha = max(ring, core * 0.95);
+        } else {
+          // Selected: a gold reticle — unmistakable at any density.
+          float ring = band(d, 0.27, 0.37);
+          float core = 1.0 - smoothstep(0.09, 0.15, d);
+          float halo = (1.0 - smoothstep(0.37, edge, d)) * step(0.37, d) * 0.28;
+          rgb = mix(DOCUMENT, vec3(1.0), core * 0.55);
+          alpha = max(max(ring, core), halo);
         }
 
-        float alpha = clamp(vAlpha * falloff + ring * 0.9, 0.0, 1.0);
-        vec3 rgb = mix(vColor, vec3(1.0), ring * 0.6);
+        if (saved && vState > 2.5) {
+          float rim = band(d, 0.44, 0.48);
+          rgb = mix(rgb, SAVED, rim);
+          alpha = max(alpha, rim);
+        }
 
+        // Emphasis recedes far less than the cloud: it must stay findable.
+        alpha *= mix(0.7, 1.0, vNear);
+        if (alpha < 0.01) {
+          discard;
+        }
         gl_FragColor = vec4(rgb, alpha);
       }
     `,
     transparent: true,
-    depthWrite: true,
-    depthTest: true,
+    depthWrite: false,
+    // Always over the cloud. The cloud writes no depth anyway; disabling the
+    // test makes the guarantee explicit rather than incidental.
+    depthTest: false,
   });
 }

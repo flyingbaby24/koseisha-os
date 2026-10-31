@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#060912" />
     <title>ThoughtMap — Search / Collect</title>
   </head>
   <body>
@@ -16,8 +18,10 @@
       <div id="tm-ui" class="tm-ui"></div>
 
       <!-- Reset Camera returns to the default angle and whole-map framing.
-           Fit All re-frames the map from the current viewing angle. -->
-      <div id="tm-camera-controls" class="tm-camera-controls">
+           Fit All re-frames the map from the current viewing angle.
+           Both control groups are moved under the visible map window at
+           start-up (SearchScreen.adoptMapControls). -->
+      <div id="tm-camera-controls" class="tm-camera-controls" role="toolbar" aria-label="Camera">
         <button type="button" data-camera-action="reset" title="Default angle, whole map">
           Reset Camera
         </button>
@@ -37,7 +41,7 @@
 
       <!-- Compact equivalents for narrow layouts, where the labelled bar does
            not fit. Same actions, same handler, icon-sized targets. -->
-      <div id="tm-camera-compact" class="tm-camera-compact">
+      <div id="tm-camera-compact" class="tm-camera-compact" role="toolbar" aria-label="Camera">
         <button type="button" data-camera-action="reset" aria-label="Reset camera" title="Reset camera">
           &#8634;
         </button>

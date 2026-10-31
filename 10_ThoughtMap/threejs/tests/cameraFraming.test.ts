@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   MIN_FIT_DISTANCE,
+  NO_INSETS,
   computeClippingPlanes,
   computeFitDistance,
+  computeViewWindow,
+  easeInOutCubic,
 } from "../src/scene/cameraFraming";
 
 const FOV = 50;
@@ -98,5 +101,84 @@ describe("computeClippingPlanes", () => {
 
     expect(near).toBeGreaterThan(0);
     expect(far).toBeGreaterThan(near);
+  });
+});
+
+describe("computeViewWindow", () => {
+  /** Canvas x of the optical axis, given a view window. */
+  function axisX(view: ReturnType<typeof computeViewWindow>): number {
+    return view.fullWidth / 2 - view.offsetX;
+  }
+  function axisY(view: ReturnType<typeof computeViewWindow>): number {
+    return view.fullHeight / 2 - view.offsetY;
+  }
+  /** Pixels per world unit at distance 1 — must not change with insets. */
+  function pixelScale(view: ReturnType<typeof computeViewWindow>): number {
+    return view.fullHeight / (2 * Math.tan(((view.fov * Math.PI) / 180) / 2));
+  }
+
+  it("is inactive and unchanged without insets", () => {
+    const view = computeViewWindow(1440, 900, NO_INSETS, FOV);
+    expect(view.active).toBe(false);
+    expect(view.fov).toBeCloseTo(FOV, 9);
+    expect(view.aspect).toBeCloseTo(1440 / 900, 9);
+    expect(axisX(view)).toBeCloseTo(720, 9);
+    expect(axisY(view)).toBeCloseTo(450, 9);
+  });
+
+  it("puts the optical centre in the middle of the uncovered window", () => {
+    // Desktop: results on the left, document on the right, search on top.
+    const insets = { top: 82, right: 384, bottom: 12, left: 352 };
+    const view = computeViewWindow(1440, 900, insets, FOV);
+
+    expect(view.active).toBe(true);
+    expect(axisX(view)).toBeCloseTo(352 + (1440 - 352 - 384) / 2, 6);
+    expect(axisY(view)).toBeCloseTo(82 + (900 - 82 - 12) / 2, 6);
+    // The rendered canvas is a whole sub-rectangle of the virtual image.
+    expect(view.offsetX).toBeGreaterThanOrEqual(0);
+    expect(view.offsetY).toBeGreaterThanOrEqual(0);
+    expect(view.offsetX + 1440).toBeLessThanOrEqual(view.fullWidth + 1e-9);
+    expect(view.offsetY + 900).toBeLessThanOrEqual(view.fullHeight + 1e-9);
+  });
+
+  it("keeps the pixel scale, so point sizes and picking are unaffected", () => {
+    const plain = computeViewWindow(1024, 768, NO_INSETS, FOV);
+    const shifted = computeViewWindow(1024, 768, { top: 80, right: 0, bottom: 0, left: 400 }, FOV);
+    expect(pixelScale(shifted)).toBeCloseTo(768 / (2 * Math.tan((FOV * Math.PI) / 360)), 6);
+    expect(pixelScale(shifted)).toBeCloseTo(pixelScale(plain), 6);
+    // Square pixels: horizontal scale matches vertical.
+    expect(shifted.aspect).toBeCloseTo(shifted.fullWidth / shifted.fullHeight, 9);
+  });
+
+  it("frames for the visible window, not the whole canvas", () => {
+    const view = computeViewWindow(1440, 900, { top: 0, right: 400, bottom: 0, left: 400 }, FOV);
+    expect(view.visibleAspect).toBeCloseTo(640 / 900, 9);
+    expect(view.visibleFov).toBeCloseTo(FOV, 6);
+
+    const shorter = computeViewWindow(1440, 900, { top: 300, right: 0, bottom: 0, left: 0 }, FOV);
+    expect(shorter.visibleFov).toBeLessThan(FOV);
+  });
+
+  it("ignores insets that leave no usable window", () => {
+    const view = computeViewWindow(400, 800, { top: 0, right: 200, bottom: 0, left: 180 }, FOV);
+    expect(axisX(view)).toBeCloseTo(200, 9);
+    expect(view.visibleAspect).toBeCloseTo(400 / 800, 9);
+  });
+
+  it("survives nonsense input", () => {
+    const view = computeViewWindow(Number.NaN, 0, { top: -5, right: Number.NaN, bottom: 0, left: 0 }, 0);
+    expect(Number.isFinite(view.fov)).toBe(true);
+    expect(Number.isFinite(view.aspect)).toBe(true);
+  });
+});
+
+describe("easeInOutCubic", () => {
+  it("starts at 0, ends at 1, is symmetric and clamps", () => {
+    expect(easeInOutCubic(0)).toBe(0);
+    expect(easeInOutCubic(1)).toBe(1);
+    expect(easeInOutCubic(0.5)).toBeCloseTo(0.5, 9);
+    expect(easeInOutCubic(0.25) + easeInOutCubic(0.75)).toBeCloseTo(1, 9);
+    expect(easeInOutCubic(-1)).toBe(0);
+    expect(easeInOutCubic(2)).toBe(1);
   });
 });

@@ -30,7 +30,10 @@ export class SearchScreen {
 
   /** Fires when selection changes, so the map can focus the chosen node. */
   private readonly selectionListeners = new Set<(docId: string | null) => void>();
+  /** Fires when the reader asks to see an already-selected document again. */
+  private readonly locateListeners = new Set<(docId: string) => void>();
   private lastSelectedDocId: string | null = null;
+  private lastStatus: AppStateSnapshot["status"] = "idle";
 
   private readonly searchPanel: SearchPanel;
   private readonly resultPanel: ResultPanel;
@@ -39,7 +42,11 @@ export class SearchScreen {
   private readonly libraryPanel: LibraryPanel;
   private readonly backendBanner: BackendStatusBanner;
   private readonly tabs: Map<string, HTMLButtonElement> = new Map();
+  private readonly tabCounts: Map<string, HTMLElement> = new Map();
   private tabBar!: HTMLDivElement;
+  private readonly root: HTMLElement;
+  private readonly centre: HTMLElement;
+  private readonly dock: HTMLElement;
   /** Mirrors features.library_enabled, so the DOM is touched only on change. */
   private libraryVisible = true;
   private activeTab: "results" | "library" = "results";
@@ -61,9 +68,25 @@ export class SearchScreen {
     });
     this.resultPanel = new ResultPanel({
       // Selection has exactly one path, here and for the 3D scene in T4.
-      onSelect: (docId) => this.selection.select(docId),
+      onSelect: (docId) => this.selectOrLocate(docId),
+      // Pointing at a row lights its node, the mirror of map hover lighting
+      // the row: the two views of one document always agree.
+      onHover: (docId) => this.state.setHovered(docId),
+      onRetry: () => void this.search.search(),
+      onExample: (query) => {
+        this.state.setQuery(query);
+        void this.search.search();
+      },
     });
-    this.detailPanel = new DetailPanel();
+    this.detailPanel = new DetailPanel({
+      onLocate: (docId) => this.emitLocate(docId),
+      onBack: () => this.setView("list"),
+      onRequestLibrary: () => {
+        this.showTab("library");
+        this.setView("list");
+        this.libraryPanel.focusIdentity();
+      },
+    });
     this.mapStatusView = new MapStatusView();
     this.backendBanner = new BackendStatusBanner();
 
@@ -74,7 +97,7 @@ export class SearchScreen {
       },
       onClearIdentity: () => this.library.clearIdentity(),
       // Saved works select through the same controller as results and nodes.
-      onSelect: (docId) => this.selection.select(docId),
+      onSelect: (docId) => this.selectOrLocate(docId),
       onRemove: (docId) => void this.library.remove(docId),
       onReload: () => void this.library.load(),
     });
@@ -91,15 +114,48 @@ export class SearchScreen {
       }
     });
 
+    const brand = document.createElement("div");
+    brand.className = "tm-brand";
+    const mark = document.createElement("span");
+    mark.className = "tm-brand-mark";
+    mark.setAttribute("aria-hidden", "true");
+    const name = document.createElement("h1");
+    name.className = "tm-brand-name";
+    name.textContent = "ThoughtMap";
+    brand.append(mark, name);
+
+    const bar = document.createElement("header");
+    bar.className = "tm-topbar";
+    bar.append(brand, this.searchPanel.element);
+
     const top = document.createElement("div");
     top.className = "tm-layout-top";
-    top.append(this.backendBanner.element, this.searchPanel.element);
+    top.append(bar, this.backendBanner.element);
 
-    // The centre column is the window onto the Thought Space; only the status
-    // overlay lives there, so the canvas behind it stays reachable.
-    const centre = document.createElement("div");
-    centre.className = "tm-layout-centre";
-    centre.append(this.mapStatusView.element);
+    // The centre is the window onto the Thought Space. The canvas fills the
+    // whole screen behind the panels; this element marks the part of it that
+    // is actually visible, so the camera can centre on it (`mapWindow`). It
+    // stays pointer-transparent so orbit works through it.
+    this.centre = document.createElement("div");
+    this.centre.className = "tm-layout-centre";
+
+    const hint = document.createElement("p");
+    hint.className = "tm-map-hint";
+    hint.append(
+      hintText(
+        "for-pointer",
+        "Drag to orbit · Right-drag to pan · Scroll to zoom · Click a point to select",
+      ),
+      hintText("for-touch", "Drag to orbit · Pinch to zoom · Tap to select"),
+    );
+
+    // Camera controls are adopted into this dock (`adoptMapControls`), so they
+    // sit under the visible map at every width instead of under the panels.
+    this.dock = document.createElement("div");
+    this.dock.className = "tm-map-dock";
+    this.dock.append(hint);
+
+    this.centre.append(this.mapStatusView.element, this.dock);
 
     // Results and Library share the left column as tabs. Search / Collect
     // stays one screen; nothing here belongs to Battle Prep.
@@ -109,31 +165,56 @@ export class SearchScreen {
     const tabBar = document.createElement("div");
     tabBar.className = "tm-tabs";
     tabBar.setAttribute("role", "tablist");
+    tabBar.setAttribute("aria-label", "Results and Library");
+    tabBar.addEventListener("keydown", this.handleTabKeydown);
     this.tabBar = tabBar;
 
     for (const [id, label] of [["results", "Results"], ["library", "Library"]] as const) {
       const tab = document.createElement("button");
       tab.type = "button";
       tab.className = "tm-tab";
-      tab.textContent = label;
+      tab.id = `tm-tab-${id}`;
       tab.setAttribute("role", "tab");
+      tab.setAttribute("aria-controls", `tm-tabpanel-${id}`);
+      const text = document.createElement("span");
+      text.textContent = label;
+      const count = document.createElement("span");
+      count.className = "tm-tab-count";
+      count.hidden = true;
+      tab.append(text, count);
       tab.addEventListener("click", () => this.showTab(id));
       this.tabs.set(id, tab);
+      this.tabCounts.set(id, count);
       tabBar.append(tab);
     }
 
-    this.resultPanel.element.classList.add("tm-tabpanel");
-    this.libraryPanel.element.classList.add("tm-tabpanel");
+    for (const [id, panel] of [
+      ["results", this.resultPanel.element],
+      ["library", this.libraryPanel.element],
+    ] as const) {
+      panel.classList.add("tm-tabpanel");
+      panel.id = `tm-tabpanel-${id}`;
+      panel.setAttribute("role", "tabpanel");
+      panel.setAttribute("aria-labelledby", `tm-tab-${id}`);
+    }
     left.append(tabBar, this.resultPanel.element, this.libraryPanel.element);
+
+    // On wide screens the sheet is layout-neutral (`display: contents`) and
+    // its two panels take the outer columns. On a phone it becomes the bottom
+    // sheet under the map window, showing the list or the document.
+    const sheet = document.createElement("div");
+    sheet.className = "tm-sheet";
+    sheet.append(left, this.detailPanel.element);
 
     const columns = document.createElement("div");
     columns.className = "tm-layout-columns";
-    columns.append(left, centre, this.detailPanel.element);
+    columns.append(sheet, this.centre);
 
-    const root = document.createElement("div");
-    root.className = "tm-layout";
-    root.append(top, columns);
-    mount.append(root);
+    this.root = document.createElement("div");
+    this.root.className = "tm-layout";
+    this.root.dataset["view"] = "list";
+    this.root.append(top, columns);
+    mount.append(this.root);
 
     this.unsubscribe = this.state.subscribe((snapshot) => {
       this.searchPanel.render(snapshot);
@@ -144,18 +225,128 @@ export class SearchScreen {
       this.backendBanner.render(snapshot);
       this.applyDeploymentFeatures(snapshot);
       this.renderTabBadges(snapshot);
+      this.root.classList.toggle("has-selection", snapshot.selectedDocId !== null);
+
+      // A new search brings the list back on narrow screens: that is what the
+      // reader is waiting for.
+      if (snapshot.status === "searching" && this.lastStatus !== "searching") {
+        this.setView("list");
+        this.showTab("results");
+      }
+      this.lastStatus = snapshot.status;
 
       if (snapshot.selectedDocId !== this.lastSelectedDocId) {
         this.lastSelectedDocId = snapshot.selectedDocId;
+        this.setView(snapshot.selectedDocId === null ? "list" : "detail");
         for (const listener of this.selectionListeners) {
           listener(snapshot.selectedDocId);
         }
       }
     });
 
+    document.addEventListener("keydown", this.handleShortcut);
+
     this.showTab("results");
     this.searchPanel.focus();
   }
+
+  /** The visible part of the map, between the panels. */
+  get mapWindow(): HTMLElement {
+    return this.centre;
+  }
+
+  /** Move the page's camera controls under the visible map. */
+  adoptMapControls(...elements: Array<HTMLElement | null>): void {
+    for (const element of elements) {
+      if (element) {
+        this.dock.append(element);
+      }
+    }
+  }
+
+  /**
+   * Narrow layouts show the list or the selected document, not both.
+   * Wider layouts ignore this and show both side by side.
+   */
+  setView(view: "list" | "detail"): void {
+    if (this.root.dataset["view"] !== view) {
+      this.root.dataset["view"] = view;
+    }
+  }
+
+  /**
+   * Select a document, or — if it already is — show it again.
+   *
+   * Clicking the selected row after orbiting away is the natural way to say
+   * "where was that?"; selecting it again would be a no-op, so it re-centres.
+   */
+  private selectOrLocate(docId: string): void {
+    if (this.state.getState().selectedDocId === docId) {
+      this.setView("detail");
+      this.emitLocate(docId);
+      return;
+    }
+    this.selection.select(docId);
+  }
+
+  private emitLocate(docId: string): void {
+    for (const listener of this.locateListeners) {
+      listener(docId);
+    }
+  }
+
+  /**
+   * Keyboard shortcuts that never fight with typing: `/` jumps to the search
+   * box, Escape steps back (detail → list, then clears the selection).
+   */
+  private readonly handleShortcut = (event: KeyboardEvent): void => {
+    if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    const typing =
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement ||
+      target?.isContentEditable === true;
+
+    if (event.key === "/" && !typing) {
+      event.preventDefault();
+      this.searchPanel.focusAndSelect();
+      return;
+    }
+
+    if (event.key === "Escape" && !typing && this.state.getState().selectedDocId !== null) {
+      event.preventDefault();
+      this.selection.clear();
+    }
+  };
+
+  /** Left/Right/Home/End move between tabs, as the tab pattern expects. */
+  private readonly handleTabKeydown = (event: KeyboardEvent): void => {
+    const order = [...this.tabs.entries()].filter(([, tab]) => !tab.hidden);
+    const current = order.findIndex(([, tab]) => tab === document.activeElement);
+    if (current === -1) {
+      return;
+    }
+    let next = -1;
+    if (event.key === "ArrowRight") {
+      next = (current + 1) % order.length;
+    } else if (event.key === "ArrowLeft") {
+      next = (current - 1 + order.length) % order.length;
+    } else if (event.key === "Home") {
+      next = 0;
+    } else if (event.key === "End") {
+      next = order.length - 1;
+    }
+    const entry = order[next];
+    if (!entry) {
+      return;
+    }
+    event.preventDefault();
+    this.showTab(entry[0] as "results" | "library");
+    entry[1].focus();
+  };
 
   /**
    * Reflect the deployment's feature list in the chrome.
@@ -206,19 +397,15 @@ export class SearchScreen {
       const active = key === id;
       tab.classList.toggle("is-active", active);
       tab.setAttribute("aria-selected", String(active));
+      tab.tabIndex = active ? 0 : -1;
     }
     this.resultPanel.element.hidden = id !== "results";
     this.libraryPanel.element.hidden = id !== "library";
   }
 
-  private renderTabBadges(snapshot: { savedWorks: readonly unknown[] }): void {
-    const library = this.tabs.get("library");
-    if (library) {
-      library.textContent =
-        snapshot.savedWorks.length > 0 ? `Library (${snapshot.savedWorks.length})` : "Library";
-      library.classList.toggle("is-active", this.activeTab === "library");
-      library.setAttribute("aria-selected", String(this.activeTab === "library"));
-    }
+  private renderTabBadges(snapshot: AppStateSnapshot): void {
+    setCount(this.tabCounts.get("results"), snapshot.results.length);
+    setCount(this.tabCounts.get("library"), snapshot.savedWorks.length);
   }
 
   /** Observe selection changes (used to focus the camera on the chosen node). */
@@ -227,11 +414,37 @@ export class SearchScreen {
     return () => this.selectionListeners.delete(listener);
   }
 
+  /** Observe requests to bring an already-selected document back into view. */
+  onLocateRequest(listener: (docId: string) => void): () => void {
+    this.locateListeners.add(listener);
+    return () => this.locateListeners.delete(listener);
+  }
+
   dispose(): void {
+    document.removeEventListener("keydown", this.handleShortcut);
     this.selectionListeners.clear();
+    this.locateListeners.clear();
     this.unsubscribe();
     this.search.cancel();
     this.map.cancel();
     this.library.cancel();
   }
+}
+
+function setCount(element: HTMLElement | undefined, count: number): void {
+  if (!element) {
+    return;
+  }
+  const text = count > 0 ? String(count) : "";
+  if (element.textContent !== text) {
+    element.textContent = text;
+  }
+  element.hidden = count === 0;
+}
+
+function hintText(className: string, text: string): HTMLElement {
+  const span = document.createElement("span");
+  span.className = className;
+  span.textContent = text;
+  return span;
 }

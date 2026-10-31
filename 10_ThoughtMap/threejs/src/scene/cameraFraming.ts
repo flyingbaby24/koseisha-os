@@ -91,3 +91,106 @@ function safeExtent(value: number): number {
   }
   return value;
 }
+
+/**
+ * Space taken by opaque UI on each edge of the canvas, in CSS pixels.
+ *
+ * The canvas fills the window, but panels cover parts of it. What the reader
+ * actually sees of the map is the rectangle left over — the *map window*.
+ */
+export interface ViewInsets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+export const NO_INSETS: ViewInsets = Object.freeze({ top: 0, right: 0, bottom: 0, left: 0 });
+
+/**
+ * How to render so the camera's optical centre sits in the middle of the map
+ * window rather than the middle of the canvas.
+ *
+ * Uses `PerspectiveCamera.setViewOffset`: the canvas becomes a sub-rectangle
+ * of a larger virtual image whose centre is the map window's centre. The
+ * field of view is widened by exactly the factor the virtual image is taller,
+ * so a world unit covers the same number of pixels as before — point sizes,
+ * picking radii and the feel of zoom are unchanged. Only *where* the centre
+ * is moves. Nothing is drawn twice and there is no extra pass.
+ */
+export interface ViewWindow {
+  /** False when the insets are zero or unusable; render without an offset. */
+  active: boolean;
+  fullWidth: number;
+  fullHeight: number;
+  offsetX: number;
+  offsetY: number;
+  /** Camera fov (degrees) for the full virtual image. */
+  fov: number;
+  /** Camera aspect for the full virtual image. */
+  aspect: number;
+  /** Vertical fov (degrees) of the visible map window, for framing. */
+  visibleFov: number;
+  /** Aspect of the visible map window, for framing. */
+  visibleAspect: number;
+}
+
+/** A map window narrower or shorter than this is ignored on that axis. */
+export const MIN_VIEW_WINDOW_PX = 80;
+
+export function computeViewWindow(
+  width: number,
+  height: number,
+  insets: ViewInsets,
+  baseFovDegrees: number,
+): ViewWindow {
+  const w = Math.max(1, Number.isFinite(width) ? width : 1);
+  const h = Math.max(1, Number.isFinite(height) ? height : 1);
+  const fov = clampFov(baseFovDegrees);
+  const inset = (value: number) => (Number.isFinite(value) && value > 0 ? value : 0);
+
+  let left = inset(insets.left);
+  let right = inset(insets.right);
+  let top = inset(insets.top);
+  let bottom = inset(insets.bottom);
+
+  // A window too small to frame anything in means the panels have taken the
+  // screen; framing for the whole canvas is then the better guess.
+  if (w - left - right < MIN_VIEW_WINDOW_PX) {
+    left = 0;
+    right = 0;
+  }
+  if (h - top - bottom < MIN_VIEW_WINDOW_PX) {
+    top = 0;
+    bottom = 0;
+  }
+
+  const visibleWidth = w - left - right;
+  const visibleHeight = h - top - bottom;
+  const centreX = left + visibleWidth / 2;
+  const centreY = top + visibleHeight / 2;
+
+  const fullWidth = w + 2 * Math.abs(centreX - w / 2);
+  const fullHeight = h + 2 * Math.abs(centreY - h / 2);
+
+  const tanHalf = Math.tan((fov * DEGREES_TO_RADIANS) / 2);
+  const toDegrees = (tangent: number) => (2 * Math.atan(tangent)) / DEGREES_TO_RADIANS;
+
+  return {
+    active: left + right + top + bottom > 0,
+    fullWidth,
+    fullHeight,
+    offsetX: fullWidth / 2 - centreX,
+    offsetY: fullHeight / 2 - centreY,
+    fov: toDegrees((tanHalf * fullHeight) / h),
+    aspect: fullWidth / fullHeight,
+    visibleFov: toDegrees((tanHalf * visibleHeight) / h),
+    visibleAspect: visibleWidth / visibleHeight,
+  };
+}
+
+/** Ease for programmatic camera moves: gentle start, gentle arrival. */
+export function easeInOutCubic(t: number): number {
+  const x = Math.min(1, Math.max(0, t));
+  return x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2;
+}

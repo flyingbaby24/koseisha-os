@@ -3,7 +3,9 @@ import {
   BufferAttribute,
   BufferGeometry,
   Color,
+  DataTexture,
   FogExp2,
+  LinearFilter,
   Group,
   Points,
   PointsMaterial,
@@ -17,6 +19,8 @@ const FOG_DENSITY = 0.0035;
 const DUST_COUNT = 1400;
 const DUST_RADIUS = 420;
 const DUST_COLOR = 0x2e4a72;
+/** Edge length of the generated round-sprite mask. Tiny; built once. */
+const DUST_SPRITE_SIZE = 32;
 
 /**
  * Static depth cue behind the Thought Map: dark ground, exponential fog, and a
@@ -30,15 +34,21 @@ export class BackgroundRenderer {
 
   private readonly geometry: BufferGeometry;
   private readonly material: PointsMaterial;
+  private readonly sprite: DataTexture;
 
   constructor(seed = 20260908) {
     this.object.name = "BackgroundRenderer";
     this.object.renderOrder = -1;
 
     this.geometry = createDustGeometry(DUST_COUNT, DUST_RADIUS, seed);
+    // Without a mask a point sprite is a square, and a dust mote that drifts
+    // close to the camera became a visible grey tile. A soft round mask keeps
+    // every mote reading as distant light.
+    this.sprite = createRoundSprite(DUST_SPRITE_SIZE);
     this.material = new PointsMaterial({
       color: new Color(DUST_COLOR),
-      size: 0.9,
+      alphaMap: this.sprite,
+      size: 0.8,
       sizeAttenuation: true,
       transparent: true,
       opacity: 0.55,
@@ -66,6 +76,7 @@ export class BackgroundRenderer {
   dispose(): void {
     this.geometry.dispose();
     this.material.dispose();
+    this.sprite.dispose();
     this.object.removeFromParent();
   }
 }
@@ -96,6 +107,28 @@ function createDustGeometry(count: number, radius: number, seed: number): Buffer
   const geometry = new BufferGeometry();
   geometry.setAttribute("position", new BufferAttribute(positions, 3));
   return geometry;
+}
+
+/** A radial falloff mask, generated in memory — no image request, no canvas. */
+function createRoundSprite(size: number): DataTexture {
+  const data = new Uint8Array(size * size * 4);
+  const centre = (size - 1) / 2;
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const distance = Math.hypot(x - centre, y - centre) / (size / 2);
+      const value = Math.round(255 * Math.max(0, 1 - distance) ** 1.6);
+      const offset = (y * size + x) * 4;
+      data[offset] = value;
+      data[offset + 1] = value;
+      data[offset + 2] = value;
+      data[offset + 3] = 255;
+    }
+  }
+  const texture = new DataTexture(data, size, size);
+  texture.magFilter = LinearFilter;
+  texture.minFilter = LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
 }
 
 /** mulberry32 — small, fast, and reproducible across engines. */

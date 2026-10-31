@@ -58,6 +58,8 @@ export class ThoughtMapInteractionController {
   private lastVisualKey = "";
   private lastNodesRef: unknown = null;
   private lastSavedRef: unknown = null;
+  /** The result list last seen, to recognise a fresh search. */
+  private lastResultsRef: unknown = null;
   private disposed = false;
 
   constructor(
@@ -72,6 +74,9 @@ export class ThoughtMapInteractionController {
     canvas.addEventListener("pointerup", this.handlePointerUp);
     canvas.addEventListener("pointercancel", this.handlePointerCancel);
     canvas.addEventListener("pointerleave", this.handlePointerLeave);
+    // Zooming moves the points out from under a still pointer; a tooltip left
+    // behind would describe a node that is no longer there.
+    canvas.addEventListener("wheel", this.handleWheel, { passive: true });
   }
 
   private get canvas(): HTMLCanvasElement {
@@ -91,6 +96,8 @@ export class ThoughtMapInteractionController {
     if (nodeCount === 0) {
       return;
     }
+
+    this.frameFreshResults(snapshot);
 
     // Cheap identity of everything the visual state depends on.
     const key = [
@@ -140,6 +147,32 @@ export class ThoughtMapInteractionController {
     this.scene.requestRender();
   }
 
+  /**
+   * Show where a new search landed — when the reader is not looking at
+   * anything in particular.
+   *
+   * From the whole-map view a result set that sits close together collapses
+   * into a single small mark, and the list's "10 results" has no visible
+   * counterpart in the space. So a fresh, non-empty result set is framed,
+   * exactly as Fit Results would frame it. With a document selected the
+   * camera stays put: selection survives a search, and pulling the view away
+   * from what someone is reading would be the surprise. Reduced motion makes
+   * the move instant, like every other camera move.
+   */
+  private frameFreshResults(snapshot: AppStateSnapshot): void {
+    if (snapshot.results === this.lastResultsRef) {
+      return;
+    }
+    this.lastResultsRef = snapshot.results;
+    if (
+      snapshot.status === "success" &&
+      snapshot.results.length > 0 &&
+      snapshot.selectedDocId === null
+    ) {
+      this.fitResults(snapshot);
+    }
+  }
+
   /** Search ↔ map join diagnostics for the current results. */
   joinDiagnostics(snapshot: AppStateSnapshot) {
     return joinMetrics(
@@ -162,7 +195,11 @@ export class ThoughtMapInteractionController {
       return false;
     }
 
-    this.scene.camera.focusPoint(position, this.scene.nodes.worldExtent);
+    // A glide rather than a cut, so the reader sees where the document is
+    // relative to where they were looking.
+    this.scene.camera.focusPoint(position, this.scene.nodes.worldExtent, undefined, {
+      animate: true,
+    });
     this.scene.requestRender();
     return true;
   }
@@ -179,7 +216,12 @@ export class ThoughtMapInteractionController {
       return false;
     }
 
-    const fitted = this.scene.camera.fitPoints(positions, this.scene.nodes.worldExtent);
+    const fitted = this.scene.camera.fitPoints(
+      positions,
+      this.scene.nodes.worldExtent,
+      undefined,
+      { animate: true },
+    );
     if (fitted) {
       this.scene.requestRender();
     }
@@ -218,6 +260,7 @@ export class ThoughtMapInteractionController {
     canvas.removeEventListener("pointerup", this.handlePointerUp);
     canvas.removeEventListener("pointercancel", this.handlePointerCancel);
     canvas.removeEventListener("pointerleave", this.handlePointerLeave);
+    canvas.removeEventListener("wheel", this.handleWheel);
 
     if (this.hoverFrame !== 0) {
       cancelAnimationFrame(this.hoverFrame);
@@ -268,6 +311,11 @@ export class ThoughtMapInteractionController {
     const point = this.toCanvasPoint(event.clientX, event.clientY);
     const index = this.pick(point.x, point.y, pickRadiusForPointer(event.pointerType));
 
+    // A click either selects (and the camera glides the node to the centre)
+    // or clears. Either way the point under a still pointer is about to move,
+    // so the tooltip goes now and returns with the next pointer move.
+    this.clearHover();
+
     if (index === -1) {
       // Empty space clears the selection, which is how you get back to the
       // whole map without hunting for a control.
@@ -280,6 +328,14 @@ export class ThoughtMapInteractionController {
       // Exactly the path a result-list click takes.
       this.selection.select(docId);
     }
+  };
+
+  private readonly handleWheel = (): void => {
+    if (this.hoverFrame !== 0) {
+      cancelAnimationFrame(this.hoverFrame);
+      this.hoverFrame = 0;
+    }
+    this.clearHover();
   };
 
   private readonly handlePointerCancel = (): void => {

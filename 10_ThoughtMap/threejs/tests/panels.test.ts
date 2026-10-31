@@ -117,6 +117,77 @@ describe("ResultPanel", () => {
     expect(rows[1]?.getAttribute("aria-selected")).toBe("true");
   });
 
+  it("shows an API error message, beside the results, without any stack trace", () => {
+    const state = new AppState();
+    state.searchFailed(state.startSearch(), "The ThoughtMap API failed to complete the search.");
+
+    panel.render(state.getState());
+
+    const error = panel.element.querySelector<HTMLElement>(".tm-error");
+    expect(error?.hidden).toBe(false);
+    expect(error?.textContent).toBe("The ThoughtMap API failed to complete the search.");
+    expect(error?.textContent).not.toContain("Traceback");
+    expect(panel.element.querySelector(".tm-note")?.textContent).toContain("Search failed");
+  });
+
+  it("offers a retry after a failure and removes the error once a search succeeds", () => {
+    const onRetry = vi.fn();
+    const retrying = new ResultPanel({ onSelect, onRetry });
+    const state = new AppState();
+    state.searchFailed(state.startSearch(), "Down.");
+    retrying.render(state.getState());
+
+    const retry = Array.from(retrying.element.querySelectorAll<HTMLButtonElement>("button")).find(
+      (button) => button.textContent === "Try again",
+    );
+    retry?.click();
+    expect(onRetry).toHaveBeenCalledTimes(1);
+
+    state.searchSucceeded(state.startSearch(), { query: "q", results: [], queryParameters: null });
+    retrying.render(state.getState());
+    expect(retrying.element.querySelector(".tm-error")).toBeNull();
+  });
+
+  it("marks a result that has no node in the loaded map, and only then", () => {
+    const state = stateWith([result({ doc_id: "in" }), result({ doc_id: "out" })]);
+    panel.render(state.getState());
+    // No map yet: nothing can be claimed missing from it.
+    expect(panel.element.querySelectorAll(".tm-result.is-offmap")).toHaveLength(0);
+
+    state.mapLoaded([{ doc_id: "in", title: "", author: "", source: "", x: 0, y: 0, z: 0 }], {} as never);
+    panel.render(state.getState());
+
+    const rows = panel.element.querySelectorAll<HTMLElement>(".tm-result");
+    expect(rows[0]?.classList.contains("is-offmap")).toBe(false);
+    expect(rows[1]?.classList.contains("is-offmap")).toBe(true);
+    // Still selectable: being off the map never removes a result from use.
+    rows[1]?.click();
+    expect(onSelect).toHaveBeenCalledWith("out");
+  });
+
+  it("reports pointer hover on a row so the map can light the node", () => {
+    const onHover = vi.fn();
+    const hovering = new ResultPanel({ onSelect, onHover });
+    hovering.render(stateWith([result({ doc_id: "a" })]).getState());
+
+    hovering.element.querySelector(".tm-result")?.dispatchEvent(new Event("mouseenter"));
+    expect(onHover).toHaveBeenCalledWith("a");
+  });
+
+  it("gives the list a single tab stop and moves with the arrow keys", () => {
+    const state = stateWith([result({ doc_id: "a" }), result({ doc_id: "b" }), result({ doc_id: "c" })]);
+    document.body.append(panel.element);
+    panel.render(state.getState());
+
+    const rows = Array.from(panel.element.querySelectorAll<HTMLElement>(".tm-result"));
+    expect(rows.map((row) => row.tabIndex)).toEqual([0, -1, -1]);
+
+    rows[0]?.focus();
+    rows[0]?.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    expect(document.activeElement).toBe(rows[1]);
+    panel.element.remove();
+  });
+
   it("falls back to a dash for missing title or author", () => {
     const state = stateWith([result({ doc_id: "a", title: "", author: "" })]);
     panel.render(state.getState());
@@ -287,17 +358,16 @@ describe("DetailPanel", () => {
     expect(panel.element.querySelector<HTMLElement>(".tm-detail-origin")?.hidden).toBe(true);
   });
 
-  it("shows an API error message without any stack trace", () => {
+  it("leaves search failures to the result list and keeps showing the document", () => {
     const panel = new DetailPanel();
+    const node = { doc_id: "a", title: "Kept", author: "", source: "zip", x: 0, y: 0, z: 0, cluster: 0 };
     const state = new AppState();
     state.searchFailed(state.startSearch(), "The ThoughtMap API failed to complete the search.");
 
-    panel.render(state.getState(), null);
+    panel.render(state.getState(), fromMapNode(node));
 
-    const error = panel.element.querySelector<HTMLElement>(".tm-error");
-    expect(error?.hidden).toBe(false);
-    expect(error?.textContent).toBe("The ThoughtMap API failed to complete the search.");
-    expect(error?.textContent).not.toContain("Traceback");
+    expect(panel.element.querySelector(".tm-error")).toBeNull();
+    expect(panel.element.querySelector(".tm-detail-title")?.textContent).toBe("Kept");
   });
 });
 

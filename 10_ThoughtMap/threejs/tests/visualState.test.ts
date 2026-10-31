@@ -197,3 +197,45 @@ describe("join metrics", () => {
     expect(joinMetrics([], INDEX.docIdToNodeIndex).resultsReturned).toBe(0);
   });
 });
+
+describe("saved membership under higher states", () => {
+  const saved = new Set(["a", "b", "c"]);
+
+  it("keeps the saved flag when a saved document is also a result or selected", () => {
+    const visual = computeNodeVisualState(
+      input({ resultDocIds: ["a"], hasSearchEmphasis: true, selectedDocId: "b", savedDocIds: saved }),
+    );
+    // Precedence still decides the state...
+    expect(stateOf(visual, "a")).toBe(NodeState.TopResult);
+    expect(stateOf(visual, "b")).toBe(NodeState.Selected);
+    expect(stateOf(visual, "c")).toBe(NodeState.Saved);
+    // ...but "this is in your library" is not lost underneath it.
+    const flag = (docId: string) => visual.saved[INDEX.docIdToNodeIndex.get(docId)!];
+    expect(flag("a")).toBe(1);
+    expect(flag("b")).toBe(1);
+    expect(flag("c")).toBe(1);
+    expect(flag("d")).toBe(0);
+  });
+
+  it("lists every emphasised node once, ascending by state, selection last", () => {
+    const visual = computeNodeVisualState(
+      input({
+        resultDocIds: ["a", "d"],
+        hasSearchEmphasis: true,
+        selectedDocId: "a",
+        hoveredDocId: "e",
+        savedDocIds: saved,
+      }),
+    );
+    const ids = visual.emphasised.map((index) => INDEX.nodeIndexToDocId[index]);
+    expect(new Set(ids)).toEqual(new Set(["a", "b", "c", "d", "e"]));
+    expect(ids).toHaveLength(5);
+    const states = visual.emphasised.map((index) => visual.state[index]!);
+    expect(states).toEqual([...states].sort((x, y) => x - y));
+    expect(ids[ids.length - 1]).toBe("a");
+  });
+
+  it("emphasises nothing when no search, selection, hover or library applies", () => {
+    expect(computeNodeVisualState(input()).emphasised).toEqual([]);
+  });
+});

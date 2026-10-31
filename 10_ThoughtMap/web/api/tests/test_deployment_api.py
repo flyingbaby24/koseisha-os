@@ -17,6 +17,22 @@ from fastapi.testclient import TestClient
 from api import main as main_module
 
 
+def vary_fields(response) -> set[str]:
+    """The field names a response's Vary header lists, lower-cased.
+
+    Vary is a comma-separated list whose order carries no meaning, and field
+    names are case-insensitive (RFC 9110 §12.5.5, §5.1). Other layers may
+    legitimately add to it: Starlette's CORSMiddleware appends ``Origin`` to
+    every response since it began handling requests without an Origin header.
+    So the contract a test can rely on is membership, not the exact string.
+    """
+    return {
+        field.strip().lower()
+        for field in response.headers.get("Vary", "").split(",")
+        if field.strip()
+    }
+
+
 def stub_artifact(fingerprint: str = "ce109523a9cd9962deadbeef", nodes: int = 4) -> dict:
     return {
         "schema_version": 1,
@@ -155,7 +171,7 @@ class MapCachingTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("Content-Encoding"), "gzip")
-        self.assertEqual(response.headers.get("Vary"), "Accept-Encoding")
+        self.assertIn("accept-encoding", vary_fields(response))
         # httpx decodes transparently; confirm the payload survived.
         self.assertEqual(len(response.json()["nodes"]), 4)
 
