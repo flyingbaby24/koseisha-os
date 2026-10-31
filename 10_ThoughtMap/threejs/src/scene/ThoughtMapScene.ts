@@ -34,6 +34,11 @@ export class ThoughtMapScene {
   private needsRender = true;
   private running = false;
   private disposed = false;
+  /** The size the drawing buffer was last given, to skip no-op resizes. */
+  private bufferSize = { width: 0, height: 0, pixelRatio: 0 };
+  /** The browser has taken the WebGL context away; nothing can be drawn. */
+  private contextLost = false;
+  private readonly contextListeners = new Set<(available: boolean) => void>();
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -60,6 +65,19 @@ export class ThoughtMapScene {
 
     const { width, height } = this.measure();
     this.renderer.setSize(width, height, false);
+    this.bufferSize = { width, height, pixelRatio: this.renderer.getPixelRatio() };
+
+    // Mobile browsers reclaim WebGL contexts under memory pressure or in the
+    // background. three.js restores its own state; what it cannot know is that
+    // this scene only draws on demand, so nothing would ask for the first
+    // frame back, and the reader would be left looking at a blank map.
+    const canvas = this.renderer.domElement;
+    canvas.addEventListener("webglcontextlost", this.handleContextLost);
+    canvas.addEventListener("webglcontextrestored", this.handleContextRestored);
+    this.disposers.push(() => {
+      canvas.removeEventListener("webglcontextlost", this.handleContextLost);
+      canvas.removeEventListener("webglcontextrestored", this.handleContextRestored);
+    });
 
     this.camera = new CameraController(this.renderer.domElement, width / height);
     this.camera.setViewport(width, height);
@@ -168,6 +186,16 @@ export class ThoughtMapScene {
     this.camera.reset({ animate: true });
   }
 
+  /** Observe WebGL context loss (false) and restoration (true). */
+  onContextChange(listener: (available: boolean) => void): () => void {
+    this.contextListeners.add(listener);
+    return () => this.contextListeners.delete(listener);
+  }
+
+  get isContextLost(): boolean {
+    return this.contextLost;
+  }
+
   dispose(): void {
     if (this.disposed) {
       return;
@@ -181,6 +209,7 @@ export class ThoughtMapScene {
     }
     this.disposers.length = 0;
 
+    this.contextListeners.clear();
     this.camera.dispose();
     this.nodes.dispose();
     this.background.dispose();
@@ -196,7 +225,7 @@ export class ThoughtMapScene {
     // Damping keeps moving the camera for a few frames after input stops.
     const settling = this.camera.update();
 
-    if (this.needsRender || settling) {
+    if ((this.needsRender || settling) && !this.contextLost) {
       this.needsRender = false;
       // Two uniform writes, only on frames that are actually drawn.
       this.nodes.setDepthCue(this.camera.focusDistance);
@@ -208,14 +237,46 @@ export class ThoughtMapScene {
 
   private handleResize(): void {
     const { width, height } = this.measure();
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
-    this.renderer.setSize(width, height, false);
+    const pixelRatio = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
+    // Moving the phone layout's panel changes only the safe area, every frame
+    // while it slides. Re-allocating an unchanged drawing buffer each time
+    // would be wasted work, so the canvas is resized only when it changed.
+    const bufferChanged =
+      width !== this.bufferSize.width ||
+      height !== this.bufferSize.height ||
+      pixelRatio !== this.bufferSize.pixelRatio;
+    if (bufferChanged) {
+      this.renderer.setPixelRatio(pixelRatio);
+      this.renderer.setSize(width, height, false);
+      this.bufferSize = { width, height, pixelRatio };
+    }
     this.camera.setViewport(width, height, this.measureSafeArea());
-    // Point size is expressed in device pixels, so it has to follow the
-    // drawing buffer rather than staying fixed across viewport changes.
-    this.syncPointScale();
+    if (bufferChanged) {
+      // Point size is expressed in device pixels, so it has to follow the
+      // drawing buffer rather than staying fixed across viewport changes.
+      this.syncPointScale();
+    }
     this.requestRender();
   }
+
+  private readonly handleContextLost = (event: Event): void => {
+    // Without preventDefault the browser will not offer the context back.
+    event.preventDefault();
+    this.contextLost = true;
+    for (const listener of this.contextListeners) {
+      listener(false);
+    }
+  };
+
+  private readonly handleContextRestored = (): void => {
+    this.contextLost = false;
+    this.bufferSize = { width: 0, height: 0, pixelRatio: 0 };
+    this.handleResize();
+    this.requestRender();
+    for (const listener of this.contextListeners) {
+      listener(true);
+    }
+  };
 
   private syncPointScale(): void {
     // The base fov, not camera.fov: a view offset widens the latter without

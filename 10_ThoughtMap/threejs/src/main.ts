@@ -144,7 +144,13 @@ async function startScene(
     screen.selection,
     {
       onHover: (info) => (info ? tooltip.show(info) : tooltip.hide()),
+      // Only once a gesture is a drag or pinch: the phone panel makes room.
+      onGestureStart: () => screen.onMapGesture(),
+      onNotice: (text) => screen.showMapNotice(text),
     },
+  );
+  const unwatchContext = scene.onContextChange((available) =>
+    screen.setMapSuspended(!available),
   );
 
   // The scene follows map state rather than being driven directly, so the
@@ -179,6 +185,7 @@ async function startScene(
     dispose: () => {
       unwatchSelection();
       unwatchLocate();
+      unwatchContext();
       unsubscribe();
       tooltip.hide();
     },

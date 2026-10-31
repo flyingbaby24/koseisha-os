@@ -270,3 +270,125 @@ describe("M-14: the tap that stops a glide only stops it", () => {
     expect(state.getState().selectedDocId).toBe("b");
   });
 });
+
+describe("gesture start, for the phone layout", () => {
+  function withGestureSpy() {
+    const canvas = document.createElement("canvas");
+    const nodes = new NodeRenderer();
+    nodes.setNodes(NODES);
+    const camera = new CameraController(canvas, CANVAS_W / CANVAS_H);
+    const state = new AppState();
+    state.mapLoaded(NODES, {} as never);
+    let starts = 0;
+    const interaction = new ThoughtMapInteractionController(
+      { renderer: { domElement: canvas }, nodes, camera, requestRender: () => {} } as never,
+      state,
+      new SelectionController(state),
+      { onHover: () => {}, onGestureStart: () => (starts += 1) },
+    );
+    cleanup = () => {
+      interaction.dispose();
+      camera.dispose();
+      nodes.dispose();
+    };
+    const pointer = (type: string, pointerId: number, x: number, y: number) =>
+      canvas.dispatchEvent(new PointerEvent(type, { pointerId, pointerType: "touch", clientX: x, clientY: y, bubbles: true }));
+    return { pointer, count: () => starts };
+  }
+
+  it("is not announced for a tap, so a tap never moves the layout", () => {
+    const { pointer, count } = withGestureSpy();
+    pointer("pointerdown", 1, 100, 100);
+    pointer("pointermove", 1, 104, 103);
+    pointer("pointerup", 1, 104, 103);
+    expect(count()).toBe(0);
+  });
+
+  it("is announced once when a finger starts to drag", () => {
+    const { pointer, count } = withGestureSpy();
+    pointer("pointerdown", 1, 100, 100);
+    expect(count()).toBe(0);
+    pointer("pointermove", 1, 130, 100);
+    pointer("pointermove", 1, 160, 100);
+    pointer("pointerup", 1, 160, 100);
+    expect(count()).toBe(1);
+  });
+
+  it("is announced when a second finger lands", () => {
+    const { pointer, count } = withGestureSpy();
+    pointer("pointerdown", 1, 100, 100);
+    pointer("pointerdown", 2, 200, 100);
+    expect(count()).toBe(1);
+  });
+});
+
+describe("crowded taps zoom instead of guessing", () => {
+  // Eight documents on almost the same spot, and two far away so the map
+  // has a real extent.
+  const CROWD = Array.from({ length: 8 }, (_, i) => node(`c${i}`, i * 0.01, 0, 0));
+  const CROWDED_MAP = [...CROWD, node("far1", 60, 40, 30), node("far2", -60, -40, -30)];
+
+  function crowded() {
+    const canvas = document.createElement("canvas");
+    const nodes = new NodeRenderer();
+    nodes.setNodes(CROWDED_MAP);
+    const camera = new CameraController(canvas, CANVAS_W / CANVAS_H);
+    const state = new AppState();
+    state.mapLoaded(CROWDED_MAP, {} as never);
+    const notices: string[] = [];
+    const interaction = new ThoughtMapInteractionController(
+      { renderer: { domElement: canvas }, nodes, camera, requestRender: () => {} } as never,
+      state,
+      new SelectionController(state),
+      { onHover: () => {}, onNotice: (text) => notices.push(text) },
+    );
+    state.subscribe((snapshot) => interaction.syncFromState(snapshot));
+    cleanup = () => {
+      interaction.dispose();
+      camera.dispose();
+      nodes.dispose();
+    };
+    const index = nodes.nodeIndex.docIdToNodeIndex.get("c0")!;
+    const at = () => {
+      const screen = nodes.projectToScreen(camera.camera, CANVAS_W, CANVAS_H);
+      return { x: screen[index * 3]!, y: screen[index * 3 + 1]! };
+    };
+    const tap = (pointerType: "touch" | "mouse") => {
+      const { x, y } = at();
+      canvas.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 1, pointerType, clientX: x, clientY: y, button: 0 }));
+      canvas.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1, pointerType, clientX: x, clientY: y, button: 0 }));
+    };
+    return { state, camera, notices, tap };
+  }
+
+  it("zooms toward a crowded spot on a touch tap while zoomed out, and says so", () => {
+    const { state, camera, notices, tap } = crowded();
+    const before = camera.focusDistance;
+
+    tap("touch");
+
+    expect(state.getState().selectedDocId).toBeNull();
+    expect(camera.isTransitioning).toBe(true);
+    camera.update(performance.now() + 10_000);
+    expect(camera.focusDistance).toBeLessThan(before);
+    expect(notices).toHaveLength(1);
+  });
+
+  it("selects once zoomed in close enough", () => {
+    const { state, camera, tap } = crowded();
+    tap("touch");
+    camera.update(performance.now() + 10_000);
+    for (let i = 0; i < 4 && state.getState().selectedDocId === null; i += 1) {
+      tap("touch");
+      camera.update(performance.now() + 10_000);
+    }
+    expect(state.getState().selectedDocId).toMatch(/^c\d$/);
+  });
+
+  it("still selects at once with a mouse (mouse unchanged)", () => {
+    const { state, notices, tap } = crowded();
+    tap("mouse");
+    expect(state.getState().selectedDocId).toMatch(/^c\d$/);
+    expect(notices).toHaveLength(0);
+  });
+});

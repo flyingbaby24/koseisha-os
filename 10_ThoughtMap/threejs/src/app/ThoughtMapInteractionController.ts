@@ -1,9 +1,11 @@
 import { Vector3 } from "three";
 
 import type { ThoughtMapScene } from "../scene/ThoughtMapScene";
+import { computeFocusDistance } from "../scene/cameraFraming";
 import { computeNodeVisualState, joinMetrics } from "../scene/nodeVisualState";
 import {
   DRAG_THRESHOLD_PX,
+  countWithinRadius,
   exceedsDragThreshold,
   pickNearestNode,
   pickRadiusForPointer,
@@ -26,7 +28,26 @@ export interface HoverInfo {
 
 export interface InteractionCallbacks {
   onHover: (info: HoverInfo | null) => void;
+  /**
+   * A gesture on the map has become a drag, pinch or pan — never fired for a
+   * tap, and never on touch-down, so a layout that makes room for the map
+   * cannot move under a finger that is only tapping.
+   */
+  onGestureStart?: () => void;
+  /** A short message for the reader, shown over the map. */
+  onNotice?: (text: string) => void;
 }
+
+/**
+ * A finger tap covering at least this many documents is too crowded to pick
+ * one meaningfully; zoomed out, the map zooms toward it instead.
+ */
+export const DENSE_TAP_MIN = 6;
+/** "Zoomed out": farther than this many single-document focus distances. */
+const DENSE_TAP_ZOOMED_OUT = 1.6;
+
+export const DENSE_TAP_NOTICE =
+  "Many documents overlap here, so the map zoomed in. Tap again to choose one.";
 
 /**
  * How long to trust a booked animation frame before assuming it will never
@@ -65,6 +86,10 @@ export class ThoughtMapInteractionController {
   private downPick = -1;
   /** The first press of this gesture stopped a camera glide (touch only). */
   private stoppedGlide = false;
+  /** Documents under the first pointer at press, capped at DENSE_TAP_MIN. */
+  private downCrowd = 0;
+  /** onGestureStart has fired for the current gesture. */
+  private gestureAnnounced = false;
 
   /** Hover picking is deferred to a frame so a fast drag cannot flood it. */
   private hoverFrame = 0;
@@ -290,6 +315,7 @@ export class ThoughtMapInteractionController {
     if (this.pointers.size === 0) {
       this.dragging = false;
       this.multiTouch = false;
+      this.gestureAnnounced = false;
     }
     this.pointerType = event.pointerType || "mouse";
     this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -297,7 +323,9 @@ export class ThoughtMapInteractionController {
       // What the finger landed on. OrbitControls starts rotating on the first
       // move, so by release a wobbling finger can sit over a neighbour.
       const point = this.toCanvasPoint(event.clientX, event.clientY);
-      this.downPick = this.pick(point.x, point.y, pickRadiusForPointer(this.pointerType));
+      const hit = this.pickAt(point.x, point.y, pickRadiusForPointer(this.pointerType));
+      this.downPick = hit.index;
+      this.downCrowd = hit.crowd;
       // A finger aimed at a node that was still gliding lands where the node
       // used to be. On touch, the press that stops a glide only stops it.
       const interrupted = this.scene.camera.consumeInterruptedGlide();
@@ -307,8 +335,16 @@ export class ThoughtMapInteractionController {
       // A second finger makes this a pinch or a pan: it can no longer end as a tap.
       this.multiTouch = true;
       this.clearHover();
+      this.announceGesture();
     }
   };
+
+  private announceGesture(): void {
+    if (!this.gestureAnnounced) {
+      this.gestureAnnounced = true;
+      this.callbacks.onGestureStart?.();
+    }
+  }
 
   private readonly handlePointerMove = (event: PointerEvent): void => {
     // A gesture becomes a camera drag once it travels far enough; from then on
@@ -320,6 +356,7 @@ export class ThoughtMapInteractionController {
       if (exceedsDragThreshold(origin, { x: event.clientX, y: event.clientY }, slop)) {
         this.dragging = true;
         this.clearHover();
+        this.announceGesture();
       }
     }
 
@@ -356,6 +393,20 @@ export class ThoughtMapInteractionController {
     this.clearHover();
 
     if (this.stoppedGlide) {
+      return;
+    }
+
+    // Zoomed out, a fingertip covers dozens of documents (24,421 at the
+    // centre of a phone's whole-map view). Picking one would be arbitrary, so
+    // the tap zooms toward them instead; the next tap can choose.
+    if (
+      index !== -1 &&
+      isCoarsePointer(this.pointerType) &&
+      this.downCrowd >= DENSE_TAP_MIN &&
+      this.isZoomedOut()
+    ) {
+      this.zoomToward(index);
+      this.callbacks.onNotice?.(DENSE_TAP_NOTICE);
       return;
     }
 
@@ -467,6 +518,40 @@ export class ThoughtMapInteractionController {
       this.state.setHovered(null);
     }
     this.callbacks.onHover(null);
+  }
+
+  private isZoomedOut(): boolean {
+    const single = computeFocusDistance(this.scene.nodes.worldExtent);
+    return this.scene.camera.focusDistance > single * DENSE_TAP_ZOOMED_OUT;
+  }
+
+  /** Glide toward a node, a third of the way in — never past focus distance. */
+  private zoomToward(index: number): void {
+    const position = this.scene.nodes.worldPositionOf(index, this.scratchPoint);
+    const extent = this.scene.nodes.worldExtent;
+    if (!position || !(extent > 0)) {
+      return;
+    }
+    const single = computeFocusDistance(extent);
+    const distance = Math.max(single, this.scene.camera.focusDistance / 3);
+    this.scene.camera.focusPoint(position, extent, distance / extent, { animate: true });
+    this.scene.requestRender();
+  }
+
+  /** The nearest node within the radius, and how crowded that spot is. */
+  private pickAt(x: number, y: number, radiusPx: number): { index: number; crowd: number } {
+    const count = this.scene.nodes.count;
+    if (count === 0) {
+      return { index: -1, crowd: 0 };
+    }
+    const canvas = this.canvas;
+    const width = canvas.clientWidth || canvas.width;
+    const height = canvas.clientHeight || canvas.height;
+    const screen = this.scene.nodes.projectToScreen(this.scene.camera.camera, width, height);
+    return {
+      index: pickNearestNode(screen, count, x, y, radiusPx).index,
+      crowd: countWithinRadius(screen, count, x, y, radiusPx, DENSE_TAP_MIN),
+    };
   }
 
   private pick(x: number, y: number, radiusPx: number): number {

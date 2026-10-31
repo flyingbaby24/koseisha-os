@@ -62,8 +62,30 @@ understand is direct. Before/after captures are in
 - **Radar**: query dashed, document solid; ring percentages on the chart; each
   profile's strongest axis named in the legend. Calculation, axis order and
   shared scale are unchanged.
-- **Narrow screens** keep the map visible: a sidebar beside it below 1100px,
-  and on phones the map above a sheet that shows the list or the document.
+- **Narrow screens** keep the map visible: a sidebar beside it below 1100px.
+- **Phones** (mobile UX audit, `../docs/mobile-ux-audit/`):
+  - **Upright (≤720px):** the map fills the screen under a bottom sheet with three resting
+    heights: peek (75 % map), half, full. Drag the handle or the header row, or tap the
+    handle. `src/ui/BottomSheet.ts` sets `data-sheet` and `--tm-sheet-h`, and the camera's
+    safe area keeps the selected document centred above the sheet.
+  - **When the sheet moves:** a search or a selection raises it to half. A drag or pinch on the
+    map lowers it to peek, but only once the gesture is known not to be a tap, so a tap never
+    moves the layout. Focusing the query lowers it for the keyboard; on touch, searching closes
+    the keyboard.
+  - **Sideways (≤500px tall):** the panel moves to the right edge.
+  - **Throughout:** previous / next steps through the results, the radar sits above the
+    catalogue fields, and every control is at least 44 px.
+  - **Touch rules:**
+    - two-finger gestures never end as a tap;
+    - touch slop is 10 px;
+    - a tap selects what was under the finger at touch-down;
+    - an empty-space tap keeps the selection;
+    - the tap that stops a glide only stops it;
+    - a crowded tap while zoomed out zooms in instead of guessing.
+
+    Mouse behaviour is unchanged.
+  - **WebGL:** losing the context shows a message, and restoring it redraws without
+    waiting for input.
 
 Keyboard: `/` focuses search, `Esc` clears the selection, arrow keys move
 through results and between the Results/Library tabs.
