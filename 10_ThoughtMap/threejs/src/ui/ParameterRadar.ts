@@ -49,7 +49,10 @@ export class ParameterRadar {
   private readonly note: HTMLElement;
   private readonly axes: RadarAxis[];
 
-  constructor(private readonly title: string) {
+  constructor(
+    private readonly title: string,
+    description = "",
+  ) {
     this.axes = computeAxes(RADIUS, LABEL_OFFSET, PARAMETER_AXIS_ORDER, axisLabel);
 
     this.element = document.createElement("section");
@@ -58,6 +61,13 @@ export class ParameterRadar {
     const heading = document.createElement("h3");
     heading.className = "tm-radar-title";
     heading.textContent = title;
+
+    // What the chart is for, in one line, so the comparison does not depend
+    // on already knowing what a Thought Composition is.
+    const caption = document.createElement("p");
+    caption.className = "tm-radar-caption";
+    caption.textContent = description;
+    caption.hidden = description === "";
 
     this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     // A viewBox with no fixed pixel size lets CSS scale the chart to any
@@ -91,7 +101,7 @@ export class ParameterRadar {
     summary.textContent = "Values by axis";
     details.append(summary, this.table);
 
-    this.element.append(heading, this.svg, this.legend, this.note, details);
+    this.element.append(heading, caption, this.svg, this.legend, this.note, details);
   }
 
   /**
@@ -163,20 +173,27 @@ export class ParameterRadar {
   }
 
   /**
-   * The scale, written on the chart: each ring's share along the top spoke.
-   * The reader no longer has to work out what the outer ring means.
+   * The scale, written on the chart: the half and outer rings, labelled in
+   * the gap between the first two spokes so they never sit on an axis line.
+   * Two labels are enough to read the scale; four were clutter.
    */
   private buildRingLabels(domain: number): SVGElement[] {
     const rings = computeRings(domain);
-    return rings.map((value, index) => {
-      const text = svgEl("text");
-      text.setAttribute("class", "tm-radar-ring-label");
-      text.setAttribute("x", "4");
-      text.setAttribute("y", String(-(RADIUS * (index + 1)) / rings.length + 3));
-      text.setAttribute("aria-hidden", "true");
-      text.textContent = formatRingValue(value);
-      return text;
-    });
+    const angle = -Math.PI / 2 + Math.PI / PARAMETER_AXIS_ORDER.length;
+    const direction = { x: Math.cos(angle), y: Math.sin(angle) };
+    return rings
+      .map((value, index) => ({ value, radius: (RADIUS * (index + 1)) / rings.length, index }))
+      .filter(({ index }) => index === rings.length / 2 - 1 || index === rings.length - 1)
+      .map(({ value, radius }) => {
+        const text = svgEl("text");
+        text.setAttribute("class", "tm-radar-ring-label");
+        text.setAttribute("x", String(Math.round(direction.x * radius * 100) / 100 + 2));
+        text.setAttribute("y", String(Math.round(direction.y * radius * 100) / 100));
+        text.setAttribute("dominant-baseline", "middle");
+        text.setAttribute("aria-hidden", "true");
+        text.textContent = formatRingValue(value);
+        return text;
+      });
   }
 
   private buildRings(domain: number): SVGElement[] {

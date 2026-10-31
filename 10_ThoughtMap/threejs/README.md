@@ -43,8 +43,14 @@ understand is direct. Before/after captures are in
 - **The camera centres on the visible map window**, not the canvas behind the
   panels (`PerspectiveCamera.setViewOffset`, pixel scale unchanged), so a
   focused document lands where the reader is looking at every width. Focus,
-  Fit Results, Fit All and Reset glide (eased, pulling back on long hops);
-  reduced motion keeps them instant. Wheel zoom goes toward the cursor.
+  Fit Results, Fit All and Reset glide (eased, pulling back on long hops,
+  0.52–1.0 s scaled by zoom ratio and distance travelled); reduced motion
+  keeps them instant and any pointer or wheel input cancels them. Wheel zoom
+  goes toward the cursor. The hover tooltip is dropped on click and on zoom,
+  so it never trails a node that has moved.
+- **Search lands in the map**: a successful, non-empty search is framed like
+  Fit Results — but only when no document is selected, so a search never pulls
+  the view away from something being read.
 - **Search**: one row — query, Search, and an Options button that states the
   mode/source/filter/count in effect; the four options keep their values and
   gain one-line explanations of what the backend does with them.
@@ -76,7 +82,7 @@ rather than silently serving the 4,584-document legacy snapshot.
 
 ### Build output
 
-The entry chunk is 20.2 kB gzipped (CSS 6.9 kB). Three.js (118.2 kB gzipped) is a separate
+The entry chunk is 20.3 kB gzipped (CSS 6.9 kB). Three.js (118.2 kB gzipped) is a separate
 vendor chunk loaded *after* the search UI is interactive, and the 3.7 MB map
 starts downloading later still — so search is usable long before the thought
 space appears. Nothing here waits for the map.

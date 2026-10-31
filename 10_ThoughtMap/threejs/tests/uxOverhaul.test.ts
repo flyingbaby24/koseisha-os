@@ -307,3 +307,99 @@ describe("screen composition", () => {
     screen.dispose();
   });
 });
+
+describe("final tuning", () => {
+  it("gives big zooms more time than short pans, within bounds", async () => {
+    const { transitionDuration } = await import("../src/scene/CameraController");
+    const pan = transitionDuration(12, 12, 2);
+    const wholeMapToDocument = transitionDuration(220, 12, 40);
+    expect(pan).toBeGreaterThanOrEqual(520);
+    expect(pan).toBeLessThan(600);
+    expect(wholeMapToDocument).toBeGreaterThan(pan);
+    expect(wholeMapToDocument).toBeLessThanOrEqual(1000);
+    expect(transitionDuration(12, 220, 40)).toBeCloseTo(wholeMapToDocument, 6);
+    expect(Number.isFinite(transitionDuration(0, Number.NaN, -1))).toBe(true);
+  });
+
+  async function interactionFixture() {
+    const { ThoughtMapInteractionController } = await import(
+      "../src/app/ThoughtMapInteractionController"
+    );
+    const { SelectionController } = await import("../src/app/SelectionController");
+    const canvas = document.createElement("canvas");
+    const nodes = new NodeRenderer();
+    nodes.setNodes([node("a", 0, 0, 0), node("b", 10, 10, 10), node("c", -10, 5, 0)]);
+    const camera = new CameraController(canvas, 16 / 9);
+    const scene = { renderer: { domElement: canvas }, nodes, camera, requestRender: vi.fn() };
+    const state = new AppState();
+    state.mapLoaded([node("a", 0, 0, 0), node("b", 10, 10, 10), node("c", -10, 5, 0)], {} as never);
+    const onHover = vi.fn();
+    const interaction = new ThoughtMapInteractionController(
+      scene as never,
+      state,
+      new SelectionController(state),
+      { onHover },
+    );
+    state.subscribe((snapshot) => interaction.syncFromState(snapshot));
+    return { state, camera, canvas, onHover, interaction };
+  }
+
+  it("frames a fresh search's results when nothing is selected", async () => {
+    const { state, camera, interaction } = await interactionFixture();
+    state.searchSucceeded(state.startSearch(), {
+      query: "q",
+      results: [result("a"), result("b")],
+      queryParameters: null,
+    });
+    expect(camera.isTransitioning).toBe(true);
+    interaction.dispose();
+    camera.dispose();
+  });
+
+  it("leaves the camera on the selected document when a search lands", async () => {
+    const { state, camera, interaction } = await interactionFixture();
+    state.select("c");
+    camera.update(performance.now() + 10_000);
+    state.searchSucceeded(state.startSearch(), {
+      query: "q",
+      results: [result("a"), result("b")],
+      queryParameters: null,
+    });
+    expect(camera.isTransitioning).toBe(false);
+    interaction.dispose();
+    camera.dispose();
+  });
+
+  it("drops the tooltip on a click and on wheel zoom, so it never trails a moved node", async () => {
+    const { state, canvas, onHover, interaction, camera } = await interactionFixture();
+
+    state.setHovered("a");
+    canvas.dispatchEvent(new PointerEvent("pointerdown", { clientX: 5, clientY: 5, pointerId: 1 }));
+    canvas.dispatchEvent(new PointerEvent("pointerup", { clientX: 5, clientY: 5, pointerId: 1 }));
+    expect(state.getState().hoveredDocId).toBeNull();
+    expect(onHover).toHaveBeenLastCalledWith(null);
+
+    state.setHovered("b");
+    canvas.dispatchEvent(new WheelEvent("wheel", { deltaY: 100 }));
+    expect(state.getState().hoveredDocId).toBeNull();
+    interaction.dispose();
+    camera.dispose();
+  });
+
+  it("explains the radar and labels only the half and outer rings", () => {
+    const panel = new DetailPanel();
+    const state = new AppState();
+    state.searchSucceeded(state.startSearch(), {
+      query: "q",
+      results: [result("a")],
+      queryParameters: [{ key: "philosophy", value: 0.16 }],
+    });
+    panel.render(state.getState(), null);
+
+    expect(panel.element.querySelector(".tm-radar-caption")?.textContent).toContain("ten axes");
+    const rings = Array.from(panel.element.querySelectorAll(".tm-radar-ring-label")).map(
+      (label) => label.textContent,
+    );
+    expect(rings).toEqual(["10%", "20%"]);
+  });
+});

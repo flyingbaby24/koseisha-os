@@ -119,7 +119,10 @@ export class DetailPanel {
 
     // One radar showing both profiles on a shared scale, so the reader can see
     // where the document agrees with and diverges from the search intent.
-    this.radar = new ParameterRadar("Thought Composition");
+    this.radar = new ParameterRadar(
+      "Thought Composition",
+      "How the query and the selected document divide their weight across ten axes. Each shape sums to 100%.",
+    );
 
     this.saveButton = document.createElement("button");
     this.saveButton.type = "button";
@@ -165,7 +168,7 @@ export class DetailPanel {
     this.originNote = document.createElement("p");
     this.originNote.className = "tm-note tm-detail-origin";
     this.originNote.textContent =
-      "Selected from the thought space. Search this document to see its similarity and profile.";
+      "Not in the current results, so there is no similarity or Thought Composition to show. Search for it to compare it with a query.";
     this.originNote.hidden = true;
 
     this.body = document.createElement("div");

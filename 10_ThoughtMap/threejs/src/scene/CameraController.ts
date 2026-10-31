@@ -19,8 +19,33 @@ import {
 
 const DEFAULT_FOV = 50;
 
-/** Length of a programmatic move. Long enough to follow, short enough not to wait on. */
-const TRANSITION_MS = 720;
+/**
+ * Length of a programmatic move, by how much it changes.
+ *
+ * One fixed length made a short pan feel slow and an 18x zoom from the whole
+ * map feel like a lurch. Time now grows with the zoom ratio (per doubling)
+ * and with the distance travelled relative to the view, within bounds: long
+ * enough to follow, short enough not to wait on.
+ */
+const TRANSITION_MIN_MS = 520;
+const TRANSITION_MAX_MS = 1000;
+const TRANSITION_MS_PER_ZOOM_DOUBLING = 110;
+const TRANSITION_MS_PER_VIEW_TRAVELLED = 120;
+
+export function transitionDuration(
+  fromDistance: number,
+  toDistance: number,
+  travel: number,
+): number {
+  const safe = (value: number) => (Number.isFinite(value) && value > 1e-6 ? value : 1e-6);
+  const zoomDoublings = Math.abs(Math.log2(safe(toDistance) / safe(fromDistance)));
+  const viewsTravelled = Math.min(3, Math.max(0, travel) / Math.max(safe(fromDistance), safe(toDistance)));
+  const duration =
+    TRANSITION_MIN_MS +
+    TRANSITION_MS_PER_ZOOM_DOUBLING * zoomDoublings +
+    TRANSITION_MS_PER_VIEW_TRAVELLED * viewsTravelled;
+  return Math.min(TRANSITION_MAX_MS, Math.max(TRANSITION_MIN_MS, duration));
+}
 
 /** Options shared by every programmatic camera move. */
 export interface MoveOptions {
@@ -449,7 +474,7 @@ export class CameraController {
 
     this.transition = {
       started: performance.now(),
-      duration: TRANSITION_MS,
+      duration: transitionDuration(fromDistance, toDistance, travel),
       fromTarget: this.controls.target.clone(),
       toTarget: target.clone(),
       fromDirection,

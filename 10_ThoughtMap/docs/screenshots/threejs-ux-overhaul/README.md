@@ -5,7 +5,8 @@ against the real 63,891-node `map_projection_3d.json`, with the same scripted
 sequence for both sides:
 
 1. `initial` — map loaded, nothing searched
-2. `results` — searched "plato republic"
+2. `results` — searched "plato republic" (after: with nothing selected, the
+   map frames the results)
 3. `selected` — Library ID set, results #2 and #4 saved, result #1 selected
 4. `hover` — pointer over result #3's node
 5. `fit-results` — Fit Results pressed

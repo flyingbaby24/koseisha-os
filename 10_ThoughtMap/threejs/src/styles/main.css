@@ -1331,6 +1331,13 @@ summary:focus-visible,
   color: var(--tm-text-dim);
 }
 
+.tm-radar-caption {
+  margin: -2px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--tm-text-dim);
+}
+
 /* viewBox scales to the column; no fixed pixel size, so it never overflows. */
 .tm-radar-svg {
   display: block;
