@@ -33,11 +33,11 @@ function rowTexts(panel: ResultPanel): string[] {
 }
 
 describe("ResultPanel", () => {
-  let onSelect: ReturnType<typeof vi.fn>;
+  let onSelect: ReturnType<typeof vi.fn<(docId: string) => void>>;
   let panel: ResultPanel;
 
   beforeEach(() => {
-    onSelect = vi.fn();
+    onSelect = vi.fn<(docId: string) => void>();
     panel = new ResultPanel({ onSelect });
   });
 
