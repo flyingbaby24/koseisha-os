@@ -147,6 +147,7 @@ async function startScene(
       // Only once a gesture is a drag or pinch: the phone panel makes room.
       onGestureStart: () => screen.onMapGesture(),
       onNotice: (text) => screen.showMapNotice(text),
+      onTap: () => screen.holdLayoutForTap(),
     },
   );
   const unwatchContext = scene.onContextChange((available) =>

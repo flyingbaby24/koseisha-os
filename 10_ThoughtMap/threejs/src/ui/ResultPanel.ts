@@ -179,6 +179,19 @@ export class ResultPanel {
     this.lastSelectedDocId = snapshot.selectedDocId;
   }
 
+  /**
+   * Bring the selected row into view, for when the list is shown again.
+   *
+   * While a phone shows the document instead of the list, the scroll on
+   * selection lands on a hidden list and does nothing; stepping through
+   * results then leaves the list far from the document just read.
+   */
+  revealSelected(): void {
+    const docId = this.lastSelectedDocId;
+    const row = docId === null ? undefined : this.rows.get(docId);
+    row?.scrollIntoView({ block: "nearest" });
+  }
+
   private renderStatus(snapshot: AppStateSnapshot): void {
     const searching = snapshot.status === "searching";
     const failed = snapshot.status === "error";

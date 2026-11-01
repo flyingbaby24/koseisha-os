@@ -1,6 +1,8 @@
 import {
   Box3,
   PerspectiveCamera,
+  Plane,
+  Ray,
   Sphere,
   Vector3,
   type Object3D,
@@ -336,6 +338,46 @@ export class CameraController {
     this.scratchTarget.copy(point);
     const position = this.scratchPosition.copy(point).add(this.scratchDirection);
     this.moveTo(position, this.scratchTarget, options, planes);
+  }
+
+  /**
+   * Zoom in or out about a point, keeping that point where it is on screen.
+   *
+   * Camera and target both scale toward `point` by `factor`, so the viewing
+   * direction is unchanged and the point stays under the finger that asked
+   * for it — the double-tap of map software. `factor` below 1 zooms in.
+   */
+  zoomAbout(point: Vector3, factor: number, mapExtent: number, options: MoveOptions = {}): void {
+    if (!(factor > 0) || !Number.isFinite(factor)) {
+      return;
+    }
+    this.discardPendingInput();
+
+    const distance = this.focusDistance;
+    // Never closer than the orbit controls themselves allow.
+    const scale = Math.max(factor, this.controls.minDistance / Math.max(distance, 1e-6));
+    const target = this.scratchTarget.copy(this.controls.target).sub(point).multiplyScalar(scale).add(point);
+    const position = this.scratchPosition.copy(this.camera.position).sub(point).multiplyScalar(scale).add(point);
+
+    const next = distance * scale;
+    const planes = computeClippingPlanes(next, Math.max(mapExtent, next));
+    this.moveTo(position, target, options, planes);
+  }
+
+  /**
+   * The world point under a canvas position, on the plane through the orbit
+   * target facing the camera. Null when that plane is behind the camera.
+   *
+   * `ndcX` / `ndcY` are the position in normalised device coordinates of the
+   * whole canvas (-1 to 1, y up), so a view offset is accounted for.
+   */
+  pointOnFocusPlane(ndcX: number, ndcY: number, out: Vector3): Vector3 | null {
+    this.camera.updateMatrixWorld();
+    const origin = this.camera.position;
+    const direction = this.scratchDirection.set(ndcX, ndcY, 0.5).unproject(this.camera).sub(origin).normalize();
+    const normal = new Vector3().subVectors(this.controls.target, origin).normalize();
+    const plane = new Plane().setFromNormalAndCoplanarPoint(normal, this.controls.target);
+    return new Ray(origin.clone(), direction).intersectPlane(plane, out);
   }
 
   /**

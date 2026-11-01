@@ -70,8 +70,10 @@ understand is direct. Before/after captures are in
     safe area keeps the selected document centred above the sheet.
   - **When the sheet moves:** a search or a selection raises it to half. A drag or pinch on the
     map lowers it to peek, but only once the gesture is known not to be a tap, so a tap never
-    moves the layout. Focusing the query lowers it for the keyboard; on touch, searching closes
-    the keyboard.
+    moves the layout. After a finger tap on the map, the rise waits out the double-tap window
+    (300 ms, `src/app/tapTiming.ts`), so a second tap lands where the first one did. Focusing the
+    query lowers it for the keyboard; on touch, searching closes the keyboard. Back to the list
+    scrolls to the document just read.
   - **Sideways (≤500px tall):** the panel moves to the right edge.
   - **Throughout:** previous / next steps through the results, the radar sits above the
     catalogue fields, and every control is at least 44 px.
@@ -81,9 +83,15 @@ understand is direct. Before/after captures are in
     - a tap selects what was under the finger at touch-down;
     - an empty-space tap keeps the selection;
     - the tap that stops a glide only stops it;
-    - a crowded tap while zoomed out zooms in instead of guessing.
+    - a crowded tap while zoomed out zooms in instead of guessing;
+    - the node under a finger lights on touch-down, before the release selects;
+    - a double tap zooms to half the distance — about the point under the finger, or onto the
+      document the first tap selected.
 
-    Mouse behaviour is unchanged.
+    Mouse behaviour is unchanged (no double-click zoom).
+  - **First visit on a touch screen:** a card lists the gestures. Touches pass through it to the
+    map; Got it, or the first drag or pinch, puts it away for good (`localStorage`
+    `thoughtmap.gestureHelpSeen`).
   - **WebGL:** losing the context shows a message, and restoring it redraws without
     waiting for input.
 

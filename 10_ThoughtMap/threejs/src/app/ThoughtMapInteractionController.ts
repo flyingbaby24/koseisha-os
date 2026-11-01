@@ -13,6 +13,7 @@ import {
 } from "../scene/picking";
 import type { AppState, AppStateSnapshot } from "./AppState";
 import type { SelectionController } from "./SelectionController";
+import { DOUBLE_TAP_MS } from "./tapTiming";
 
 export interface HoverInfo {
   docId: string;
@@ -36,6 +37,13 @@ export interface InteractionCallbacks {
   onGestureStart?: () => void;
   /** A short message for the reader, shown over the map. */
   onNotice?: (text: string) => void;
+  /**
+   * A finger tapped the map (touch and pen only), reported before the tap
+   * selects anything. A second tap may follow within DOUBLE_TAP_MS, so the
+   * layout must hold still until then: a panel that moved after the first tap
+   * would put a different control under the second.
+   */
+  onTap?: () => void;
 }
 
 /**
@@ -64,6 +72,20 @@ function isCoarsePointer(pointerType: string): boolean {
 /** Touch slop: Android uses ~8 dp; a finger tap that wobbles less is still a tap. */
 const TOUCH_DRAG_THRESHOLD_PX = 10;
 
+/** Double tap: the second press this close to the first (a fingertip's width). */
+export const DOUBLE_TAP_SLOP_PX = 40;
+/** How far a double tap zooms: to half the distance, as map software does. */
+export const DOUBLE_TAP_ZOOM = 0.5;
+
+/** A finished single tap that a second one could turn into a double tap. */
+interface LastTap {
+  x: number;
+  y: number;
+  time: number;
+  /** The node the tap selected, or -1 when it landed on empty space. */
+  index: number;
+}
+
 /**
  * Turns pointer input on the canvas into application state, and application
  * state into renderer commands.
@@ -90,6 +112,12 @@ export class ThoughtMapInteractionController {
   private downCrowd = 0;
   /** onGestureStart has fired for the current gesture. */
   private gestureAnnounced = false;
+  /** The previous finger tap, while a second could still make it a double. */
+  private lastTap: LastTap | null = null;
+  /** The press in progress is the second of a double tap, if it stays a tap. */
+  private doubleTapPending = false;
+  /** Where the first finger of the current gesture went down, canvas pixels. */
+  private downPoint = { x: 0, y: 0 };
 
   /** Hover picking is deferred to a frame so a fast drag cannot flood it. */
   private hoverFrame = 0;
@@ -323,21 +351,64 @@ export class ThoughtMapInteractionController {
       // What the finger landed on. OrbitControls starts rotating on the first
       // move, so by release a wobbling finger can sit over a neighbour.
       const point = this.toCanvasPoint(event.clientX, event.clientY);
+      this.downPoint = point;
       const hit = this.pickAt(point.x, point.y, pickRadiusForPointer(this.pointerType));
       this.downPick = hit.index;
       this.downCrowd = hit.crowd;
       // A finger aimed at a node that was still gliding lands where the node
       // used to be. On touch, the press that stops a glide only stops it.
       const interrupted = this.scene.camera.consumeInterruptedGlide();
-      this.stoppedGlide = interrupted && isCoarsePointer(this.pointerType);
+      const coarse = isCoarsePointer(this.pointerType);
+      this.stoppedGlide = interrupted && coarse;
+      this.doubleTapPending = coarse && this.followsLastTap(point, performance.now());
+      if (!this.doubleTapPending) {
+        this.lastTap = null;
+      }
+      if (coarse && !this.doubleTapPending && !this.stoppedGlide && !this.tapWouldAssist()) {
+        this.showPressed(this.downPick);
+      }
     }
     if (this.pointers.size > 1) {
       // A second finger makes this a pinch or a pan: it can no longer end as a tap.
       this.multiTouch = true;
+      this.lastTap = null;
       this.clearHover();
       this.announceGesture();
     }
   };
+
+  /** Whether a press here and now is the second half of a double tap. */
+  private followsLastTap(point: { x: number; y: number }, now: number): boolean {
+    const last = this.lastTap;
+    return (
+      last !== null &&
+      now - last.time <= DOUBLE_TAP_MS &&
+      Math.hypot(point.x - last.x, point.y - last.y) <= DOUBLE_TAP_SLOP_PX
+    );
+  }
+
+  /** A finger tap here would zoom toward a crowd rather than select. */
+  private tapWouldAssist(): boolean {
+    return this.downPick !== -1 && this.downCrowd >= DENSE_TAP_MIN && this.isZoomedOut();
+  }
+
+  /**
+   * Light the node under a finger the moment it touches down.
+   *
+   * A finger hides what it presses, and selection waits for the release, so
+   * without this nothing answers until the finger lifts. It is the hover
+   * state, without the tooltip a fingertip would cover; a drag, a second
+   * finger or the release clears it like any hover.
+   */
+  private showPressed(index: number): void {
+    if (index === -1) {
+      return;
+    }
+    const docId = this.scene.nodes.nodeIndex.nodeIndexToDocId[index];
+    if (docId) {
+      this.state.setHovered(docId);
+    }
+  }
 
   private announceGesture(): void {
     if (!this.gestureAnnounced) {
@@ -382,15 +453,32 @@ export class ThoughtMapInteractionController {
     // OrbitControls owns drags and multi-finger gestures; releasing from one
     // must never select.
     if (!wasTap) {
+      this.lastTap = null;
+      this.doubleTapPending = false;
       return;
     }
 
     const index = this.downPick;
+    const coarse = isCoarsePointer(this.pointerType);
+    if (coarse) {
+      this.callbacks.onTap?.();
+    }
 
     // A click either selects (and the camera glides the node to the centre)
     // or clears. Either way the point under a still pointer is about to move,
     // so the tooltip goes now and returns with the next pointer move.
     this.clearHover();
+
+    // Checked before the glide rule: the first tap of a double tap on a
+    // document starts a glide, and the second press is what stops it.
+    if (this.doubleTapPending) {
+      const first = this.lastTap;
+      this.doubleTapPending = false;
+      // A third tap starts afresh rather than zooming again.
+      this.lastTap = null;
+      this.zoomForDoubleTap(first?.index ?? -1);
+      return;
+    }
 
     if (this.stoppedGlide) {
       return;
@@ -399,15 +487,16 @@ export class ThoughtMapInteractionController {
     // Zoomed out, a fingertip covers dozens of documents (24,421 at the
     // centre of a phone's whole-map view). Picking one would be arbitrary, so
     // the tap zooms toward them instead; the next tap can choose.
-    if (
-      index !== -1 &&
-      isCoarsePointer(this.pointerType) &&
-      this.downCrowd >= DENSE_TAP_MIN &&
-      this.isZoomedOut()
-    ) {
+    if (coarse && this.tapWouldAssist()) {
       this.zoomToward(index);
       this.callbacks.onNotice?.(DENSE_TAP_NOTICE);
       return;
+    }
+
+    // Only a tap that selected or did nothing can begin a double tap: one
+    // that stopped a glide or zoomed toward a crowd already answered.
+    if (coarse) {
+      this.lastTap = { ...this.downPoint, time: performance.now(), index };
     }
 
     if (index === -1) {
@@ -443,8 +532,46 @@ export class ThoughtMapInteractionController {
       this.dragging = false;
       this.multiTouch = false;
     }
+    this.lastTap = null;
+    this.doubleTapPending = false;
     this.clearHover();
   };
+
+  /**
+   * The second tap of a double tap: zoom in to half the distance.
+   *
+   * After a tap that selected a document, that means closer to the document —
+   * finishing, nearer, the glide the second press interrupted. Anywhere else
+   * the point under the finger stays under it while the map grows around it.
+   */
+  private zoomForDoubleTap(firstIndex: number): void {
+    const camera = this.scene.camera;
+    const extent = this.scene.nodes.worldExtent;
+    if (!(extent > 0)) {
+      return;
+    }
+
+    const node = firstIndex === -1 ? null : this.scene.nodes.worldPositionOf(firstIndex, this.scratchPoint);
+    if (node) {
+      const base = Math.min(camera.focusDistance, computeFocusDistance(extent));
+      camera.focusPoint(node, extent, (base * DOUBLE_TAP_ZOOM) / extent, { animate: true });
+      this.scene.requestRender();
+      return;
+    }
+
+    const canvas = this.canvas;
+    const width = canvas.clientWidth || canvas.width;
+    const height = canvas.clientHeight || canvas.height;
+    const point = camera.pointOnFocusPlane(
+      (this.downPoint.x / width) * 2 - 1,
+      1 - (this.downPoint.y / height) * 2,
+      this.scratchPoint,
+    );
+    if (point) {
+      camera.zoomAbout(point, DOUBLE_TAP_ZOOM, extent, { animate: true });
+      this.scene.requestRender();
+    }
+  }
 
   private readonly handlePointerLeave = (): void => {
     this.clearHover();

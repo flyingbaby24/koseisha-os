@@ -203,6 +203,51 @@ describe("phone layout rules", () => {
     screen.dispose();
   });
 
+  it("waits out a possible second tap before opening for a map tap's selection", () => {
+    vi.useFakeTimers();
+    try {
+      const { screen } = phone();
+      screen.state.searchSucceeded(screen.state.startSearch(), {
+        query: "q",
+        results: [result("a")],
+        queryParameters: null,
+      });
+      screen.sheet.setSnap("peek");
+
+      screen.holdLayoutForTap();
+      screen.selection.select("a");
+      expect(screen.sheet.snap).toBe("peek");
+
+      vi.advanceTimersByTime(300);
+      expect(screen.sheet.snap).toBe("half");
+      screen.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("drops the opening if the tap turns into exploring", () => {
+    vi.useFakeTimers();
+    try {
+      const { screen } = phone();
+      screen.state.searchSucceeded(screen.state.startSearch(), {
+        query: "q",
+        results: [result("a")],
+        queryParameters: null,
+      });
+      screen.sheet.setSnap("peek");
+
+      screen.holdLayoutForTap();
+      screen.selection.select("a");
+      screen.onMapGesture();
+      vi.advanceTimersByTime(300);
+      expect(screen.sheet.snap).toBe("peek");
+      screen.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("gives the map the screen only when a map gesture has begun", () => {
     const { screen } = phone();
     screen.sheet.setSnap("full");

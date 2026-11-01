@@ -13,6 +13,7 @@ import { LibraryController } from "./LibraryController";
 import { MapController } from "./MapController";
 import { SearchController } from "./SearchController";
 import { SelectionController } from "./SelectionController";
+import { DOUBLE_TAP_MS } from "./tapTiming";
 
 /**
  * Composes the Search / Collect screen: state, controllers, and panels.
@@ -50,6 +51,14 @@ export class SearchScreen {
   private readonly dock: HTMLElement;
   private readonly notice: HTMLElement;
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
+  /** First-visit gesture card for touch screens; hidden once dismissed. */
+  private readonly gestureHelp: HTMLElement;
+  /** The card has been considered for this page load (shown or not). */
+  private gestureHelpOffered = false;
+  /** Set while a finger tap on the map may still become a double tap. */
+  private tapHold: ReturnType<typeof setTimeout> | null = null;
+  /** A sheet rise asked for during the hold, made when it ends. */
+  private raiseAfterHold = false;
   /** The phone layout's panel; inert on tablets and desktops. */
   readonly sheet: BottomSheet;
   private readonly coarsePointer: () => boolean;
@@ -101,7 +110,14 @@ export class SearchScreen {
     });
     this.detailPanel = new DetailPanel({
       onLocate: (docId) => this.emitLocate(docId),
-      onBack: () => this.setView("list"),
+      onBack: () => {
+        this.setView("list");
+        // Stepping through results can leave the list scrolled away from
+        // the document just read; coming back should land on it.
+        if (this.activeTab === "results") {
+          this.resultPanel.revealSelected();
+        }
+      },
       onRequestLibrary: () => {
         this.showTab("library");
         this.setView("list");
@@ -168,7 +184,7 @@ export class SearchScreen {
         "for-pointer",
         "Drag to orbit · Right-drag to pan · Scroll to zoom · Click a point to select",
       ),
-      hintText("for-touch", "Drag to orbit · Pinch to zoom · Tap to select"),
+      hintText("for-touch", "Drag to orbit · Pinch to zoom · Tap to select · Double-tap to zoom in"),
     );
 
     // Camera controls are adopted into this dock (`adoptMapControls`), so they
@@ -185,7 +201,9 @@ export class SearchScreen {
     this.notice.setAttribute("aria-live", "polite");
     this.notice.hidden = true;
 
-    this.centre.append(this.mapStatusView.element, this.notice, this.dock);
+    this.gestureHelp = buildGestureHelp(() => this.dismissGestureHelp());
+
+    this.centre.append(this.mapStatusView.element, this.gestureHelp, this.notice, this.dock);
 
     // Results and Library share the left column as tabs. Search / Collect
     // stays one screen; nothing here belongs to Battle Prep.
@@ -269,6 +287,7 @@ export class SearchScreen {
       this.applyDeploymentFeatures(snapshot);
       this.renderTabBadges(snapshot);
       this.root.classList.toggle("has-selection", snapshot.selectedDocId !== null);
+      this.offerGestureHelp(snapshot);
 
       // A new search brings the list back on narrow screens: that is what the
       // reader is waiting for.
@@ -307,9 +326,35 @@ export class SearchScreen {
    * known not to be a tap, so a tap never moves the layout under the finger.
    */
   onMapGesture(): void {
+    // The tap became exploring: whatever it was going to open waits.
+    this.raiseAfterHold = false;
     if (this.sheet.layoutMode === "bottom" && this.sheet.snap !== "peek") {
       this.sheet.setSnap("peek");
     }
+    // Someone already moving the map has found out how; the card has done its job.
+    if (!this.gestureHelp.hidden) {
+      this.dismissGestureHelp();
+    }
+  }
+
+  /**
+   * On a touch screen, explain the map's gestures once, the first time a map
+   * is there to try them on. The one-line hint does not fit a phone, and the
+   * gestures — double tap included — are not discoverable by looking.
+   */
+  private offerGestureHelp(snapshot: AppStateSnapshot): void {
+    if (this.gestureHelpOffered || snapshot.mapStatus !== "ready") {
+      return;
+    }
+    this.gestureHelpOffered = true;
+    if (this.coarsePointer() && !readFlag(GESTURE_HELP_SEEN_KEY)) {
+      this.gestureHelp.hidden = false;
+    }
+  }
+
+  private dismissGestureHelp(): void {
+    this.gestureHelp.hidden = true;
+    writeFlag(GESTURE_HELP_SEEN_KEY);
   }
 
   /** Show a short message over the map; `persist` keeps it until replaced. */
@@ -364,11 +409,35 @@ export class SearchScreen {
     }
   }
 
+  /**
+   * A finger has just tapped the map, and a second tap may follow: keep the
+   * layout where it is until it cannot. Raising the sheet the moment the
+   * first tap selects shrinks the map window and moves the camera controls
+   * up — under the finger that is coming down again.
+   */
+  holdLayoutForTap(): void {
+    if (this.tapHold !== null) {
+      clearTimeout(this.tapHold);
+    }
+    this.tapHold = setTimeout(() => {
+      this.tapHold = null;
+      if (this.raiseAfterHold) {
+        this.raiseAfterHold = false;
+        this.raiseSheetFromPeek();
+      }
+    }, DOUBLE_TAP_MS);
+  }
+
   /** A search or a selection wants the panel readable, not just its header. */
   private raiseSheetFromPeek(): void {
-    if (this.sheet.layoutMode === "bottom" && this.sheet.snap === "peek") {
-      this.sheet.setSnap("half");
+    if (this.sheet.layoutMode !== "bottom" || this.sheet.snap !== "peek") {
+      return;
     }
+    if (this.tapHold !== null) {
+      this.raiseAfterHold = true;
+      return;
+    }
+    this.sheet.setSnap("half");
   }
 
   /** The visible part of the map, between the panels. */
@@ -542,6 +611,10 @@ export class SearchScreen {
   }
 
   dispose(): void {
+    if (this.tapHold !== null) {
+      clearTimeout(this.tapHold);
+      this.tapHold = null;
+    }
     this.sheet.dispose();
     this.hideMapNotice();
     document.removeEventListener("keydown", this.handleShortcut);
@@ -563,6 +636,70 @@ function setCount(element: HTMLElement | undefined, count: number): void {
     element.textContent = text;
   }
   element.hidden = count === 0;
+}
+
+const GESTURE_HELP_SEEN_KEY = "thoughtmap.gestureHelpSeen";
+
+const GESTURES: ReadonlyArray<readonly [string, string]> = [
+  ["Drag", "turn the map"],
+  ["Pinch", "zoom in and out"],
+  ["Two-finger drag", "move across"],
+  ["Tap a point", "open the document"],
+  ["Double-tap", "zoom in there"],
+];
+
+function buildGestureHelp(onDismiss: () => void): HTMLElement {
+  const card = document.createElement("section");
+  card.className = "tm-gesture-help";
+  card.setAttribute("aria-labelledby", "tm-gesture-help-title");
+  card.hidden = true;
+
+  const title = document.createElement("h2");
+  title.className = "tm-gesture-help-title";
+  title.id = "tm-gesture-help-title";
+  title.textContent = "Moving around the map";
+
+  const list = document.createElement("dl");
+  list.className = "tm-gesture-help-list";
+  for (const [gesture, effect] of GESTURES) {
+    const term = document.createElement("dt");
+    term.textContent = gesture;
+    const description = document.createElement("dd");
+    description.textContent = effect;
+    list.append(term, description);
+  }
+
+  const done = document.createElement("button");
+  done.type = "button";
+  done.className = "tm-button tm-gesture-help-done";
+  done.textContent = "Got it";
+  done.addEventListener("click", onDismiss);
+
+  // Only the button takes touches (see the stylesheet): the card lies over
+  // the map, and trying a gesture on the map under it is the point.
+  const head = document.createElement("div");
+  head.className = "tm-gesture-help-head";
+  head.append(title, done);
+
+  card.append(head, list);
+  return card;
+}
+
+/** A remembered yes/no; private browsing may refuse storage, which reads as no. */
+function readFlag(key: string): boolean {
+  try {
+    return window.localStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeFlag(key: string): void {
+  try {
+    window.localStorage.setItem(key, "1");
+  } catch {
+    // Not remembered: the card may return next visit, which is harmless.
+  }
 }
 
 function hintText(className: string, text: string): HTMLElement {

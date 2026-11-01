@@ -7,11 +7,12 @@
  *   M-02  a finger that wobbles a little still taps — the node it touched
  *   M-03  a finger tap on empty space does not clear the selection
  *   M-14  the tap that stops a camera glide only stops it
+ *   M-15  a finger gets an answer on touch-down, and a double tap zooms
  *
  * Each touch rule is paired with the mouse behaviour it leaves alone.
  */
 import { Vector3 } from "three";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { MapNode } from "../src/api/mapTypes";
 import { AppState } from "../src/app/AppState";
@@ -19,6 +20,7 @@ import { SelectionController } from "../src/app/SelectionController";
 import { ThoughtMapInteractionController } from "../src/app/ThoughtMapInteractionController";
 import { CameraController } from "../src/scene/CameraController";
 import { NodeRenderer } from "../src/scene/NodeRenderer";
+import { computeFocusDistance } from "../src/scene/cameraFraming";
 
 function node(docId: string, x: number, y: number, z: number): MapNode {
   return { doc_id: docId, title: docId, author: "", source: "gutendex", x, y, z, cluster: 0 };
@@ -268,6 +270,214 @@ describe("M-14: the tap that stops a glide only stops it", () => {
     pointer("pointerup", 1, b.x, b.y, "mouse");
 
     expect(state.getState().selectedDocId).toBe("b");
+  });
+});
+
+describe("M-15: a finger gets an answer on touch-down", () => {
+  it("lights the node under a finger as it touches down, before the release", () => {
+    const { state, pointer, screenOf } = setup();
+    const b = screenOf("b");
+
+    pointer("pointerdown", 1, b.x, b.y);
+    expect(state.getState().hoveredDocId).toBe("b");
+    expect(state.getState().selectedDocId).toBe("a");
+
+    pointer("pointerup", 1, b.x, b.y);
+    expect(state.getState().selectedDocId).toBe("b");
+    expect(state.getState().hoveredDocId).toBeNull();
+  });
+
+  it("drops the highlight once the finger starts to orbit", () => {
+    const { state, pointer, screenOf } = setup();
+    const b = screenOf("b");
+
+    pointer("pointerdown", 1, b.x, b.y);
+    pointer("pointermove", 1, b.x + 14, b.y);
+    expect(state.getState().hoveredDocId).toBeNull();
+  });
+
+  it("drops the highlight when a second finger lands", () => {
+    const { state, pointer, screenOf } = setup();
+    const b = screenOf("b");
+
+    pointer("pointerdown", 1, b.x, b.y);
+    pointer("pointerdown", 2, b.x + 60, b.y);
+    expect(state.getState().hoveredDocId).toBeNull();
+  });
+
+  it("leaves a mouse press alone: hover already answers a mouse (mouse unchanged)", () => {
+    const { state, pointer, screenOf } = setup();
+    const b = screenOf("b");
+
+    pointer("pointerdown", 1, b.x, b.y, "mouse");
+    expect(state.getState().hoveredDocId).toBeNull();
+  });
+});
+
+describe("M-15: a double tap zooms in", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const tap = (pointer: ReturnType<typeof setup>["pointer"], id: number, at: { x: number; y: number }, type?: "mouse") => {
+    pointer("pointerdown", id, at.x, at.y, type);
+    pointer("pointerup", id, at.x, at.y, type);
+  };
+  const settle = (camera: CameraController) => camera.update(performance.now() + 10_000);
+
+  it("zooms to half the distance about the point under the finger, on empty space", () => {
+    const { state, camera, pointer, emptyPoint } = setup();
+    const before = camera.focusDistance;
+    const ndc = { x: (emptyPoint.x / CANVAS_W) * 2 - 1, y: 1 - (emptyPoint.y / CANVAS_H) * 2 };
+    const anchor = camera.pointOnFocusPlane(ndc.x, ndc.y, new Vector3())!;
+
+    tap(pointer, 1, emptyPoint);
+    tap(pointer, 2, emptyPoint);
+    settle(camera);
+
+    expect(camera.focusDistance).toBeCloseTo(before / 2, 5);
+    camera.camera.updateMatrixWorld();
+    const projected = anchor.clone().project(camera.camera);
+    expect(((projected.x + 1) / 2) * CANVAS_W).toBeCloseTo(emptyPoint.x, 3);
+    expect(((1 - projected.y) / 2) * CANVAS_H).toBeCloseTo(emptyPoint.y, 3);
+    expect(state.getState().selectedDocId).toBe("a");
+  });
+
+  it("selects a document and comes closer to it than a single tap would", () => {
+    const { state, camera, nodes, pointer, screenOf } = setup();
+    const b = screenOf("b");
+
+    tap(pointer, 1, b);
+    tap(pointer, 2, b);
+    settle(camera);
+
+    expect(state.getState().selectedDocId).toBe("b");
+    expect(camera.focusDistance).toBeCloseTo(computeFocusDistance(nodes.worldExtent) / 2, 5);
+    const index = nodes.nodeIndex.docIdToNodeIndex.get("b")!;
+    const target = nodes.worldPositionOf(index, new Vector3())!;
+    camera.camera.updateMatrixWorld();
+    const centre = target.clone().project(camera.camera);
+    expect(centre.x).toBeCloseTo(0, 5);
+    expect(centre.y).toBeCloseTo(0, 5);
+  });
+
+  it("treats taps farther apart than a fingertip as two taps", () => {
+    const { state, camera, pointer, screenOf } = setup();
+    const before = camera.focusDistance;
+
+    tap(pointer, 1, screenOf("b"));
+    tap(pointer, 2, screenOf("c"));
+    settle(camera);
+
+    expect(state.getState().selectedDocId).toBe("c");
+    expect(camera.focusDistance).toBeCloseTo(before, 5);
+  });
+
+  it("treats a slow second tap as a new tap", () => {
+    const { camera, pointer, emptyPoint } = setup();
+    const before = camera.focusDistance;
+
+    tap(pointer, 1, emptyPoint);
+    const later = performance.now() + 400;
+    vi.spyOn(performance, "now").mockReturnValue(later);
+    tap(pointer, 2, emptyPoint);
+    settle(camera);
+
+    expect(camera.focusDistance).toBeCloseTo(before, 5);
+  });
+
+  it("does not zoom again on a third tap", () => {
+    const { camera, pointer, emptyPoint } = setup();
+    const before = camera.focusDistance;
+
+    tap(pointer, 1, emptyPoint);
+    tap(pointer, 2, emptyPoint);
+    settle(camera);
+    tap(pointer, 3, emptyPoint);
+    settle(camera);
+
+    expect(camera.focusDistance).toBeCloseTo(before / 2, 5);
+  });
+
+  it("does not begin with a tap that only stopped a glide", () => {
+    const { camera, pointer, screenOf } = setup();
+    camera.focusPoint(new Vector3(40, -30, 20), 100, undefined, { animate: true });
+    const b = screenOf("b");
+    tap(pointer, 1, b); // stops the glide, nothing else
+    const stopped = camera.focusDistance;
+
+    tap(pointer, 2, b); // an ordinary tap: selects, no zoom
+    settle(camera);
+    expect(camera.focusDistance).toBeCloseTo(stopped, 5);
+  });
+
+  it("does not zoom on a mouse double click (mouse unchanged)", () => {
+    const { state, camera, pointer, screenOf } = setup();
+    const before = camera.focusDistance;
+    const b = screenOf("b");
+
+    tap(pointer, 1, b, "mouse");
+    tap(pointer, 1, b, "mouse");
+    settle(camera);
+
+    expect(state.getState().selectedDocId).toBe("b");
+    expect(camera.focusDistance).toBeCloseTo(before, 5);
+  });
+});
+
+describe("M-15: the layout holds still for a second tap", () => {
+  function withTapSpy() {
+    const canvas = document.createElement("canvas");
+    const nodes = new NodeRenderer();
+    nodes.setNodes(NODES);
+    const camera = new CameraController(canvas, CANVAS_W / CANVAS_H);
+    const state = new AppState();
+    state.mapLoaded(NODES, {} as never);
+    const events: string[] = [];
+    state.subscribe((snapshot) => {
+      if (snapshot.selectedDocId !== null) {
+        events.push(`select:${snapshot.selectedDocId}`);
+      }
+    });
+    const interaction = new ThoughtMapInteractionController(
+      { renderer: { domElement: canvas }, nodes, camera, requestRender: () => {} } as never,
+      state,
+      new SelectionController(state),
+      { onHover: () => {}, onTap: () => events.push("tap") },
+    );
+    cleanup = () => {
+      interaction.dispose();
+      camera.dispose();
+      nodes.dispose();
+    };
+    const index = nodes.nodeIndex.docIdToNodeIndex.get("b")!;
+    const screen = nodes.projectToScreen(camera.camera, CANVAS_W, CANVAS_H);
+    const b = { x: screen[index * 3]!, y: screen[index * 3 + 1]! };
+    const pointer = (type: string, x: number, y: number, pointerType = "touch") =>
+      canvas.dispatchEvent(new PointerEvent(type, { pointerId: 1, pointerType, clientX: x, clientY: y, button: 0 }));
+    return { b, events, pointer };
+  }
+
+  it("reports a finger tap before the tap selects, so the layout can wait", () => {
+    const { b, events, pointer } = withTapSpy();
+    pointer("pointerdown", b.x, b.y);
+    pointer("pointerup", b.x, b.y);
+    expect(events).toEqual(["tap", "select:b"]);
+  });
+
+  it("does not report a drag", () => {
+    const { b, events, pointer } = withTapSpy();
+    pointer("pointerdown", b.x, b.y);
+    pointer("pointermove", b.x + 30, b.y);
+    pointer("pointerup", b.x + 30, b.y);
+    expect(events).toEqual([]);
+  });
+
+  it("does not report a mouse click, which has no double tap (mouse unchanged)", () => {
+    const { b, events, pointer } = withTapSpy();
+    pointer("pointerdown", b.x, b.y, "mouse");
+    pointer("pointerup", b.x, b.y, "mouse");
+    expect(events).toEqual(["select:b"]);
   });
 });
 

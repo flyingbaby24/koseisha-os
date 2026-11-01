@@ -1060,6 +1060,67 @@ summary:focus-visible,
   color: #ffd9a3;
 }
 
+/* First-visit gesture card on touch screens: readable type, one big button.
+   Touches pass through the card to the map underneath, except on the button,
+   so the card never stands between someone and the gesture it describes. */
+.tm-gesture-help {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 4;
+  width: min(320px, calc(100% - 20px));
+  padding: 6px 8px 10px 14px;
+  border: 1px solid var(--tm-border-strong);
+  border-radius: 14px;
+  background: rgba(6, 10, 18, 0.9);
+  box-shadow: var(--tm-shadow);
+  color: var(--tm-text);
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: tm-reveal 200ms var(--tm-ease);
+}
+
+.tm-gesture-help-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.tm-gesture-help-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.tm-gesture-help-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  padding-right: 6px;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.tm-gesture-help-list dt {
+  font-weight: 600;
+}
+
+.tm-gesture-help-list dd {
+  margin: 0;
+  color: var(--tm-text-dim);
+}
+
+.tm-gesture-help-done {
+  flex: 0 0 auto;
+  min-width: 44px;
+  height: 44px;
+  font-size: 14px;
+  pointer-events: auto;
+}
+
 /* --- detail --------------------------------------------------------------- */
 
 .tm-detail-head {
@@ -2509,7 +2570,8 @@ summary:focus-visible,
   /* With the panel at full height the map is hidden; so are its controls. */
   .tm-layout[data-sheet="full"] .tm-map-legend,
   .tm-layout[data-sheet="full"] .tm-map-dock,
-  .tm-layout[data-sheet="full"] .tm-map-notice {
+  .tm-layout[data-sheet="full"] .tm-map-notice,
+  .tm-layout[data-sheet="full"] .tm-gesture-help {
     visibility: hidden;
   }
 }
