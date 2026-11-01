@@ -193,10 +193,8 @@ python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
 `npm audit` reports advisories in **development-only** packages; none of them is
 in the production bundle.
 
-- `happy-dom` 20.14.0 (the test DOM): GHSA-834v-8h66-3h79, GHSA-c8p4-j97h-3vg8
-  and GHSA-5fpq-26gf-qwcr affect versions ≤ 21.0.3. The fix is 21.0.4, a major
-  version bump, so it was deliberately left out of the T8 UI change. Upgrade it
-  on its own and re-run `npm run test`.
+- `happy-dom` (the test DOM) is locked to 21.0.4, which fixes
+  GHSA-834v-8h66-3h79, GHSA-c8p4-j97h-3vg8 and GHSA-5fpq-26gf-qwcr.
 - `vitest` / `@vitest/mocker` / `tinypool` and `source-map-js` (build and test
   tooling) carry further advisories; the `vitest` fix is also a major bump.
 
