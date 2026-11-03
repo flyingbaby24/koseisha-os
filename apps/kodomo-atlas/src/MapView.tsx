@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import L from "leaflet";
 import { Home, Minus, Plus, LocateFixed } from "lucide-react";
+import { fitPadding } from "./mapPadding";
 import { colorOf, formatValue, metrics, valueOf } from "./metrics";
 import type {
   FocusRequest,
@@ -48,6 +49,8 @@ interface Props {
   onPosition: (position: MapPosition) => void;
   onSelect: (code: string) => void;
   onHome: () => void;
+  /** Legend, title and selection overlays drawn over the map. */
+  children?: ReactNode;
 }
 
 export default function MapView(props: Props) {
@@ -89,9 +92,12 @@ export default function MapView(props: Props) {
         animate: false,
       });
     else
-      instance.fitBounds(JAPAN_BOUNDS, { padding: [24, 22], animate: false });
+      instance.fitBounds(JAPAN_BOUNDS, {
+        ...fitPadding(container.current, 12),
+        animate: false,
+      });
     L.control
-      .scale({ position: "bottomleft", imperial: false, maxWidth: 90 })
+      .scale({ position: "bottomright", imperial: false, maxWidth: 90 })
       .addTo(instance);
     L.control
       .attribution({
@@ -175,8 +181,8 @@ export default function MapView(props: Props) {
     return {
       fillColor: inScope
         ? colorOf(valueOf(record, state.metric), state.metric)
-        : "#e2e7e1",
-      fillOpacity: inScope ? 0.94 : 0.42,
+        : "#dfe4de",
+      fillOpacity: inScope ? 0.94 : 0.7,
       color: selected ? "#b85f25" : "#ffffff",
       weight: selected ? (selectedRegion?.memberCodes ? 1.8 : 3.4) : 0.45,
       opacity: selected ? 1 : 0.85,
@@ -195,7 +201,7 @@ export default function MapView(props: Props) {
           const region = state.byCode.get(code),
             value = valueOf(region, state.metric);
           const title = region?.name ?? feature.properties.name;
-          const content = `<div class="tooltip-pref">${escape(feature.properties.prefecture)}</div><strong>${escape(title)}</strong><div class="tooltip-value">${formatValue(value, state.metric)} <small>${value === null ? "データなし" : metrics[state.metric].unit}</small></div><div class="tooltip-period">${metrics[state.metric].label} · ${metrics[state.metric].period}</div>`;
+          const content = `<div class="tooltip-pref">${escape(feature.properties.prefecture)}</div><strong>${escape(title)}</strong><div class="tooltip-value">${formatValue(value, state.metric)} <small>${value === null ? "データなし・非公表" : metrics[state.metric].unit}</small></div><div class="tooltip-period">${metrics[state.metric].label} · ${metrics[state.metric].period}</div><div class="tooltip-action">クリックで詳細</div>`;
           if (!polygon.getTooltip())
             polygon.bindTooltip(content, {
               sticky: true,
@@ -208,8 +214,8 @@ export default function MapView(props: Props) {
           if (polygon instanceof L.Path) {
             const base = style(feature);
             polygon.setStyle({
-              weight: Math.max(base.weight ?? 0, 1.8),
-              color: base.weight! > 1 ? base.color : "#547966",
+              weight: Math.max(base.weight ?? 0, 2),
+              color: base.weight! > 1 ? base.color : "#1d3a2c",
               fillOpacity: 1,
             });
           }
@@ -296,7 +302,7 @@ export default function MapView(props: Props) {
   useEffect(() => {
     if (props.focus && map.current)
       map.current.fitBounds(props.focus.bounds, {
-        padding: [32, 32],
+        ...fitPadding(container.current, 32),
         maxZoom: 10,
         animate: false,
       });
@@ -318,21 +324,13 @@ export default function MapView(props: Props) {
     }
   }, [props.position, props.id]);
 
-  const selectedRegion = props.byCode.get(props.selectedCode ?? "");
-  const selectedName =
-    selectedRegion?.name ??
-    props.geometry.features.find(
-      (feature) => feature.properties.code === props.selectedCode,
-    )?.properties.name;
-  const selectedValue = valueOf(selectedRegion, props.metric);
-
   return (
     <div className="map-canvas-wrap">
       <div
         ref={container}
         className="map-canvas"
         role="region"
-        aria-label={`${metrics[props.metric].label}の市区町村地図。検索とランキングからも地域を選択できます。`}
+        aria-label={`${metrics[props.metric].label}（${metrics[props.metric].period}）の市区町村地図。矢印キーで移動、＋−キーで拡大縮小。検索とランキングからも地域を選択できます。`}
       />
       <div className="map-zoom-controls" aria-label="地図操作">
         <button
@@ -341,7 +339,7 @@ export default function MapView(props: Props) {
           title="拡大"
           aria-label="地図を拡大"
         >
-          <Plus size={19} />
+          <Plus size={20} />
         </button>
         <button
           onClick={() => map.current?.zoomOut()}
@@ -349,15 +347,14 @@ export default function MapView(props: Props) {
           title="縮小"
           aria-label="地図を縮小"
         >
-          <Minus size={19} />
+          <Minus size={20} />
         </button>
-        <span />
         <button
           onClick={props.onHome}
           title="全国を表示"
           aria-label="全国を表示"
         >
-          <Home size={17} />
+          <Home size={18} />
         </button>
         {props.selectedCode && (
           <button
@@ -365,47 +362,24 @@ export default function MapView(props: Props) {
               const region = props.byCode.get(props.selectedCode!);
               if (region?.bounds)
                 map.current?.fitBounds(region.bounds, {
-                  padding: [45, 45],
+                  ...fitPadding(container.current, 45),
                   maxZoom: 11,
                 });
             }}
             title="選択した地域へ"
             aria-label="選択した地域にズーム"
           >
-            <LocateFixed size={17} />
+            <LocateFixed size={18} />
           </button>
         )}
       </div>
-      <span className="map-north" aria-hidden="true">
-        <b>N</b>
-        <span>↑</span>
-      </span>
-      {selectedName && (
-        <div className="map-selection-info" role="status" aria-live="polite">
-          <div className="selected-region-name">
-            {selectedName}
-            {selectedRegion?.level === "1" && <small>市・区部全体</small>}
-          </div>
-          <strong>
-            {formatValue(selectedValue, props.metric)}
-            <small>
-              {selectedValue === null
-                ? "データなし・非公表"
-                : metrics[props.metric].unit}
-            </small>
-          </strong>
-          <p>
-            {metrics[props.metric].label} · {metrics[props.metric].period}
-          </p>
-          {selectedRegion?.level === "1" && (
-            <p className="selected-unit-note">地図の色は行政区別</p>
-          )}
+      {props.children}
+      {!props.selectedCode && (
+        <div className="map-hint" aria-hidden="true">
+          <span className="hint-pointer">地域にふれると数値、クリックで詳細</span>
+          <span className="hint-touch">地域をタップで数値と詳細</span>
         </div>
       )}
-      <div className="map-hint">
-        <span />
-        地域にふれると数値、クリックで詳細
-      </div>
       {tileError && props.showBackground && (
         <div className="tile-error">
           背景地図を取得できません。行政区域は引き続き探索できます。

@@ -76,7 +76,8 @@ try {
   await page.locator("#p-kodomo-atlas").click();
   await loaded(page); assert.equal(page.url(), appUrl);
   assert.equal(await page.locator(".map-canvas svg path.leaflet-interactive").count(), 1902);
-  assert.equal(await page.locator(".reference-box b").textContent(), "1.33");
+  assert.equal(await page.locator(".detail-big-number").textContent(), "1.33");
+  assert.equal(await page.locator(".map-key .ramp-national").textContent(), "全国 1.33");
   pass("English/Japanese project cards, eight existing/new entries, top-to-app navigation and nationwide map");
   await shot(page, "atlas");
   await page.getByRole("button", { name: "2つの指標を比較", exact: true }).click();
@@ -89,7 +90,7 @@ try {
   }
   const [a,b] = await Promise.all((await page.locator(".map-panel").all()).map(panel => panel.boundingBox()));
   assert(a.x < b.x && Math.abs(a.y - b.y) < 1);
-  assert.equal(await page.locator(".compare-legend[open]").count(), 2);
+  assert.equal(await page.locator(".map-panel .map-key").count(), 2);
   assert.deepEqual(await page.locator(".map-year").allTextContents(), ["2018–2022年", "2020年"]);
   await search(page, "大阪市", "27100");
   await page.locator(".map-zoom-controls").first().getByRole("button", { name: "地図を縮小", exact: true }).click();
@@ -104,12 +105,12 @@ try {
 
   const phone = await open({ width: 390, height: 844 }, true);
   await phone.goto(appUrl, { waitUntil: "networkidle" }); await loaded(phone);
-  await phone.locator(".mobile-filter-button").click(); await search(phone, "豊中市", "27203");
+  await search(phone, "豊中市", "27203");
   await phone.getByRole("button", { name: "2つの指標を比較", exact: true }).click();
   await phone.getByRole("combobox", { name: "比較する2つ目の指標" }).selectOption("childShare");
   const [mobileA,mobileB] = await Promise.all((await phone.locator(".map-panel").all()).map(panel => panel.boundingBox()));
   assert(mobileA.width > 340 && mobileB.y > mobileA.y);
-  assert.equal(await phone.locator(".compare-legend[open]").count(), 2);
+  assert.equal(await phone.locator(".map-panel .map-key").count(), 2);
   assert(!(await phone.evaluate(() => document.documentElement.scrollWidth > innerWidth)));
   await shot(phone, "mobile");
   pass("390px direct access, search, stacked comparison and legends without horizontal overflow");
