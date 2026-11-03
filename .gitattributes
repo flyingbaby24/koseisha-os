@@ -1,0 +1,3 @@
+# Preserve the verified official-data bytes across Windows and Linux checkouts.
+apps/kodomo-atlas/public/data/* -text
+docs/kodomo-atlas/data/* -text

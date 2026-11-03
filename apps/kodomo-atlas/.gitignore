@@ -1,0 +1,9 @@
+node_modules/
+dist/
+data/raw/
+__pycache__/
+*.log
+.DS_Store
+qa/screenshots/
+qa/*.png
+qa/*results.json

@@ -38,7 +38,7 @@ test('every local link, asset and fragment on the top pages resolves', () => {
         if (/^(https?:|mailto:|data:)/.test(candidate)) continue;
         const [rel, hash] = candidate.split('#');
         if (!rel) { if (hash && !own.has(hash)) failures.push(`${p}: #${hash}`); continue; }
-        let target = path.resolve(docs, rel.split('?')[0]);
+        let target = path.resolve(docs, rel.split('?')[0].replace(/^\//, ''));
         if (!target.startsWith(docs) || !fs.existsSync(target)) { failures.push(`${p}: ${candidate}`); continue; }
         if (fs.statSync(target).isDirectory()) target = path.join(target, 'index.html');
         if (!fs.existsSync(target)) failures.push(`${p}: ${candidate}`);

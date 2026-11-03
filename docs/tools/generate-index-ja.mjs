@@ -69,7 +69,7 @@ const tr = {
   "<small>App</small>":"<small>アプリ</small>",
   "<small>Game</small>":"<small>ゲーム</small>",
   "<small>Product</small>":"<small>プロダクト</small>",
-  "Seven projects across four domains: Thought, Body, Material and System. Lines show where projects share data, mechanics or material.":"思考・身体・素材・システムの4つの領域にまたがる7つのプロジェクト。線は、データ・仕組み・素材を共有している関係を示します。",
+  "Selected connections across four domains: Thought, Body, Material and System. Lines show where projects share data, mechanics or material.":"思考・身体・素材・システムの4つの領域にまたがるプロジェクトのつながり。線は、データ・仕組み・素材を共有している関係を示します。",
   "aria-label=\"Available now\"":"aria-label=\"公開中のプロジェクト\"",
   "<p class=\"now-label\">Now</p>":"<p class=\"now-label\">公開中</p>",
   "<span class=\"status status-live\">Playable</span>":"<span class=\"status status-live\">プレイ可能</span>",
@@ -98,7 +98,10 @@ const tr = {
 
   // Work
   "<span class=\"index\">02</span>Work":"<span class=\"index\">02</span>作品",
-  "Seven entry points.":"7つの入口。",
+  "Eight entry points.":"8つの入口。",
+  "Research / Public Data Visualization":"研究 / 公開データの可視化",
+  "An interactive map of fertility rates and child population across Japan, visualized by municipality.":"全国の出生率と子どもの人口分布を、市区町村単位で可視化するインタラクティブマップ",
+  "Open Kodomo Atlas":"こどもアトラスを開く",
   "Games, research platforms, public apps and physical products: independent projects built around the same question.":"ゲーム、研究基盤、公開アプリ、そしてプロダクト。同じ問いから生まれた、独立したプロジェクトです。",
   "aria-label=\"Filter projects\"":"aria-label=\"プロジェクトを絞り込む\"",
   "data-status-template=\"Showing {n} of {total} projects\"":"data-status-template=\"{total}件中{n}件を表示\"",
@@ -306,7 +309,7 @@ function translate(html) {
   return out;
 }
 
-const source = fs.readFileSync(enFile, "utf8").replace(seoPattern, "");
+const source = fs.readFileSync(enFile, "utf8").replace(/\r\n/g, "\n").replace(seoPattern, "");
 fs.writeFileSync(enFile, withHead(source, "en"));
 fs.writeFileSync(jaFile, withHead(translate(source), "ja"));
 console.log("Generated docs/index.html and docs/index-ja.html");

@@ -1,0 +1,34 @@
+{
+  "name": "kodomo-atlas",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc -b && vite build",
+    "pages:build": "npm run build && node scripts/publish-pages.mjs",
+    "preview": "vite preview --host 127.0.0.1",
+    "data:fetch": "python scripts/prepare_data.py",
+    "data:check": "python scripts/validate_data.py",
+    "qa:check": "node scripts/check_visualization.mjs",
+    "qa:browser": "node scripts/browser-smoke.mjs",
+    "qa:deploy": "node scripts/deployment-smoke.mjs"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/geojson": "^7946.0.16",
+    "@types/leaflet": "^1.9.15",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "mapshaper": "^0.7.101",
+    "playwright": "^1.64.1",
+    "typescript": "~5.7.2",
+    "vite": "^6.0.5"
+  }
+}
