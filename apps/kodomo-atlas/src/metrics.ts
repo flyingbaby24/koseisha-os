@@ -1,4 +1,4 @@
-import type { Metric, Region } from "./types";
+import type { HouseholdMetric, Metric, Region } from "./types";
 
 export const greens = [
   "#e6edcb",
@@ -19,6 +19,16 @@ const blues = [
   "#2b657f",
   "#17465d",
 ];
+/** Household / marital-status layer: one muted purple ramp, distinct from green (TFR) and blue (children). */
+const plums = [
+  "#f2eef6",
+  "#dcd2e9",
+  "#c2b1d9",
+  "#a48dc4",
+  "#8468a9",
+  "#62468a",
+  "#412a63",
+];
 const growth = [
   "#bf826b",
   "#dab29c",
@@ -28,6 +38,41 @@ const growth = [
   "#7eb18e",
   "#387959",
 ];
+export const householdMetrics: HouseholdMetric[] = [
+  "singleShare",
+  "single",
+  "coupleChildrenShare",
+  "coupleChildren",
+  "under18Share",
+  "under18",
+  "unmarriedRate",
+  "unmarriedRateMale",
+  "unmarriedRateFemale",
+  "unmarried",
+  "unmarriedMale",
+  "unmarriedFemale",
+  "elderlyOnlyShare",
+  "elderlyOnly",
+  "elderlySingleShare",
+  "elderlySingle",
+];
+const householdSet = new Set<string>(householdMetrics);
+export const isHouseholdMetric = (metric: Metric): metric is HouseholdMetric =>
+  householdSet.has(metric);
+/** Percentages shown with one decimal and compared in points. */
+const shareSet = new Set<string>([
+  "childShare",
+  "change",
+  "singleShare",
+  "coupleChildrenShare",
+  "under18Share",
+  "elderlyOnlyShare",
+  "elderlySingleShare",
+  "unmarriedRate",
+  "unmarriedRateMale",
+  "unmarriedRateFemale",
+]);
+export const isShareMetric = (metric: Metric) => shareSet.has(metric);
 export const metricList: Metric[] = [
   "tfr",
   "children",
@@ -37,6 +82,7 @@ export const metricList: Metric[] = [
   "age5",
   "age10",
   "change",
+  ...householdMetrics,
 ];
 export const metrics: Record<
   Metric,
@@ -143,12 +189,200 @@ export const metrics: Record<
     breaks: [-15, -10, -5, 0, 5, 10],
     colors: growth,
   },
+  singleShare: {
+    label: "単独世帯の割合",
+    short: "単独世帯率",
+    english: "ONE-PERSON HOUSEHOLDS",
+    unit: "%",
+    period: "2020年",
+    source: "総務省統計局 令和2年国勢調査 第9-1表",
+    description:
+      "一般世帯（家族類型「不詳」を除く）に占める単独世帯（1人で住む世帯）の割合。未婚率とは別の指標です。",
+    breaks: [20, 25, 30, 35, 40, 50],
+    colors: plums,
+  },
+  single: {
+    label: "単独世帯数",
+    short: "単独世帯数",
+    english: "ONE-PERSON HOUSEHOLDS",
+    unit: "世帯",
+    period: "2020年",
+    source: "総務省統計局 令和2年国勢調査 第9-1表",
+    description:
+      "単独世帯（世帯人員が1人の世帯）の数。一般世帯に限り、施設等の世帯は含みません。",
+    breaks: [500, 1000, 3000, 10000, 30000, 100000],
+    colors: plums,
+  },
+  coupleChildrenShare: {
+    label: "夫婦と子どもから成る世帯の割合",
+    short: "夫婦と子ども世帯率",
+    english: "COUPLE-AND-CHILDREN HOUSEHOLDS",
+    unit: "%",
+    period: "2020年",
+    source: "総務省統計局 令和2年国勢調査 第9-1表",
+    description:
+      "一般世帯（家族類型「不詳」を除く）に占める「夫婦と子供から成る世帯」の割合。子どもの年齢は問いません。",
+    breaks: [12, 16, 20, 24, 28, 32],
+    colors: plums,
+  },
+  coupleChildren: {
+    label: "夫婦と子どもから成る世帯数",
+    short: "夫婦と子ども世帯数",
+    english: "COUPLE-AND-CHILDREN HOUSEHOLDS",
+    unit: "世帯",
+    period: "2020年",
+    source: "総務省統計局 令和2年国勢調査 第9-1表",
+    description:
+      "世帯の家族類型「夫婦と子供から成る世帯」の数。子どもの年齢は問いません。",
+    breaks: [300, 1000, 2000, 5000, 10000, 30000],
+    colors: plums,
+  },
+  under18Share: {
+    label: "18歳未満の世帯員がいる世帯の割合",
+    short: "18歳未満のいる世帯率",
+    english: "HOUSEHOLDS WITH UNDER-18S",
+    unit: "%",
+    period: "2020年",
+    source: "総務省統計局 令和2年国勢調査 第9-1表",
+    description:
+      "一般世帯に占める、18歳未満の世帯員がいる世帯の割合。分母は一般世帯の総数です。",
+    breaks: [10, 13, 16, 19, 22, 25],
+    colors: plums,
+  },
+  under18: {
+    label: "18歳未満の世帯員がいる世帯数",
+    short: "18歳未満のいる世帯数",
+    english: "HOUSEHOLDS WITH UNDER-18S",
+    unit: "世帯",
+    period: "2020年",
+    source: "総務省統計局 令和2年国勢調査 第9-1表",
+    description: "18歳未満の世帯員がいる一般世帯の数。",
+    breaks: [300, 1000, 2000, 5000, 10000, 30000],
+    colors: plums,
+  },
+  unmarriedRate: {
+    label: "25〜39歳の未婚率",
+    short: "25〜39歳未婚率",
+    english: "NEVER MARRIED, AGES 25–39",
+    unit: "%",
+    period: "2020年",
+    source: "総務省統計局 令和2年国勢調査 第4-3表",
+    description:
+      "25〜39歳の人口（配偶関係「不詳」を除く）に占める未婚者の割合。男女計。単独世帯の割合とは別の指標です。",
+    breaks: [30, 35, 40, 45, 50, 55],
+    colors: plums,
+  },
+  unmarriedRateMale: {
+    label: "25〜39歳の未婚率（男性）",
+    short: "未婚率（男性）",
+    english: "NEVER MARRIED, MEN 25–39",
+    unit: "%",
+    period: "2020年",
+    source: "総務省統計局 令和2年国勢調査 第4-3表",
+    description:
+      "25〜39歳の男性（配偶関係「不詳」を除く）に占める未婚者の割合。",
+    breaks: [30, 35, 40, 45, 50, 55],
+    colors: plums,
+  },
+  unmarriedRateFemale: {
+    label: "25〜39歳の未婚率（女性）",
+    short: "未婚率（女性）",
+    english: "NEVER MARRIED, WOMEN 25–39",
+    unit: "%",
+    period: "2020年",
+    source: "総務省統計局 令和2年国勢調査 第4-3表",
+    description:
+      "25〜39歳の女性（配偶関係「不詳」を除く）に占める未婚者の割合。",
+    breaks: [30, 35, 40, 45, 50, 55],
+    colors: plums,
+  },
+  unmarried: {
+    label: "25〜39歳の未婚者数",
+    short: "25〜39歳未婚者数",
+    english: "NEVER MARRIED, AGES 25–39",
+    unit: "人",
+    period: "2020年",
+    source: "総務省統計局 令和2年国勢調査 第4-3表",
+    description:
+      "25〜39歳で配偶関係が「未婚」の人数（男女計）。配偶関係「不詳」の人は含みません。",
+    breaks: [100, 300, 1000, 3000, 10000, 30000],
+    colors: plums,
+  },
+  unmarriedMale: {
+    label: "25〜39歳の未婚者数（男性）",
+    short: "未婚者数（男性）",
+    english: "NEVER MARRIED, MEN 25–39",
+    unit: "人",
+    period: "2020年",
+    source: "総務省統計局 令和2年国勢調査 第4-3表",
+    description: "25〜39歳で配偶関係が「未婚」の男性の人数。",
+    breaks: [100, 300, 1000, 3000, 10000, 30000],
+    colors: plums,
+  },
+  unmarriedFemale: {
+    label: "25〜39歳の未婚者数（女性）",
+    short: "未婚者数（女性）",
+    english: "NEVER MARRIED, WOMEN 25–39",
+    unit: "人",
+    period: "2020年",
+    source: "総務省統計局 令和2年国勢調査 第4-3表",
+    description: "25〜39歳で配偶関係が「未婚」の女性の人数。",
+    breaks: [100, 300, 1000, 3000, 10000, 30000],
+    colors: plums,
+  },
+  elderlyOnlyShare: {
+    label: "65歳以上の世帯員のみの世帯の割合",
+    short: "高齢者のみの世帯率",
+    english: "HOUSEHOLDS OF 65+ ONLY",
+    unit: "%",
+    period: "2020年",
+    source: "総務省統計局 令和2年国勢調査 第27-4表",
+    description:
+      "一般世帯に占める、世帯員が全員65歳以上の世帯の割合。65歳以上の人が「いる」世帯とは別の指標です。",
+    breaks: [15, 20, 25, 30, 35, 40],
+    colors: plums,
+  },
+  elderlyOnly: {
+    label: "65歳以上の世帯員のみの世帯数",
+    short: "高齢者のみの世帯数",
+    english: "HOUSEHOLDS OF 65+ ONLY",
+    unit: "世帯",
+    period: "2020年",
+    source: "総務省統計局 令和2年国勢調査 第27-4表",
+    description: "世帯員が全員65歳以上の一般世帯の数。",
+    breaks: [500, 1000, 2000, 5000, 10000, 30000],
+    colors: plums,
+  },
+  elderlySingleShare: {
+    label: "65歳以上の単独世帯の割合",
+    short: "65歳以上の単独世帯率",
+    english: "PEOPLE 65+ LIVING ALONE",
+    unit: "%",
+    period: "2020年",
+    source: "総務省統計局 令和2年国勢調査 第9-1表",
+    description:
+      "一般世帯（家族類型「不詳」を除く）に占める、65歳以上の人が1人で住む世帯の割合。",
+    breaks: [8, 10, 12, 15, 18, 22],
+    colors: plums,
+  },
+  elderlySingle: {
+    label: "65歳以上の単独世帯数",
+    short: "65歳以上の単独世帯数",
+    english: "PEOPLE 65+ LIVING ALONE",
+    unit: "世帯",
+    period: "2020年",
+    source: "総務省統計局 令和2年国勢調査 第9-1表",
+    description: "65歳以上の人が1人で住む一般世帯の数。",
+    breaks: [200, 500, 1000, 2000, 5000, 15000],
+    colors: plums,
+  },
 };
 export function valueOf(
   region: Region | undefined,
   metric: Metric,
 ): number | null {
   if (!region) return null;
+  if (isHouseholdMetric(metric)) return region.households?.[metric] ?? null;
   if (metric === "age0") return region.ages[0];
   if (metric === "age5") return region.ages[1];
   if (metric === "age10") return region.ages[2];
@@ -167,7 +401,7 @@ export const integer = new Intl.NumberFormat("ja-JP", {
 export function formatValue(value: number | null, metric: Metric): string {
   if (value === null) return "—";
   if (metric === "tfr") return value.toFixed(2);
-  if (metric === "childShare" || metric === "change")
+  if (isShareMetric(metric))
     return `${metric === "change" && value > 0 ? "+" : ""}${value.toFixed(1)}`;
   if (metric === "childDensity") return decimal.format(value);
   return integer.format(value);
@@ -196,16 +430,11 @@ export function difference(
     base = valueOf(national, metric);
   if (value === null || base === null) return null;
   const diff = value - base;
-  const unit =
-    metric === "childShare" || metric === "change"
-      ? "pt"
-      : metrics[metric].unit;
+  const unit = isShareMetric(metric) ? "pt" : metrics[metric].unit;
   const result =
     metric === "tfr"
       ? Math.abs(diff).toFixed(2)
-      : metric === "childShare" ||
-          metric === "change" ||
-          metric === "childDensity"
+      : isShareMetric(metric) || metric === "childDensity"
         ? decimal.format(Math.abs(diff))
         : integer.format(Math.abs(diff));
   return `${diff >= 0 ? "+" : "−"}${result}${unit ? ` ${unit}` : ""}`;

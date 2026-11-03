@@ -1,11 +1,17 @@
+import { useEffect, useState, type CSSProperties } from "react";
 import {
   ArrowRight,
+  Armchair,
   Baby,
+  Backpack,
+  CalendarClock,
   ChartColumn,
   Check,
   ChevronDown,
   CircleHelp,
   Grid2X2,
+  Hourglass,
+  House,
   Layers2,
   MapPin,
   PieChart,
@@ -13,30 +19,42 @@ import {
   SplitSquareHorizontal,
   Tags,
   TrendingUp,
+  User,
   UsersRound,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { CSSProperties } from "react";
 import SearchBox from "../SearchBox";
 import { integer, metrics } from "../metrics";
 import type { Metric, Region, Statistics } from "../types";
 import {
   ageMetrics,
+  categories,
+  categoryOf,
   comparePresets,
-  guide,
+  indicatorOf,
+  indicators,
   isAge,
-  otherMetrics,
-  primaryMetrics,
+  pickVariant,
+  SEX_LABELS,
+  variantOf,
+  type CategoryId,
+  type Indicator,
 } from "../ui";
 
 const icons: Record<string, LucideIcon> = {
-  tfr: Baby,
-  childShare: PieChart,
-  children: UsersRound,
-  childDensity: Grid2X2,
-  age0: ChartColumn,
-  change: TrendingUp,
+  baby: Baby,
+  pie: PieChart,
+  users: UsersRound,
+  grid: Grid2X2,
+  chart: ChartColumn,
+  trend: TrendingUp,
+  user: User,
+  home: House,
+  backpack: Backpack,
+  ring: CalendarClock,
+  elder: Hourglass,
+  elderAlone: Armchair,
 };
 
 interface Props {
@@ -71,6 +89,22 @@ function Ramp({ metric }: { metric: Metric }) {
 
 export default function ControlPanel(props: Props) {
   const { metric } = props;
+  const current = categoryOf(metric);
+  // The tab follows the shown indicator (presets, detail shortcuts) but can be browsed freely.
+  const [tab, setTab] = useState<CategoryId>(current);
+  useEffect(() => setTab(current), [current]);
+  const visible = indicators.filter((indicator) => indicator.category === tab);
+  const activeIndicator = indicatorOf(metric);
+  const variant = variantOf(metric);
+  function choose(indicator: Indicator) {
+    if (indicator === activeIndicator) return;
+    // Keep the share/count (and sex) choice when moving between household indicators.
+    props.onMetric(
+      indicator.rate && activeIndicator.rate
+        ? pickVariant(indicator, variant.mode, variant.sex)
+        : indicator.metrics[0],
+    );
+  }
   return (
     <aside className="controls-panel" aria-label="表示設定">
       <div className="controls-intro">
@@ -78,7 +112,7 @@ export default function ControlPanel(props: Props) {
           <span>日本のどこに子どもが多い？</span>
           <span>出生率が高いのはどこ？</span>
         </h1>
-        <p>色が濃いほど、値が高い（多い）地域です。</p>
+        <p>色が濃いほど値が高い（多い）地域。世帯構造・未婚・高齢化とも見比べられます。</p>
       </div>
 
       <section className="control-section search-section" aria-labelledby="search-heading">
@@ -118,67 +152,147 @@ export default function ControlPanel(props: Props) {
             ? "地図Aの指標"
             : "地図に表示する指標"}
         </h2>
-        <div className="mode-options">
+        <div className="category-tabs" role="tablist" aria-label="指標のカテゴリ">
+          {categories.map((category) => {
+            const selected = tab === category.id;
+            return (
+              <button
+                key={category.id}
+                id={`category-${category.id}`}
+                role="tab"
+                aria-selected={selected}
+                aria-controls="metric-panel"
+                tabIndex={selected ? 0 : -1}
+                className={selected ? "active" : ""}
+                onClick={() => setTab(category.id)}
+                onKeyDown={(e) => {
+                  if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+                  const i = categories.findIndex((c) => c.id === tab);
+                  const next =
+                    categories[(i + (e.key === "ArrowRight" ? 1 : categories.length - 1)) % categories.length];
+                  setTab(next.id);
+                  document.getElementById(`category-${next.id}`)?.focus();
+                }}
+              >
+                {category.label}
+                {category.id === current && !selected && (
+                  <i className="tab-dot" aria-label="表示中の指標" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {activeIndicator.rate && (
+          <div className="variant-row">
+            <div className="segmented" role="group" aria-label="割合と数の切り替え">
+              {(["rate", "count"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  className={variant.mode === mode ? "active" : ""}
+                  aria-pressed={variant.mode === mode}
+                  onClick={() => props.onMetric(pickVariant(activeIndicator, mode, variant.sex))}
+                >
+                  {mode === "rate" ? "割合（%）" : "数"}
+                </button>
+              ))}
+            </div>
+            {activeIndicator.rate.length > 1 && (
+              <div className="segmented" role="group" aria-label="男女の切り替え">
+                {SEX_LABELS.map((label, sex) => (
+                  <button
+                    key={label}
+                    className={variant.sex === sex ? "active" : ""}
+                    aria-pressed={variant.sex === sex}
+                    onClick={() => props.onMetric(pickVariant(activeIndicator, variant.mode, sex))}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        <div
+          className="mode-options"
+          id="metric-panel"
+          role="tabpanel"
+          aria-labelledby={`category-${tab}`}
+        >
           <div className="metric-primary">
-            {primaryMetrics.map((m) => {
-              const Icon = icons[m];
-              const active = metric === m;
-              return (
-                <button
-                  key={m}
-                  className={`metric-card ${active ? "active" : ""}`}
-                  style={
-                    {
-                      "--metric-color": metrics[m].colors[5],
-                      "--metric-soft": `${metrics[m].colors[0]}99`,
-                    } as CSSProperties
-                  }
-                  aria-pressed={active}
-                  aria-label={
-                    metrics[m].label.includes(guide[m].title)
-                      ? metrics[m].label
-                      : `${guide[m].title}（${metrics[m].label}）`
-                  }
-                  aria-describedby={`metric-desc-${m}`}
-                  onClick={() => props.onMetric(m)}
-                >
-                  <span className="metric-card-icon">
-                    <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
-                  </span>
-                  <span className="metric-card-text" id={`metric-desc-${m}`}>
-                    <span className="metric-card-title">
-                      <b>{guide[m].title}</b>
-                      <small>{metrics[m].period}</small>
+            {visible
+              .filter((indicator) => indicator.primary)
+              .map((indicator) => {
+                const Icon = icons[indicator.icon];
+                const base = indicator.metrics[0];
+                const active = indicator === activeIndicator;
+                return (
+                  <button
+                    key={indicator.id}
+                    className={`metric-card ${active ? "active" : ""}`}
+                    style={
+                      {
+                        "--metric-color": metrics[base].colors[5],
+                        "--metric-soft": `${metrics[base].colors[0]}99`,
+                      } as CSSProperties
+                    }
+                    aria-pressed={active}
+                    aria-label={
+                      indicator.rate
+                        ? indicator.title
+                        : metrics[base].label.includes(indicator.title)
+                          ? metrics[base].label
+                          : `${indicator.title}（${metrics[base].label}）`
+                    }
+                    aria-describedby={`metric-desc-${indicator.id}`}
+                    onClick={() => choose(indicator)}
+                  >
+                    <span className="metric-card-icon">
+                      <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
                     </span>
-                    <small>{guide[m].plain}</small>
-                  </span>
-                  <Ramp metric={m} />
-                  <span className="metric-check" aria-hidden="true">
-                    {active && <Check size={13} strokeWidth={3} />}
-                  </span>
-                </button>
-              );
-            })}
+                    <span className="metric-card-text" id={`metric-desc-${indicator.id}`}>
+                      <span className="metric-card-title">
+                        <b>{indicator.title}</b>
+                      </span>
+                      <small>{indicator.plain}</small>
+                    </span>
+                    <span className="metric-card-meta" aria-hidden="true">
+                      <Ramp metric={base} />
+                      <small>{metrics[base].period}</small>
+                    </span>
+                    <span className="metric-check" aria-hidden="true">
+                      {active && <Check size={13} strokeWidth={3} />}
+                    </span>
+                  </button>
+                );
+              })}
           </div>
-          <div className="metric-other" role="group" aria-label="その他の指標">
-            <span className="metric-other-label">その他の指標</span>
-            {otherMetrics.map(({ metric: m, label }) => {
-              const Icon = icons[m];
-              const active = m === "age0" ? isAge(metric) : metric === m;
-              return (
-                <button
-                  key={m}
-                  className={`metric-chip ${active ? "active" : ""}`}
-                  aria-pressed={active}
-                  aria-label={label}
-                  onClick={() => props.onMetric(m)}
-                >
-                  <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
-                  <span>{m === "age0" ? "年齢別の人口" : metrics[m].short}</span>
-                </button>
-              );
-            })}
-          </div>
+          {visible.some((indicator) => !indicator.primary) && (
+            <div className="metric-other" role="group" aria-label="その他の指標">
+              <span className="metric-other-label">その他の指標</span>
+              {visible
+                .filter((indicator) => !indicator.primary)
+                .map((indicator) => {
+                  const Icon = icons[indicator.icon];
+                  const active = indicator === activeIndicator;
+                  return (
+                    <button
+                      key={indicator.id}
+                      className={`metric-chip ${active ? "active" : ""}`}
+                      aria-pressed={active}
+                      aria-label={
+                        indicator.id === "age"
+                          ? indicator.plain
+                          : metrics[indicator.metrics[0]].label
+                      }
+                      onClick={() => choose(indicator)}
+                    >
+                      <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
+                      <span>{indicator.title}</span>
+                    </button>
+                  );
+                })}
+            </div>
+          )}
         </div>
         {isAge(metric) && (
           <div className="age-tabs" role="group" aria-label="年齢階級">
@@ -212,6 +326,7 @@ export default function ControlPanel(props: Props) {
                 key={preset.id}
                 className={`preset-button ${active ? "active" : ""}`}
                 aria-pressed={active}
+                title={`${metrics[preset.left].label}と${metrics[preset.right].label}を左右に並べて表示`}
                 onClick={() => props.onCompare(preset.left, preset.right)}
               >
                 <span className="preset-ramps" aria-hidden="true">
@@ -222,26 +337,29 @@ export default function ControlPanel(props: Props) {
                   <b>{preset.title}</b>
                   <small>{preset.hint}</small>
                 </span>
-                {active && <Check size={16} aria-hidden="true" />}
+                {active && <Check size={15} aria-hidden="true" className="preset-check" />}
               </button>
             );
           })}
-          <button
-            className={`compare-button ${props.compare && props.page === "map" ? "is-active" : ""}`}
-            onClick={props.onToggleCompare}
-            aria-pressed={props.compare && props.page === "map"}
-          >
-            <SplitSquareHorizontal size={16} aria-hidden="true" />
-            <span>
-              {props.compare && props.page === "map"
-                ? "比較表示を終了"
-                : "2つの指標を比較"}
-            </span>
-            {props.compare && props.page === "map" && (
-              <X size={14} aria-hidden="true" />
-            )}
-          </button>
         </div>
+        <button
+          className={`compare-button ${props.compare && props.page === "map" ? "is-active" : ""}`}
+          onClick={props.onToggleCompare}
+          aria-pressed={props.compare && props.page === "map"}
+        >
+          <SplitSquareHorizontal size={16} aria-hidden="true" />
+          <span>
+            {props.compare && props.page === "map"
+              ? "比較表示を終了"
+              : "2つの指標を比較"}
+          </span>
+          {props.compare && props.page === "map" && (
+            <X size={14} aria-hidden="true" />
+          )}
+        </button>
+        <p className="compare-note">
+          並べて見るための表示です。2つの指標の因果関係を示すものではありません。
+        </p>
       </section>
 
       <details className="control-section display-options">

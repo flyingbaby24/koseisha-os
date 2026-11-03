@@ -13,7 +13,7 @@ const out = new URL("../qa/", import.meta.url);
 await mkdir(out, { recursive: true });
 const report = { origin, appUrl, startedAt: new Date().toISOString(), checks: [], errors: [], httpErrors: [], screenshots: [], statistics: {}, status: "running" };
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
-const expected = Object.fromEntries(await Promise.all(["statistics.json", "municipalities.geojson"].map(async file => [file, hash(await readFile(new URL(`../public/data/${file}`, import.meta.url)))])));
+const expected = Object.fromEntries(await Promise.all(["statistics.json", "municipalities.geojson", "households.json"].map(async file => [file, hash(await readFile(new URL(`../public/data/${file}`, import.meta.url)))])));
 for (const pathname of ["/", "/index-ja.html", "/kodomo-atlas/"]) {
   const response = await fetch(`${origin}${pathname}`, { redirect: "error" });
   assert.equal(response.status, 200, pathname);
@@ -82,7 +82,8 @@ try {
   await shot(page, "atlas");
   await page.getByRole("button", { name: "2つの指標を比較", exact: true }).click();
   await page.getByRole("combobox", { name: "比較する2つ目の指標" }).selectOption("childShare");
-  assert.equal(await page.getByRole("combobox", { name: "比較する2つ目の指標" }).locator("option").count(), 8);
+  // 8 original indicators + 16 household / marital-status variants.
+  assert.equal(await page.getByRole("combobox", { name: "比較する2つ目の指標" }).locator("option").count(), 24);
   for (const [name, code, tfr, share] of [["大阪市", "27100", "1.16", "11.0"], ["豊中市", "27203", "1.50", "13.7"], ["明石市", "28203", "1.63", "13.8"]]) {
     await search(page, name, code);
     const text = await page.locator(".map-selection-info").allTextContents();
@@ -116,7 +117,7 @@ try {
   pass("390px direct access, search, stacked comparison and legends without horizontal overflow");
   await Promise.all(bodyChecks);
   assert.deepEqual(report.errors, []); assert.deepEqual(report.httpErrors, []);
-  assert.equal(Object.keys(report.statistics).length, 2);
+  assert.equal(Object.keys(report.statistics).length, 3);
   pass("CSS/JS/images/statistics/GeoJSON load without HTTP errors; published data hashes match originals");
   report.status = "passed";
 } catch (error) {

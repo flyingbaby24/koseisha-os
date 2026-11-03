@@ -8,7 +8,50 @@ export type Metric =
   | "age0"
   | "age5"
   | "age10"
-  | "change";
+  | "change"
+  | HouseholdMetric;
+/** Household / marital-status indicators (households.json, 2020 Census). */
+export type HouseholdMetric =
+  | "singleShare"
+  | "single"
+  | "coupleChildrenShare"
+  | "coupleChildren"
+  | "under18Share"
+  | "under18"
+  | "elderlyOnlyShare"
+  | "elderlyOnly"
+  | "elderlySingleShare"
+  | "elderlySingle"
+  | "unmarriedRate"
+  | "unmarriedRateMale"
+  | "unmarriedRateFemale"
+  | "unmarried"
+  | "unmarriedMale"
+  | "unmarriedFemale";
+/** All published fields per region; counts and shares (%), null = undefined (zero denominator). */
+export type HouseholdField =
+  | HouseholdMetric
+  | "general"
+  | "typeUnknown"
+  | "withElderly"
+  | "unmarriedBase"
+  | "unmarriedBaseMale"
+  | "unmarriedBaseFemale";
+export type Households = Record<HouseholdField, number | null>;
+export interface HouseholdData {
+  metadata: {
+    generatedAt: string;
+    baseDate: string;
+    regionCount: number;
+    unitCount: number;
+    sources: (Source & { table: string; use: string; statInfId: string })[];
+    checks: { published4_4Compared: number; published4_4MaxDiff: number };
+    missingByField: Record<string, number>;
+    definitions: Record<string, string>;
+  };
+  fields: HouseholdField[];
+  regions: Record<string, (number | null)[]>;
+}
 export type Bounds = [[number, number], [number, number]];
 export interface Region {
   code: string;
@@ -30,6 +73,8 @@ export interface Region {
   center?: [number, number];
   /** Derived map membership for the 21 city/ward aggregates, never extra population rows. */
   memberCodes?: string[];
+  /** Household layer joined by 5-digit code at load time (separate official tables). */
+  households?: Households | null;
 }
 export interface Source {
   title: string;

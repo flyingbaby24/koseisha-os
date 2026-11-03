@@ -23,7 +23,7 @@ export default function Header({
           <Logo />
         </button>
         <p className="topbar-lead">
-          出生率と子どもの人口を、市区町村ごとの地図で
+          出生率・子ども・世帯構造を、市区町村ごとの地図で
         </p>
         <nav className="main-nav" aria-label="メインナビゲーション">
           <button

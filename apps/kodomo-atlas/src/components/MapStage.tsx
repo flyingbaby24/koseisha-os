@@ -8,7 +8,7 @@ import type {
   Metric,
   Region,
 } from "../types";
-import { isCount } from "../ui";
+import { categories, categoryOf, isCount } from "../ui";
 import MapKey from "./MapKey";
 import { BaselineLabel } from "./common";
 
@@ -169,10 +169,16 @@ export default function MapStage(props: Props) {
                           props.onSecondMetric(e.target.value as Metric)
                         }
                       >
-                        {metricList.map((key) => (
-                          <option key={key} value={key}>
-                            {metrics[key].label}
-                          </option>
+                        {categories.map((category) => (
+                          <optgroup key={category.id} label={category.label}>
+                            {metricList
+                              .filter((key) => categoryOf(key) === category.id)
+                              .map((key) => (
+                                <option key={key} value={key}>
+                                  {metrics[key].label}
+                                </option>
+                              ))}
+                          </optgroup>
                         ))}
                       </select>
                       <ChevronDown size={15} aria-hidden="true" />
