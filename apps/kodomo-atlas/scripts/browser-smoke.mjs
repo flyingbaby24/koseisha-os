@@ -195,9 +195,10 @@ try {
     "Nationwide SVG paths drawn; Sapporo/Tokyo/Osaka/Naha in frame; 1,896 statistical regions",
   );
 
+  // Indicator buttons are named after the official indicator (visible short title included).
   for (const [label, title] of [
     ["年少人口比率", "年少人口比率"],
-    ["0〜14歳人口", "0〜14歳人口"],
+    ["子ども人口（0〜14歳人口）", "0〜14歳人口"],
     ["子どもの人口密度", "子どもの人口密度"],
     ["年齢別の人口分布", "0〜4歳人口"],
   ]) {
@@ -229,7 +230,14 @@ try {
     .locator(".mode-options")
     .getByRole("button", { name: "合計特殊出生率", exact: true })
     .click();
-  assert.equal(await page.locator(".reference-box b").textContent(), "1.33");
+  assert.equal(
+    await page.locator(".detail-big-number").textContent(),
+    "1.33",
+  );
+  assert.equal(
+    await page.locator(".map-key .ramp-national").textContent(),
+    "全国 1.33",
+  );
   check(
     "All eight indicators switch; published national TFR 1.33 and indicator periods retained",
   );
@@ -245,7 +253,7 @@ try {
     panels.map((panel) => panel.boundingBox()),
   );
   assert(leftBox.x < rightBox.x && Math.abs(leftBox.y - rightBox.y) < 1);
-  assert.equal(await page.locator(".compare-legend[open]").count(), 2);
+  assert.equal(await page.locator(".map-panel .map-key").count(), 2);
   assert.deepEqual(await page.locator(".map-year").allTextContents(), [
     "2018–2022年",
     "2020年",
@@ -373,7 +381,9 @@ try {
   report.viewport.mobile = mobileSize;
   const mobile = await contextFor(mobileSize, true);
   const phone = mobile.page;
-  await phone.locator(".mobile-filter-button").click();
+  // Search and indicators sit directly above the map on phones (no settings drawer).
+  const phoneMapTop = (await phone.locator(".map-canvas").boundingBox()).y;
+  assert(phoneMapTop < 844 * 0.35, "Map starts in the upper third of the phone screen");
   await search(phone, "豊中市", "27203");
   await phone
     .getByRole("button", { name: "地域の選択を解除", exact: true })
@@ -403,7 +413,7 @@ try {
     ),
   );
   assert(mobileA.width >= 340 && mobileB.width >= 340 && mobileB.y > mobileA.y);
-  assert.equal(await phone.locator(".compare-legend[open]").count(), 2);
+  assert.equal(await phone.locator(".map-panel .map-key").count(), 2);
   assert(
     !(await phone.evaluate(
       () => document.documentElement.scrollWidth > innerWidth,
@@ -413,7 +423,7 @@ try {
   await assertAligned(phone);
   await screenshot(phone, "mobile.png");
   check(
-    "390px touch viewport: settings/search/tap feedback, full-width comparison maps, two legends, no horizontal overflow",
+    "390px touch viewport: map in first view, search/tap feedback, full-width comparison maps, two legends, no horizontal overflow",
   );
 
   assert.deepEqual(report.runtimeErrors, []);
