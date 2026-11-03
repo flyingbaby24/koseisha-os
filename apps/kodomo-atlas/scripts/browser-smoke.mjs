@@ -221,11 +221,14 @@ try {
       title,
     );
   }
+  // Indicators are grouped into tabs: 出生・子ども / 世帯構造 / 未婚・高齢化.
+  await page.getByRole("tab", { name: "未婚・高齢化" }).click();
   await page
     .locator(".mode-options")
     .getByRole("button", { name: "人口増減率", exact: true })
     .click();
   assert.equal(await page.locator(".map-year").textContent(), "2015→2020年");
+  await page.getByRole("tab", { name: "出生・子ども" }).click();
   await page
     .locator(".mode-options")
     .getByRole("button", { name: "合計特殊出生率", exact: true })

@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, Database } from "lucide-react";
 import { JAPAN_BOUNDS } from "./MapView";
 import { comparisonReference, regionIndex } from "./regions";
+import { householdReference, joinHouseholds } from "./households";
 import type {
   Bounds,
   FocusRequest,
   Geography,
+  HouseholdData,
   MapPosition,
   Metric,
   Region,
@@ -25,6 +27,9 @@ const PHONE = "(max-width: 760px)";
 export default function App() {
   const [data, setData] = useState<Statistics | null>(null);
   const [geometry, setGeometry] = useState<Geography | null>(null);
+  const [householdMeta, setHouseholdMeta] = useState<
+    HouseholdData["metadata"] | null
+  >(null);
   const [error, setError] = useState("");
   const [metric, setMetric] = useState<Metric>("tfr");
   const [secondMetric, setSecondMetric] = useState<Metric>("childShare");
@@ -44,7 +49,11 @@ export default function App() {
     async function load() {
       try {
         const response = await Promise.all(
-          ["data/statistics.json", "data/municipalities.geojson"].map((url) =>
+          [
+            "data/statistics.json",
+            "data/municipalities.geojson",
+            "data/households.json",
+          ].map((url) =>
             fetch(`${import.meta.env.BASE_URL}${url}`, {
               signal: controller.signal,
             }),
@@ -54,10 +63,12 @@ export default function App() {
           throw new Error(
             "公開統計データを読み込めませんでした。READMEのデータ取得手順をご確認ください。",
           );
-        const [statistics, geography] = await Promise.all(
+        const [statistics, geography, households] = await Promise.all(
           response.map((r) => r.json()),
         );
-        setData(statistics);
+        // The household layer is joined by code; statistics.json itself is unchanged.
+        setData(joinHouseholds(statistics, households));
+        setHouseholdMeta(households.metadata);
         setGeometry(geography);
       } catch (e) {
         if (!controller.signal.aborted)
@@ -84,7 +95,10 @@ export default function App() {
   const scopeName =
     data?.prefectures.find((r) => r.prefCode === prefecture)?.name ?? "全国";
   const baseline = useMemo(
-    () => (data ? comparisonReference(data) : null),
+    () =>
+      data
+        ? { ...comparisonReference(data), households: householdReference(data) }
+        : null,
     [data],
   );
   const selectedRegion = selectedCode ? byCode.get(selectedCode) : undefined;
@@ -333,7 +347,11 @@ export default function App() {
         </span>
       </footer>
       {sourcesOpen && data && (
-        <DataDialog data={data} onClose={() => setSourcesOpen(false)} />
+        <DataDialog
+          data={data}
+          households={householdMeta}
+          onClose={() => setSourcesOpen(false)}
+        />
       )}
     </>
   );

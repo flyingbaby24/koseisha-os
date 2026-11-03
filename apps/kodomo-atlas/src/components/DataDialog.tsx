@@ -2,13 +2,31 @@ import { useEffect, useRef } from "react";
 import { Check, Database, Download, ExternalLink, X } from "lucide-react";
 import { integer } from "../metrics";
 import { unitCounts } from "../regions";
-import type { Statistics } from "../types";
+import type { HouseholdData, Statistics } from "../types";
+
+const householdTerms: Record<string, string> = {
+  single: "単独世帯",
+  singleShare: "単独世帯の割合",
+  coupleChildren: "夫婦と子どもから成る世帯",
+  coupleChildrenShare: "夫婦と子どもから成る世帯の割合",
+  under18: "18歳未満の世帯員がいる世帯",
+  under18Share: "18歳未満の世帯員がいる世帯の割合",
+  elderlyOnly: "65歳以上の世帯員のみの世帯",
+  elderlyOnlyShare: "65歳以上の世帯員のみの世帯の割合",
+  elderlySingle: "65歳以上の単独世帯",
+  elderlySingleShare: "65歳以上の単独世帯の割合",
+  unmarried: "25〜39歳の未婚者",
+  unmarriedRate: "25〜39歳の未婚率",
+  denominators: "割合の分母",
+};
 
 export default function DataDialog({
   data,
+  households,
   onClose,
 }: {
   data: Statistics;
+  households: HouseholdData["metadata"] | null;
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -22,6 +40,10 @@ export default function DataDialog({
     };
   }, []);
   const missing = data.municipalities.filter((r) => r.tfr === null);
+  const householdMissing = data.municipalities.filter(
+    (r) => r.households && r.households.singleShare === null,
+  );
+  const sources = [...data.metadata.sources, ...(households?.sources ?? [])];
   const units = unitCounts(data);
   return (
     <dialog
@@ -58,15 +80,17 @@ export default function DataDialog({
         <div className="data-year-notice">
           <Database size={20} />
           <p>
-            <b>出生率は2018〜2022年、人口は2020年。</b>
+            <b>出生率は2018〜2022年、人口・世帯・配偶関係は2020年。</b>
             <span>異なる年度の指標を、同じ年の実績として扱っていません。</span>
           </p>
         </div>
         <h3>データの出典</h3>
         <div className="source-list">
-          {data.metadata.sources.map((source, i) => (
+          {sources.map((source, i) => (
             <article key={source.file}>
-              <span className="source-index">0{i + 1}</span>
+              <span className="source-index">
+                {String(i + 1).padStart(2, "0")}
+              </span>
               <div>
                 <h4>
                   <a href={source.page} target="_blank" rel="noreferrer">
@@ -77,6 +101,12 @@ export default function DataDialog({
                 <p>
                   {source.period}
                   <span>公表 {source.published}</span>
+                  {"use" in source && (
+                    <>
+                      <br />
+                      使用：{String(source.use)}
+                    </>
+                  )}
                 </p>
                 <a
                   className="source-download"
@@ -118,9 +148,51 @@ export default function DataDialog({
             <dt>全国との比較</dt>
             <dd>
               出生率・年少人口比率・密度・人口増減率は全国の集計値と比較し、自治体の単純平均には置き換えません。人口数・年齢別人口だけは「自治体平均（参考）」として1,896市区町村・行政区の単純平均を示します。これは全国集計値とは別の参考値です。都道府県・市全体の人口数にはこの差を表示しません。
+              世帯数・未婚者数も同じく「自治体平均（参考）」と、世帯・未婚の割合は全国集計値と比較します。
             </dd>
           </div>
         </dl>
+        {households && (
+          <>
+            <h3>世帯構造・未婚・高齢化の指標</h3>
+            <div className="term-notice">
+              <p>
+                <b>「単独世帯」と「未婚者」は別の指標です。</b>
+                単独世帯は1人で住む世帯（年齢・配偶関係を問わない）、未婚者は配偶関係が「未婚」の人（親などと同居していても含む）です。
+              </p>
+              <p>
+                <b>「65歳以上の世帯員がいる世帯」と「65歳以上の世帯員のみの世帯」も別です。</b>
+                この地図の「高齢者のみの世帯」は世帯員が全員65歳以上の世帯で、全国では一般世帯の
+                {(
+                  ((data.national.households?.elderlyOnly ?? 0) /
+                    (data.national.households?.general ?? 1)) *
+                  100
+                ).toFixed(1)}
+                %（「いる」世帯は
+                {(
+                  ((data.national.households?.withElderly ?? 0) /
+                    (data.national.households?.general ?? 1)) *
+                  100
+                ).toFixed(1)}
+                %）です。
+              </p>
+            </div>
+            <dl className="definition-list">
+              {Object.entries(households.definitions).map(([key, description]) => (
+                <div key={key}>
+                  <dt>{householdTerms[key] ?? key}</dt>
+                  <dd>{description}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="method-text">
+              一般世帯のみを対象とし、寮・病院・社会施設などの施設等の世帯は含みません。配偶関係は不詳補完値ではなく原数値です。公表された第4-4表の未婚割合（{integer.format(households.checks.published4_4Compared)}値）と算出方法が一致することを確認しています。市区町村コードで結合し、政令指定都市・東京都区部の合計行は地図・ランキングに重ねていません。
+            </p>
+            <p className="method-text">
+              2つの地図を並べる比較は地域ごとの傾向を見比べるためのもので、指標どうしの因果関係を示すものではありません。
+            </p>
+          </>
+        )}
         <h3>1,896地域の内訳</h3>
         <p className="method-text">
           {units.cities}市（政令指定都市を除く）＋{units.towns}町＋
@@ -149,6 +221,14 @@ export default function DataDialog({
         <p className="method-text">
           年齢不詳人口は補完していません。年少人口比率の分母からは除かれ、総人口には含まれます。出生率だけで子育て環境の良し悪しや因果関係を示すものではありません。
         </p>
+        {households && (
+          <p className="method-text">
+            世帯・配偶関係の表に非公表値（「…」「X」）はなく、「-」は原表の記号規約どおり0として扱います。割合は分母が0の地域だけ算出不可（—）とし、0にはしていません
+            {householdMissing.length > 0 &&
+              `（${householdMissing.map((r) => `${r.prefecture}${r.name}`).join("、")}：2020年の人口・世帯が0）`}
+            。
+          </p>
+        )}
         <div className="data-provenance">
           <Check size={16} />
           <div>
@@ -163,6 +243,11 @@ export default function DataDialog({
             <a href={`${import.meta.env.BASE_URL}data/statistics.json`} target="_blank" rel="noreferrer">
               加工済みデータ・取得元・ハッシュを確認 <ExternalLink size={12} />
             </a>
+            {households && (
+              <a href={`${import.meta.env.BASE_URL}data/households.json`} target="_blank" rel="noreferrer">
+                世帯・配偶関係データ（取得元・ハッシュ・照合結果） <ExternalLink size={12} />
+              </a>
+            )}
           </div>
         </div>
       </div>

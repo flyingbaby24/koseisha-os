@@ -199,3 +199,23 @@
     gap: 2px;
   }
 }
+
+.term-notice {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 8px;
+  padding: 12px 14px;
+  border: 1px solid #ddd3ea;
+  border-radius: var(--radius);
+  background: #f6f2fa;
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--ink-2);
+}
+.term-notice b {
+  display: block;
+  color: var(--ink);
+}
+.data-provenance a + a {
+  margin-left: 14px;
+}

@@ -11,6 +11,7 @@ import {
   difference,
   formatValue,
   integer,
+  isHouseholdMetric,
   metrics,
   valueOf,
 } from "../metrics";
@@ -18,16 +19,27 @@ import type { Metric, Region } from "../types";
 import {
   binIndex,
   guide,
+  indicatorOf,
   isCount,
   levelLabel,
   rankOf,
   sortByMetric,
   type Rank,
 } from "../ui";
+import { withElderlyShare } from "../households";
 import { BaselineLabel } from "./common";
 import { Distribution, LegendTable } from "./Distribution";
 
 const keyMetrics: Metric[] = ["tfr", "childShare", "children", "childDensity"];
+/** Household shares with their counts; the never-married rate also by sex. */
+const householdItems: { share: Metric; count: Metric; bySex?: [Metric, Metric] }[] = [
+  { share: "singleShare", count: "single" },
+  { share: "coupleChildrenShare", count: "coupleChildren" },
+  { share: "under18Share", count: "under18" },
+  { share: "unmarriedRate", count: "unmarried", bySex: ["unmarriedRateMale", "unmarriedRateFemale"] },
+  { share: "elderlyOnlyShare", count: "elderlyOnly" },
+  { share: "elderlySingleShare", count: "elderlySingle" },
+];
 
 function AgeChart({ region }: { region: Region }) {
   const total = region.ages.reduce<number>((sum, n) => sum + (n ?? 0), 0);
@@ -122,6 +134,65 @@ function KeyStats({
   );
 }
 
+function HouseholdStats({
+  region,
+  metric,
+  onMetric,
+}: {
+  region: Region;
+  metric: Metric;
+  onMetric: (metric: Metric) => void;
+}) {
+  const households = region.households;
+  if (!households)
+    return <p className="small-note">この地域の世帯・配偶関係の統計は収録されていません。</p>;
+  const withElderly = withElderlyShare(households);
+  return (
+    <>
+      <div
+        className="key-stats household-stats"
+        role="group"
+        aria-label="世帯構造・未婚・高齢化の指標（押すと地図を切り替え）"
+      >
+        {householdItems.map((item) => {
+          const active = indicatorOf(item.share).metrics.includes(metric);
+          const value = valueOf(region, item.share);
+          const count = valueOf(region, item.count);
+          return (
+            <button
+              key={item.share}
+              className={active ? "active" : ""}
+              aria-pressed={active}
+              onClick={() => onMetric(item.share)}
+              title={`地図を「${metrics[item.share].label}」に切り替え`}
+            >
+              <span className="key-stat-label">
+                <i style={{ background: metrics[item.share].colors[4] }} />
+                {guide[item.share].title}
+              </span>
+              <b>
+                {formatValue(value, item.share)}
+                <small>{value === null ? "" : "%"}</small>
+              </b>
+              <em>
+                {item.bySex
+                  ? `男性 ${formatValue(valueOf(region, item.bySex[0]), item.bySex[0])}% · 女性 ${formatValue(valueOf(region, item.bySex[1]), item.bySex[1])}%`
+                  : `${formatValue(count, item.count)}${count === null ? "" : metrics[item.count].unit}`}
+              </em>
+            </button>
+          );
+        })}
+      </div>
+      <p className="reference-line">
+        一般世帯 {formatValue(households.general, "single")}世帯（施設等の世帯を除く）。
+        （参考）65歳以上の世帯員が「いる」世帯は
+        {withElderly === null ? "—" : ` ${withElderly.toFixed(1)}%`}
+        で、「高齢者のみの世帯」とは別の数値です。
+      </p>
+    </>
+  );
+}
+
 function Footnote({
   metric,
   onSources,
@@ -135,6 +206,9 @@ function Footnote({
         出典：{metrics[metric].source}（{metrics[metric].period}）
       </p>
       <p>出生率は子育て環境の良し悪しを直接示す指標ではありません。</p>
+      {isHouseholdMetric(metric) && (
+        <p>世帯・配偶関係の指標は暮らし方の違いを示すもので、地域の良し悪しや因果関係を示すものではありません。</p>
+      )}
       <button className="text-link" onClick={onSources}>
         <CircleHelp size={15} aria-hidden="true" />
         定義・出典・欠損値
@@ -322,11 +396,20 @@ export default function DetailPanel({
         <section className="detail-section">
           <div className="detail-section-title">
             <h3>
-              {isNational ? "全国" : scopeName}の主な指標
+              {isNational ? "全国" : scopeName}の出生・子ども
               <span>押すと地図を切り替え</span>
             </h3>
           </div>
           <KeyStats region={region} metric={metric} onMetric={onMetric} />
+        </section>
+
+        <section className="detail-section">
+          <div className="detail-section-title">
+            <h3>
+              世帯構造・未婚・高齢化<span>2020年10月1日</span>
+            </h3>
+          </div>
+          <HouseholdStats region={region} metric={metric} onMetric={onMetric} />
         </section>
 
         <div className="selection-tip">
@@ -439,10 +522,19 @@ export default function DetailPanel({
       <section className="detail-section">
         <div className="detail-section-title">
           <h3>
-            主な指標<span>押すと地図を切り替え</span>
+            出生・子ども<span>押すと地図を切り替え</span>
           </h3>
         </div>
         <KeyStats region={region} metric={metric} onMetric={onMetric} />
+      </section>
+
+      <section className="detail-section">
+        <div className="detail-section-title">
+          <h3>
+            世帯構造・未婚・高齢化<span>2020年10月1日</span>
+          </h3>
+        </div>
+        <HouseholdStats region={region} metric={metric} onMetric={onMetric} />
       </section>
 
       <section className="detail-section">

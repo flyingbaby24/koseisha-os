@@ -105,6 +105,7 @@
   align-items: baseline;
   flex-wrap: wrap;
   gap: 0 10px;
+  flex: 1;
   min-width: 0;
 }
 .map-key-title h3 {
@@ -135,6 +136,9 @@
   position: relative;
   display: inline-flex;
   align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
 }
 .compare-metric-select select {
   appearance: none;
@@ -148,7 +152,9 @@
   font-weight: 750;
   color: var(--ink);
   cursor: pointer;
-  max-width: 100%;
+  width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
 }
 .compare-metric-select select:hover {
   border-color: var(--green);

@@ -258,8 +258,22 @@
   color: var(--ink-3);
   line-height: 1.45;
 }
-.metric-card .metric-ramp {
+.metric-card-meta {
   grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.metric-card-meta .metric-ramp {
+  flex: 1;
+}
+.metric-card-meta small {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 .metric-check {
   grid-column: 3;
@@ -354,19 +368,90 @@
   box-shadow: var(--shadow-1);
 }
 
-/* Comparison presets */
-.compare-presets {
+/* Category tabs and variant toggles */
+.category-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+  margin-bottom: 10px;
+  padding: 3px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+.category-tabs button {
+  position: relative;
+  min-height: 36px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.category-tabs button:hover {
+  color: var(--ink);
+}
+.category-tabs button.active {
+  background: var(--surface);
+  color: var(--green-strong);
+  box-shadow: var(--shadow-1);
+}
+.tab-dot {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.variant-row {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 8px;
+  margin-bottom: 10px;
+}
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+.segmented button {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.segmented button:hover {
+  color: var(--ink);
+}
+.segmented button.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-1), inset 0 0 0 1.5px #8468a9;
+}
+
+/* Comparison presets: two columns so all six stay one tap away */
+.compare-presets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
 }
 .preset-button {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
-  gap: 11px;
-  align-items: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   width: 100%;
-  padding: 11px 12px;
+  min-height: 76px;
+  padding: 9px 10px 10px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   background: var(--surface);
@@ -376,41 +461,48 @@
 .preset-button:hover {
   border-color: var(--green);
   background: var(--surface-2);
-  color: var(--green);
 }
 .preset-button.active {
   border-color: var(--green);
   background: var(--green-soft);
-  color: var(--green-strong);
   box-shadow: inset 0 0 0 1px var(--green);
 }
 .preset-ramps {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 .preset-ramps .metric-ramp {
-  height: 7px;
+  flex: 1;
+  height: 6px;
 }
 .preset-text b {
   display: block;
-  font-size: 14.5px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--ink);
   line-height: 1.4;
 }
 .preset-text small {
   display: block;
-  font-size: 12.5px;
+  margin-top: 2px;
+  font-size: 11.5px;
   color: var(--ink-3);
-  line-height: 1.45;
+  line-height: 1.4;
+}
+.preset-check {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  color: var(--green-strong);
 }
 .compare-button {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  width: 100%;
   min-height: 42px;
+  margin-top: 8px;
   border: 1px dashed var(--line-strong);
   border-radius: var(--radius);
   font-size: 14px;
@@ -427,6 +519,12 @@
   border-color: var(--green-strong);
   background: var(--green-strong);
   color: #fff;
+}
+.compare-note {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-3);
 }
 
 /* Display options */
@@ -625,8 +723,7 @@
     white-space: nowrap;
   }
   .metric-card-text > small,
-  .metric-card-title small,
-  .metric-card .metric-ramp,
+  .metric-card-meta,
   .metric-check {
     display: none;
   }
@@ -650,26 +747,18 @@
     background: var(--surface);
     border-top: 1px solid var(--line);
   }
-  .compare-presets {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+  .category-tabs {
+    margin: 0 12px 8px;
   }
-  .compare-presets .preset-button {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
-    align-content: start;
+  .category-tabs button {
+    min-height: 38px;
+    font-size: 13.5px;
   }
-  .compare-presets .preset-button > svg {
-    display: none;
+  .variant-row {
+    margin: 0 12px 8px;
   }
-  .preset-ramps {
-    flex-direction: row;
-  }
-  .preset-ramps .metric-ramp {
-    flex: 1;
-  }
-  .compare-button {
-    grid-column: 1 / -1;
+  .preset-text b {
+    font-size: 13.5px;
   }
   .display-options {
     order: 6;

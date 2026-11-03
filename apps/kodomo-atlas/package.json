@@ -9,9 +9,11 @@
     "pages:build": "npm run build && node scripts/publish-pages.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "data:fetch": "python scripts/prepare_data.py",
-    "data:check": "python scripts/validate_data.py",
+    "data:households": "python scripts/prepare_households.py",
+    "data:check": "python scripts/validate_data.py && python scripts/validate_households.py",
     "qa:check": "node scripts/check_visualization.mjs",
     "qa:browser": "node scripts/browser-smoke.mjs",
+    "qa:households": "node scripts/household-smoke.mjs",
     "qa:deploy": "node scripts/deployment-smoke.mjs"
   },
   "dependencies": {
