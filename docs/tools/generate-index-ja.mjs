@@ -184,6 +184,7 @@ const tr = {
   "Every channel, from news and social accounts to direct contact, is collected on one page.":"お知らせ、SNS、直接のご連絡まで、すべての窓口を1ページにまとめています。",
   "<b>All links</b><span>News, social accounts and contact</span>":"<b>すべてのリンク</b><span>お知らせ・SNS・連絡先</span>",
   "<span>Support independent development</span>":"<span>独立開発を支援する</span>",
+  "<b>Leave a tip</b>":"<b>チップで応援</b>",
   "<span>Source, issues and documentation</span>":"<span>ソース・Issue・ドキュメント</span>",
 
   // Footer
@@ -194,6 +195,8 @@ const tr = {
   "<h2>Connect</h2>":"<h2>つながる</h2>",
   ">Kunizukuri — Daidarabotchi</a>":">国創 — Daidarabotchi</a>",
   "All links ↗":"すべてのリンク ↗",
+  ">Leave a tip</a>":">チップで応援</a>",
+  ">Specified Commercial Transactions Act disclosure</a>":">特定商取引法に基づく表記</a>",
   "<li><a href=\"index-ja.html\" hreflang=\"ja\" lang=\"ja\">日本語</a></li>":"<li><a href=\"index.html\" hreflang=\"en\" lang=\"en\">English</a></li>",
   "Back to top ↑":"ページの先頭へ ↑",
 };
@@ -209,6 +212,7 @@ const routes = [
   ['devblog/articles/resonance-system.html"', 'devblog/articles/resonance-system-ja.html"'],
   ['devblog/articles/why-build-a-game-from-thought.html"', 'devblog/articles/why-build-a-game-from-thought-ja.html"'],
   ['href="research/thoughtmap/"', 'href="research/thoughtmap/index-ja.html"'],
+  ['href="support/"', 'href="support/index-ja.html"'],
   ['href="research/stratagems/?lang=en"', 'href="research/stratagems/?lang=ja"'],
   ['href="kunizukuri/index-en.html"', 'href="kunizukuri/"'],
   ['href="jinnsp/"', 'href="jinnsp/index-ja.html"'],
