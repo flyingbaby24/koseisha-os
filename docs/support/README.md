@@ -29,7 +29,7 @@ Stripe's published conditions:
 
 1. In the **Jinn Project LLC Stripe account**, confirm the tip-for-published-content use case and any required account settings.
 2. Create a **one-time Payment Link** for the relevant published-content tip use case. If supported for the account, allow the customer to choose the amount; keep the label as a *tip/payment*, not a charitable-donation claim.
-3. Ensure the site's required **Commercial Disclosure / 特定商取引法に基づく表記** page and return/refund/customer contact details are complete and accessible. The legal company name, representative, address, telephone and permitted payment methods must be verified from company records; do not populate these with placeholders.
+3. The required **Commercial Disclosure / 特定商取引法に基づく表記** page lives at `docs/legal/index.html` (published as `/legal/`), linked from both homepages and both support pages. It carries the registered company name, representative, head-office address, contact email, payment methods and the tip refund policy; the telephone number uses the Act's request-disclosure wording (provided without delay on request). If Stripe's review asks for a published number, add a company number there instead. After deployment, register the live URL in the Stripe Dashboard under Settings → Business → Business details → Commerce disclosures.
    Stripe's requirements: https://support.stripe.com/questions/how-to-create-and-display-a-commerce-disclosure-page?locale=ja-JP
 4. Replace the empty `STRIPE_TIP_PAYMENT_LINK` in `docs/support/support.js` with the approved **live** `https://buy.stripe.com/...` link.
 5. Only after appropriate checks, merge this branch to deploy. Do not expose a Stripe test link on the production domain.
