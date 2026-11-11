@@ -196,6 +196,7 @@ const tr = {
   ">Kunizukuri — Daidarabotchi</a>":">国創 — Daidarabotchi</a>",
   "All links ↗":"すべてのリンク ↗",
   ">Leave a tip</a>":">チップで応援</a>",
+  ">Specified Commercial Transactions Act disclosure</a>":">特定商取引法に基づく表記</a>",
   "<li><a href=\"index-ja.html\" hreflang=\"ja\" lang=\"ja\">日本語</a></li>":"<li><a href=\"index.html\" hreflang=\"en\" lang=\"en\">English</a></li>",
   "Back to top ↑":"ページの先頭へ ↑",
 };
