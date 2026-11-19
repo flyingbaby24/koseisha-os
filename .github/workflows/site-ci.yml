@@ -39,6 +39,11 @@ jobs:
           node docs/tools/generate-index-ja.mjs
           git diff --exit-code -- docs/index.html docs/index-ja.html
 
+      - name: Source of Thought Tactics pages are generated from their template
+        run: |
+          node docs/tools/build-sott.mjs
+          git diff --exit-code -- docs/sott/index.html docs/sott/index-ja.html
+
       - name: Stratagems Atlas is generated from its data
         run: |
           node docs/tools/build-stratagems.mjs

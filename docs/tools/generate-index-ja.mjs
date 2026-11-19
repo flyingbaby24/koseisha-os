@@ -98,7 +98,9 @@ const tr = {
 
   // Work
   "<span class=\"index\">02</span>Work":"<span class=\"index\">02</span>作品",
-  "Eight entry points.":"8つの入口。",
+  "Nine entry points.":"9つの入口。",
+  "A network tactics game where works become units and fight for a 50-node board.":"作品がユニットになり、50ノードの盤面を奪い合うネットワーク戦術ゲーム。",
+  "See the work in progress":"開発中の作品を見る",
   "Research / Public Data Visualization":"研究 / 公開データの可視化",
   "An interactive map of fertility rates and child population across Japan, visualized by municipality.":"全国の出生率と子どもの人口分布を、市区町村単位で可視化するインタラクティブマップ",
   "Open Kodomo Atlas":"こどもアトラスを開く",
@@ -143,7 +145,7 @@ const tr = {
   "Explore ThoughtMap →":"ThoughtMapについて →",
   "<p class=\"loop-step\">Expressions</p>":"<p class=\"loop-step\">表現</p>",
   "<h3>Games &amp; studies</h3>":"<h3>ゲームと研究</h3>",
-  "Profiles become cards, skills and formations in Source of Thought, and patterns of judgement in the Stratagems Atlas.":"プロファイルは、Source of ThoughtではCard・Skill・Formationに、Stratagems Atlasでは判断のパターンになります。",
+  "Profiles become cards, skills and formations in Source of Thought, units on a network in Source of Thought Tactics, and patterns of judgement in the Stratagems Atlas.":"プロファイルは、Source of ThoughtではCard・Skill・Formationに、Source of Thought Tacticsではネットワーク上のユニットに、Stratagems Atlasでは判断のパターンになります。",
   "Research should remain <em>inspectable.</em>":"研究は、<em>検証できるかたちで。</em>",
   "<span>Research record</span>":"<span>研究業績</span>",
   "<span>Source code and documentation</span>":"<span>ソースコードとドキュメント</span>",
@@ -212,6 +214,7 @@ const routes = [
   ['devblog/articles/resonance-system.html"', 'devblog/articles/resonance-system-ja.html"'],
   ['devblog/articles/why-build-a-game-from-thought.html"', 'devblog/articles/why-build-a-game-from-thought-ja.html"'],
   ['href="research/thoughtmap/"', 'href="research/thoughtmap/index-ja.html"'],
+  ['href="sott/"', 'href="sott/index-ja.html"'],
   ['href="support/"', 'href="support/index-ja.html"'],
   ['href="research/stratagems/?lang=en"', 'href="research/stratagems/?lang=ja"'],
   ['href="kunizukuri/index-en.html"', 'href="kunizukuri/"'],

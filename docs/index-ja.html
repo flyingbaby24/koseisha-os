@@ -85,12 +85,14 @@
           <span class="domain domain-material" aria-hidden="true">素材</span>
           <svg class="field-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
             <g class="spokes">
-              <line pathLength="1" x1="48" y1="52" x2="20" y2="28"/><line pathLength="1" x1="48" y1="52" x2="50" y2="18"/><line pathLength="1" x1="48" y1="52" x2="82" y2="28"/><line pathLength="1" x1="48" y1="52" x2="68" y2="44"/><line pathLength="1" x1="48" y1="52" x2="24" y2="64"/><line pathLength="1" x1="48" y1="52" x2="40" y2="84"/><line pathLength="1" x1="48" y1="52" x2="78" y2="78"/>
+              <line pathLength="1" x1="48" y1="52" x2="20" y2="28"/><line pathLength="1" x1="48" y1="52" x2="50" y2="18"/><line pathLength="1" x1="48" y1="52" x2="82" y2="28"/><line pathLength="1" x1="48" y1="52" x2="68" y2="44"/><line pathLength="1" x1="48" y1="52" x2="24" y2="64"/><line pathLength="1" x1="48" y1="52" x2="40" y2="84"/><line pathLength="1" x1="48" y1="52" x2="78" y2="78"/><line pathLength="1" x1="48" y1="52" x2="88" y2="56"/>
             </g>
             <g class="links">
               <line data-pair="map sot" pathLength="1" x1="50" y1="18" x2="68" y2="44"/>
               <line data-pair="map atlas" pathLength="1" x1="50" y1="18" x2="20" y2="28"/>
               <line data-pair="atlas sot" pathLength="1" x1="20" y1="28" x2="68" y2="44"/>
+              <line data-pair="sot sott" pathLength="1" x1="68" y1="44" x2="88" y2="56"/>
+              <line data-pair="map sott" pathLength="1" x1="50" y1="18" x2="88" y2="56"/>
               <line data-pair="mandalizm jinnsp" pathLength="1" x1="24" y1="64" x2="82" y2="28"/>
               <line data-pair="mandalizm sole" pathLength="1" x1="24" y1="64" x2="40" y2="84"/>
               <line data-pair="sole kunizukuri" pathLength="1" x1="40" y1="84" x2="78" y2="78"/>
@@ -103,6 +105,7 @@
             <li style="--x:50;--y:18" data-node="map"><a href="#p-map"><b>ThoughtMap</b><small>研究基盤</small></a></li>
             <li style="--x:82;--y:28" data-node="jinnsp" data-side="start"><a href="#p-jinnsp"><b>JinnSP</b><small>アプリ</small></a></li>
             <li style="--x:68;--y:44" data-node="sot"><a href="#p-sot"><b>Source of Thought</b><small>ゲーム</small></a></li>
+            <li style="--x:88;--y:56" data-node="sott" data-side="start"><a href="#p-sott"><b>SoT Tactics</b><small>ゲーム</small></a></li>
             <li style="--x:24;--y:64" data-node="mandalizm"><a href="#p-mandalizm"><b>Mandalizm</b><small>ゲーム</small></a></li>
             <li style="--x:40;--y:84" data-node="sole"><a href="#p-sole"><b>Grounding Sole</b><small>プロダクト</small></a></li>
             <li style="--x:78;--y:78" data-node="kunizukuri" data-side="start"><a href="#p-kunizukuri"><b lang="ja">国創</b><small>ゲーム</small></a></li>
@@ -155,7 +158,7 @@
     <section class="section work" id="projects" aria-labelledby="work-title">
       <div class="section-head">
         <p class="kicker"><span class="index">02</span>作品</p>
-        <h2 id="work-title">8つの入口。</h2>
+        <h2 id="work-title">9つの入口。</h2>
         <p class="section-lede">ゲーム、研究基盤、公開アプリ、そしてプロダクト。同じ問いから生まれた、独立したプロジェクトです。</p>
       </div>
       <div class="filters" role="group" aria-label="プロジェクトを絞り込む" data-status-template="{total}件中{n}件を表示" hidden>
@@ -173,6 +176,15 @@
             <h3 class="card-title">Source of Thought</h3>
             <span class="card-text">思想が意味・相性・Resonanceで競い合う戦略カードゲーム。</span>
             <span class="card-cta">ゲーム公式サイトへ <span aria-hidden="true">→</span></span>
+          </a>
+        </li>
+        <li class="work-item" data-kind="game">
+          <a class="project-card project-sott" id="p-sott" href="sott/index-ja.html">
+            <span class="card-media"><picture><source type="image/webp" srcset="assets/img/sott-battle-480.webp 480w, assets/img/sott-battle-960.webp 960w" sizes="(min-width: 1100px) 33vw, (min-width: 700px) 50vw, 100vw"><img src="assets/img/sott-battle-480.webp" width="480" height="270" loading="lazy" decoding="async" alt=""></picture></span>
+            <span class="card-meta"><span class="status status-dev">開発中</span><span>ゲーム · Web</span></span>
+            <h3 class="card-title">Source of Thought Tactics</h3>
+            <span class="card-text">作品がユニットになり、50ノードの盤面を奪い合うネットワーク戦術ゲーム。</span>
+            <span class="card-cta">開発中の作品を見る <span aria-hidden="true">→</span></span>
           </a>
         </li>
         <li class="work-item" data-kind="research">
@@ -264,8 +276,8 @@
         <li>
           <p class="loop-step">表現</p>
           <h3>ゲームと研究</h3>
-          <p>プロファイルは、Source of ThoughtではCard・Skill・Formationに、Stratagems Atlasでは判断のパターンになります。</p>
-          <p class="loop-links"><a href="research/source-of-thought/index-ja.html">Source of Thought →</a><a href="research/stratagems/?lang=ja">Stratagems Atlas →</a></p>
+          <p>プロファイルは、Source of ThoughtではCard・Skill・Formationに、Source of Thought Tacticsではネットワーク上のユニットに、Stratagems Atlasでは判断のパターンになります。</p>
+          <p class="loop-links"><a href="research/source-of-thought/index-ja.html">Source of Thought →</a><a href="sott/index-ja.html">Source of Thought Tactics →</a><a href="research/stratagems/?lang=ja">Stratagems Atlas →</a></p>
         </li>
       </ol>
 
@@ -287,7 +299,7 @@
         <p class="section-lede">思想・身体・素材・システムに潜む見えない構造は、どうすれば人が見て、遊び、使えるものになるのか。Jinn Projectのすべての作品は、その問いへのひとつの答えです。</p>
       </div>
       <ul class="domains">
-        <li><h3>思考</h3><p>意味論・認知・哲学。</p><p class="domain-works">ThoughtMap · Stratagems Atlas · Source of Thought</p></li>
+        <li><h3>思考</h3><p>意味論・認知・哲学。</p><p class="domain-works">ThoughtMap · Stratagems Atlas · Source of Thought · Source of Thought Tactics</p></li>
         <li><h3>身体</h3><p>リズム・動き・知覚。</p><p class="domain-works">Mandalizm · Grounding Sole</p></li>
         <li><h3>素材</h3><p>土地・モノ・フィジカルデザイン。</p><p class="domain-works">国創 · Grounding Sole</p></li>
         <li><h3>システム</h3><p>オープンソフトウェアと公開ツール。</p><p class="domain-works">JinnSP · ThoughtMap · GitHub</p></li>
@@ -303,7 +315,7 @@
       <ul class="figures" aria-label="プロジェクトの数字">
         <li><strong>64,000+</strong><span>ThoughtMapに収録された作品</span></li>
         <li><strong>36</strong><span>Atlasに収録された計略</span></li>
-        <li><strong>8</strong><span>4つの領域にまたがるプロジェクト</span></li>
+        <li><strong>9</strong><span>4つの領域にまたがるプロジェクト</span></li>
         <li><strong>2</strong><span>言語（英語・日本語）</span></li>
       </ul>
     </section>
@@ -350,6 +362,7 @@
           <h2>作品</h2>
           <ul>
             <li><a href="research/source-of-thought/index-ja.html">Source of Thought</a></li>
+            <li><a href="sott/index-ja.html">Source of Thought Tactics</a></li>
             <li><a href="https://koseisha-os.onrender.com/" target="_blank" rel="noopener noreferrer">ThoughtMap ↗<span class="sr-only">（新しいタブで開きます）</span></a></li>
             <li><a href="research/stratagems/?lang=ja">Stratagems Atlas</a></li>
             <li><a href="kunizukuri/">国創 — Daidarabotchi</a></li>

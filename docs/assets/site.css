@@ -142,6 +142,7 @@ em{font-style:italic}
 .field-nodes a:focus-visible{outline-offset:6px}
 .field-plane:has([data-node="map"] a:is(:hover,:focus-visible)) line[data-pair~="map"],
 .field-plane:has([data-node="sot"] a:is(:hover,:focus-visible)) line[data-pair~="sot"],
+.field-plane:has([data-node="sott"] a:is(:hover,:focus-visible)) line[data-pair~="sott"],
 .field-plane:has([data-node="atlas"] a:is(:hover,:focus-visible)) line[data-pair~="atlas"],
 .field-plane:has([data-node="jinnsp"] a:is(:hover,:focus-visible)) line[data-pair~="jinnsp"],
 .field-plane:has([data-node="mandalizm"] a:is(:hover,:focus-visible)) line[data-pair~="mandalizm"],
