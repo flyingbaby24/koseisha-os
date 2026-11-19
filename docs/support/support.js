@@ -1,7 +1,7 @@
 // Paste the approved *live* Stripe Payment Link (customer chooses what to pay)
 // after Stripe confirms this account's use case: tips for already-published work.
 // Never paste a secret key here. A blank value keeps checkout disabled.
-const STRIPE_TIP_PAYMENT_LINK = "";
+const STRIPE_TIP_PAYMENT_LINK = "https://buy.stripe.com/dRmaEQeb323C7VcbssfYY00";
 
 for (const link of document.querySelectorAll("[data-tip-checkout]")) {
   let valid = false;
