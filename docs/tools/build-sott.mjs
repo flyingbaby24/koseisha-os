@@ -126,7 +126,7 @@ const L = {
       ["here", "Network tactics", "Source of Thought Tactics", "Works become units. Five against five on a 50-node network where movement is territory. In development, playable alpha.", "You are here"],
     ],
     s8k: "Development", s8h: "In development. <em>Playable now in your browser.</em>",
-    play: "PLAY SoTT", playNote: "Free, no account. Opens the TACTICAL alpha in a new tab. Best on a desktop browser.",
+    play: "PLAY SoTT", playNote: "Free, no account. Opens the TACTICAL alpha in a new tab. For desktop browsers.", playPc: "Playable on a desktop browser. The alpha does not support phone screens yet.",
     s8l: "A public alpha of TACTICAL runs in the browser. It is a development build: rules, balance and interface will change, and it has no background music yet.",
     devFacts: [["Status", "In development", "Public alpha, playable in the browser"], ["Shown here", "TACTICAL — 5 vs 5 on 50 nodes", "Captured 19 November 2026, ruleset 0.28.1"], ["Platform", "Web browser", "TypeScript and Three.js"], ["Roster", "40 works, 10 roles", "Fixed roster shipped with the build"], ["Saving", "This browser only", "Formations are not synced between devices"], ["Source code", "Not public", "Private during development"]],
     devH: "Play the alpha.", devP: "Pick five works, place them and fight a full 5 vs 5 battle against the AI. Source of Thought, the card game from the same line of research, is playable too.",
@@ -240,7 +240,7 @@ const L = {
       ["here", "ネットワーク戦術", "Source of Thought Tactics", "作品がユニットになる。移動がそのまま領土になる、50ノードのネットワークでの5対5。開発中、アルファ版を公開中。", "現在のページ"],
     ],
     s8k: "開発状況", s8h: "開発中。<em>ブラウザで、いま遊べます。</em>",
-    play: "SoTTをプレイ", playNote: "無料・登録不要。TACTICALのアルファ版が新しいタブで開きます。パソコンのブラウザを推奨します。",
+    play: "SoTTをプレイ", playNote: "無料・登録不要。TACTICALのアルファ版が新しいタブで開きます。パソコンのブラウザ向けです。", playPc: "パソコンのブラウザで遊べます。アルファ版はスマートフォンの画面にまだ対応していません。",
     s8l: "TACTICALのアルファ版をブラウザで公開しています。開発中のビルドのため、ルール・バランス・画面は今後変わります。BGMはまだ入っていません。",
     devFacts: [["状況", "開発中", "アルファ版をブラウザで公開中"], ["掲載内容", "TACTICAL — 50ノードでの5対5", "2026年11月19日撮影、ルールセット0.28.1"], ["プラットフォーム", "Webブラウザ", "TypeScriptとThree.js"], ["ロスター", "40作品・10ロール", "ビルドに同梱した固定ロスター"], ["保存", "このブラウザ内のみ", "編成はほかの端末と同期されません"], ["ソースコード", "非公開", "開発中のため公開していません"]],
     devH: "アルファ版を遊ぶ。", devP: "5つの作品を選んで配置し、AIを相手に5対5の戦闘を最後まで遊べます。同じ研究から生まれたカードゲーム、Source of Thoughtも公開中です。",
@@ -340,7 +340,7 @@ function page(s) {
       <div class="hero-copy">
         <p class="hero-brand"><a href="${s.home}"><picture><source srcset="../assets/img/jinn-mark-96.webp" type="image/webp"><img src="../assets/img/jinn-mark-96.png" width="22" height="22" alt=""></picture>${s.heroBrand}</a><span class="chip">${s.chip}</span></p>
         <h1 id="hero-title" aria-label="Source of Thought Tactics"><span class="l1" aria-hidden="true">${chars("Source of Thought", 0)}</span><span class="l2" aria-hidden="true">${chars("Tactics", 6)}</span></h1>
-        <div class="hero-lines"><p class="hero-catch">${s.heroCatch}</p><p class="hero-sub">${s.heroSub}</p><p class="hero-play">${playLink}</p></div>
+        <div class="hero-lines"><p class="hero-catch">${s.heroCatch}</p><p class="hero-sub">${s.heroSub}</p><p class="hero-play">${playLink}<span class="play-pc">${esc(s.playPc)}</span></p></div>
       </div>
       <div class="hero-foot">
         <dl class="hero-facts">${s.facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
@@ -442,7 +442,7 @@ function page(s) {
         ${head("08", "development", s.s8k, s.s8h, s.s8l)}
         <div class="dev-grid">
           <dl class="dev-facts" data-rv>${s.devFacts.map(([k, v, sm]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}<small>${esc(sm)}</small></dd></div>`).join("")}</dl>
-          <div class="dev-side" data-rv><h3>${esc(s.devH)}</h3><p>${esc(s.devP)}</p><p class="play-note">${esc(s.playNote)}</p><p class="dev-actions">${playLink}<a class="btn" href="${s.sot}">${esc(s.devA[0])} <span aria-hidden="true">→</span></a>${extLink("https://linktr.ee/Jinn_project", s.devA[1], "btn")}</p></div>
+          <div class="dev-side" data-rv><h3>${esc(s.devH)}</h3><p>${esc(s.devP)}</p><p class="play-note">${esc(s.playNote)}</p><p class="play-pc">${esc(s.playPc)}</p><p class="dev-actions">${playLink}<a class="btn" href="${s.sot}">${esc(s.devA[0])} <span aria-hidden="true">→</span></a>${extLink("https://linktr.ee/Jinn_project", s.devA[1], "btn")}</p></div>
         </div>
         <nav class="more" aria-label="${esc(s.s8k)}">${[[s.homeTop, 0], [s.tm, 1], [s.sot, 2], [s.atlas, 3]].map(([href, i]) => `<a href="${href}"><span>${esc(s.more[i][1])}</span><b>${esc(s.more[i][0])}</b></a>`).join("")}</nav>
       </div>

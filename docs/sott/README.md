@@ -54,5 +54,7 @@ real board graph, but movement is simplified and there is no combat.
 SoTT has a public alpha: the TACTICAL web build on Cloudflare Pages (project `sott`,
 `https://sott-8kg.pages.dev`). The page keeps "In development", offers `PLAY SoTT` /
 `SoTTをプレイ` (`PLAY_URL` in `docs/tools/build-sott.mjs`, also asserted in the tests) and
-does not link to the game's source. If the game moves to another origin, change
+does not link to the game's source. The play link shows at 1024 px and wider only
+(`.btn-play` / `.play-pc` in `sott.css`), because the alpha battle HUD does not fit phone
+screens; narrower screens get a "desktop browser" notice instead. If the game moves to another origin, change
 `PLAY_URL` and the test together, after the new URL has been verified.

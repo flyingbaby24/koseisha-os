@@ -103,6 +103,9 @@ em{font-style:italic}
 .hero-play{margin-top:22px}
 .btn-play{font-weight:700;letter-spacing:.06em}
 .play-note{font-size:.8125rem;color:var(--paper-2)}
+/* The alpha battle HUD does not fit phone screens: offer the play link on desktop widths only. */
+.play-pc{display:none;font-size:.8125rem;color:var(--paper-2);max-width:34ch}
+@media (max-width:1023px){.btn-play,.play-note{display:none}.play-pc{display:block}}
 .btn span[aria-hidden]{transition:transform .25s var(--ease)}
 .btn:hover span[aria-hidden]{transform:translateX(4px)}
 

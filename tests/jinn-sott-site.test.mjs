@@ -104,6 +104,8 @@ test('the public alpha is offered as a play link while the work stays in develop
       assert.equal(href, 'https://sott-8kg.pages.dev/formation.html', p);
       assert.equal(label.trim(), p.endsWith('-ja.html') ? 'SoTTをプレイ' : 'PLAY SoTT', p);
     }
+    assert.equal((html.match(/class="play-pc"/g) || []).length, 2, p + ': desktop-only notice next to each play link');
+    assert.match(read('sott/sott.css'), /@media \(max-width:1023px\)\{\.btn-play,\.play-note\{display:none\}\.play-pc\{display:block\}\}/, 'play link is hidden below desktop widths');
     assert.doesNotMatch(html, /github\.com\/flyingbaby24\/sott/, p);
     assert.match(text, p.endsWith('-ja.html') ? /開発中/ : /In development/, p);
   }
