@@ -100,6 +100,9 @@ em{font-style:italic}
 .btn:hover{border-color:var(--cyan);color:var(--cyan)}
 .btn-gold{background:linear-gradient(100deg,#f2dca6,#c9a45c);border-color:transparent;color:#1a1408}
 .btn-gold:hover{background:var(--paper);color:var(--bg);border-color:transparent}
+.hero-play{margin-top:22px}
+.btn-play{font-weight:700;letter-spacing:.06em}
+.play-note{font-size:.8125rem;color:var(--paper-2)}
 .btn span[aria-hidden]{transition:transform .25s var(--ease)}
 .btn:hover span[aria-hidden]{transform:translateX(4px)}
 

@@ -51,6 +51,8 @@ real board graph, but movement is simplified and there is no combat.
 
 ## Status wording
 
-SoTT has no public build. The page says "In development", offers no play button and
-does not link to the game's source. Change that wording only when a public build
-exists.
+SoTT has a public alpha: the TACTICAL web build on Cloudflare Pages (project `sott`,
+`https://sott-8kg.pages.dev`). The page keeps "In development", offers `PLAY SoTT` /
+`SoTTをプレイ` (`PLAY_URL` in `docs/tools/build-sott.mjs`, also asserted in the tests) and
+does not link to the game's source. If the game moves to another origin, change
+`PLAY_URL` and the test together, after the new URL has been verified.

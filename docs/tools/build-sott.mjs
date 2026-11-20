@@ -12,6 +12,8 @@ import { fileURLToPath } from "node:url";
 
 const docs = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const base = "https://www.jinn-project.com/";
+// Public alpha (Cloudflare Pages, project "sott"). Change together with tests/jinn-sott-site.test.mjs.
+const PLAY_URL = "https://sott-8kg.pages.dev/formation.html";
 const esc = (s) => String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 
 const KEYS = ["PHILOSOPHY", "PSYCHOLOGY", "SCIENCE", "MORAL", "ECONOMY", "IDEOLOGY", "EMOTION", "INDIVIDUAL", "COMMUNITY", "KARMA"];
@@ -28,7 +30,7 @@ const L = {
     ogAlt: "Source of Thought Tactics — a 5 vs 5 battle on the 50-node network board.",
     skip: "Skip to content", brandLabel: "Jinn Project — home", crumb: "Source of Thought Tactics", langLabel: "Language", index: "Index", indexLabel: "Sections", railLabel: "Page sections",
     nav: ["Top", "Thought becomes territory", "The battlefield", "Tactical decisions", "Gameplay gallery", "AI plays tactics", "From ThoughtMap to SoTT", "Development"],
-    heroBrand: "A Jinn Project work", chip: "In development",
+    heroBrand: "A Jinn Project work", chip: "Playable alpha",
     heroSub: "A network tactics game in which works of literature, philosophy and science become units, and the ideas they carry decide how they fight.",
     heroCatch: "Thought becomes territory.",
     heroPosterAlt: "Source of Thought Tactics: ten units fight across the octagonal nodes of the network board.",
@@ -121,12 +123,13 @@ const L = {
       ["org", "Research and development", "Jinn Project", "The independent project behind all three: research tools, open systems and games that make hidden structure visible.", "Jinn Project home"],
       ["tm", "Analysis", "ThoughtMap", "Searches and compares tens of thousands of works by meaning, and describes each as a composition of ideas.", "About ThoughtMap"],
       ["sot", "Card strategy", "Source of Thought", "Works become cards. Ten-card decks, five members and a 5×5 formation, playable now in the browser.", "Source of Thought"],
-      ["here", "Network tactics", "Source of Thought Tactics", "Works become units. Five against five on a 50-node network where movement is territory. In development.", "You are here"],
+      ["here", "Network tactics", "Source of Thought Tactics", "Works become units. Five against five on a 50-node network where movement is territory. In development, playable alpha.", "You are here"],
     ],
-    s8k: "Development", s8h: "In development. <em>Not yet playable in public.</em>",
-    s8l: "Everything on this page was captured from a working development build. A public build will be announced on the Jinn Project site when it exists.",
-    devFacts: [["Status", "In development", "Development build; no public release yet"], ["Shown here", "TACTICAL — 5 vs 5 on 50 nodes", "Captured 19 November 2026, ruleset 0.28.1"], ["Platform", "Web browser", "TypeScript and Three.js"], ["Roster", "40 works, 10 roles", "Fixed roster shipped with the build"], ["Source code", "Not public", "Private during development"]],
-    devH: "Follow the work.", devP: "Source of Thought, the card game from the same line of research, is playable today. News about SoTT will appear with the other Jinn Project releases.",
+    s8k: "Development", s8h: "In development. <em>Playable now in your browser.</em>",
+    play: "PLAY SoTT", playNote: "Free, no account. Opens the TACTICAL alpha in a new tab. Best on a desktop browser.",
+    s8l: "A public alpha of TACTICAL runs in the browser. It is a development build: rules, balance and interface will change, and it has no background music yet.",
+    devFacts: [["Status", "In development", "Public alpha, playable in the browser"], ["Shown here", "TACTICAL — 5 vs 5 on 50 nodes", "Captured 19 November 2026, ruleset 0.28.1"], ["Platform", "Web browser", "TypeScript and Three.js"], ["Roster", "40 works, 10 roles", "Fixed roster shipped with the build"], ["Saving", "This browser only", "Formations are not synced between devices"], ["Source code", "Not public", "Private during development"]],
+    devH: "Play the alpha.", devP: "Pick five works, place them and fight a full 5 vs 5 battle against the AI. Source of Thought, the card game from the same line of research, is playable too.",
     devA: ["Play Source of Thought", "All Jinn Project links"],
     more: [["Jinn Project", "All work"], ["ThoughtMap", "Research platform"], ["Source of Thought", "Card strategy game"], ["Stratagems Atlas", "Interactive publication"]],
     footTag: "Independent research, open systems and games built to make hidden structures visible.",
@@ -141,7 +144,7 @@ const L = {
     ogAlt: "Source of Thought Tactics — 50ノードのネットワーク盤面で戦う5対5の戦闘。",
     skip: "本文へ移動", brandLabel: "Jinn Project — ホームへ", crumb: "Source of Thought Tactics", langLabel: "言語", index: "目次", indexLabel: "セクション", railLabel: "ページ内のセクション",
     nav: ["トップ", "思想は、領土になる", "戦場", "戦術の判断", "プレイ画面", "AIが戦術を指す", "ThoughtMapからSoTTへ", "開発状況"],
-    heroBrand: "Jinn Projectの作品", chip: "開発中",
+    heroBrand: "Jinn Projectの作品", chip: "アルファ版公開中",
     heroSub: "文学・哲学・科学の作品がユニットになり、作品に宿る思想が戦い方を決める。つながりを読み、盤面を奪い合うネットワーク戦術ゲーム。",
     heroCatch: "思想は、領土になる。",
     heroPosterAlt: "Source of Thought Tactics：八角形のノードが連なるネットワーク盤面で、10体のユニットが戦う。",
@@ -234,12 +237,13 @@ const L = {
       ["org", "研究・制作主体", "Jinn Project", "3つすべての母体となる独立プロジェクト。見えない構造を見えるかたちにする、研究ツール・オープンなシステム・ゲームを制作しています。", "Jinn Project ホーム"],
       ["tm", "解析", "ThoughtMap", "数万の作品を意味で検索・比較し、それぞれを思想の構成として記述する研究基盤。", "ThoughtMapについて"],
       ["sot", "カード戦略", "Source of Thought", "作品がカードになる。10枚のデッキ、5人の出撃メンバー、5×5の陣形。いまブラウザで遊べます。", "Source of Thought"],
-      ["here", "ネットワーク戦術", "Source of Thought Tactics", "作品がユニットになる。移動がそのまま領土になる、50ノードのネットワークでの5対5。開発中。", "現在のページ"],
+      ["here", "ネットワーク戦術", "Source of Thought Tactics", "作品がユニットになる。移動がそのまま領土になる、50ノードのネットワークでの5対5。開発中、アルファ版を公開中。", "現在のページ"],
     ],
-    s8k: "開発状況", s8h: "開発中。<em>一般公開は、まだ先です。</em>",
-    s8l: "このページの画面と映像は、すべて動作している開発ビルドから撮影したものです。公開ビルドができたときは、Jinn Projectのサイトでお知らせします。",
-    devFacts: [["状況", "開発中", "開発ビルド。一般公開はまだありません"], ["掲載内容", "TACTICAL — 50ノードでの5対5", "2026年11月19日撮影、ルールセット0.28.1"], ["プラットフォーム", "Webブラウザ", "TypeScriptとThree.js"], ["ロスター", "40作品・10ロール", "ビルドに同梱した固定ロスター"], ["ソースコード", "非公開", "開発中のため公開していません"]],
-    devH: "制作を追いかける。", devP: "同じ研究から生まれたカードゲーム、Source of Thoughtはいますぐ遊べます。SoTTの続報は、Jinn Projectのほかの作品とあわせてお知らせします。",
+    s8k: "開発状況", s8h: "開発中。<em>ブラウザで、いま遊べます。</em>",
+    play: "SoTTをプレイ", playNote: "無料・登録不要。TACTICALのアルファ版が新しいタブで開きます。パソコンのブラウザを推奨します。",
+    s8l: "TACTICALのアルファ版をブラウザで公開しています。開発中のビルドのため、ルール・バランス・画面は今後変わります。BGMはまだ入っていません。",
+    devFacts: [["状況", "開発中", "アルファ版をブラウザで公開中"], ["掲載内容", "TACTICAL — 50ノードでの5対5", "2026年11月19日撮影、ルールセット0.28.1"], ["プラットフォーム", "Webブラウザ", "TypeScriptとThree.js"], ["ロスター", "40作品・10ロール", "ビルドに同梱した固定ロスター"], ["保存", "このブラウザ内のみ", "編成はほかの端末と同期されません"], ["ソースコード", "非公開", "開発中のため公開していません"]],
+    devH: "アルファ版を遊ぶ。", devP: "5つの作品を選んで配置し、AIを相手に5対5の戦闘を最後まで遊べます。同じ研究から生まれたカードゲーム、Source of Thoughtも公開中です。",
     devA: ["Source of Thoughtを遊ぶ", "Jinn Projectのリンク一覧"],
     more: [["Jinn Project", "作品一覧"], ["ThoughtMap", "研究基盤"], ["Source of Thought", "カード戦略ゲーム"], ["Stratagems Atlas", "インタラクティブ出版物"]],
     footTag: "見えない構造を見えるかたちにする、独立した研究・オープンなシステム・ゲーム。",
@@ -272,6 +276,7 @@ function page(s) {
     { "@type": "VideoGame", "@id": base + "sott/#game", name: "Source of Thought Tactics", alternateName: "SoTT", url: base + "sott/", description: L.en.desc, genre: ["Tactics", "Strategy"], gamePlatform: "Web browser", creativeWorkStatus: "In development", image: base + "sott/media/og-sott.jpg", author: { "@id": base + "#organization" }, publisher: { "@id": base + "#organization" } },
     { "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Jinn Project", item: ja ? base + "index-ja.html" : base }, { "@type": "ListItem", position: 2, name: "Source of Thought Tactics", item: s.url }] },
   ] };
+  const playLink = `<a class="btn btn-gold btn-play" href="${PLAY_URL}" target="_blank" rel="noopener noreferrer" data-play>${esc(s.play)} <span aria-hidden="true">↗</span><span class="sr-only">${s.ext}</span></a>`;
   const extLink = (href, label, cls = "") => `<a${cls ? ` class="${cls}"` : ""} href="${href}" target="_blank" rel="noopener noreferrer">${esc(label)} <span aria-hidden="true">↗</span><span class="sr-only">${s.ext}</span></a>`;
   return `<!doctype html>
 <html lang="${s.lang}" class="no-js">
@@ -335,7 +340,7 @@ function page(s) {
       <div class="hero-copy">
         <p class="hero-brand"><a href="${s.home}"><picture><source srcset="../assets/img/jinn-mark-96.webp" type="image/webp"><img src="../assets/img/jinn-mark-96.png" width="22" height="22" alt=""></picture>${s.heroBrand}</a><span class="chip">${s.chip}</span></p>
         <h1 id="hero-title" aria-label="Source of Thought Tactics"><span class="l1" aria-hidden="true">${chars("Source of Thought", 0)}</span><span class="l2" aria-hidden="true">${chars("Tactics", 6)}</span></h1>
-        <div class="hero-lines"><p class="hero-catch">${s.heroCatch}</p><p class="hero-sub">${s.heroSub}</p></div>
+        <div class="hero-lines"><p class="hero-catch">${s.heroCatch}</p><p class="hero-sub">${s.heroSub}</p><p class="hero-play">${playLink}</p></div>
       </div>
       <div class="hero-foot">
         <dl class="hero-facts">${s.facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
@@ -437,7 +442,7 @@ function page(s) {
         ${head("08", "development", s.s8k, s.s8h, s.s8l)}
         <div class="dev-grid">
           <dl class="dev-facts" data-rv>${s.devFacts.map(([k, v, sm]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}<small>${esc(sm)}</small></dd></div>`).join("")}</dl>
-          <div class="dev-side" data-rv><h3>${esc(s.devH)}</h3><p>${esc(s.devP)}</p><p class="dev-actions"><a class="btn btn-gold" href="${s.sot}">${esc(s.devA[0])} <span aria-hidden="true">→</span></a>${extLink("https://linktr.ee/Jinn_project", s.devA[1], "btn")}</p></div>
+          <div class="dev-side" data-rv><h3>${esc(s.devH)}</h3><p>${esc(s.devP)}</p><p class="play-note">${esc(s.playNote)}</p><p class="dev-actions">${playLink}<a class="btn" href="${s.sot}">${esc(s.devA[0])} <span aria-hidden="true">→</span></a>${extLink("https://linktr.ee/Jinn_project", s.devA[1], "btn")}</p></div>
         </div>
         <nav class="more" aria-label="${esc(s.s8k)}">${[[s.homeTop, 0], [s.tm, 1], [s.sot, 2], [s.atlas, 3]].map(([href, i]) => `<a href="${href}"><span>${esc(s.more[i][1])}</span><b>${esc(s.more[i][0])}</b></a>`).join("")}</nav>
       </div>

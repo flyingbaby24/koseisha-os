@@ -95,11 +95,16 @@ test('canonical, reciprocal hreflang, social card, structured data and sitemap e
   }
 });
 
-test('the work is presented as in development: no play call, no private source link', () => {
+test('the public alpha is offered as a play link while the work stays in development; no private source link', () => {
   for (const p of pages) {
-    const text = visible(read(p));
-    assert.doesNotMatch(text, /PLAY NOW|Play now|今すぐプレイ|いますぐプレイ/, p);
-    assert.doesNotMatch(read(p), /github\.com\/flyingbaby24\/sott/, p);
+    const html = read(p), text = visible(html);
+    const links = [...html.matchAll(/<a class="btn btn-gold btn-play" href="([^"]+)" target="_blank" rel="noopener noreferrer" data-play>([^<]+)</g)];
+    assert.equal(links.length, 2, p + ': play link in the hero and in the development section');
+    for (const [, href, label] of links) {
+      assert.equal(href, 'https://sott-8kg.pages.dev/formation.html', p);
+      assert.equal(label.trim(), p.endsWith('-ja.html') ? 'SoTTをプレイ' : 'PLAY SoTT', p);
+    }
+    assert.doesNotMatch(html, /github\.com\/flyingbaby24\/sott/, p);
     assert.match(text, p.endsWith('-ja.html') ? /開発中/ : /In development/, p);
   }
 });
