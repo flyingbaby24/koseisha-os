@@ -3,7 +3,7 @@ import json
 import pytest
 
 from jinn_uploader import archive_json, keys, pricing
-from jinn_uploader.config import AppConfig, ConfigStore, DEFAULT_BUCKET, DEFAULT_PUBLIC_BASE_URL, Pricing
+from jinn_uploader.config import ConfigStore, DEFAULT_BUCKET, DEFAULT_PUBLIC_BASE_URL, Pricing
 from jinn_uploader.credentials import CredentialError, CredentialStore, MemoryKeyring, R2Credentials
 from jinn_uploader.scanner import hash_file, scan_paths
 

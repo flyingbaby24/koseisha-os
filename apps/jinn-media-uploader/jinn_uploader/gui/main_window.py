@@ -43,8 +43,7 @@ from ..history import History, ResumeStore
 from ..jobs import JobManager, NotConnected
 from ..keys import CATEGORY_LABELS, format_bytes, format_duration, format_eta, format_rate, normalize_prefix, public_url
 from ..r2client import R2Service, make_client
-from ..uploader import ACTIVE_STATES, JobState, UploadEngine
-from . import theme
+from ..uploader import JobState, UploadEngine
 from .dialogs import COMPRESSION_LABELS, DecisionDialog, ExportDialog, SettingsDialog
 from .models import CategoryDelegate, ObjectsFilter, ObjectsModel, ProgressDelegate, QueueModel
 from .worker import run_async

@@ -14,7 +14,7 @@ from typing import Callable, Iterable
 
 from .config import AppConfig
 from .keys import build_key, classify, rename_candidate, validate_key
-from .r2client import ObjectInfo, R2Service, describe_error
+from .r2client import ObjectInfo, describe_error
 from .scanner import Cancelled, scan_paths
 from .uploader import (
     ACTIVE_STATES,

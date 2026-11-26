@@ -114,9 +114,9 @@ def offline_selftest(endpoint: str | None = None) -> dict:
 
     with rep.step("Qt (PySide6) widgets load") as e:
         import PySide6
-        from PySide6 import QtWidgets  # noqa: F401
+        from PySide6 import QtWidgets
 
-        e["detail"] = f"PySide6 {PySide6.__version__}"
+        e["detail"] = f"PySide6 {PySide6.__version__} ({QtWidgets.__name__})"
 
     with rep.step("Credential vault round trip") as e:
         store = CredentialStore(service=f"JinnMediaUploader/selftest-{uuid.uuid4().hex[:8]}")
