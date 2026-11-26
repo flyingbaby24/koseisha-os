@@ -39,10 +39,12 @@ jobs:
         shell: pwsh
         working-directory: apps/jinn-media-uploader
     env:
-      JINN_UPLOADER_HOME: ${{ runner.temp }}\jmu-home
       PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@v4
+
+      - name: Isolated app data folder
+        run: '"JINN_UPLOADER_HOME=$env:RUNNER_TEMP\jmu-home" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8'
 
       - uses: actions/setup-python@v5
         with:
