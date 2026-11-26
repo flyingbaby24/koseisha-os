@@ -147,7 +147,8 @@ em{font-style:italic}
 .field-plane:has([data-node="jinnsp"] a:is(:hover,:focus-visible)) line[data-pair~="jinnsp"],
 .field-plane:has([data-node="mandalizm"] a:is(:hover,:focus-visible)) line[data-pair~="mandalizm"],
 .field-plane:has([data-node="sole"] a:is(:hover,:focus-visible)) line[data-pair~="sole"],
-.field-plane:has([data-node="kunizukuri"] a:is(:hover,:focus-visible)) line[data-pair~="kunizukuri"]{stroke:var(--shu);stroke-opacity:1;stroke-width:.5}
+.field-plane:has([data-node="kunizukuri"] a:is(:hover,:focus-visible)) line[data-pair~="kunizukuri"],
+.field-plane:has([data-node="archive"] a:is(:hover,:focus-visible)) line[data-pair~="archive"]{stroke:var(--shu);stroke-opacity:1;stroke-width:.5}
 .field figcaption{max-width:640px;margin-left:auto;color:var(--paper-3);font-size:var(--step--1);text-wrap:pretty}
 
 .now{grid-column:1/-1;display:flex;align-items:stretch;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
@@ -172,6 +173,56 @@ em{font-style:italic}
 .link-list a{display:flex;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--rule);color:var(--paper-2);font-weight:500;transition:color .2s,padding .25s var(--ease)}
 .link-list a::after{content:"→"}
 .link-list a:hover{color:var(--paper);padding-left:6px}
+
+/* ---------- Infinite Archive (spatial museum, portfolio.jinn-project.com) ----------
+   The section borrows the archive's own atmosphere: a band of warm dark (#0c0a08, the
+   corridor's near fog) runs edge to edge, the corridor is shown as a window into it, and
+   the works below float at staggered heights the way they hang in the corridor. */
+.archive{position:relative;isolation:isolate}
+.archive::before{content:"";position:absolute;z-index:-1;inset:calc(var(--section) * .55) calc(50% - 50vw) calc(var(--section) * -.5);pointer-events:none;background:
+  radial-gradient(60% 46% at 64% 40%,rgba(231,196,150,.085),transparent 72%),
+  radial-gradient(38% 30% at 14% 86%,rgba(95,220,242,.035),transparent 70%),
+  linear-gradient(180deg,transparent,#0c0a08 14%,#0c0a08 86%,transparent)}
+.archive .section-head h2 em{color:#d9c8ad}
+.archive-stage{display:grid;grid-template-columns:minmax(0,2.12fr) minmax(0,1fr);gap:clamp(12px,1.6vw,20px);align-items:stretch}
+.archive-view{display:flex;flex-direction:column;border:1px solid #2b241d;background:#0c0a08}
+.archive-view figcaption{padding:11px 14px;font:500 .6875rem/1.4 var(--mono);letter-spacing:.06em;color:var(--paper-3);border-top:1px solid #2b241d}
+/* The still sets the height of the row; the corridor fills it (cropping its sides a little) */
+.archive-window{position:relative;display:block;overflow:hidden;flex:1;min-height:0}
+.archive-window picture{display:block;height:100%}
+.archive-window img{width:100%;height:100%;object-fit:cover;object-position:46% 50%;transition:transform 1.8s var(--ease)}
+.archive-window::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(115% 85% at 50% 42%,transparent 58%,rgba(8,7,6,.62))}
+.archive-window:hover img{transform:scale(1.03)}
+.archive-enter{position:absolute;z-index:1;left:clamp(14px,2vw,26px);bottom:clamp(12px,2vw,24px);display:inline-flex;align-items:center;gap:12px;font:500 .75rem/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--paper);transition:gap .3s var(--ease)}
+.archive-enter::before{content:"";width:10px;height:10px;background:var(--shu);box-shadow:0 0 0 3px rgba(255,107,74,.16)}
+.archive-enter::after{content:"→";color:var(--paper-2)}
+.archive-window:hover .archive-enter{gap:16px}
+.archive-still picture{flex:1;min-height:0}
+.archive-still img{width:100%;aspect-ratio:5/6;object-fit:cover;object-position:50% 46%}
+.archive-reel{margin-top:clamp(40px,5vw,72px)}
+.archive-reel-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;padding-bottom:14px;border-bottom:1px solid var(--rule);font:500 .75rem/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--paper-2)}
+.archive-reel-head span:last-child{color:var(--paper-3)}
+.archive-reel ol{display:flex;align-items:flex-start;justify-content:space-between;gap:clamp(12px,1.8vw,24px);padding:clamp(28px,3.4vw,48px) 2px 18px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:thin;scrollbar-color:var(--rule-strong) transparent}
+.archive-reel li{flex:0 0 auto;scroll-snap-align:start}
+.archive-reel li:nth-child(3n+2){margin-top:clamp(22px,3.4vw,52px)}
+.archive-reel li:nth-child(3n){margin-top:clamp(8px,1.4vw,20px)}
+.archive-reel a{display:grid;gap:10px;width:clamp(112px,11.6vw,158px)}
+.archive-reel .is-landscape a{width:clamp(200px,20.5vw,270px)}
+.archive-reel picture{display:block;position:relative}
+/* each work throws its own colour into the dark around it (a shadow, so it never widens the row) */
+.archive-reel img{width:100%;aspect-ratio:9/16;object-fit:cover;border:1px solid #2b241d;box-shadow:0 10px 46px -10px var(--glow,rgba(231,196,150,.3));transition:transform .7s var(--ease),border-color .3s,box-shadow .7s var(--ease)}
+.archive-reel .is-landscape img{aspect-ratio:16/9}
+.archive-reel a:hover img,.archive-reel a:focus-visible img{transform:translateY(-6px);border-color:var(--rule-strong)}
+.archive-reel a:hover img{box-shadow:0 16px 60px -6px var(--glow,rgba(231,196,150,.3))}
+.archive-reel b{font:400 1.1875rem/1.15 var(--serif);text-wrap:balance}
+.archive-reel a:hover b{color:var(--paper)}
+.archive-reel small{font:500 .6875rem/1 var(--mono);letter-spacing:.12em;color:var(--paper-3)}
+.archive-foot{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr);gap:clamp(20px,3vw,48px);align-items:end;margin-top:clamp(24px,3vw,40px)}
+.archive-facts{grid-template-columns:repeat(4,minmax(0,1fr))}
+.archive-facts div{padding-right:16px}
+.archive-facts dd{font-size:1.375rem;word-break:keep-all;overflow-wrap:anywhere}
+.archive-actions{display:grid;gap:12px}
+.nav-portfolio .ext{margin-left:.3em}
 
 /* ---------- Work index ---------- */
 .filters{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:28px}
@@ -312,6 +363,7 @@ a.project-card:hover .card-cta>span[aria-hidden]{transform:translateX(4px)}
   .field-plane,.field figcaption{margin-left:0;max-width:680px}
   .section-head h2,.section-lede{grid-column:1/-1}
   .feature-grid{grid-template-columns:1fr}
+  .archive-foot{grid-template-columns:1fr}
   .feature-side{grid-template-columns:1fr 1fr;align-items:start}
   .feature-side .facts{grid-row:span 2}
   .work-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -362,6 +414,14 @@ a.project-card:hover .card-cta>span[aria-hidden]{transform:translateX(4px)}
   .field-nodes a::before{width:14px;height:14px}
   .domain{font-size:.625rem;letter-spacing:.12em}
   .feature-side{grid-template-columns:1fr}
+  .archive-stage{grid-template-columns:1fr}
+  .archive-window img{aspect-ratio:16/9;height:auto}
+  .archive-still img{aspect-ratio:4/5}
+  .archive-facts{grid-template-columns:1fr 1fr}
+  .archive-facts dd{font-size:1.125rem}
+  .archive-reel ol{justify-content:flex-start;margin-right:calc(-1 * var(--gutter));padding-right:var(--gutter)}
+  .archive-reel a{width:36vw}
+  .archive-reel .is-landscape a{width:62vw}
   .work-grid{grid-template-columns:minmax(0,1fr)}
   .project-sole{display:flex}
   .project-sole .card-media{aspect-ratio:16/9;min-height:0;margin-bottom:8px}

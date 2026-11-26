@@ -24,7 +24,7 @@ const pages = {
     url: base,
     locale: "en_US",
     title: "Jinn Project — Research, OSS & Game Development",
-    description: "Jinn Project is an independent research and development project that makes hidden structure visible: ThoughtMap, Source of Thought, Stratagems Atlas, Kunizukuri, Mandalizm and JinnSP.",
+    description: "Jinn Project is an independent research and development project that makes hidden structure visible: ThoughtMap, Source of Thought, the Infinite Archive, Stratagems Atlas, Kunizukuri and Mandalizm.",
     imageAlt: "Jinn Project — Making hidden structure visible.",
   },
   ja: {
@@ -32,7 +32,7 @@ const pages = {
     url: base + "index-ja.html",
     locale: "ja_JP",
     title: "Jinn Project — 研究・OSS・ゲーム開発",
-    description: "Jinn Projectは、見えない構造を見えるかたちにする独立研究開発プロジェクトです。ThoughtMap、Source of Thought、Stratagems Atlas、国創、Mandalizm、JinnSPを公開しています。",
+    description: "Jinn Projectは、見えない構造を見えるかたちにする独立研究開発プロジェクトです。ThoughtMap、Source of Thought、空間型美術館Infinite Archive、Stratagems Atlas、国創、Mandalizm、JinnSPを公開しています。",
     imageAlt: "Jinn Project — 見えない構造を、見えるかたちに。",
   },
 };
@@ -49,6 +49,7 @@ const tr = {
   ">About</a>":">概要</a>",
   ">Log</a>":">開発ログ</a>",
   ">Contact</a>":">連絡先</a>",
+  ">Portfolio<span class=\"ext\"":">ポートフォリオ<span class=\"ext\"",
   "aria-label=\"Language\"":"aria-label=\"言語\"",
   "<a href=\"index.html\" hreflang=\"en\" lang=\"en\" aria-current=\"page\">EN</a>":"<a href=\"index.html\" hreflang=\"en\" lang=\"en\">EN</a>",
   "<a href=\"index-ja.html\" hreflang=\"ja\" lang=\"ja\">日本語</a>\n        </nav>":"<a href=\"index-ja.html\" hreflang=\"ja\" lang=\"ja\" aria-current=\"page\">日本語</a>\n        </nav>",
@@ -79,6 +80,9 @@ const tr = {
   " Source of Thought, public web build</a>":" Source of Thought Web版</a>",
   " Kunizukuri — Daidarabotchi<span":" 国創 — Daidarabotchi<span",
   " ThoughtMap, 64,000+ works<span":" ThoughtMap — 64,000件以上の作品<span",
+  "<span class=\"status status-live\">Open</span>":"<span class=\"status status-live\">公開中</span>",
+  " Infinite Archive, a spatial museum of music videos<span":" Infinite Archive — ミュージックビデオの空間美術館<span",
+  "<small>Exhibition</small>":"<small>展示</small>",
   "<span class=\"sr-only\"> (opens in a new tab)</span>":"<span class=\"sr-only\">（新しいタブで開きます）</span>",
 
   // Flagship
@@ -96,14 +100,35 @@ const tr = {
   ">Roadmap<":">ロードマップ<",
   ">Development blog<":">開発ブログ<",
 
+  // Infinite Archive
+  "<span class=\"index\">02</span>Infinite Archive · Open now":"<span class=\"index\">02</span>Infinite Archive · 公開中",
+  "Every work, kept in an <em>endless corridor.</em>":"すべての作品を、<em>果てのない回廊に。</em>",
+  "Infinite Archive is Jinn Project's spatial digital museum. Music videos drift in a corridor of warm darkness and surface from the fog as you move. Choose one and it comes to you, playing inside the space. No view counts, no rankings, no ads: only the works and how they were made.":"Infinite Archiveは、Jinn Projectの空間型デジタル美術館です。ミュージックビデオは暖かい闇の回廊を漂い、進むにつれて霧の中から現れます。作品を選ぶと、作品のほうがこちらへ近づき、その空間の中で再生されます。再生数もランキングも広告もなく、あるのは作品と、その制作背景だけです。",
+  "The Infinite Archive: music video panels floating along a dark corridor, their titles lettered into the depth and threads of light running toward a distant glow.":"Infinite Archiveの回廊。暗い回廊に沿ってミュージックビデオの面が漂い、題名が奥へ向かって記され、光の糸が遠くの光へと伸びている。",
+  "<span class=\"archive-enter\" aria-hidden=\"true\">Enter the corridor</span>":"<span class=\"archive-enter\" aria-hidden=\"true\">回廊へ入る</span>",
+  "Actual capture · the corridor, rendered live in the browser with WebGL":"実際の画面 · ブラウザ上でWebGLにより描画される回廊",
+  "Guardians of the Original playing in the Infinite Archive: the work has come forward and its colours spill into the dark around it.":"Infinite Archiveで再生中の「Guardians of the Original」。作品が手前へ近づき、その色彩が周囲の闇へにじんでいる。",
+  "A work being viewed · its light spills into the space":"鑑賞中の作品 · 映像の光が空間へにじむ",
+  "<span>From the collection</span><span>Music videos · Jinn Project</span>":"<span>収蔵作品から</span><span>ミュージックビデオ · Jinn Project</span>",
+  "<dt>Form</dt><dd>Spatial museum</dd>":"<dt>形式</dt><dd>空間型美術館</dd>",
+  "<dt>Collection</dt><dd>Music videos</dd>":"<dt>収蔵</dt><dd>MV作品</dd>",
+  "<dt>Rendering</dt><dd>WebGL, live</dd>":"<dt>リアルタイム描画</dt><dd>WebGL</dd>",
+  "<dt>Languages</dt><dd>EN · JA</dd>":"<dt>言語</dt><dd>日本語 · 英語</dd>",
+  "Enter Infinite Archive<span":"Infinite Archiveへ入る<span",
+  "Browse the library<span":"作品一覧を見る<span",
+
   // Work
-  "<span class=\"index\">02</span>Work":"<span class=\"index\">02</span>作品",
-  "Nine entry points.":"9つの入口。",
+  "<span class=\"index\">03</span>Work":"<span class=\"index\">03</span>作品",
+  "Ten entry points.":"10の入口。",
   "A network tactics game where works become units and fight for a 50-node board.":"作品がユニットになり、50ノードの盤面を奪い合うネットワーク戦術ゲーム。",
   "See the work in progress":"開発中の作品を見る",
   "Research / Public Data Visualization":"研究 / 公開データの可視化",
   "An interactive map of fertility rates and child population across Japan, visualized by municipality.":"全国の出生率と子どもの人口分布を、市区町村単位で可視化するインタラクティブマップ",
   "Open Kodomo Atlas":"こどもアトラスを開く",
+  ">Art &amp; media</button>":">アート・映像</button>",
+  "<span>Exhibition · Web</span>":"<span>展示 · Web</span>",
+  "A spatial digital museum where music videos drift in an endless corridor.":"ミュージックビデオが果てのない回廊を漂う、空間型デジタル美術館。",
+  "Enter the archive <span":"アーカイブへ入る <span",
   "Games, research platforms, public apps and physical products: independent projects built around the same question.":"ゲーム、研究基盤、公開アプリ、そしてプロダクト。同じ問いから生まれた、独立したプロジェクトです。",
   "aria-label=\"Filter projects\"":"aria-label=\"プロジェクトを絞り込む\"",
   "data-status-template=\"Showing {n} of {total} projects\"":"data-status-template=\"{total}件中{n}件を表示\"",
@@ -133,7 +158,7 @@ const tr = {
   "Read the JinnSP guide →":"JinnSPガイドを読む →",
 
   // Research
-  "<span class=\"index\">03</span>Research":"<span class=\"index\">03</span>研究",
+  "<span class=\"index\">04</span>Research":"<span class=\"index\">04</span>研究",
   "One research loop, <em>many expressions.</em>":"ひとつの研究ループ、<em>いくつもの表現。</em>",
   "ThoughtMap is the shared semantic layer. The same profiles that power search and comparison also shape game mechanics and applied studies.":"ThoughtMapは共通の意味レイヤーです。検索や比較を支えるプロファイルが、そのままゲームの仕組みや応用研究のかたちを決めています。",
   "<p class=\"loop-step\">Corpus</p>":"<p class=\"loop-step\">コーパス</p>",
@@ -153,7 +178,7 @@ const tr = {
   "About ThoughtMap":"ThoughtMapについて",
 
   // About
-  "<span class=\"index\">04</span>About":"<span class=\"index\">04</span>概要",
+  "<span class=\"index\">05</span>About":"<span class=\"index\">05</span>概要",
   "Four domains, <em>one question.</em>":"4つの領域、<em>ひとつの問い。</em>",
   "How do the hidden structures in ideas, bodies, materials and systems become something people can see, play and use? Every Jinn Project work is an attempt at an answer.":"思想・身体・素材・システムに潜む見えない構造は、どうすれば人が見て、遊び、使えるものになるのか。Jinn Projectのすべての作品は、その問いへのひとつの答えです。",
   "<h3>Thought</h3><p>Semantics, cognition and philosophy.</p>":"<h3>思考</h3><p>意味論・認知・哲学。</p>",
@@ -172,7 +197,7 @@ const tr = {
   "<span>languages: English and Japanese</span>":"<span>言語（英語・日本語）</span>",
 
   // Log
-  "<span class=\"index\">05</span>Development log":"<span class=\"index\">05</span>開発ログ",
+  "<span class=\"index\">06</span>Development log":"<span class=\"index\">06</span>開発ログ",
   "From the build log.":"開発の記録から。",
   "All development articles →":"すべての開発記事 →",
   "Skill Generation Without Losing the Source Work":"作品の意味を失わないSkill Generation",
@@ -181,7 +206,7 @@ const tr = {
   "Why Build a Game from Thought?":"なぜ思想からゲームを作るのか",
 
   // Contact
-  "<span class=\"index\">06</span>Contact":"<span class=\"index\">06</span>連絡先",
+  "<span class=\"index\">07</span>Contact":"<span class=\"index\">07</span>連絡先",
   "Follow, support <em>or collaborate.</em>":"フォロー、支援、<em>そして協働。</em>",
   "Every channel, from news and social accounts to direct contact, is collected on one page.":"お知らせ、SNS、直接のご連絡まで、すべての窓口を1ページにまとめています。",
   "<b>All links</b><span>News, social accounts and contact</span>":"<b>すべてのリンク</b><span>お知らせ・SNS・連絡先</span>",
@@ -219,7 +244,11 @@ const routes = [
   ['href="research/stratagems/?lang=en"', 'href="research/stratagems/?lang=ja"'],
   ['href="kunizukuri/index-en.html"', 'href="kunizukuri/"'],
   ['href="jinnsp/"', 'href="jinnsp/index-ja.html"'],
+  ['href="https://portfolio.jinn-project.com/', 'href="https://portfolio.jinn-project.com/ja/'],
 ];
+
+// The portfolio (Infinite Archive) is a separate site of the same organisation.
+const portfolio = "https://portfolio.jinn-project.com/";
 
 const escapeAttr = (s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 
@@ -258,6 +287,19 @@ function seoBlock(lang) {
         inLanguage: lang,
         isPartOf: { "@id": base + "#website" },
         primaryImageOfPage: image,
+        mentions: { "@id": portfolio + "#website" },
+      },
+      {
+        "@type": "WebSite",
+        "@id": portfolio + "#website",
+        url: lang === "ja" ? portfolio + "ja/" : portfolio,
+        name: "Jinn Project Portfolio",
+        alternateName: "Infinite Archive",
+        description: lang === "ja"
+          ? "Jinn Projectのミュージックビデオを展示する空間型デジタル美術館。"
+          : "A spatial digital museum of Jinn Project's music videos.",
+        inLanguage: ["en", "ja"],
+        publisher: { "@id": base + "#organization" },
       },
     ],
   };
