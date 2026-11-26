@@ -206,7 +206,8 @@ em{font-style:italic}
 .archive-reel li{flex:0 0 auto;scroll-snap-align:start}
 .archive-reel li:nth-child(3n+2){margin-top:clamp(22px,3.4vw,52px)}
 .archive-reel li:nth-child(3n){margin-top:clamp(8px,1.4vw,20px)}
-.archive-reel a{display:grid;gap:10px;width:clamp(112px,11.6vw,158px)}
+/* position:relative keeps each link's screen-reader text inside the scrolling row (it would otherwise widen the page on phones) */
+.archive-reel a{position:relative;display:grid;gap:10px;width:clamp(112px,11.6vw,158px)}
 .archive-reel .is-landscape a{width:clamp(200px,20.5vw,270px)}
 .archive-reel picture{display:block;position:relative}
 /* each work throws its own colour into the dark around it (a shadow, so it never widens the row) */
