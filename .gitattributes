@@ -1,3 +1,6 @@
 # Preserve the verified official-data bytes across Windows and Linux checkouts.
 apps/kodomo-atlas/public/data/* -text
 docs/kodomo-atlas/data/* -text
+# Byte-exact copies of the Jinn-Portfolio data and validators used by the uploader compatibility tests.
+apps/jinn-media-uploader/tests/fixtures/** -text
+apps/jinn-media-uploader/tests/portfolio_spec/** -text

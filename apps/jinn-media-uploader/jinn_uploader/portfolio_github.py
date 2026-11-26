@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .github_client import GitHubClient, GitHubConflict, GitHubError
-from .portfolio import DATA_FILES, PortfolioData, PortfolioError, Registration, dump_json
+from .portfolio import DATA_FILES, PortfolioData, PortfolioError, Registration, encode_json, newline_of
 
 PAGES_APP_SLUG = "cloudflare-workers-and-pages"
 
@@ -69,8 +69,8 @@ class FileChange:
     def diff(self) -> str:
         if self.binary:
             return f"（画像 {len(self.new):,} バイト）"
-        old = (self.old_text or "").splitlines(keepends=True)
-        new = self.new.decode("utf-8").splitlines(keepends=True)
+        old = (self.old_text or "").replace("\r\n", "\n").splitlines(keepends=True)
+        new = self.new.decode("utf-8").replace("\r\n", "\n").splitlines(keepends=True)
         return "".join(difflib.unified_diff(old, new, f"a/{self.path}", f"b/{self.path}", n=3))
 
     def added_lines(self) -> int:
@@ -89,16 +89,15 @@ def change_set(data: PortfolioData, reg: Registration, thumbnails: dict[str, Pat
     if reg.problems:
         raise PortfolioError("検証エラーがあるため反映できません:\n- " + "\n- ".join(reg.problems))
     changes: list[FileChange] = []
-    for name, doc in (("works.json", reg.works_doc), ("soundscape.json", reg.soundscape_doc),
-                      ("thumbnail-sources.json", reg.thumbnail_sources)):
+    for name in ("works.json", "soundscape.json", "thumbnail-sources.json"):
         old = data.raw_texts.get(name)
-        new_text = dump_json(doc)
         if old is None and name == "soundscape.json" and not reg.new_tracks:
             continue
-        if old == new_text:
+        new = reg.encoded(name)  # keeps the file's own line endings
+        if old is not None and old.encode("utf-8") == new:
             continue
-        reformatted = old is not None and dump_json(json.loads(old)) != old
-        changes.append(FileChange(f"data/{name}", new_text.encode("utf-8"), old, False, reformatted))
+        reformatted = old is not None and encode_json(json.loads(old), newline_of(old)) != old.encode("utf-8")
+        changes.append(FileChange(f"data/{name}", new, old, False, reformatted))
     for key, src in sorted(thumbnails.items()):
         changes.append(FileChange(f"public/{key}", Path(src).read_bytes(), None, True))
     return changes

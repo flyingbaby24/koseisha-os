@@ -249,3 +249,44 @@ def test_pages_branch_urls():
     assert pg.pages_branch_url("jinn-portfolio", "main") == "https://jinn-portfolio.pages.dev"
     assert pg.pages_branch_url("jinn-portfolio", "phase-3-1-soundscape") == "https://phase-3-1-soundscape.jinn-portfolio.pages.dev"
     assert pg.pages_branch_url("jinn-portfolio", "register/mv-0005") == "https://register-mv-0005.jinn-portfolio.pages.dev"
+
+
+def test_line_endings_of_existing_files_are_preserved(tmp_path):
+    """A repo whose JSON uses CRLF must not be rewritten line by line (and LF stays LF)."""
+    files = repo_files()
+    for name in ("data/works.json", "data/thumbnail-sources.json"):
+        files[name] = files[name].replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+    fake = FakeGitHubRepo(REPO, TOKEN, files, branch="main")
+    with FakeGitHubServer(fake) as srv:
+        client = GitHubClient(TOKEN, REPO, api=srv.api)
+        snap = pg.fetch_snapshot(client, "main")
+        cands = candidates()
+        portfolio.plan(cands, snap.data)
+        reg = portfolio.build(snap.data, cands)
+        changes = {c.path: c for c in pg.change_set(snap.data, reg, thumbs(tmp_path, cands))}
+        works = changes["data/works.json"]
+        assert works.removed_lines() <= 1 and not works.reformatted
+        assert works.new.count(b"\r\n") == works.new.count(b"\n")  # CRLF kept
+        assert b"\r\n" not in changes["data/soundscape.json"].new  # LF file stays LF
+        pg.publish(client, snap, list(changes.values()), "msg")
+        after = fake.files_at("main")["data/works.json"]
+        assert after.startswith(files["data/works.json"][:500])  # existing bytes untouched
+        assert after.count(b"\r\n") == after.count(b"\n")
+
+
+def test_local_bundle_keeps_line_endings(tmp_path):
+    import shutil
+
+    root = tmp_path / "pf"
+    shutil.copytree(FIXTURE, root)
+    w = root / "data" / "works.json"
+    w.write_bytes(w.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+    data = portfolio.PortfolioData.load(root)
+    cands = candidates()[:1]
+    portfolio.plan(cands, data)
+    bundle = portfolio.write_bundle(portfolio.build(data, cands), tmp_path / "out", {})
+    out = (bundle / "data" / "works.json").read_bytes()
+    assert out.count(b"\r\n") == out.count(b"\n")
+    assert out.startswith(w.read_bytes()[:500])
+    sound = (bundle / "data" / "soundscape.json").read_bytes()
+    assert b"\r\n" not in sound  # written as bytes: no Windows text-mode translation

@@ -256,7 +256,8 @@ class PortfolioData:
     def load(cls, path: str | Path, thumb_prefix: str = "thumbnails/") -> "PortfolioData":
         root = locate_root(path)
         data = root / "data"
-        texts = {n: (data / n).read_text(encoding="utf-8") if (data / n).is_file() else None for n in DATA_FILES}
+        # Bytes, not text mode: keep the files' own line endings so they can be preserved on write.
+        texts = {n: (data / n).read_bytes().decode("utf-8") if (data / n).is_file() else None for n in DATA_FILES}
         thumbs_dir = root / "public" / Path(*[p for p in thumb_prefix.split("/") if p])
         existing = {f.name for f in thumbs_dir.iterdir()} if thumbs_dir.is_dir() else set()
         return cls.from_texts(texts, str(root), root=root, existing_thumbnails=existing)
@@ -448,6 +449,12 @@ class Registration:
     new_works: list[dict]
     new_tracks: list[dict]
     problems: list[str]
+    newlines: dict = field(default_factory=dict)  # data file name → "\n" or "\r\n" as found
+
+    def encoded(self, name: str) -> bytes:
+        doc = {"works.json": self.works_doc, "soundscape.json": self.soundscape_doc,
+               "thumbnail-sources.json": self.thumbnail_sources}[name]
+        return encode_json(doc, self.newlines.get(name, "\n"))
 
 
 def build(data: PortfolioData, candidates: list[Candidate], thumb_prefix: str = "thumbnails/",
@@ -466,12 +473,22 @@ def build(data: PortfolioData, candidates: list[Candidate], thumb_prefix: str = 
     for c in candidates:
         if c.include and c.kind == "work" and not _SLUG_RE.match(c.slug or ""):
             problems.append(f"{c.id}: slug は英小文字・数字・ハイフンのみ")
-    return Registration(works_doc, sound, sources, new_works, new_tracks, problems)
+    newlines = {name: newline_of(text) for name, text in data.raw_texts.items()}
+    return Registration(works_doc, sound, sources, new_works, new_tracks, problems, newlines)
 
 
 def dump_json(doc) -> str:
     """Same layout as the repository's files (2-space indent, UTF-8, trailing newline)."""
     return json.dumps(doc, ensure_ascii=False, indent=2) + "\n"
+
+
+def newline_of(text: str | None) -> str:
+    return "\r\n" if text and "\r\n" in text else "\n"
+
+
+def encode_json(doc, newline: str = "\n") -> bytes:
+    """dump_json with the given line ending, as bytes (never re-translated by text-mode I/O)."""
+    return dump_json(doc).replace("\n", newline).encode("utf-8")
 
 
 def write_bundle(reg: Registration, out_dir: Path, thumbnails: dict[str, Path]) -> Path:
@@ -484,9 +501,8 @@ def write_bundle(reg: Registration, out_dir: Path, thumbnails: dict[str, Path]) 
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     bundle = out_dir / f"jinn-portfolio-registration-{stamp}"
     (bundle / "data").mkdir(parents=True, exist_ok=True)
-    (bundle / "data" / "works.json").write_text(dump_json(reg.works_doc), encoding="utf-8")
-    (bundle / "data" / "soundscape.json").write_text(dump_json(reg.soundscape_doc), encoding="utf-8")
-    (bundle / "data" / "thumbnail-sources.json").write_text(dump_json(reg.thumbnail_sources), encoding="utf-8")
+    for name in ("works.json", "soundscape.json", "thumbnail-sources.json"):
+        (bundle / "data" / name).write_bytes(reg.encoded(name))
     for key, src in thumbnails.items():
         dest = bundle / "public" / Path(*key.split("/"))
         dest.parent.mkdir(parents=True, exist_ok=True)
