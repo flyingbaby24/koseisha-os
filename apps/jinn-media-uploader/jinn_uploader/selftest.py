@@ -31,7 +31,7 @@ from pathlib import Path
 
 from . import __version__, media, portfolio, pricing
 from .config import AppConfig, ConfigStore
-from .credentials import CredentialStore, R2Credentials
+from .credentials import CredentialStore, GitHubTokenStore, R2Credentials
 from .history import History, ResumeStore
 from .r2client import R2Service, describe_error, make_client
 from .uploader import InjectedFault, JobState, MiB, UploadControl, UploadEngine, UploadJob
@@ -132,6 +132,20 @@ def offline_selftest(endpoint: str | None = None) -> dict:
             store.delete()
         _require(store.load() is None, "credential not removed")
 
+    with rep.step("GitHub token in the credential vault") as e:
+        gstore = GitHubTokenStore(service=f"JinnMediaUploader/selftest-gh-{uuid.uuid4().hex[:8]}")
+        e["backend"] = gstore.backend_label
+        _require(gstore.secure, f"insecure keyring backend: {gstore.backend_label}")
+        gstore.save("github_pat_selftest_0000")
+        try:
+            _require(gstore.load() == "github_pat_selftest_0000", "token read back differs")
+        finally:
+            gstore.delete()
+        _require(gstore.load() is None, "token not removed")
+
+    with rep.step("GitHub direct registration (local stand-in for the GitHub API)") as e:
+        e.update(_github_registration_check())
+
     ffmpeg, ffprobe = media.find_ffmpeg("")
     with rep.step("FFmpeg probe + thumbnails") as e:
         _require(bool(ffmpeg and ffprobe), "ffmpeg/ffprobe not found next to the EXE or on PATH")
@@ -164,6 +178,63 @@ def offline_selftest(endpoint: str | None = None) -> dict:
         upload_verification(rep, service, cfg, size_mib=320, ffmpeg=ffmpeg, ffprobe=ffprobe,
                             check_public_url=False, cleanup=True)
     return rep.finish()
+
+
+def _github_registration_check() -> dict:
+    """Fetch → plan → one commit → read back, through the real HTTP client, against a local fake."""
+    import json
+
+    from . import portfolio_github as pg
+    from .github_client import GitHubClient, GitHubConflict
+    from .github_fake import FakeGitHubRepo, FakeGitHubServer
+
+    def work(i, slug, key):
+        return portfolio.work_entry(portfolio.Candidate(kind="work", key=key, title=slug.title(), id=f"mv-{i:04d}",
+                                                        slug=slug, duration=10.0, width=1080, height=1920),
+                                    "thumbnails/", "Jinn Project")
+
+    existing = [work(1, "human", "Human.mp4"), work(4, "night-drive", "Night Drive.mp4")]
+    files = {
+        "data/works.json": portfolio.dump_json({"schemaVersion": 1, "works": existing}).encode(),
+        "data/soundscape.json": portfolio.dump_json({"placeholder": "synth", "crossfade": 8, "tracks": []}).encode(),
+        "data/thumbnail-sources.json": portfolio.dump_json({"human": 1.0, "night-drive": 1.0}).encode(),
+        "data/categories.json": portfolio.dump_json({"categories": [{"id": "music-videos", "enabled": True}]}).encode(),
+        "public/thumbnails/human.webp": b"x", "public/thumbnails/night-drive.webp": b"x",
+    }
+    token = "github_pat_selftest"
+    fake = FakeGitHubRepo("selftest/Jinn-Portfolio", token, files, branch="main")
+    with FakeGitHubServer(fake) as srv:
+        client = GitHubClient(token, "selftest/Jinn-Portfolio", api=srv.api)
+        snap = pg.fetch_snapshot(client, "main")
+        cands = [portfolio.Candidate(kind="work", key="mv/Night Drive (Live).mp4", title="Night Drive",
+                                     duration=12.0, width=1920, height=1080),
+                 portfolio.Candidate(kind="track", key="audio/Loop 01.m4a", title="Loop 01")]
+        portfolio.plan(cands, snap.data)
+        _require((cands[0].id, cands[0].slug) == ("mv-0005", "night-drive-2"), f"allocated {cands[0].id} {cands[0].slug}")
+        reg = portfolio.build(snap.data, cands)
+        with tempfile.TemporaryDirectory() as td:
+            thumbs = {}
+            for name in ("night-drive-2.webp", "night-drive-2-poster.jpg"):
+                (Path(td) / name).write_bytes(b"image")
+                thumbs["thumbnails/" + name] = Path(td) / name
+            changes = pg.change_set(snap.data, reg, thumbs)
+            fake.push("main", {"README.md": b"concurrent edit"})
+            try:
+                pg.publish(client, snap, changes, "selftest")
+                raise AssertionError("a moved branch was not detected")
+            except GitHubConflict:
+                pass
+            snap = pg.fetch_snapshot(client, "main")
+            portfolio.plan(cands, snap.data)
+            reg = portfolio.build(snap.data, cands)
+            changes = pg.change_set(snap.data, reg, thumbs)
+            result = pg.publish(client, snap, changes, pg.default_message(reg))
+        after = fake.files_at("main")
+        works = json.loads(after["data/works.json"])["works"]
+        _require(works[:2] == existing and works[2]["id"] == "mv-0005", "existing works not preserved")
+        _require(after["README.md"] == b"concurrent edit", "concurrent edit lost")
+        _require(fake.commits[result.commit_sha]["parents"] == [snap.commit_sha], "not a single fast-forward commit")
+        return {"commit": result.commit_sha[:7], "files": [c.path for c in changes], "verified": result.verified}
 
 
 # ---------------------------------------------------------------------- live R2

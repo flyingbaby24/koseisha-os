@@ -67,23 +67,23 @@ def test_destination_prefix_change_rewrites_keys(window, tmp_path):
     assert window.manager.jobs[0].key == "videos/2026/x.mp4"
 
 
-def test_export_dialog_writes_portfolio_bundle(window, tmp_path, s3, monkeypatch, ffmpeg_bins):
-    import json
-    import shutil
+def _wait(pred, timeout=30):
+    import time
+
+    from PySide6.QtWidgets import QApplication
+
+    end = time.monotonic() + timeout
+    while time.monotonic() < end:
+        QApplication.processEvents()
+        if pred():
+            return True
+        time.sleep(0.02)
+    return False
+
+
+def _uploaded(window, tmp_path, ffmpeg, ffprobe):
+    """Upload a portrait MV titled "Human" and a BGM through the window; return history rows."""
     import subprocess
-    from pathlib import Path
-
-    from PySide6.QtWidgets import QMessageBox
-
-    from jinn_uploader import portfolio
-    from jinn_uploader.gui.dialogs import ExportDialog
-
-    ffmpeg, ffprobe = ffmpeg_bins
-    monkeypatch.setattr(QMessageBox, "exec", lambda self: 0)
-    shown = []
-    monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: shown.append(a[2]))
-    pf = tmp_path / "Jinn-Portfolio"
-    shutil.copytree(Path(__file__).parent / "fixtures" / "jinn-portfolio", pf)
 
     src = tmp_path / "Human.mp4"  # same title as mv-0001 → slug must not collide
     subprocess.run([ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
@@ -103,14 +103,36 @@ def test_export_dialog_writes_portfolio_bundle(window, tmp_path, s3, monkeypatch
     window.manager.wait(60)
     rows = list(reversed(window.history.recent(window.config.bucket)))
     assert {r["key"] for r in rows} == {"mv/Human.mp4", "audio/Archive 01.mp3"}
+    return rows
+
+
+def test_local_folder_mode_writes_portfolio_bundle(window, tmp_path, s3, monkeypatch, ffmpeg_bins):
+    import json
+    import shutil
+    from pathlib import Path
+
+    from PySide6.QtWidgets import QMessageBox
+
+    from jinn_uploader import portfolio
+    from jinn_uploader.gui.portfolio_dialog import PortfolioDialog
+
+    ffmpeg, ffprobe = ffmpeg_bins
+    monkeypatch.setattr(QMessageBox, "exec", lambda self: 0)
+    shown = []
+    monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: shown.append(a[2]))
+    pf = tmp_path / "Jinn-Portfolio"
+    shutil.copytree(Path(__file__).parent / "fixtures" / "jinn-portfolio", pf)
+    rows = _uploaded(window, tmp_path, ffmpeg, ffprobe)
 
     cands = window._candidates_from_rows(rows)
     window.config.portfolio_dir = str(pf)
-    dlg = ExportDialog(window, cands, window.config, window.history, ffmpeg, lambda k: "https://x/" + k)
+    window.config.portfolio_source = "local"
+    dlg = PortfolioDialog(window, cands, window.config, window.history, ffmpeg, lambda k: "https://x/" + k,
+                          window.github_store)
     work = next(c for c in cands if c.kind == "work")
     track = next(c for c in cands if c.kind == "track")
     assert (work.id, work.slug, track.id) == ("mv-0005", "human-2", "archive-01")
-    dlg._write()
+    dlg._go()
     assert not shown, shown
     bundle = dlg.output_path
     merged = portfolio.PortfolioData.load(bundle)
@@ -123,6 +145,60 @@ def test_export_dialog_writes_portfolio_bundle(window, tmp_path, s3, monkeypatch
 
     # A second export before the first one is committed must not hand out mv-0005 again.
     other = portfolio.Candidate(kind="work", key="mv/Other.mp4", title="Other", duration=5.0, width=1920, height=1080)
-    dlg2 = ExportDialog(window, [other], window.config, window.history, ffmpeg, lambda k: "")
+    dlg2 = PortfolioDialog(window, [other], window.config, window.history, ffmpeg, lambda k: "", window.github_store)
     assert other.id == "mv-0006"
     dlg2.close()
+
+
+def test_github_mode_end_to_end(window, tmp_path, s3, monkeypatch, ffmpeg_bins):
+    import json
+
+    from PySide6.QtWidgets import QMessageBox
+
+    from jinn_uploader.github_fake import FakeGitHubRepo, FakeGitHubServer
+    from jinn_uploader.gui import portfolio_dialog as pd
+    from test_github import REPO, TOKEN, repo_files
+
+    ffmpeg, ffprobe = ffmpeg_bins
+    shown = []
+    monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: shown.append(a[2]))
+    reviewed = {}
+
+    def review_exec(self):
+        reviewed["files"] = [c.path for c in self.changes]
+        reviewed["message"] = self.commit_message()
+        return 1
+
+    monkeypatch.setattr(pd.ReviewDialog, "exec", review_exec)
+    monkeypatch.setattr(pd.PublishedDialog, "exec", lambda self: (self.timer.stop(), 0)[1])
+    rows = _uploaded(window, tmp_path, ffmpeg, ffprobe)
+
+    fake = FakeGitHubRepo(REPO, TOKEN, repo_files(), branch="main", extra_branches=("phase-3-1-soundscape",))
+    with FakeGitHubServer(fake) as srv:
+        window.config.github_api = srv.api
+        window.config.github_repo = REPO
+        window.config.github_branch = "phase-3-1-soundscape"
+        window.config.portfolio_source = "github"
+        window.config.github_mode = "commit"
+        window.github_store.save(TOKEN)
+        cands = window._candidates_from_rows(rows)
+        dlg = pd.PortfolioDialog(window, cands, window.config, window.history, ffmpeg, lambda k: "https://x/" + k,
+                                 window.github_store)
+        assert _wait(lambda: dlg.snap is not None), dlg.status.text()
+        assert dlg.snap.branch == "phase-3-1-soundscape" and "作品 4 件" in dlg.status.text()
+        assert "phase-3-1-soundscape.jinn-portfolio.pages.dev" in dlg.status.text()
+        work = next(c for c in cands if c.kind == "work")
+        assert (work.id, work.slug) == ("mv-0005", "human-2")
+        dlg._go()
+        assert _wait(lambda: dlg.published is not None), shown
+        assert reviewed["files"] == ["data/works.json", "data/soundscape.json", "data/thumbnail-sources.json",
+                                     "public/thumbnails/human-2-poster.jpg", "public/thumbnails/human-2.webp"]
+        assert reviewed["message"].startswith("Add mv-0005 Human, soundscape track archive-01")
+        after = fake.files_at("phase-3-1-soundscape")
+        works = json.loads(after["data/works.json"])["works"]
+        assert [w["id"] for w in works] == ["mv-0001", "mv-0002", "mv-0003", "mv-0004", "mv-0005"]
+        assert works[-1]["thumbnailKey"] == "thumbnails/human-2.webp"
+        assert after["public/thumbnails/human-2.webp"][:4] == b"RIFF"  # a real WebP
+        assert fake.refs["main"] != fake.refs["phase-3-1-soundscape"]
+        assert window.history.issued_ids("work") == {"mv/Human.mp4": "mv-0005"}
+        assert not shown, shown

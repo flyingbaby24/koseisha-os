@@ -203,39 +203,63 @@ def locate_root(path: str | Path) -> Path:
     raise PortfolioError(f"data/works.json が見つかりません: {path}")
 
 
-def _read_json(path: Path, default=None):
-    if not path.is_file():
-        if default is not None:
-            return default
-        raise PortfolioError(f"{path.name} がありません")
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except ValueError as exc:
-        raise PortfolioError(f"{path.name} を読み込めません: {exc}") from exc
+DATA_FILES = ("works.json", "soundscape.json", "thumbnail-sources.json", "categories.json")
+DEFAULT_SOUNDSCAPE = {"placeholder": "synth", "crossfade": 8, "tracks": []}
 
 
 @dataclass
 class PortfolioData:
-    root: Path
+    """The portfolio's registration data, read from a local clone or from GitHub."""
+
+    root: Path | None
     works_doc: dict
     soundscape_doc: dict
     thumbnail_sources: dict
     categories: list
+    source: str = ""
+    # Files already present under public/<thumbnail prefix> (names only); a slug whose
+    # thumbnail name is taken is treated as taken even if no work uses it.
+    existing_thumbnails: set = field(default_factory=set)
+    has_soundscape: bool = True
+    raw_texts: dict = field(default_factory=dict)  # data file name → text as read
 
     @classmethod
-    def load(cls, path: str | Path) -> "PortfolioData":
-        root = locate_root(path)
-        data = root / "data"
-        works_doc = _read_json(data / "works.json")
+    def from_texts(cls, texts: dict[str, str | None], source: str, root: Path | None = None,
+                   existing_thumbnails: set | None = None) -> "PortfolioData":
+        """Build from the raw text of each data file (None = file absent)."""
+        def parse(name: str, default=None):
+            text = texts.get(name)
+            if text is None:
+                if default is not None:
+                    return json.loads(json.dumps(default))
+                raise PortfolioError(f"{name} がありません（{source}）")
+            try:
+                return json.loads(text)
+            except ValueError as exc:
+                raise PortfolioError(f"{name} を読み込めません: {exc}") from exc
+
+        works_doc = parse("works.json")
         if not isinstance(works_doc, dict) or not isinstance(works_doc.get("works"), list):
             raise PortfolioError("works.json の形式が想定と異なります（works 配列がありません）")
-        soundscape = _read_json(data / "soundscape.json", {"placeholder": "synth", "crossfade": 8, "tracks": []})
-        sources = _read_json(data / "thumbnail-sources.json", {})
-        categories = _read_json(data / "categories.json", {"categories": [{"id": MV_CATEGORY}]}).get("categories", [])
+        soundscape = parse("soundscape.json", DEFAULT_SOUNDSCAPE)
+        sources = parse("thumbnail-sources.json", {})
+        categories = parse("categories.json", {"categories": [{"id": MV_CATEGORY}]}).get("categories", [])
         problems = validate_works(works_doc["works"], categories) + validate_soundscape(soundscape)
         if problems:
             raise PortfolioError("既存データが検証を通りません:\n- " + "\n- ".join(problems[:10]))
-        return cls(root, works_doc, soundscape, sources, categories)
+        return cls(root, works_doc, soundscape, sources, categories, source=source,
+                   existing_thumbnails=set(existing_thumbnails or ()),
+                   has_soundscape=texts.get("soundscape.json") is not None,
+                   raw_texts={k: v for k, v in texts.items() if v is not None})
+
+    @classmethod
+    def load(cls, path: str | Path, thumb_prefix: str = "thumbnails/") -> "PortfolioData":
+        root = locate_root(path)
+        data = root / "data"
+        texts = {n: (data / n).read_text(encoding="utf-8") if (data / n).is_file() else None for n in DATA_FILES}
+        thumbs_dir = root / "public" / Path(*[p for p in thumb_prefix.split("/") if p])
+        existing = {f.name for f in thumbs_dir.iterdir()} if thumbs_dir.is_dir() else set()
+        return cls.from_texts(texts, str(root), root=root, existing_thumbnails=existing)
 
     @property
     def works(self) -> list[dict]:
@@ -302,6 +326,7 @@ class Candidate:
     published_date: str = field(default_factory=lambda: date.today().isoformat())
     thumb_time: float = 0.0
     include: bool = True
+    locked: bool = False  # cannot be registered (already registered / unsupported here)
     note: str = ""
 
     @classmethod
@@ -334,12 +359,15 @@ def plan(candidates: list[Candidate], data: PortfolioData, issued: dict[str, str
     track_ids = {t["id"] for t in data.tracks if isinstance(t, dict) and "id" in t}
     reserved_other = {i for k, i in issued.items()}
     slugs = {w["slug"] for w in data.works if w.get("category") == MV_CATEGORY}
+    for name in data.existing_thumbnails:  # e.g. "human.webp", "human-poster.jpg"
+        stem = name.rsplit(".", 1)[0]
+        slugs.add(stem[:-len("-poster")] if stem.endswith("-poster") else stem)
     for c in candidates:
-        c.note = ""
+        c.note, c.include, c.locked = "", True, False
         if c.kind == "work":
             existing = data.work_by_video_key(c.key)
             if existing:
-                c.include, c.id, c.slug = False, existing["id"], existing["slug"]
+                c.include, c.locked, c.id, c.slug = False, True, existing["id"], existing["slug"]
                 c.note = f"登録済み（{existing['id']}）"
                 continue
             prev = issued.get(c.key)
@@ -348,27 +376,31 @@ def plan(candidates: list[Candidate], data: PortfolioData, issued: dict[str, str
             else:
                 c.id = next_numbered_id(WORK_ID_PREFIX, work_ids | reserved_other)
             work_ids.add(c.id)
-            base = c.slug if c.slug and _SLUG_RE.match(c.slug) else (slugify(c.title) or c.id)
+            base = slugify(c.title) or c.id
             c.slug = unique_name(base, slugs)
             slugs.add(c.slug)
             if c.duration is None or not c.width or not c.height:
                 c.status = "draft"
                 c.note = "尺・解像度が不明のため draft"
         else:
+            if not data.has_soundscape:
+                c.include, c.locked = False, True
+                c.note = "このブランチには data/soundscape.json がありません（BGM 未対応）"
+                continue
             existing = data.track_by_key(c.key)
             if existing:
-                c.include, c.id = False, existing.get("id", "")
+                c.include, c.locked, c.id = False, True, existing.get("id", "")
                 c.note = f"登録済み（{c.id}）"
                 continue
             if not AUDIO_KEY_RE.search(c.key):
-                c.include = False
+                c.include, c.locked = False, True
                 c.note = "サイトが再生できない形式（m4a/mp3/aac/ogg/opus/wav/flac のみ）"
                 continue
             prev = issued.get(c.key)
             if prev and prev not in track_ids and _ID_RE.match(prev):
                 c.id = prev
             else:
-                base = c.id if c.id and _ID_RE.match(c.id) else (slugify(c.title) or "track")
+                base = slugify(c.title) or "track"
                 c.id = unique_name(base, track_ids | {i for i in reserved_other if i != issued.get(c.key)})
             track_ids.add(c.id)
 

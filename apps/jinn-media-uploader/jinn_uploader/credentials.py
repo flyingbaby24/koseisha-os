@@ -190,3 +190,64 @@ class MemoryKeyring:
             del self._store[(service, username)]
         except KeyError as exc:
             raise PasswordDeleteError("not found") from exc
+
+
+# ---------------------------------------------------------------------- GitHub
+GITHUB_SERVICE = "JinnMediaUploader/GitHub"
+GITHUB_USERNAME = "token"
+
+
+def mask_token(token: str) -> str:
+    return (token[:4] + "…" + token[-4:]) if len(token) > 12 else "****"
+
+
+class GitHubTokenStore:
+    """GitHub personal access token in the OS vault (Windows Credential Manager).
+
+    Stored separately from the R2 keys under ``JinnMediaUploader/GitHub`` so either can
+    be replaced or removed on its own.
+    """
+
+    def __init__(self, backend=None, service: str = GITHUB_SERVICE, username: str = GITHUB_USERNAME):
+        self.backend = backend if backend is not None else default_backend()
+        self.service = service
+        self.username = username
+
+    @property
+    def backend_label(self) -> str:
+        return describe_backend(self.backend)
+
+    @property
+    def secure(self) -> bool:
+        return is_secure_backend(self.backend)
+
+    def load(self) -> str | None:
+        try:
+            token = self.backend.get_password(self.service, self.username)
+        except KeyringError as exc:
+            raise CredentialError(f"資格情報ストアを読み取れません: {exc}") from exc
+        return token.strip() if token else None
+
+    def save(self, token: str) -> None:
+        token = (token or "").strip()
+        if not token:
+            raise CredentialError("GitHub トークンが空です")
+        if any(ch.isspace() for ch in token):
+            raise CredentialError("GitHub トークンに空白が含まれています")
+        if not self.secure:
+            raise CredentialError(
+                f"安全な資格情報ストアが利用できません（{self.backend_label}）。保存を中止しました。"
+            )
+        try:
+            self.backend.set_password(self.service, self.username, token)
+        except KeyringError as exc:
+            raise CredentialError(f"GitHub トークンを保存できません: {exc}") from exc
+
+    def delete(self) -> bool:
+        try:
+            self.backend.delete_password(self.service, self.username)
+            return True
+        except PasswordDeleteError:
+            return False
+        except KeyringError as exc:
+            raise CredentialError(f"GitHub トークンを削除できません: {exc}") from exc

@@ -86,6 +86,12 @@ class AppConfig:
     ffmpeg_path: str = ""
 
     # Portfolio (Infinite Archive) registration.
+    portfolio_source: str = "github"  # "github" (direct, no local clone needed) | "local"
+    github_repo: str = "flyingbaby24/Jinn-Portfolio"
+    github_api: str = "https://api.github.com"  # not shown in the UI (self-test / GitHub Enterprise)
+    github_branch: str = ""  # last branch used; empty → the repository's default branch
+    github_mode: str = "commit"  # "commit" (fast-forward the branch) | "pr" (new branch + pull request)
+    pages_project: str = "jinn-portfolio"  # Cloudflare Pages project (→ <branch>.jinn-portfolio.pages.dev)
     portfolio_dir: str = ""  # local clone of flyingbaby24/Jinn-Portfolio (or its data/ folder)
     archive_artist: str = "Jinn Project"
     export_dir: str = ""
@@ -98,6 +104,11 @@ class AppConfig:
     def normalized(self) -> "AppConfig":
         if self.compression not in COMPRESSION_MODES:
             self.compression = "none"
+        if self.portfolio_source not in ("github", "local"):
+            self.portfolio_source = "github"
+        if self.github_mode not in ("commit", "pr"):
+            self.github_mode = "commit"
+        self.github_repo = self.github_repo.strip().strip("/")
         self.part_size_mib = max(5, min(int(self.part_size_mib), 5 * 1024))
         self.multipart_threshold_mib = max(5, int(self.multipart_threshold_mib))
         self.concurrency = max(1, min(int(self.concurrency), 16))

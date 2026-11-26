@@ -1,6 +1,6 @@
 # Jinn Media Uploader
 
-Cloudflare R2（S3 互換 API）へ MV・BGM をアップロードし、Jinn Project Portfolio（Infinite Archive）への登録データを作る Windows 用 GUI アプリです。
+Cloudflare R2（S3 互換 API）へ MV・BGM をアップロードし、Jinn Project Portfolio（Infinite Archive）へ登録する Windows 用 GUI アプリです。登録は GitHub API で直接行えます（ローカルのリポジトリ不要）。
 
 | 項目 | 既定値 |
 |---|---|
@@ -24,7 +24,7 @@ Cloudflare R2（S3 互換 API）へ MV・BGM をアップロードし、Jinn Pro
 - 公開 URL の生成とコピー
 - MV・BGM・その他の保存先（フォルダ）指定。フォルダ構造の保持も選択可
 - FFmpeg によるサムネイル生成（ポートフォリオの `scripts/make-thumbnails.mjs` と同じサイズ・形式・既定フレーム）
-- ポートフォリオ（`data/works.json` / `data/soundscape.json`）への登録データ出力。作品 ID・slug・BGM の id は既存データと重複しないよう自動で割り当てます
+- ポートフォリオへの登録：GitHub API から最新データを取得し、確認後に 1 コミットで反映します（Cloudflare Pages が自動デプロイ）。ローカルフォルダへの出力も選べます。作品 ID・slug・BGM の id は既存データと重複しないよう自動で割り当てます
 - 動画の圧縮は任意（既定は「元ファイルのまま」）。無劣化の Web 最適化（faststart）または H.264 再エンコードを選べます
 
 ## はじめに（ダウンロードと起動）
@@ -53,7 +53,7 @@ Cloudflare R2（S3 互換 API）へ MV・BGM をアップロードし、Jinn Pro
 2. 上部の「保存先」で MV / BGM / その他のフォルダを指定します（既定は `mv/` と `audio/`。空欄はバケット直下）。各行の「保存先キー」「種別」はダブルクリックで個別に変更できます。
 3. ［アップロード開始］を押します。重複や同名ファイルがある場合は確認画面が出ます（スキップ／別名で保存／上書き）。
 4. 完了した行の公開 URL は［公開URLをコピー］または右クリックからコピーできます。
-5. ［ポートフォリオ登録］（または［履歴］タブで選択 →［選択をポートフォリオ登録］）で、ポートフォリオへの登録データを出力します（下記）。
+5. ［ポートフォリオ登録］（または［履歴］タブで選択 →［選択をポートフォリオ登録］）で、ポートフォリオに登録します（下記）。
 
 一時停止すると、送信中のパートが終わった時点で止まります。［アップロード開始］で続きから再開します。アプリを閉じても、次回起動時に中断分がキューに戻ります。
 
@@ -67,43 +67,77 @@ Cloudflare R2（S3 互換 API）へ MV・BGM をアップロードし、Jinn Pro
 
 ## ポートフォリオへの登録
 
-対象は `flyingbaby24/Jinn-Portfolio` の `phase-3-1-soundscape` ブランチのデータ形式です。
+アップロード済みの MV・BGM を、Jinn Project Portfolio（`flyingbaby24/Jinn-Portfolio`）の作品データに登録します。登録方法は 2 つあります。
 
-1. 初回は［設定］→［メディア・出力］→「ポートフォリオのフォルダ」に、Jinn-Portfolio リポジトリのフォルダ（`data/works.json` があるところ）を指定します。登録画面でも指定できます。
-2. 登録画面では既存データ（例: 作品 4 件 mv-0001〜mv-0004 / BGM 0 曲）を読み込みます。新しい作品には次の値が自動で割り当てられます。
-   - 作品 ID: `mv-0005` から順に、既存の最大番号の次
-   - slug: タイトルから作成。既存の slug と重なる場合は `human-2` のように番号を付けます
-   - BGM の id: ファイル名から作成
-3. タイトル・slug・状態（published / draft / unlisted）・掲載日・サムネイル位置（秒）を確認・編集し、［登録データを出力］を押します。
-4. 出力フォルダ `jinn-portfolio-registration-<日時>/` の `data/` と `public/` を、リポジトリのルートにコピー（上書き）します。そのあと `npm run build && npm test`、`npm run verify:r2` で確認してください。
+| 方式 | 使いどころ |
+|---|---|
+| **GitHub に直接登録**（既定） | ローカルにリポジトリは不要です。GitHub API から最新データを取得し、確認後にコミットします。Cloudflare Pages が自動でデプロイします |
+| **ローカルのリポジトリ / フォルダに出力** | 手元のクローンに反映したい場合や、オフラインで準備する場合に使います（従来の方式） |
 
-### 割り当てのルール
+### GitHub トークンの準備（初回のみ）
 
-- 作品 ID・slug・BGM の id は、既存の `works.json` / `soundscape.json` と、このアプリが過去の出力で割り当てた ID（コミット前のものを含む）のどちらとも重ならない値になります。同じファイルを出力し直したときは同じ ID を使います。
-- すでに登録済みの `videoKey` / `key` は二重に登録しません。登録画面に「登録済み（mv-0002）」と表示されます。
-- サイトが再生できない音声形式（m4a / mp3 / aac / ogg / opus / wav / flac 以外）は BGM として登録しません。
+1. GitHub → Settings → Developer settings → **Personal access tokens → Fine-grained tokens** → Generate new token を開きます。
+2. Repository access は **Only select repositories** で `flyingbaby24/Jinn-Portfolio` だけを選びます。
+3. Permissions は次のとおりにします。
+   - **Contents: Read and write**（必須）
+   - **Pull requests: Read and write**（プルリクエスト方式を使う場合）
+   - **Checks: Read-only**（デプロイ状況の表示用）
+4. アプリの［設定］→［ポートフォリオ（GitHub）］→［トークンを登録・変更…］で貼り付け、［接続テスト］→［資格情報マネージャーに保存］します。
 
-### 出力の内容
+トークンは **Windows 資格情報マネージャー**（汎用資格情報 `JinnMediaUploader/GitHub`）にだけ保存されます。R2 の認証情報とは別の項目です。設定ファイル、ログ、履歴には書き込みません。
+
+### GitHub に直接登録する手順
+
+1. ［ポートフォリオ登録］（または［履歴］／［R2 ファイル一覧］で選択 → 右クリック）で登録画面を開きます。
+2. 「反映先ブランチ」を選びます。画面を開くとき、ブランチを切り替えたとき、［最新データを取得］を押したときに、そのブランチの最新コミットから次の情報を読み込みます。
+   - `data/works.json`、`data/soundscape.json`、`data/thumbnail-sources.json`
+   - `public/thumbnails/` のファイル一覧
+3. 作品 ID・slug・BGM の id が自動で割り当てられます。割り当てでは次の 3 つのどれとも重ならない値を選びます。
+   - 既存の作品・BGM
+   - 既存のサムネイルのファイル名
+   - このアプリが過去に割り当てた ID
+4. タイトル・状態・掲載日・サムネイル位置を確認し、［確認して GitHub へ反映…］を押します。
+5. 確認画面に、反映先、基準のコミット、追加する作品・BGM、変更されるファイルごとの差分（画像はプレビュー）、コミットメッセージが表示されます。内容を確認してから［GitHub へ反映する］を押します。
+6. 反映後の画面にコミット（またはプルリクエスト）へのリンクが表示されます。Cloudflare Pages のビルド状況と URL も、完了するまで自動で更新されます。
+
+反映方法は 2 つから選べます。
+
+| 反映方法 | 動き |
+|---|---|
+| 反映先ブランチに直接コミット | そのブランチを更新し、Cloudflare Pages がすぐにビルドします。`main` は本番、それ以外のブランチは `https://<ブランチ名>.jinn-portfolio.pages.dev` のプレビューになります |
+| 新しいブランチでプルリクエスト | `register/mv-0005-…` ブランチに 1 コミットを作り、反映先ブランチへのプルリクエストを作ります。プレビューで確認してからマージできます |
+
+### 既存データを守る仕組み
+
+- 1 回の登録は **1 つのコミット**にまとまります（`data/*.json` と `public/thumbnails/*`）。ほかのファイルには触れません。
+- ブランチは **早送り（fast-forward）でのみ**更新します。データの取得から反映までの間に他の更新（クラウド側の開発セッションによる push など）があった場合は、上書きせずに中止します。そのあと最新データを取り直します。
+- 追加するサムネイルと同じパスのファイルがすでにある場合も中止します。
+- 反映後に、新しいコミットの内容を GitHub から読み戻して確認します。
+  - 送ったファイルが送信内容と一致すること
+  - 既存の作品データが 1 件も変わっていないこと
+- `works.json` の既存の記述はバイト単位で同じまま、新しい作品を末尾に追加します。未提供の項目（解説・歌詞・ジャンルなど）は `null` / `[]` のままです。
+- 送信前に、サイトの `validateWorks` / `validateSoundscape` と同じ検証を行います。
+- `data/soundscape.json` がないブランチ（現在の `main` など）では、BGM は登録しません。
+
+### ローカルフォルダに出力する場合
+
+登録画面で「ローカルのリポジトリ / フォルダに出力」を選び、Jinn-Portfolio のフォルダ（`data/works.json` があるところ）を指定します。リポジトリと同じ構成のフォルダ `jinn-portfolio-registration-<日時>/` が出力されます。中の `data/` と `public/` をリポジトリのルートにコピーし、`npm run build && npm test` で確認してください。
+
+### 出力・コミットされるファイル
 
 | ファイル | 内容 |
 |---|---|
-| `data/works.json` | 既存の作品はそのまま（バイト単位で同一）。新しい作品を末尾に追加します |
-| `data/soundscape.json` | `tracks` に `{ "id", "key" }` を追加します（キーは `audio/…` のまま。URL エンコードはサイトのビルドが行います） |
+| `data/works.json` | 新しい作品を末尾に追加します（サイトの `src/data/schema.mjs` と同じ 23 項目を同じ順序で書きます） |
+| `data/soundscape.json` | `tracks` に `{ "id", "key" }` を追加します（キーは `audio/…`） |
 | `data/thumbnail-sources.json` | slug ごとのポスター用フレーム位置（秒）。サイトの `npm run thumbnails` でも同じ画像を再生成できます |
 | `public/thumbnails/<slug>.webp` | カード用 WebP（縦長は幅 480px、横長は幅 800px） |
 | `public/thumbnails/<slug>-poster.jpg` | ポスター用 JPEG（縦長は幅 720px、横長は幅 1280px） |
-| `new-entries.json` / `README.txt` | 今回追加した分の一覧と手順 |
 
-作品データはサイトの `src/data/schema.mjs` と同じ 23 項目を同じ順序で書きます。
+### ポートフォリオ側のテストについて
 
-- 解説・歌詞・ジャンル・制作日・言語など、提供されていない情報は `null` / `[]` のままにします（推測で埋めません）。
-- `duration` / `width` / `height` はファイルからの実測値です（回転を考慮した表示サイズ）。
-- 出力前に、サイトの `validateWorks` / `validateSoundscape` と同じ検証を行います。
+Jinn-Portfolio の単体テストの一部は、現在のデータ（作品 4 件、videoKey の一覧、`tracks` が空、サイトマップの件数）を固定値で確認しています。作品を追加すると、GitHub Actions の「Build, unit tests, browser tests」がこれらのテストで失敗します。
 
-### 確認済み
-
-- 現在のデータ（4 作品）に 2 作品と BGM 1 曲を追加した出力を、リポジトリのコピーに適用しました。`npm run build` は成功し、新しい作品ページも生成されました。
-- `npm test` では 6 件が失敗します。いずれも現在のデータそのもの（作品数 4、videoKey の一覧、`tracks` が空、サイトマップの件数）を固定で確認しているテストで、作品を追加するときはリポジトリ側でこれらの期待値を更新してください。
+Cloudflare Pages のビルド（`npm run build`）は成功し、サイトには反映されます。CI を緑に保つには、リポジトリ側でこれらの期待値を更新してください。
 
 ## 推定月額料金
 
@@ -146,7 +180,7 @@ pyinstaller --noconfirm JinnMediaUploader.spec   # Windows 上で dist/JinnMedia
 - `.github/workflows/media-uploader.yml` は Windows ランナー上で次の順に実行します。R2 への接続や Secrets は使いません。
   1. テスト
   2. EXE のビルド
-  3. EXE の自己診断（資格情報マネージャー、FFmpeg、サムネイル、ローカル S3 サーバーへの 320MiB マルチパート、ポートフォリオ登録）
+  3. EXE の自己診断（R2・GitHub 用の資格情報マネージャー、FFmpeg、サムネイル、ローカル S3 サーバーへの 320MiB マルチパート、ポートフォリオ登録、ローカルの疑似 GitHub への直接登録）
   4. 画面キャプチャ
   5. Artifact `JinnMediaUploader-win64` の出力
 
@@ -166,5 +200,7 @@ EXE のコマンドライン機能です。ウィンドウアプリのため、�
 | `AccessDenied` | API トークンの権限（Object Read & Write）と対象バケットを確認してください |
 | 接続できない | Account ID（アカウント名ではなく 32 桁の ID）とネットワーク・プロキシ設定を確認してください |
 | サムネイルが作られない | ステータスバーの「FFmpeg: 未検出」を確認し、［設定］で `ffmpeg.exe` を指定してください |
-| 登録画面で「data/works.json が見つかりません」 | Jinn-Portfolio リポジトリのルート（または `data` フォルダ）を指定してください |
+| 登録画面で「data/works.json が見つかりません」 | ローカル方式の場合はリポジトリのルート（または `data` フォルダ）を指定してください。GitHub 方式の場合は反映先ブランチを確認してください |
+| GitHub で 401 / 403 / 404 | トークンの期限、対象リポジトリ（Only select repositories）、権限（Contents: Read and write）を確認してください |
+| 「ブランチが更新されています」 | 取得後に他の更新がありました。最新データが自動で読み込まれるので、内容を確認して再度反映してください |
 | ログ | `%APPDATA%\JinnMediaUploader\logs\app.log`（認証情報は記録しません） |

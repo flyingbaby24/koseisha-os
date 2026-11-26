@@ -38,13 +38,14 @@ from PySide6.QtWidgets import (
 
 from .. import APP_NAME, __version__, media, portfolio, pricing
 from ..config import AppConfig, ConfigStore
-from ..credentials import CredentialError, CredentialStore
+from ..credentials import CredentialError, CredentialStore, GitHubTokenStore
 from ..history import History, ResumeStore
 from ..jobs import JobManager, NotConnected
 from ..keys import CATEGORY_LABELS, format_bytes, format_duration, format_eta, format_rate, normalize_prefix, public_url
 from ..r2client import R2Service, make_client
 from ..uploader import JobState, UploadEngine
-from .dialogs import COMPRESSION_LABELS, DecisionDialog, ExportDialog, SettingsDialog
+from .dialogs import COMPRESSION_LABELS, DecisionDialog, SettingsDialog
+from .portfolio_dialog import PortfolioDialog
 from .models import CategoryDelegate, ObjectsFilter, ObjectsModel, ProgressDelegate, QueueModel
 from .worker import run_async
 
@@ -86,11 +87,13 @@ class DropZone(QFrame):
 
 class MainWindow(QMainWindow):
     def __init__(self, config_store: ConfigStore, cred_store: CredentialStore, history: History,
-                 resume: ResumeStore, icon: QIcon | None = None, auto_startup: bool = True):
+                 resume: ResumeStore, icon: QIcon | None = None, auto_startup: bool = True,
+                 github_store: GitHubTokenStore | None = None):
         super().__init__()
         self.config_store = config_store
         self.config: AppConfig = config_store.load()
         self.cred_store = cred_store
+        self.github_store = github_store or GitHubTokenStore(backend=cred_store.backend)
         self.history = history
         self.resume = resume
         self.ffmpeg, self.ffprobe = media.find_ffmpeg(self.config.ffmpeg_path)
@@ -596,7 +599,7 @@ class MainWindow(QMainWindow):
         run_async(svc.test_connection, on_done=ok, on_error=fail)
 
     def open_settings(self):
-        dlg = SettingsDialog(self, self.config, self.cred_store)
+        dlg = SettingsDialog(self, self.config, self.cred_store, self.github_store)
         if dlg.exec():
             self.config_store.save(self.config)
             self.ffmpeg, self.ffprobe = media.find_ffmpeg(self.config.ffmpeg_path)
@@ -912,12 +915,15 @@ class MainWindow(QMainWindow):
         if not cands:
             QMessageBox.information(self, "登録データ出力", "出力できる MV / BGM がありません（アップロード済みのものを選択してください）。")
             return
-        dlg = ExportDialog(self, cands, self.config, self.history, self.ffmpeg,
-                           lambda k: public_url(self.config.public_base_url, k))
+        dlg = PortfolioDialog(self, cands, self.config, self.history, self.ffmpeg,
+                              lambda k: public_url(self.config.public_base_url, k), self.github_store)
         dlg.exec()
         self.config_store.save(self.config)
         if dlg.output_path:
             log.info("ポートフォリオ登録データを出力しました: %s", dlg.output_path)
+        if dlg.published:
+            r = dlg.published
+            log.info("ポートフォリオに反映しました: %s（%s）%s", r.commit_url, r.branch, f" PR: {r.pr_url}" if r.pr_url else "")
 
     def export_session_json(self):
         jobs = [j for j in (self._selected_jobs() or self.manager.jobs) if j.state == JobState.DONE and j.history_id]
