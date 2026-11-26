@@ -29,7 +29,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__, archive_json, media, pricing
+from . import __version__, media, portfolio, pricing
 from .config import AppConfig, ConfigStore
 from .credentials import CredentialStore, R2Credentials
 from .history import History, ResumeStore
@@ -141,9 +141,13 @@ def offline_selftest(endpoint: str | None = None) -> dict:
             _make_test_video(ffmpeg, v)
             info = media.probe(ffprobe, v)
             _require(info.display_size == (1080, 1920), f"unexpected size {info.display_size}")
-            th = media.make_video_thumbnails(ffmpeg, v, Path(td) / "th", "probe-test", info)
-            e["thumb"] = th.thumb.suffix if th.thumb else None
-            _require(th.poster is not None and th.poster.stat().st_size > 0, "no poster")
+            th = media.make_site_thumbnails(ffmpeg, v, Path(td) / "probe-test.webp", Path(td) / "probe-test-poster.jpg",
+                                            portfolio.default_thumb_time(info.duration), landscape=False)
+            t_info, p_info = media.probe(ffprobe, th.thumb), media.probe(ffprobe, th.poster)
+            e["thumb"] = f"{t_info.video_codec} {t_info.width}x{t_info.height}"
+            e["poster"] = f"{p_info.video_codec} {p_info.width}x{p_info.height}"
+            _require((t_info.video_codec, t_info.width) == ("webp", 480), "card thumbnail is not a 480px WebP")
+            _require((p_info.video_codec, p_info.width) == ("mjpeg", 720), "poster is not a 720px JPEG")
 
     if endpoint:
         _require(endpoint.startswith(("http://127.0.0.1", "http://localhost")),
@@ -205,7 +209,7 @@ def upload_verification(rep: Report, service: R2Service, base_cfg: AppConfig, si
     marker = {"jmu-selftest-run": run_id}
 
     cfg = copy.deepcopy(base_cfg)
-    cfg.mv_prefix, cfg.bgm_prefix, cfg.thumb_prefix = prefix + "mv/", prefix + "bgm/", prefix + "thumbnails/"
+    cfg.mv_prefix, cfg.bgm_prefix, cfg.thumb_prefix = prefix + "mv/", prefix + "audio/", prefix + "thumbnails/"
     cfg.part_size_mib, cfg.multipart_threshold_mib, cfg.concurrency, cfg.max_retries = 16, 32, 4, 5
     cfg.compression = "none"
     cfg.generate_thumbnails = bool(ffmpeg)
@@ -356,7 +360,7 @@ def upload_verification(rep: Report, service: R2Service, base_cfg: AppConfig, si
             _require(info.content_type == "audio/mpeg", "wrong content type")
 
         if ffmpeg and ffprobe:
-            with rep.step("FFmpeg thumbnails + Infinite Archive JSON") as e:
+            with rep.step("FFmpeg thumbnails + portfolio registration (works.json / soundscape.json)") as e:
                 mvp = work / "Selftest Portrait MV.mp4"
                 _make_test_video(ffmpeg, mvp)
                 job5 = UploadJob(path=mvp, size=mvp.stat().st_size, category="mv", key=cfg.mv_prefix + mvp.name)
@@ -364,20 +368,47 @@ def upload_verification(rep: Report, service: R2Service, base_cfg: AppConfig, si
                 eng.analyze(job5)
                 eng.run(job5, UploadControl())
                 _require(job5.state == JobState.DONE, job5.error)
-                _require(bool(job5.thumb_key and job5.poster_key), f"thumbnails not uploaded: {job5.message}")
+                _require(bool(job5.thumb_local and job5.poster_local), f"thumbnails not generated: {job5.message}")
+                _require(bool(job5.thumb_key and job5.poster_key), f"thumbnails not copied to R2: {job5.message}")
                 _require(service.head(job5.thumb_key) is not None, "thumbnail missing in bucket")
-                rows = [r for r in reversed(history.recent(service.bucket)) if r["category"] in ("mv", "bgm")
-                        and r["key"] in (job5.key, job4.key)]
-                items = []
-                for n, r in enumerate(rows):
-                    items.append(archive_json.ArchiveItem.from_history(r, 900 + n, cfg.archive_artist))
-                doc = archive_json.build_document(items, cfg.public_base_url, service.bucket)
-                problems = archive_json.validate_document(doc)
-                _require(not problems, "; ".join(problems))
-                w = doc["works"][0]
-                _require((w["w"], w["h"]) == (1080, 1920) and w["durationText"] == "0:04", f"bad work entry {w}")
-                e["work"] = w
-                e["track"] = doc["soundscape"]["tracks"][0] if doc["soundscape"]["tracks"] else None
+                # A portfolio whose existing data already uses the slug, a high ID and the track id.
+                pf = work / "portfolio"
+                (pf / "data").mkdir(parents=True)
+                existing = [dict(portfolio.work_entry(portfolio.Candidate(
+                    kind="work", key=k, title=t, id=i, slug=sl, duration=10.0, width=1080, height=1920),
+                    "thumbnails/", "Jinn Project")) for k, t, i, sl in (
+                    ("Existing A.mp4", "Existing A", "mv-0001", "selftest-portrait-mv"),
+                    ("Existing B.mp4", "Existing B", "mv-0007", "existing-b"))]
+                (pf / "data" / "works.json").write_text(
+                    portfolio.dump_json({"schemaVersion": 1, "works": existing}), encoding="utf-8")
+                (pf / "data" / "soundscape.json").write_text(portfolio.dump_json(
+                    {"placeholder": "synth", "crossfade": 8, "tracks": [{"id": "jmu-selftest-bgm", "key": "audio/old.m4a"}]}),
+                    encoding="utf-8")
+                (pf / "data" / "categories.json").write_text(portfolio.dump_json(
+                    {"categories": [{"id": "music-videos", "enabled": True}]}), encoding="utf-8")
+                data = portfolio.PortfolioData.load(pf)
+                rows = [r for r in reversed(history.recent(service.bucket)) if r["key"] in (job5.key, job4.key)]
+                cands = [portfolio.Candidate.from_history(r) for r in rows]
+                portfolio.plan(cands, data)
+                w_c = next(c for c in cands if c.kind == "work")
+                t_c = next(c for c in cands if c.kind == "track")
+                _require(w_c.id == "mv-0008", f"work id {w_c.id} (expected mv-0008, after mv-0007)")
+                _require(w_c.slug == "selftest-portrait-mv-2", f"slug {w_c.slug} collides")
+                _require(t_c.id == "jmu-selftest-bgm-2", f"track id {t_c.id} collides")
+                reg = portfolio.build(data, cands, "thumbnails/", cfg.archive_artist)
+                _require(not reg.problems, "; ".join(reg.problems))
+                thumbs = media.make_site_thumbnails(ffmpeg, mvp, work / f"{w_c.slug}.webp", work / f"{w_c.slug}-poster.jpg",
+                                                    w_c.thumb_time, w_c.landscape)
+                bundle = portfolio.write_bundle(reg, work / "export", {
+                    f"thumbnails/{w_c.slug}.webp": thumbs.thumb, f"thumbnails/{w_c.slug}-poster.jpg": thumbs.poster})
+                merged = portfolio.PortfolioData.load(bundle)
+                _require([w["id"] for w in merged.works] == ["mv-0001", "mv-0007", "mv-0008"], "works not appended")
+                _require(merged.works[:2] == existing, "existing works were modified")
+                _require((bundle / "public" / "thumbnails" / f"{w_c.slug}.webp").is_file(), "thumbnail missing in bundle")
+                new = merged.works[-1]
+                _require((new["width"], new["height"]) == (1080, 1920) and 3.5 < new["duration"] < 4.5, f"bad entry {new}")
+                e["work"] = new
+                e["track"] = merged.tracks[-1]
 
         with rep.step("Usage and monthly cost estimate") as e:
             usage = R2Service.summarize(service.list_all())

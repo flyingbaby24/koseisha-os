@@ -1,6 +1,6 @@
 # Jinn Media Uploader
 
-Cloudflare R2（S3 互換 API）へ MV・BGM をアップロードする Windows 用 GUI アプリです。
+Cloudflare R2（S3 互換 API）へ MV・BGM をアップロードし、Jinn Project Portfolio（Infinite Archive）への登録データを作る Windows 用 GUI アプリです。
 
 | 項目 | 既定値 |
 |---|---|
@@ -8,6 +8,7 @@ Cloudflare R2（S3 互換 API）へ MV・BGM をアップロードする Windows
 | バケット | `jinn-mv-portfolio` |
 | API | S3 Compatibility API（`https://<Account ID>.r2.cloudflarestorage.com`） |
 | 公開ベース URL | `https://pub-14a29b5d61e944bfa82071f29c1817f1.r2.dev` |
+| 保存先 | MV → `mv/`、BGM → `audio/`（サイトの soundscape の規定）、その他 → `misc/` |
 
 ## 機能
 
@@ -22,8 +23,8 @@ Cloudflare R2（S3 互換 API）へ MV・BGM をアップロードする Windows
 - 上書き前の確認（「上書きする」を選び、さらに確認した場合のみ上書き）
 - 公開 URL の生成とコピー
 - MV・BGM・その他の保存先（フォルダ）指定。フォルダ構造の保持も選択可
-- FFmpeg によるサムネイル生成（動画: ポスター JPG ＋ WebP サムネイル、音声: カバーアートまたは波形画像）
-- Infinite Archive 登録用 JSON の出力
+- FFmpeg によるサムネイル生成（ポートフォリオの `scripts/make-thumbnails.mjs` と同じサイズ・形式・既定フレーム）
+- ポートフォリオ（`data/works.json` / `data/soundscape.json`）への登録データ出力。作品 ID・slug・BGM の id は既存データと重複しないよう自動で割り当てます
 - 動画の圧縮は任意（既定は「元ファイルのまま」）。無劣化の Web 最適化（faststart）または H.264 再エンコードを選べます
 
 ## はじめに（ダウンロードと起動）
@@ -49,10 +50,10 @@ Cloudflare R2（S3 互換 API）へ MV・BGM をアップロードする Windows
 ## 使い方
 
 1. ［アップロード］タブにファイルやフォルダをドロップします。追加と同時に、ハッシュ計算・メディア解析（長さ・解像度）・重複確認がバックグラウンドで行われます。
-2. 上部の「保存先」で MV / BGM / その他のフォルダを指定します（例: `mv/2026/`。空欄はバケット直下）。各行の「保存先キー」「種別」はダブルクリックで個別に変更できます。
+2. 上部の「保存先」で MV / BGM / その他のフォルダを指定します（既定は `mv/` と `audio/`。空欄はバケット直下）。各行の「保存先キー」「種別」はダブルクリックで個別に変更できます。
 3. ［アップロード開始］を押します。重複や同名ファイルがある場合は確認画面が出ます（スキップ／別名で保存／上書き）。
 4. 完了した行の公開 URL は［公開URLをコピー］または右クリックからコピーできます。
-5. ［JSON 出力］（または［履歴］タブで選択 →［選択を JSON 出力］）で、Infinite Archive 登録用 JSON を出力します。出力前にタイトル・slug・ID 番号・説明を編集できます。
+5. ［ポートフォリオ登録］（または［履歴］タブで選択 →［選択をポートフォリオ登録］）で、ポートフォリオへの登録データを出力します（下記）。
 
 一時停止すると、送信中のパートが終わった時点で止まります。［アップロード開始］で続きから再開します。アプリを閉じても、次回起動時に中断分がキューに戻ります。
 
@@ -62,33 +63,47 @@ Cloudflare R2（S3 互換 API）へ MV・BGM をアップロードする Windows
 - アップロード直前に HEAD で既存ファイルを確認します。存在する場合は、明示的に「上書きする」を選んで再確認しない限り書き込みません。
 - 新規の書き込みには `If-None-Match: *` を付けます。確認から書き込みまでの間に同名ファイルが作られても、R2 側で拒否されます。上書きには、確認時に見た ETag を `If-Match` で指定するため、確認後に変わったファイルは上書きしません。
 - 中止時に破棄（abort）するのは、このアプリ自身が開始したマルチパートアップロードだけです。
-- 生成サムネイルが既存ファイルと同名になる場合は、`name (2).webp` のように別名にします。
+- サムネイルの R2 へのコピー（任意・既定オフ）は、同じキーに別内容のファイルがあれば行いません（名前も変えません）。
 
-## Infinite Archive 登録用 JSON
+## ポートフォリオへの登録
 
-`works` の各要素は、Infinite Archive のページに埋め込まれている `#x-data` の作品データと同じ形式です。
+対象は `flyingbaby24/Jinn-Portfolio` の `phase-3-1-soundscape` ブランチのデータ形式です。
 
-```json
-{
-  "works": [{
-    "id": "mv-0005", "slug": "night-drive", "title": "Night Drive", "artist": "Jinn Project",
-    "w": 1920, "h": 1080, "durationText": "3:12",
-    "thumb": "https://pub-…r2.dev/thumbnails/night-drive.webp",
-    "poster": "https://pub-…r2.dev/thumbnails/night-drive-poster.jpg",
-    "video": "https://pub-…r2.dev/mv/Night%20Drive.mp4",
-    "page": "/music-videos/night-drive/", "description": null, "lyrics": null,
-    "uploadDate": "2026-11-26", "duration": "PT3M12S", "encodingFormat": "video/mp4",
-    "category": "music-videos", "genre": "", "themes": [], "year": "2026"
-  }],
-  "soundscape": { "tracks": [{ "id": "bgm-0001", "title": "…", "src": "https://pub-…r2.dev/bgm/….mp3", "…": "…" }] },
-  "assets": [{ "key": "mv/Night Drive.mp4", "sizeBytes": 0, "sha256": "…", "…": "…" }]
-}
-```
+1. 初回は［設定］→［メディア・出力］→「ポートフォリオのフォルダ」に、Jinn-Portfolio リポジトリのフォルダ（`data/works.json` があるところ）を指定します。登録画面でも指定できます。
+2. 登録画面では既存データ（例: 作品 4 件 mv-0001〜mv-0004 / BGM 0 曲）を読み込みます。新しい作品には次の値が自動で割り当てられます。
+   - 作品 ID: `mv-0005` から順に、既存の最大番号の次
+   - slug: タイトルから作成。既存の slug と重なる場合は `human-2` のように番号を付けます
+   - BGM の id: ファイル名から作成
+3. タイトル・slug・状態（published / draft / unlisted）・掲載日・サムネイル位置（秒）を確認・編集し、［登録データを出力］を押します。
+4. 出力フォルダ `jinn-portfolio-registration-<日時>/` の `data/` と `public/` を、リポジトリのルートにコピー（上書き）します。そのあと `npm run build && npm test`、`npm run verify:r2` で確認してください。
 
-- 先頭 13 項目（`id`〜`lyrics`）がサイトの作品データと同じです。続く `uploadDate` / `duration` / `encodingFormat` は作品ページの VideoObject、`category` / `genre` / `themes` / `year` はライブラリのカードで使われている項目です。
-- `w` / `h` は回転メタデータを考慮した表示サイズです（縦動画は 1080×1920）。
-- `thumb` / `poster` は、サムネイルを R2 にアップロードした場合は公開 URL、ローカルのみの場合は `/thumbnails/<ファイル名>`（サイトの `thumbnails/` にコピーする前提）です。
-- ID 番号の初期値は［設定］→［メディア・出力］の「次の MV 番号」です（既定 5。現在の公開作品は mv-0001〜0004）。出力後は自動で進みます。
+### 割り当てのルール
+
+- 作品 ID・slug・BGM の id は、既存の `works.json` / `soundscape.json` と、このアプリが過去の出力で割り当てた ID（コミット前のものを含む）のどちらとも重ならない値になります。同じファイルを出力し直したときは同じ ID を使います。
+- すでに登録済みの `videoKey` / `key` は二重に登録しません。登録画面に「登録済み（mv-0002）」と表示されます。
+- サイトが再生できない音声形式（m4a / mp3 / aac / ogg / opus / wav / flac 以外）は BGM として登録しません。
+
+### 出力の内容
+
+| ファイル | 内容 |
+|---|---|
+| `data/works.json` | 既存の作品はそのまま（バイト単位で同一）。新しい作品を末尾に追加します |
+| `data/soundscape.json` | `tracks` に `{ "id", "key" }` を追加します（キーは `audio/…` のまま。URL エンコードはサイトのビルドが行います） |
+| `data/thumbnail-sources.json` | slug ごとのポスター用フレーム位置（秒）。サイトの `npm run thumbnails` でも同じ画像を再生成できます |
+| `public/thumbnails/<slug>.webp` | カード用 WebP（縦長は幅 480px、横長は幅 800px） |
+| `public/thumbnails/<slug>-poster.jpg` | ポスター用 JPEG（縦長は幅 720px、横長は幅 1280px） |
+| `new-entries.json` / `README.txt` | 今回追加した分の一覧と手順 |
+
+作品データはサイトの `src/data/schema.mjs` と同じ 23 項目を同じ順序で書きます。
+
+- 解説・歌詞・ジャンル・制作日・言語など、提供されていない情報は `null` / `[]` のままにします（推測で埋めません）。
+- `duration` / `width` / `height` はファイルからの実測値です（回転を考慮した表示サイズ）。
+- 出力前に、サイトの `validateWorks` / `validateSoundscape` と同じ検証を行います。
+
+### 確認済み
+
+- 現在のデータ（4 作品）に 2 作品と BGM 1 曲を追加した出力を、リポジトリのコピーに適用しました。`npm run build` は成功し、新しい作品ページも生成されました。
+- `npm test` では 6 件が失敗します。いずれも現在のデータそのもの（作品数 4、videoKey の一覧、`tracks` が空、サイトマップの件数）を固定で確認しているテストで、作品を追加するときはリポジトリ側でこれらの期待値を更新してください。
 
 ## 推定月額料金
 
@@ -99,48 +114,49 @@ R2 Standard の公開価格（ストレージ $0.015/GB・月、Class A $4.50/10
 
 実際の請求額は Cloudflare ダッシュボードで確認してください。単価と為替レートは［使用量・料金］タブで変更できます。
 
+## 実機（Windows）での R2 接続確認
+
+アップロードは画面から行えます。動作確認をまとめて行いたい場合は、資格情報マネージャーに保存した認証情報を使う検証コマンドも使えます。
+
+```bat
+JinnMediaUploader.exe --r2-verify --report r2-verify.json --cleanup
+```
+
+- 320MiB のマルチパートアップロードを行い、次の点を確認します。
+  - 通信断の注入 → 自動再試行
+  - 一時停止 → 再開
+  - SHA-256 の照合
+  - 公開 URL の確認
+  - 重複検出、上書き防止
+  - 既存オブジェクトがすべて変わっていないこと
+- 書き込むのは `_selftest/jmu-<実行ID>/` の下だけです。`--cleanup` を付けると、その実行で作成したテスト用オブジェクトだけを削除します。
+- 結果は `r2-verify.json` に出力されます。
+
 ## 開発者向け
 
 ```bash
 cd apps/jinn-media-uploader
 pip install -r requirements.txt -r requirements-dev.txt
 python run_app.py                          # GUI を起動
-python -m pytest -q -m "large or not large" # 330MiB のマルチパートを含む全テスト（ローカル S3 互換サーバー使用）
+python -m pytest -q -m "large or not large" # 330MiB のマルチパートとポートフォリオ互換性を含む全テスト
 pyinstaller --noconfirm JinnMediaUploader.spec   # Windows 上で dist/JinnMediaUploader.exe を作成
 ```
 
-EXE には検証用のコマンドライン機能があります。ウィンドウアプリのため、結果は JSON ファイルに出力されます。
+- `tests/portfolio_spec/` には、ポートフォリオの検証コード（`schema.mjs` / `soundscape.mjs` / `media.mjs`）と実データを、コミットを記録してそのままコピーしています。Node があれば、出力をサイト自身の検証コードにも通し、アプリ側の検証結果とエラーメッセージまで一致することを確認します。
+- `.github/workflows/media-uploader.yml` は Windows ランナー上で次の順に実行します。R2 への接続や Secrets は使いません。
+  1. テスト
+  2. EXE のビルド
+  3. EXE の自己診断（資格情報マネージャー、FFmpeg、サムネイル、ローカル S3 サーバーへの 320MiB マルチパート、ポートフォリオ登録）
+  4. 画面キャプチャ
+  5. Artifact `JinnMediaUploader-win64` の出力
+
+EXE のコマンドライン機能です。ウィンドウアプリのため、結果は JSON ファイルに出力されます。
 
 | コマンド | 内容 |
 |---|---|
-| `JinnMediaUploader.exe --selftest --report out.json [--endpoint http://127.0.0.1:5055]` | Qt、資格情報マネージャー、FFmpeg を確認します。`--endpoint` を指定すると、ローカル S3 サーバーへの 320MiB アップロードまで行います |
-| `JinnMediaUploader.exe --r2-verify --report out.json --cleanup` | 実際の R2 で検証します（詳細は下の「実 R2 での検証」） |
-| `JinnMediaUploader.exe --screenshot out.png [--tab N]` | デモデータで画面を PNG に保存します |
-
-### CI と実 R2 での検証
-
-`.github/workflows/media-uploader.yml` は Windows ランナー上で次の順に実行します。
-
-1. テスト
-2. EXE のビルド
-3. EXE の自己診断（資格情報マネージャー、FFmpeg、ローカル S3 への 320MiB マルチパート）
-4. 画面キャプチャ
-
-実 R2 での検証は、リポジトリの Secrets に `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` を登録したうえで、次のどちらかで実行します。
-
-- **Run workflow** で `r2_live` にチェックを入れて実行する
-- コミットメッセージに `[r2-live]` を含めて push する
-
-実行内容は次のとおりです。
-
-- 資格情報マネージャーへの保存と読み出し
-- 320MiB のマルチパートアップロード（通信断の注入 → 自動再試行、一時停止 → 再開）
-- SHA-256 の照合
-- 公開 URL への HEAD リクエスト
-- 重複検出、上書き防止、BGM の単一 PUT、サムネイル生成、JSON 出力
-- 既存オブジェクトがすべて変わっていないことの比較
-
-書き込むのは `_selftest/jmu-<実行ID>/` の下だけです。終了時には、その実行で作成したテスト用オブジェクト（`jmu-selftest-run` メタデータで識別）だけを削除します。
+| `JinnMediaUploader.exe --selftest --report out.json [--endpoint http://127.0.0.1:5055]` | オフラインの自己診断 |
+| `JinnMediaUploader.exe --r2-verify --report out.json --cleanup` | 実際の R2 での確認（上記） |
+| `JinnMediaUploader.exe --screenshot out.png [--tab N]` | デモデータで画面を PNG に保存 |
 
 ## トラブルシューティング
 
@@ -150,4 +166,5 @@ EXE には検証用のコマンドライン機能があります。ウィンド�
 | `AccessDenied` | API トークンの権限（Object Read & Write）と対象バケットを確認してください |
 | 接続できない | Account ID（アカウント名ではなく 32 桁の ID）とネットワーク・プロキシ設定を確認してください |
 | サムネイルが作られない | ステータスバーの「FFmpeg: 未検出」を確認し、［設定］で `ffmpeg.exe` を指定してください |
+| 登録画面で「data/works.json が見つかりません」 | Jinn-Portfolio リポジトリのルート（または `data` フォルダ）を指定してください |
 | ログ | `%APPDATA%\JinnMediaUploader\logs\app.log`（認証情報は記録しません） |

@@ -1,8 +1,9 @@
 name: Jinn Media Uploader
 
-# Builds the Windows EXE, tests it, and (on request) verifies it against the real
-# Cloudflare R2 bucket. The live run only writes under _selftest/jmu-<run id>/,
-# checks every pre-existing object is unchanged, and deletes only its own test objects.
+# Tests the uploader, builds the Windows EXE, self-tests the EXE against a local
+# S3-compatible server and publishes it as an artifact. Nothing here connects to
+# Cloudflare R2: real uploads are done by the user from their Windows machine, with
+# credentials kept in Windows Credential Manager, so no R2 secrets are needed.
 on:
   push:
     paths:
@@ -13,14 +14,6 @@ on:
       - "apps/jinn-media-uploader/**"
       - ".github/workflows/media-uploader.yml"
   workflow_dispatch:
-    inputs:
-      r2_live:
-        description: "Run the live Cloudflare R2 verification (needs R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY secrets)"
-        type: boolean
-        default: false
-      size_mib:
-        description: "Size of the live test upload in MiB"
-        default: "320"
 
 permissions:
   contents: read
@@ -54,6 +47,10 @@ jobs:
             apps/jinn-media-uploader/requirements.txt
             apps/jinn-media-uploader/requirements-dev.txt
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -83,7 +80,9 @@ jobs:
           "$PWD\ffmpeg" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
           & .\ffmpeg\ffmpeg.exe -hide_banner -version | Select-Object -First 1
 
-      - name: Unit and integration tests (incl. 330 MiB multipart upload to a local S3 server)
+      - name: Unit and integration tests (incl. 330 MiB multipart upload to a local S3 server and portfolio compatibility)
+        env:
+          JMU_REQUIRE_NODE: "1"  # the portfolio-validator cross-checks must run, not skip
         run: python -m pytest -q -p no:cacheprovider -m "large or not large"
 
       - name: Build EXE (PyInstaller)
@@ -128,24 +127,6 @@ jobs:
           name: JinnMediaUploader-win64
           path: apps/jinn-media-uploader/package/
           retention-days: 30
-
-      - name: Live Cloudflare R2 verification
-        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.r2_live) || contains(github.event.head_commit.message, '[r2-live]') }}
-        env:
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          SIZE_MIB: ${{ inputs.size_mib || '320' }}
-        run: |
-          if (-not $env:R2_ACCOUNT_ID -or -not $env:R2_ACCESS_KEY_ID -or -not $env:R2_SECRET_ACCESS_KEY) {
-            throw "Repository secrets R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY are not configured"
-          }
-          $p = Start-Process -FilePath "package\JinnMediaUploader\JinnMediaUploader.exe" `
-            -ArgumentList @("--r2-verify", "--store-env-credentials", "--forget-credentials", "--cleanup",
-                            "--size-mib", $env:SIZE_MIB, "--report", "$PWD\reports\r2-verify.json") `
-            -Wait -PassThru
-          python scripts/print_report.py reports/r2-verify.json
-          if ($p.ExitCode -ne 0) { throw "live R2 verification failed with exit code $($p.ExitCode)" }
 
       - name: Upload reports
         if: always()

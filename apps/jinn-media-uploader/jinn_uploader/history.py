@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS uploads (
     poster_key TEXT,
     thumb_local TEXT,
     poster_local TEXT,
+    thumb_time REAL,
     compression TEXT,
     overwrote INTEGER DEFAULT 0,
     class_a_ops INTEGER DEFAULT 0
@@ -44,12 +45,20 @@ CREATE TABLE IF NOT EXISTS uploads (
 CREATE INDEX IF NOT EXISTS idx_uploads_sha ON uploads(sha256);
 CREATE INDEX IF NOT EXISTS idx_uploads_src_sha ON uploads(source_sha256);
 CREATE INDEX IF NOT EXISTS idx_uploads_key ON uploads(bucket, key);
+-- IDs handed out in portfolio exports, so a later export never reuses one for another file.
+CREATE TABLE IF NOT EXISTS issued_ids (
+    kind TEXT NOT NULL,
+    id TEXT NOT NULL,
+    key TEXT NOT NULL,
+    issued_at TEXT NOT NULL,
+    PRIMARY KEY (kind, id)
+);
 """
 
 COLUMNS = (
     "uploaded_at", "bucket", "key", "public_url", "local_path", "category", "size", "sha256",
     "source_sha256", "md5", "etag", "content_type", "duration", "width", "height", "video_codec",
-    "audio_codec", "thumb_key", "poster_key", "thumb_local", "poster_local", "compression", "overwrote",
+    "audio_codec", "thumb_key", "poster_key", "thumb_local", "poster_local", "thumb_time", "compression", "overwrote",
     "class_a_ops",
 )
 
@@ -61,6 +70,9 @@ class History:
         path.parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as db:
             db.executescript(SCHEMA)
+            cols = {r[1] for r in db.execute("PRAGMA table_info(uploads)")}
+            if "thumb_time" not in cols:  # databases created by 1.0.0
+                db.execute("ALTER TABLE uploads ADD COLUMN thumb_time REAL")
 
     @contextlib.contextmanager
     def _connect(self):
@@ -104,6 +116,20 @@ class History:
                 "SELECT * FROM uploads WHERE bucket=? ORDER BY id DESC LIMIT ?", (bucket, limit)
             ).fetchall()
         return [dict(r) for r in rows]
+
+    def issued_ids(self, kind: str) -> dict[str, str]:
+        """object key → ID issued for it (latest wins)."""
+        with self._connect() as db:
+            rows = db.execute("SELECT id, key FROM issued_ids WHERE kind=? ORDER BY issued_at", (kind,)).fetchall()
+        return {r["key"]: r["id"] for r in rows}
+
+    def record_issued(self, kind: str, pairs: list[tuple[str, str]]) -> None:
+        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        with self._lock, self._connect() as db:
+            db.executemany(
+                "INSERT OR REPLACE INTO issued_ids (kind, id, key, issued_at) VALUES (?, ?, ?, ?)",
+                [(kind, i, k, now) for i, k in pairs],
+            )
 
     def class_a_ops_this_month(self, bucket: str) -> int:
         month = datetime.now(timezone.utc).strftime("%Y-%m")

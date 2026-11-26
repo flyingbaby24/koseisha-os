@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from jinn_uploader import archive_json, keys, pricing
+from jinn_uploader import keys, pricing
 from jinn_uploader.config import ConfigStore, DEFAULT_BUCKET, DEFAULT_PUBLIC_BASE_URL, Pricing
 from jinn_uploader.credentials import CredentialError, CredentialStore, MemoryKeyring, R2Credentials
 from jinn_uploader.scanner import hash_file, scan_paths
@@ -57,6 +57,8 @@ def test_config_roundtrip(tmp_path):
     assert cfg.bucket == DEFAULT_BUCKET
     assert cfg.public_base_url == DEFAULT_PUBLIC_BASE_URL
     assert cfg.compression == "none"  # originals by default
+    assert cfg.bgm_prefix == "audio/"  # where the portfolio's soundscape expects ambient audio
+    assert cfg.upload_thumbnails is False  # the site serves thumbnails from public/
     cfg.mv_prefix = "videos/"
     cfg.pricing.usd_jpy = 160
     store.save(cfg)
@@ -123,22 +125,11 @@ def test_pricing_estimate():
     assert pricing.upload_class_a_ops(330 * 2**20, 32 * 2**20, 16 * 2**20) == 21 + 2
 
 
-def test_archive_document_matches_site_schema(tmp_path):
-    row = {
-        "key": "mv/Human.mp4", "local_path": "C:/MV/Human.mp4", "category": "mv", "width": 1080,
-        "height": 1920, "duration": 85.0, "content_type": "video/mp4", "size": 123, "sha256": "ab",
-        "thumb_key": "thumbnails/human.webp", "poster_key": "thumbnails/human-poster.jpg",
-        "uploaded_at": "2026-11-26T00:00:00+00:00",
-    }
-    item = archive_json.ArchiveItem.from_history(row, 5, "Jinn Project")
-    doc = archive_json.build_document([item], DEFAULT_PUBLIC_BASE_URL, DEFAULT_BUCKET)
-    work = doc["works"][0]
-    # Same keys, in the same order, as the archive's embedded x-data works.
-    assert list(work)[:13] == list(archive_json.REQUIRED_WORK_KEYS)
-    assert work["id"] == "mv-0005" and work["slug"] == "human" and work["durationText"] == "1:25"
-    assert work["video"] == DEFAULT_PUBLIC_BASE_URL + "/mv/Human.mp4"
-    assert work["thumb"].endswith("/thumbnails/human.webp")
-    assert work["duration"] == "PT1M25S" and work["uploadDate"] == "2026-11-26"
-    assert archive_json.validate_document(doc) == []
-    path = archive_json.write_document(doc, tmp_path)
-    assert json.loads(path.read_text(encoding="utf-8"))["works"][0]["title"] == "Human"
+def test_config_from_1_0_0_is_migrated(tmp_path):
+    old = {"bgm_prefix": "bgm/", "upload_thumbnails": True, "archive_next_mv_number": 5, "mv_prefix": "videos/"}
+    (tmp_path / "c.json").write_text(json.dumps(old), encoding="utf-8")
+    cfg = ConfigStore(tmp_path / "c.json").load()
+    assert cfg.bgm_prefix == "audio/" and cfg.upload_thumbnails is False and cfg.mv_prefix == "videos/"
+    custom = {"bgm_prefix": "music/", "config_version": 2}
+    (tmp_path / "c.json").write_text(json.dumps(custom), encoding="utf-8")
+    assert ConfigStore(tmp_path / "c.json").load().bgm_prefix == "music/"  # user choices are kept

@@ -1,0 +1,6 @@
+{
+  "_comment": "Ambient music of the Infinite Archive. Upload audio files to the R2 bucket, then list them here in playing order. While `tracks` is empty the browser generates a placeholder (set \"placeholder\" to \"none\" for silence). See docs/soundscape.md.",
+  "placeholder": "synth",
+  "crossfade": 8,
+  "tracks": []
+}

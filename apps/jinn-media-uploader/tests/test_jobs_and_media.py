@@ -34,7 +34,7 @@ def test_job_manager_folder_drop_duplicates_and_upload(tmp_path, make_engine, co
 
     by_name = {j.name: j for j in mgr.jobs}
     assert by_name["Song.mp4"].key == "mv/Song.mp4"
-    assert by_name["Theme.mp3"].key == "bgm/Theme.mp3"
+    assert by_name["Theme.mp3"].key == "audio/Theme.mp3"
     assert by_name["Song.mp4"].state == JobState.NEEDS_DECISION and by_name["Song.mp4"].remote == "conflict"
     dup = by_name["Theme copy.mp3"] if by_name["Theme copy.mp3"].remote == "queue_dup" else by_name["Theme.mp3"]
     assert dup.state == JobState.NEEDS_DECISION and dup.remote == "queue_dup"
@@ -50,8 +50,8 @@ def test_job_manager_folder_drop_duplicates_and_upload(tmp_path, make_engine, co
     assert states["Song.mp4"] == JobState.DONE
     assert states[dup.name] == JobState.SKIPPED
     keys = {o["Key"] for o in s3.list_objects_v2(Bucket=BUCKET)["Contents"]}
-    assert keys == {"mv/Song.mp4", "mv/Song (2).mp4", "bgm/Theme.mp3"} or keys == {
-        "mv/Song.mp4", "mv/Song (2).mp4", "bgm/Theme copy.mp3"}
+    assert keys == {"mv/Song.mp4", "mv/Song (2).mp4", "audio/Theme.mp3"} or keys == {
+        "mv/Song.mp4", "mv/Song (2).mp4", "audio/Theme copy.mp3"}
     assert s3.get_object(Bucket=BUCKET, Key="mv/Song.mp4")["Body"].read() == b"someone else's MV"
     totals = mgr.totals()
     assert totals["completed"] == 2 and totals["failed"] == 0
@@ -64,7 +64,7 @@ def test_category_change_and_prefix_update(tmp_path, make_engine, config, s3):
     mgr = JobManager(config, make_engine)
     (job,), _ = mgr.add_paths([f])
     assert mgr.wait_analysis(30)
-    assert job.key == "bgm/loop.wav"
+    assert job.key == "audio/loop.wav"
     mgr.set_category(job, "other")
     assert job.key == "misc/loop.wav"
     config.other_prefix = "extras/2026/"
@@ -111,11 +111,16 @@ def test_probe_thumbnails_and_compression(tmp_path, ffmpeg_bins):
     assert info.display_size == (1080, 1920)
     assert 2.5 < info.duration < 3.5
 
-    th = media.make_video_thumbnails(ffmpeg, src, tmp_path / "thumbs", "portrait-mv", info)
-    assert th.poster.name == "portrait-mv-poster.jpg" and th.poster.stat().st_size > 1000
-    assert th.thumb is not None and th.thumb.suffix in (".webp", ".jpg")
-    pinfo = media.probe(ffprobe, th.poster)
-    assert max(pinfo.width, pinfo.height) <= 1280 and pinfo.height > pinfo.width
+    th = media.make_site_thumbnails(ffmpeg, src, tmp_path / "t" / "portrait-mv.webp",
+                                    tmp_path / "t" / "portrait-mv-poster.jpg", 0.3, landscape=False)
+    t, p = media.probe(ffprobe, th.thumb), media.probe(ffprobe, th.poster)
+    # Same derivatives as the portfolio's scripts/make-thumbnails.mjs (480/720 px wide when vertical).
+    assert (t.video_codec, t.width, t.height) == ("webp", 480, 854)
+    assert (p.video_codec, p.width, p.height) == ("mjpeg", 720, 1280)
+    land = _make_video(ffmpeg, tmp_path / "land.mp4", 1920, 1080, seconds=2)
+    th2 = media.make_site_thumbnails(ffmpeg, land, tmp_path / "t" / "l.webp", tmp_path / "t" / "l-poster.jpg",
+                                     0.2, landscape=True)
+    assert (media.probe(ffprobe, th2.thumb).width, media.probe(ffprobe, th2.poster).width) == (800, 1280)
 
     progress = []
     out = media.transcode(ffmpeg, src, "h264", crf=30, duration=info.duration, progress=progress.append)
@@ -133,17 +138,6 @@ def test_probe_thumbnails_and_compression(tmp_path, ffmpeg_bins):
         fast.unlink(missing_ok=True)
 
 
-def test_audio_waveform_thumbnail(tmp_path, ffmpeg_bins):
-    ffmpeg, ffprobe = ffmpeg_bins
-    wav = tmp_path / "bgm.wav"
-    subprocess.run([ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
-                    "sine=frequency=220:duration=2", str(wav)], check=True)
-    info = media.probe(ffprobe, wav)
-    assert info.has_audio and not info.has_video
-    th = media.make_audio_thumbnails(ffmpeg, wav, tmp_path / "t", "bgm", info)
-    assert th.poster.is_file()
-
-
 def test_engine_generates_and_uploads_thumbnails(tmp_path, make_engine, ffmpeg_bins, s3):
     ffmpeg, ffprobe = ffmpeg_bins
     src = _make_video(ffmpeg, tmp_path / "Night Drive.mp4", 1280, 720)
@@ -159,22 +153,28 @@ def test_engine_generates_and_uploads_thumbnails(tmp_path, make_engine, ffmpeg_b
     engine.run(job, UploadControl())
     assert job.state == JobState.DONE, job.error
     assert job.poster_key == "thumbnails/night-drive-poster.jpg"
-    assert job.thumb_key in ("thumbnails/night-drive.webp", "thumbnails/night-drive-thumb.jpg")
+    assert job.thumb_key == "thumbnails/night-drive.webp"
+    assert job.thumb_time == 0.3  # 10 % of the 3 s clip, like make-thumbnails.mjs
     s3.head_object(Bucket=BUCKET, Key=job.poster_key)
+    row = engine.history.latest_for_key(BUCKET, job.key)
+    assert row["thumb_time"] == 0.3 and row["thumb_local"].endswith("night-drive.webp")
 
-    # A second MV with the same title must not replace the first thumbnail.
+    # Another MV with the same title: its R2 copy would need the same key, so it is skipped,
+    # never renamed and never written over the first one.
+    first = s3.get_object(Bucket=BUCKET, Key="thumbnails/night-drive.webp")["Body"].read()
     (tmp_path / "other").mkdir()
     src2 = _make_video(ffmpeg, tmp_path / "other" / "Night Drive.mp4", 640, 360)
     job2 = UploadJob(path=src2, size=src2.stat().st_size, category="mv", key="mv/Night Drive v2.mp4")
     job2.media = media.probe(ffprobe, src2)
     engine.run(job2, UploadControl())
     assert job2.state == JobState.DONE, job2.error
-    assert job2.poster_key == "thumbnails/night-drive-2-poster.jpg"
-    assert job.poster_local != job2.poster_local
+    assert job2.thumb_key is None and job2.thumb_local != job.thumb_local
+    assert s3.get_object(Bucket=BUCKET, Key="thumbnails/night-drive.webp")["Body"].read() == first
 
-    # Same local name but the remote name is taken by different content → "(2)" suffix, never a replace.
-    s3.put_object(Bucket=BUCKET, Key="thumbnails/clash.webp", Body=b"existing thumbnail")
-    clash = tmp_path / "clash.webp"
-    clash.write_bytes(b"new thumbnail")
-    assert engine._upload_aux(clash) == "thumbnails/clash (2).webp"
-    assert s3.get_object(Bucket=BUCKET, Key="thumbnails/clash.webp")["Body"].read() == b"existing thumbnail"
+    # BGM gets no thumbnail (the soundscape has no image field).
+    wav = tmp_path / "loop.wav"
+    subprocess.run([ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
+                    "sine=frequency=220:duration=2", str(wav)], check=True)
+    job3 = UploadJob(path=wav, size=wav.stat().st_size, category="bgm", key="audio/loop.wav")
+    engine.run(job3, UploadControl())
+    assert job3.state == JobState.DONE and job3.thumb_local is None

@@ -42,7 +42,8 @@ from botocore.exceptions import (
 from . import media
 from .config import AppConfig
 from .history import History, ResumeState, ResumeStore
-from .keys import build_key, content_type_for, rename_candidate, slugify, title_from_filename
+from .keys import build_key, content_type_for, slugify, title_from_filename
+from .portfolio import default_thumb_time
 from .pricing import upload_class_a_ops
 from .r2client import ObjectInfo, R2Service, describe_error, error_code, http_status
 from .scanner import Cancelled, hash_file
@@ -145,6 +146,7 @@ class UploadJob:
     poster_key: str | None = None
     thumb_local: str | None = None
     poster_local: str | None = None
+    thumb_time: float | None = None
     compression: str = "none"
     started_at: float | None = None
     finished_at: float | None = None
@@ -512,7 +514,7 @@ class UploadEngine:
                 video_codec=job.media.video_codec if job.media else None,
                 audio_codec=job.media.audio_codec if job.media else None,
                 thumb_key=job.thumb_key, poster_key=job.poster_key,
-                thumb_local=job.thumb_local, poster_local=job.poster_local,
+                thumb_local=job.thumb_local, poster_local=job.poster_local, thumb_time=job.thumb_time,
                 compression=job.compression, overwrote=1 if job.decision == "overwrite" else 0,
                 class_a_ops=upload_class_a_ops(size, self.config.multipart_threshold_mib * MiB, part),
             )
@@ -799,53 +801,60 @@ class UploadEngine:
 
     # ------------------------------------------------------------------ thumbnails
     def _thumbnails(self, job: UploadJob, src: Path) -> None:
-        if not (self.config.generate_thumbnails and self.ffmpeg and job.category in ("mv", "bgm")):
+        """Make the portfolio's card thumbnail (WebP) and poster (JPEG) for an MV.
+
+        Same sizes, codecs and default frame (10 %) as the portfolio's
+        scripts/make-thumbnails.mjs. Files are cached per source file; the export
+        copies them to public/thumbnails/<slug>… (or regenerates them if the slug or
+        frame was changed there).
+        """
+        if not (self.config.generate_thumbnails and self.ffmpeg and job.category == "mv"):
             return
         job.state = JobState.THUMBNAILS
         try:
-            base = slugify(job.title) or (Path(job.key).stem.replace(" ", "-") or job.id)
-            out_dir = self.config.export_path() / "thumbnails"
-            stem, n = base, 1
-            while (out_dir / f"{stem}-poster.jpg").exists():
-                n += 1
-                stem = f"{base}-{n}"
             info = job.media or media.MediaInfo()
-            if job.category == "mv":
-                th = media.make_video_thumbnails(self.ffmpeg, src, out_dir, stem, info)
-            else:
-                th = media.make_audio_thumbnails(self.ffmpeg, src, out_dir, stem, info)
-            job.poster_local = str(th.poster) if th.poster else None
-            job.thumb_local = str(th.thumb) if th.thumb else None
+            w, h = info.display_size
+            at = default_thumb_time(info.duration)
+            slug = slugify(job.title) or f"work-{(job.sha256 or job.id)[:8]}"
+            cache = self.config.export_path() / "thumbnail-cache" / (job.sha256 or job.id)[:16]
+            th = media.make_site_thumbnails(self.ffmpeg, src, cache / f"{slug}.webp", cache / f"{slug}-poster.jpg",
+                                            at, landscape=(w or 16) > (h or 9))
+            job.thumb_local, job.poster_local, job.thumb_time = str(th.thumb), str(th.poster), th.at
             if self.config.upload_thumbnails:
-                if th.thumb:
-                    job.thumb_key = self._upload_aux(th.thumb)
-                if th.poster:
-                    job.poster_key = self._upload_aux(th.poster)
+                job.thumb_key = self._upload_aux(th.thumb)
+                job.poster_key = self._upload_aux(th.poster)
         except Exception as exc:  # noqa: BLE001 - thumbnails must not fail the main upload
             job.message = f"サムネイル生成をスキップ: {exc}"
             log.warning("Thumbnail step failed for %s: %s", job.name, exc)
 
-    def _upload_aux(self, local: Path) -> str:
-        """Upload a generated thumbnail without ever replacing an existing object."""
+    def _upload_aux(self, local: Path) -> str | None:
+        """Copy a generated thumbnail to R2 under the thumbnail prefix.
+
+        The key must equal the portfolio's thumbnailKey/posterKey, so it is never
+        renamed: an existing identical object is reused, a different one is left
+        untouched and the upload is skipped (returns None).
+        """
         data = local.read_bytes()
         sha = hashlib.sha256(data).hexdigest()
         key = build_key(self.config.thumb_prefix, local.name)
-        for _ in range(50):
-            existing = self.service.head(key)
-            if existing is None:
-                break
+        existing = self.service.head(key)
+        if existing is not None:
             if same_content(existing, len(data), sha, hashlib.md5(data).hexdigest()):
                 return key
-            key = rename_candidate(key, lambda k: False)
+            log.warning("%s already exists in R2 with different content; thumbnail not uploaded", key)
+            return None
         kwargs = dict(Bucket=self.bucket, Key=key, Body=data, ContentType=content_type_for(local),
                       ContentMD5=_md5_b64(data),
                       Metadata={"sha256": sha, "uploader": "jinn-media-uploader", **self.extra_metadata})
-        conditions = {"IfNoneMatch": "*"}
 
         def recheck() -> None:
             if self.service.head(key) is not None:
                 raise ConflictDetected("thumbnail key appeared")
 
-        self._call_conditional(self.client.put_object, kwargs, conditions, recheck)
+        try:
+            self._call_conditional(self.client.put_object, kwargs, {"IfNoneMatch": "*"}, recheck)
+        except ConflictDetected:
+            log.warning("%s appeared during upload; left untouched", key)
+            return None
         self.service.count("A")
         return key

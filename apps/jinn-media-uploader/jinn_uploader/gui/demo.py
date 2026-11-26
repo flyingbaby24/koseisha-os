@@ -41,13 +41,13 @@ def populate(win) -> None:
             0.62, rate=38.4 * MiB, msg=""),
         job("Glass Orbit.mov", 612 * MiB, "mv", "mv/Glass Orbit.mov", JobState.DONE, 1.0, url=True,
             msg="完了（平均 41.2 MB/s）"),
-        job("Ambient Loop 01.wav", 48 * MiB, "bgm", "bgm/Ambient Loop 01.wav", JobState.DONE, 1.0, url=True,
+        job("Ambient Loop 01.wav", 48 * MiB, "bgm", "audio/Ambient Loop 01.wav", JobState.DONE, 1.0, url=True,
             msg="完了（平均 22.8 MB/s）"),
         job("Human.mp4", 96 * MiB, "mv", "Human.mp4", JobState.NEEDS_DECISION, remote="identical",
             msg="", dups=None),
-        job("Ambient Loop 01 copy.wav", 48 * MiB, "bgm", "bgm/Ambient Loop 01 copy.wav", JobState.NEEDS_DECISION,
-            remote="content_dup", dups=["bgm/Ambient Loop 01.wav"]),
-        job("Night Walk.mp3", 9 * MiB, "bgm", "bgm/Night Walk.mp3", JobState.READY),
+        job("Ambient Loop 01 copy.wav", 48 * MiB, "bgm", "audio/Ambient Loop 01 copy.wav", JobState.NEEDS_DECISION,
+            remote="content_dup", dups=["audio/Ambient Loop 01.wav"]),
+        job("Night Walk.mp3", 9 * MiB, "bgm", "audio/Night Walk.mp3", JobState.READY),
         job("Tidal (Director's Cut).mp4", 2_310 * MiB, "mv", "mv/Tidal (Director's Cut).mp4", JobState.READY),
     ]
     with win.manager.lock:
@@ -61,14 +61,11 @@ def populate(win) -> None:
         ObjectInfo("Million consumer full.mp4", 228 * MiB, "c" * 32 + "-15", now - timedelta(days=3)),
         ObjectInfo("Wrapped Too Beautifully.mp4", 118 * MiB, "d" * 32 + "-8", now - timedelta(days=3)),
         ObjectInfo("mv/Glass Orbit.mov", 612 * MiB, "e" * 32 + "-39", now - timedelta(minutes=4)),
-        ObjectInfo("bgm/Ambient Loop 01.wav", 48 * MiB, "f" * 32 + "-3", now - timedelta(minutes=2)),
-        ObjectInfo("thumbnails/glass-orbit.webp", 41_000, "1" * 32, now - timedelta(minutes=4)),
-        ObjectInfo("thumbnails/glass-orbit-poster.jpg", 182_000, "2" * 32, now - timedelta(minutes=4)),
+        ObjectInfo("audio/Ambient Loop 01.wav", 48 * MiB, "f" * 32 + "-3", now - timedelta(minutes=2)),
     ]
     win.obj_model.set_objects(objects)
-    win.obj_prefix.addItem("bgm/", "bgm/")
+    win.obj_prefix.addItem("audio/", "audio/")
     win.obj_prefix.addItem("mv/", "mv/")
-    win.obj_prefix.addItem("thumbnails/", "thumbnails/")
     win._apply_obj_filter()
     win._usage = R2Service.summarize(objects)
     win._render_usage()

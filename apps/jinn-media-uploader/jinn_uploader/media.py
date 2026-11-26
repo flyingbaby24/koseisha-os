@@ -150,93 +150,34 @@ def probe(ffprobe: str, path: str | Path) -> MediaInfo:
 
 @dataclass
 class Thumbnails:
-    poster: Path | None = None  # JPEG, up to 1280px on the long side
-    thumb: Path | None = None  # WebP (JPEG fallback), up to 640px on the long side
+    thumb: Path | None = None  # WebP for cards
+    poster: Path | None = None  # JPEG for the player poster and Open Graph
+    at: float = 0.0  # second the frame was taken from
 
 
-def _seek_point(duration: float | None) -> float:
-    if not duration or duration <= 0:
-        return 0.0
-    if duration < 3:
-        return 0.0
-    return min(max(1.0, duration * 0.1), duration - 1.0)
+# Same derivatives as the portfolio's scripts/make-thumbnails.mjs, so a thumbnail made
+# here is interchangeable with one the site regenerates from data/thumbnail-sources.json.
+THUMB_WIDTH = {"portrait": 480, "landscape": 800}
+POSTER_WIDTH = {"portrait": 720, "landscape": 1280}
+THUMB_CODEC = ["-c:v", "libwebp", "-quality", "62", "-compression_level", "6"]
+POSTER_CODEC = ["-q:v", "4"]
 
 
-def make_video_thumbnails(ffmpeg: str, src: str | Path, out_dir: Path, stem: str, info: MediaInfo) -> Thumbnails:
-    """Pick a representative frame ~10% into the video and write a poster + small thumb."""
-    out_dir.mkdir(parents=True, exist_ok=True)
-    poster = out_dir / f"{stem}-poster.jpg"
-    ss = f"{_seek_point(info.duration):.3f}"
-    pick = "thumbnail=n=30,"
-    scale_big = "scale='min(1280,iw)':'min(1280,ih)':force_original_aspect_ratio=decrease"
-    r = _run(
-        [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-ss", ss, "-i", str(src),
-         "-frames:v", "1", "-vf", pick + scale_big, "-q:v", "3", str(poster)],
-        timeout=300,
-    )
-    if r.returncode != 0 or not poster.is_file():
-        # Retry from the start without the frame picker (very short / odd files).
+def make_site_thumbnails(ffmpeg: str, src: str | Path, thumb_path: Path, poster_path: Path, at: float,
+                         landscape: bool) -> Thumbnails:
+    """Grab the frame at *at* seconds; *src* may be a local file or the public https URL."""
+    orient = "landscape" if landscape else "portrait"
+    outputs = [(thumb_path, THUMB_WIDTH[orient], THUMB_CODEC), (poster_path, POSTER_WIDTH[orient], POSTER_CODEC)]
+    for out, width, codec in outputs:
+        out.parent.mkdir(parents=True, exist_ok=True)
         r = _run(
-            [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", str(src),
-             "-frames:v", "1", "-vf", scale_big, "-q:v", "3", str(poster)],
+            [ffmpeg, "-v", "error", "-y", "-ss", f"{max(0.0, at):g}", "-i", str(src), "-frames:v", "1",
+             "-vf", f"scale={width}:-2:flags=lanczos", *codec, str(out)],
             timeout=300,
         )
-        if r.returncode != 0 or not poster.is_file():
-            raise FFmpegError(r.stderr.decode("utf-8", "replace").strip()[-500:] or "サムネイル生成に失敗しました")
-    return Thumbnails(poster=poster, thumb=_small_thumb(ffmpeg, poster, out_dir, stem))
-
-
-def _small_thumb(ffmpeg: str, poster: Path, out_dir: Path, stem: str) -> Path | None:
-    scale_small = "scale='min(640,iw)':'min(640,ih)':force_original_aspect_ratio=decrease"
-    webp = out_dir / f"{stem}.webp"
-    r = _run(
-        [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", str(poster),
-         "-vf", scale_small, "-c:v", "libwebp", "-quality", "82", str(webp)],
-        timeout=120,
-    )
-    if r.returncode == 0 and webp.is_file():
-        return webp
-    jpg = out_dir / f"{stem}-thumb.jpg"
-    r = _run(
-        [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", str(poster),
-         "-vf", scale_small, "-q:v", "4", str(jpg)],
-        timeout=120,
-    )
-    return jpg if r.returncode == 0 and jpg.is_file() else None
-
-
-def make_audio_thumbnails(ffmpeg: str, src: str | Path, out_dir: Path, stem: str, info: MediaInfo) -> Thumbnails:
-    """Use embedded cover art when present, otherwise draw a waveform image."""
-    out_dir.mkdir(parents=True, exist_ok=True)
-    poster = out_dir / f"{stem}-poster.jpg"
-    if info.has_cover_art:
-        r = _run(
-            [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", str(src), "-an",
-             "-frames:v", "1", "-vf",
-             "scale='min(1280,iw)':'min(1280,ih)':force_original_aspect_ratio=decrease",
-             "-q:v", "3", str(poster)],
-            timeout=120,
-        )
-        if r.returncode == 0 and poster.is_file():
-            return Thumbnails(poster=poster, thumb=_small_thumb(ffmpeg, poster, out_dir, stem))
-    png = out_dir / f"{stem}-wave.png"
-    r = _run(
-        [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", str(src),
-         "-filter_complex", "aformat=channel_layouts=mono,showwavespic=s=1280x360:colors=0xE8E1D4",
-         "-frames:v", "1", str(png)],
-        timeout=300,
-    )
-    if r.returncode != 0 or not png.is_file():
-        raise FFmpegError(r.stderr.decode("utf-8", "replace").strip()[-500:] or "波形画像の生成に失敗しました")
-    r = _run(
-        [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "color=c=0x101014:s=1280x360",
-         "-i", str(png), "-filter_complex", "[0][1]overlay=format=auto", "-frames:v", "1", "-q:v", "3", str(poster)],
-        timeout=120,
-    )
-    png.unlink(missing_ok=True)
-    if r.returncode != 0 or not poster.is_file():
-        raise FFmpegError(r.stderr.decode("utf-8", "replace").strip()[-500:] or "波形画像の生成に失敗しました")
-    return Thumbnails(poster=poster, thumb=_small_thumb(ffmpeg, poster, out_dir, stem))
+        if r.returncode != 0 or not out.is_file() or out.stat().st_size == 0:
+            raise FFmpegError(r.stderr.decode("utf-8", "replace").strip()[-500:] or f"{out.name} を作成できません")
+    return Thumbnails(thumb=thumb_path, poster=poster_path, at=at)
 
 
 def transcode(

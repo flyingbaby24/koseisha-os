@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QDesktopServices, QGuiApplication
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .. import archive_json, media
+from .. import media, portfolio
 from ..config import AppConfig
 from ..credentials import CredentialError, CredentialStore, R2Credentials
 from ..keys import format_bytes, normalize_prefix
@@ -190,9 +190,9 @@ class SettingsDialog(QDialog):
         self.crf = QSpinBox()
         self.crf.setRange(14, 35)
         self.crf.setValue(self.config.h264_crf)
-        self.gen_thumbs = QCheckBox("MV/BGM のサムネイルを生成する")
+        self.gen_thumbs = QCheckBox("MV のサムネイル（WebP カード用・JPEG ポスター）を生成する")
         self.gen_thumbs.setChecked(self.config.generate_thumbnails)
-        self.up_thumbs = QCheckBox("生成したサムネイルも R2 にアップロードする")
+        self.up_thumbs = QCheckBox("生成したサムネイルを R2 にもコピーする（通常は不要：サイトの public/thumbnails から配信）")
         self.up_thumbs.setChecked(self.config.upload_thumbnails)
         f1.addRow("動画の処理", self.compression)
         f1.addRow("H.264 品質 (CRF)", self.crf)
@@ -212,20 +212,22 @@ class SettingsDialog(QDialog):
         r2.addWidget(self.export_dir, 1)
         r2.addWidget(exp_browse)
         self.artist = QLineEdit(self.config.archive_artist)
-        self.next_mv = QSpinBox()
-        self.next_mv.setRange(1, 9999)
-        self.next_mv.setValue(self.config.archive_next_mv_number)
-        self.next_bgm = QSpinBox()
-        self.next_bgm.setRange(1, 9999)
-        self.next_bgm.setValue(self.config.archive_next_bgm_number)
+        self.portfolio_dir = QLineEdit(self.config.portfolio_dir)
+        self.portfolio_dir.setPlaceholderText("Jinn-Portfolio リポジトリのフォルダ（data/works.json があるところ）")
+        pf_browse = QPushButton("参照…")
+        pf_browse.clicked.connect(self._browse_portfolio)
+        r3 = QHBoxLayout()
+        r3.addWidget(self.portfolio_dir, 1)
+        r3.addWidget(pf_browse)
         f2.addRow("MV の保存先", self.mv_prefix)
         f2.addRow("BGM の保存先", self.bgm_prefix)
         f2.addRow("サムネイルの保存先", self.thumb_prefix)
         f2.addRow("その他の保存先", self.other_prefix)
         f2.addRow("出力フォルダ（JSON・サムネイル）", r2)
-        f2.addRow("アーティスト名（JSON）", self.artist)
-        f2.addRow("次の MV 番号（mv-XXXX）", self.next_mv)
-        f2.addRow("次の BGM 番号（bgm-XXXX）", self.next_bgm)
+        f2.addRow("ポートフォリオのフォルダ", r3)
+        f2.addRow("アーティスト名（works.json）", self.artist)
+        f2.addRow(_hint("作品 ID（mv-XXXX）・slug・BGM の id は、ポートフォリオの既存データと過去の出力を確認して"
+                        "重複しない値を自動で割り当てます。"))
         lay.addWidget(g1)
         lay.addWidget(g2)
         lay.addStretch(1)
@@ -236,6 +238,11 @@ class SettingsDialog(QDialog):
         path, _ = QFileDialog.getOpenFileName(self, "ffmpeg を選択", "", "ffmpeg (ffmpeg*);;すべて (*)")
         if path:
             self.ffmpeg_path.setText(path)
+
+    def _browse_portfolio(self):
+        path = QFileDialog.getExistingDirectory(self, "Jinn-Portfolio のフォルダを選択", self.portfolio_dir.text())
+        if path:
+            self.portfolio_dir.setText(path)
 
     def _browse_export(self):
         path = QFileDialog.getExistingDirectory(self, "出力フォルダを選択", self.export_dir.text())
@@ -334,8 +341,7 @@ class SettingsDialog(QDialog):
         c.thumb_prefix, c.other_prefix = prefixes["thumb"], prefixes["other"]
         c.export_dir = self.export_dir.text().strip()
         c.archive_artist = self.artist.text().strip() or "Jinn Project"
-        c.archive_next_mv_number = self.next_mv.value()
-        c.archive_next_bgm_number = self.next_bgm.value()
+        c.portfolio_dir = self.portfolio_dir.text().strip()
         c.normalized()
         self.accept()
 
@@ -439,103 +445,244 @@ class DecisionDialog(QDialog):
 
 # ---------------------------------------------------------------------- export
 class ExportDialog(QDialog):
-    """Review titles/slugs/IDs, then write the Infinite Archive registration JSON."""
+    """Register uploaded MVs/BGM in the portfolio's data files (works.json / soundscape.json).
 
-    COLS = ["種別", "ID番号", "slug", "タイトル", "アーティスト", "説明", "キー"]
+    IDs and slugs are allocated around the portfolio's existing data and around IDs
+    issued by earlier exports; the result is validated with ports of the site's own
+    validators before anything is written.
+    """
 
-    def __init__(self, parent, items: list[archive_json.ArchiveItem], config: AppConfig):
+    COLS = ["登録", "種別", "ID", "slug", "タイトル", "状態", "掲載日", "サムネ位置(秒)", "オブジェクトキー", "備考"]
+    C_INC, C_KIND, C_ID, C_SLUG, C_TITLE, C_STATUS, C_DATE, C_TIME, C_KEY, C_NOTE = range(10)
+
+    def __init__(self, parent, candidates: list[portfolio.Candidate], config: AppConfig, history,
+                 ffmpeg: str | None, public_url_for):
         super().__init__(parent)
-        self.setWindowTitle("Infinite Archive 登録用 JSON の出力")
-        self.resize(1000, 460)
-        self.items = items
+        self.setWindowTitle("ポートフォリオ（Infinite Archive）への登録データを出力")
+        self.resize(1180, 520)
+        self.cands = candidates
         self.config = config
+        self.history = history
+        self.ffmpeg = ffmpeg
+        self.public_url_for = public_url_for
+        self.data: portfolio.PortfolioData | None = None
         self.output_path: Path | None = None
-        self.table = QTableWidget(len(items), len(self.COLS))
+        self._filling = False
+
+        self.pf_edit = QLineEdit(config.portfolio_dir)
+        self.pf_edit.setPlaceholderText("Jinn-Portfolio リポジトリのフォルダ（data/works.json があるところ）")
+        self.pf_edit.editingFinished.connect(lambda: self._load(self.pf_edit.text()))
+        pf_browse = QPushButton("参照…")
+        pf_browse.clicked.connect(self._browse_portfolio)
+        self.pf_status = QLabel("")
+        self.pf_status.setWordWrap(True)
+        top = QHBoxLayout()
+        top.addWidget(QLabel("ポートフォリオ"))
+        top.addWidget(self.pf_edit, 1)
+        top.addWidget(pf_browse)
+
+        self.table = QTableWidget(len(candidates), len(self.COLS))
         self.table.setHorizontalHeaderLabels(self.COLS)
         self.table.verticalHeader().setVisible(False)
-        for row, it in enumerate(items):
-            values = ["MV" if it.category == "mv" else "BGM", str(it.number), it.slug, it.title, it.artist,
-                      it.description or "", it.key]
-            for col, v in enumerate(values):
-                cell = QTableWidgetItem(v)
-                if col in (0, 6):
-                    cell.setFlags(cell.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                self.table.setItem(row, col, cell)
-        self.table.resizeColumnsToContents()
-        self.table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(self.C_NOTE, QHeaderView.ResizeMode.Stretch)
+        self.table.itemChanged.connect(self._on_item_changed)
+
         self.dir_edit = QLineEdit(str(config.export_path()))
         browse = QPushButton("参照…")
-        browse.clicked.connect(self._browse)
+        browse.clicked.connect(self._browse_out)
         r = QHBoxLayout()
         r.addWidget(QLabel("出力先"))
         r.addWidget(self.dir_edit, 1)
         r.addWidget(browse)
         buttons = QDialogButtonBox()
-        write_btn = buttons.addButton("JSON を出力", QDialogButtonBox.ButtonRole.AcceptRole)
-        write_btn.setObjectName("primary")
-        copy_btn = buttons.addButton("クリップボードにコピー", QDialogButtonBox.ButtonRole.ActionRole)
+        self.write_btn = buttons.addButton("登録データを出力", QDialogButtonBox.ButtonRole.AcceptRole)
+        self.write_btn.setObjectName("primary")
         buttons.addButton("閉じる", QDialogButtonBox.ButtonRole.RejectRole)
         buttons.accepted.connect(self._write)
         buttons.rejected.connect(self.reject)
-        copy_btn.clicked.connect(self._copy)
+
         lay = QVBoxLayout(self)
-        lay.addWidget(_hint("works は Infinite Archive の x-data（id / slug / title / artist / w / h / durationText / "
-                            "thumb / poster / video / page / description / lyrics）と同じ形式です。"
-                            "セルをダブルクリックして編集できます。"))
-        lay.addWidget(self.table)
+        lay.addLayout(top)
+        lay.addWidget(self.pf_status)
+        lay.addWidget(_hint(
+            "出力されるのはリポジトリと同じ構成のフォルダ（data/works.json・data/soundscape.json・"
+            "data/thumbnail-sources.json・public/thumbnails/…）です。既存の記述は変更せず末尾に追加します。"
+            "解説・歌詞・ジャンルなど未提供の項目は null / [] のままにします。"))
+        lay.addWidget(self.table, 1)
         lay.addLayout(r)
         lay.addWidget(buttons)
+        if config.portfolio_dir:
+            self._load(config.portfolio_dir)
+        else:
+            self._set_status("Jinn-Portfolio のフォルダを指定してください（既存の作品 ID との重複を防ぐために必要です）。", False)
+            self._fill()
 
-    def _browse(self):
+    # ------------------------------------------------------------------ portfolio data
+    def _set_status(self, text: str, ok: bool):
+        self.pf_status.setText(("✔ " if ok else "✖ ") + text)
+        self.pf_status.setStyleSheet(f"color: {'#7fbf8e' if ok else '#e07a6e'};")
+        self.write_btn.setEnabled(ok)
+
+    def _browse_portfolio(self):
+        path = QFileDialog.getExistingDirectory(self, "Jinn-Portfolio のフォルダを選択", self.pf_edit.text())
+        if path:
+            self.pf_edit.setText(path)
+            self._load(path)
+
+    def _load(self, path: str):
+        path = path.strip()
+        if not path:
+            return
+        try:
+            self.data = portfolio.PortfolioData.load(path)
+        except portfolio.PortfolioError as exc:
+            self.data = None
+            self._set_status(str(exc), False)
+            self._fill()
+            return
+        self.config.portfolio_dir = str(self.data.root)
+        self._set_status(f"既存データ: {self.data.summary()}（{self.data.root}）", True)
+        issued = {**self.history.issued_ids("work"), **self.history.issued_ids("track")}
+        portfolio.plan(self.cands, self.data, issued)
+        self._fill()
+
+    # ------------------------------------------------------------------ table
+    def _fill(self):
+        self._filling = True
+        ro = Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
+        for row, c in enumerate(self.cands):
+            is_work = c.kind == "work"
+            registered = c.note.startswith("登録済み") or c.note.startswith("サイトが再生できない")
+            inc = QTableWidgetItem()
+            inc.setFlags(ro | (Qt.ItemFlag.ItemIsUserCheckable if not registered and self.data else Qt.ItemFlag.NoItemFlags))
+            inc.setCheckState(Qt.CheckState.Checked if c.include and self.data else Qt.CheckState.Unchecked)
+            self.table.setItem(row, self.C_INC, inc)
+            values = {
+                self.C_KIND: ("MV" if is_work else "BGM", False),
+                self.C_ID: (c.id, not registered),
+                self.C_SLUG: (c.slug if is_work else "—", is_work and not registered),
+                self.C_TITLE: (c.title, is_work and not registered),
+                self.C_DATE: (c.published_date if is_work and not registered else "—", is_work and not registered),
+                self.C_TIME: (f"{c.thumb_time:g}" if is_work and not registered else "—", is_work and not registered),
+                self.C_KEY: (c.key, False),
+                self.C_NOTE: (c.note, False),
+            }
+            for col, (text, editable) in values.items():
+                item = QTableWidgetItem(text)
+                item.setFlags(ro | (Qt.ItemFlag.ItemIsEditable if editable else Qt.ItemFlag.NoItemFlags))
+                self.table.setItem(row, col, item)
+            if is_work and not registered:
+                cb = QComboBox()
+                for st in ("published", "draft", "unlisted"):
+                    cb.addItem(st, st)
+                cb.setCurrentIndex(max(0, cb.findData(c.status)))
+                self.table.setCellWidget(row, self.C_STATUS, cb)
+            else:
+                self.table.removeCellWidget(row, self.C_STATUS)
+                self.table.setItem(row, self.C_STATUS, QTableWidgetItem("—"))
+        self.table.resizeColumnsToContents()
+        self.table.horizontalHeader().setSectionResizeMode(self.C_NOTE, QHeaderView.ResizeMode.Stretch)
+        self._filling = False
+
+    def _on_item_changed(self, item):
+        if self._filling or item.column() != self.C_INC:
+            return
+        self.cands[item.row()].include = item.checkState() == Qt.CheckState.Checked
+
+    def _browse_out(self):
         path = QFileDialog.getExistingDirectory(self, "出力フォルダ", self.dir_edit.text())
         if path:
             self.dir_edit.setText(path)
 
-    def _collect(self) -> dict | None:
-        for row, it in enumerate(self.items):
-            try:
-                it.number = int(self.table.item(row, 1).text())
-            except ValueError:
-                QMessageBox.warning(self, "ID番号", f"{row + 1} 行目の ID番号が数値ではありません")
-                return None
-            it.slug = self.table.item(row, 2).text().strip()
-            it.title = self.table.item(row, 3).text().strip()
-            it.artist = self.table.item(row, 4).text().strip()
-            it.description = self.table.item(row, 5).text().strip() or None
-        doc = archive_json.build_document(self.items, self.config.public_base_url, self.config.bucket)
-        problems = archive_json.validate_document(doc)
-        if problems:
-            QMessageBox.warning(self, "確認してください", "\n".join(problems))
-            return None
-        return doc
+    def _collect(self) -> list[str]:
+        errors = []
+        for row, c in enumerate(self.cands):
+            if not c.include:
+                continue
+            text = lambda col: (self.table.item(row, col).text().strip() if self.table.item(row, col) else "")  # noqa: E731
+            c.id = text(self.C_ID)
+            if c.kind == "work":
+                c.slug = text(self.C_SLUG)
+                c.title = text(self.C_TITLE)
+                c.published_date = text(self.C_DATE)
+                cb = self.table.cellWidget(row, self.C_STATUS)
+                c.status = cb.currentData() if cb else c.status
+                try:
+                    c.thumb_time = round(float(text(self.C_TIME)), 2)
+                except ValueError:
+                    errors.append(f"{c.id}: サムネ位置は秒数で入力してください")
+                if c.duration and not (0 <= c.thumb_time < c.duration):
+                    errors.append(f"{c.id}: サムネ位置が動画の長さ（{c.duration:g} 秒）の範囲外です")
+        return errors
 
-    def _copy(self):
-        doc = self._collect()
-        if doc:
-            QGuiApplication.clipboard().setText(json.dumps(doc, ensure_ascii=False, indent=2))
+    # ------------------------------------------------------------------ output
+    def _thumbnail_files(self, work_dir: Path) -> tuple[dict[str, Path], list[str]]:
+        files: dict[str, Path] = {}
+        errors: list[str] = []
+        prefix = self.config.thumb_prefix
+        for c in self.cands:
+            if not (c.include and c.kind == "work"):
+                continue
+            thumb_key, poster_key = f"{prefix}{c.slug}.webp", f"{prefix}{c.slug}-poster.jpg"
+            cached = (c.thumb_local and c.poster_local and Path(c.thumb_local).is_file()
+                      and Path(c.poster_local).is_file() and Path(c.thumb_local).stem == c.slug
+                      and c.thumb_time_generated is not None and abs(c.thumb_time_generated - c.thumb_time) < 0.005)
+            if cached:
+                files[thumb_key], files[poster_key] = Path(c.thumb_local), Path(c.poster_local)
+                continue
+            if not self.ffmpeg:
+                errors.append(f"{c.id}: FFmpeg が見つからないためサムネイルを作成できません")
+                continue
+            src = c.local_path if c.local_path and Path(c.local_path).is_file() else self.public_url_for(c.key)
+            try:
+                th = media.make_site_thumbnails(self.ffmpeg, src, work_dir / f"{c.slug}.webp",
+                                                work_dir / f"{c.slug}-poster.jpg", c.thumb_time, c.landscape)
+            except media.FFmpegError as exc:
+                errors.append(f"{c.id}: サムネイルを作成できません: {exc}")
+                continue
+            files[thumb_key], files[poster_key] = th.thumb, th.poster
+        return files, errors
 
     def _write(self):
-        doc = self._collect()
-        if not doc:
+        if self.data is None:
+            QMessageBox.warning(self, "ポートフォリオ未指定", "Jinn-Portfolio のフォルダを指定してください。")
             return
-        out_dir = Path(self.dir_edit.text().strip() or self.config.export_path())
+        errors = self._collect()
+        if not any(c.include for c in self.cands):
+            errors.append("登録する項目がありません")
+        reg = portfolio.build(self.data, self.cands, self.config.thumb_prefix, self.config.archive_artist)
+        errors += reg.problems
+        if errors:
+            QMessageBox.warning(self, "確認してください", "\n".join(errors))
+            return
+        import tempfile
+
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            self.output_path = archive_json.write_document(doc, out_dir)
-        except OSError as exc:
+            with tempfile.TemporaryDirectory(prefix="jmu-thumbs-") as td:
+                thumbs, t_errors = self._thumbnail_files(Path(td))
+                if t_errors:
+                    QApplication.restoreOverrideCursor()
+                    QMessageBox.warning(self, "サムネイル", "\n".join(t_errors))
+                    return
+                out_dir = Path(self.dir_edit.text().strip() or self.config.export_path())
+                self.output_path = portfolio.write_bundle(reg, out_dir, thumbs)
+        except (OSError, portfolio.PortfolioError) as exc:
+            QApplication.restoreOverrideCursor()
             QMessageBox.critical(self, "出力できません", str(exc))
             return
-        mv_numbers = [i.number for i in self.items if i.category == "mv"]
-        bgm_numbers = [i.number for i in self.items if i.category == "bgm"]
-        if mv_numbers:
-            self.config.archive_next_mv_number = max(self.config.archive_next_mv_number, max(mv_numbers) + 1)
-        if bgm_numbers:
-            self.config.archive_next_bgm_number = max(self.config.archive_next_bgm_number, max(bgm_numbers) + 1)
+        QApplication.restoreOverrideCursor()
+        self.history.record_issued("work", [(w["id"], w["videoKey"]) for w in reg.new_works])
+        self.history.record_issued("track", [(t["id"], t["key"]) for t in reg.new_tracks])
         box = QMessageBox(self)
         box.setWindowTitle("出力しました")
-        box.setText(f"JSON を出力しました:\n{self.output_path}")
+        box.setText(
+            f"作品 {len(reg.new_works)} 件・BGM {len(reg.new_tracks)} 曲の登録データを出力しました。\n{self.output_path}\n\n"
+            "このフォルダの data/ と public/ を Jinn-Portfolio リポジトリのルートにコピーし、"
+            "npm run build && npm test で確認してください。")
         open_btn = box.addButton("フォルダを開く", QMessageBox.ButtonRole.ActionRole)
         box.addButton("OK", QMessageBox.ButtonRole.AcceptRole)
         box.exec()
         if box.clickedButton() is open_btn:
-            QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.output_path.parent)))
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.output_path)))
         self.accept()

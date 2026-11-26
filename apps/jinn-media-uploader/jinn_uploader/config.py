@@ -63,7 +63,8 @@ class AppConfig:
 
     # Destination prefixes ("folders") inside the bucket.
     mv_prefix: str = "mv/"
-    bgm_prefix: str = "bgm/"
+    # The portfolio's soundscape expects ambient audio under audio/ (docs/soundscape.md).
+    bgm_prefix: str = "audio/"
     thumb_prefix: str = "thumbnails/"
     other_prefix: str = "misc/"
     keep_folder_structure: bool = False
@@ -79,14 +80,17 @@ class AppConfig:
     compression: str = "none"
     h264_crf: int = 23
     generate_thumbnails: bool = True
-    upload_thumbnails: bool = True
+    # The portfolio serves thumbnails from its own public/ folder (THUMBNAIL_BASE_URL empty),
+    # so copying them to R2 is optional.
+    upload_thumbnails: bool = False
     ffmpeg_path: str = ""
 
-    # Infinite Archive export.
+    # Portfolio (Infinite Archive) registration.
+    portfolio_dir: str = ""  # local clone of flyingbaby24/Jinn-Portfolio (or its data/ folder)
     archive_artist: str = "Jinn Project"
-    archive_next_mv_number: int = 5
-    archive_next_bgm_number: int = 1
     export_dir: str = ""
+
+    config_version: int = 2
 
     pricing: Pricing = field(default_factory=Pricing)
 
@@ -134,6 +138,18 @@ def _from_dict(cls, data: dict):
     return cls(**kwargs)
 
 
+def migrate(data: dict) -> dict:
+    """Bring settings saved by older versions up to date."""
+    data = dict(data or {})
+    if int(data.get("config_version", 1)) < 2:
+        if data.get("bgm_prefix") == "bgm/":
+            data["bgm_prefix"] = "audio/"
+        if "upload_thumbnails" in data:
+            data["upload_thumbnails"] = False
+        data["config_version"] = 2
+    return data
+
+
 class ConfigStore:
     def __init__(self, path: Path | None = None):
         self.path = path or (app_data_dir() / "config.json")
@@ -141,7 +157,7 @@ class ConfigStore:
     def load(self) -> AppConfig:
         try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
-            return _from_dict(AppConfig, data).normalized()
+            return _from_dict(AppConfig, migrate(data)).normalized()
         except FileNotFoundError:
             return AppConfig().normalized()
         except (OSError, ValueError, TypeError):

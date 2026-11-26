@@ -36,7 +36,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .. import APP_NAME, __version__, archive_json, media, pricing
+from .. import APP_NAME, __version__, media, portfolio, pricing
 from ..config import AppConfig, ConfigStore
 from ..credentials import CredentialError, CredentialStore
 from ..history import History, ResumeStore
@@ -165,7 +165,7 @@ class MainWindow(QMainWindow):
         a_files.triggered.connect(self.add_files_dialog)
         a_folder = QAction("フォルダを追加", self)
         a_folder.triggered.connect(self.add_folder_dialog)
-        a_json = QAction("Infinite Archive JSON 出力", self)
+        a_json = QAction("ポートフォリオ登録データ出力", self)
         a_json.triggered.connect(self.export_session_json)
         for a in (a_files, a_folder, None, a_settings, a_test, None, a_json):
             if a is None:
@@ -270,7 +270,7 @@ class MainWindow(QMainWindow):
         self.btn_clear.clicked.connect(lambda: self.manager.clear_finished())
         self.btn_copy = QPushButton("公開URLをコピー")
         self.btn_copy.clicked.connect(self.copy_selected_urls)
-        self.btn_json = QPushButton("JSON 出力")
+        self.btn_json = QPushButton("ポートフォリオ登録")
         self.btn_json.clicked.connect(self.export_session_json)
         buttons = QHBoxLayout()
         for b in (self.btn_start, self.btn_pause, self.btn_cancel, self.btn_retry):
@@ -294,7 +294,7 @@ class MainWindow(QMainWindow):
         cb = QComboBox()
         cb.setEditable(True)
         items = [value] + [p for p in self.config.recent_prefixes if p != value]
-        for v in ("mv/", "bgm/", "misc/", ""):
+        for v in ("mv/", "audio/", "misc/", ""):
             if v not in items:
                 items.append(v)
         for v in items:
@@ -378,7 +378,7 @@ class MainWindow(QMainWindow):
         copy.clicked.connect(self.copy_object_urls)
         open_b = QPushButton("ブラウザで開く")
         open_b.clicked.connect(self.open_object_urls)
-        export = QPushButton("選択を JSON 出力")
+        export = QPushButton("選択をポートフォリオ登録")
         export.clicked.connect(self.export_objects_json)
         note = QLabel("このアプリは R2 上の既存ファイルを削除・変更しません（一覧は読み取り専用）。")
         note.setObjectName("muted")
@@ -495,7 +495,7 @@ class MainWindow(QMainWindow):
         self.h_table.horizontalHeader().setStretchLastSection(True)
         copy = QPushButton("公開URLをコピー")
         copy.clicked.connect(self.copy_history_urls)
-        export = QPushButton("選択を JSON 出力")
+        export = QPushButton("選択をポートフォリオ登録")
         export.setObjectName("primary")
         export.clicked.connect(self.export_history_json)
         reload_b = QPushButton("再読み込み")
@@ -858,7 +858,7 @@ class MainWindow(QMainWindow):
         menu = QMenu(self)
         menu.addAction("公開URLをコピー", self.copy_object_urls)
         menu.addAction("ブラウザで開く", self.open_object_urls)
-        menu.addAction("JSON 出力", self.export_objects_json)
+        menu.addAction("ポートフォリオ登録データ出力", self.export_objects_json)
         menu.exec(self.obj_view.viewport().mapToGlobal(pos))
 
     # ------------------------------------------------------------------ history
@@ -885,30 +885,39 @@ class MainWindow(QMainWindow):
         self._copy_urls([r["public_url"] for r in self._selected_history() if r.get("public_url")])
 
     # ------------------------------------------------------------------ JSON export
-    def _items_from_rows(self, rows: list[dict]) -> list[archive_json.ArchiveItem]:
-        items = []
-        mv_n = self.config.archive_next_mv_number
-        bgm_n = self.config.archive_next_bgm_number
+    def _candidates_from_rows(self, rows: list[dict]) -> list[portfolio.Candidate]:
+        """MV/BGM rows → registration candidates; probe the public URL for missing length/size."""
+        cands = []
         for row in rows:
             if row.get("category") not in ("mv", "bgm"):
                 continue
-            if row["category"] == "mv":
-                items.append(archive_json.ArchiveItem.from_history(row, mv_n, self.config.archive_artist))
-                mv_n += 1
-            else:
-                items.append(archive_json.ArchiveItem.from_history(row, bgm_n, self.config.archive_artist))
-                bgm_n += 1
-        return items
+            c = portfolio.Candidate.from_history(row)
+            if c.kind == "work" and (c.duration is None or not c.width) and self.ffprobe:
+                try:
+                    info = media.probe(self.ffprobe, public_url(self.config.public_base_url, c.key))
+                    c.duration = round(info.duration, 2) if info.duration else None
+                    c.width, c.height = info.display_size
+                    c.thumb_time = portfolio.default_thumb_time(c.duration)
+                except media.FFmpegError as exc:
+                    log.warning("Could not probe %s: %s", c.key, exc)
+            cands.append(c)
+        return cands
 
     def _export(self, rows: list[dict]):
-        items = self._items_from_rows(rows)
-        if not items:
-            QMessageBox.information(self, "JSON 出力", "出力できる MV / BGM がありません（アップロード済みのものを選択してください）。")
+        QGuiApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            cands = self._candidates_from_rows(rows)
+        finally:
+            QGuiApplication.restoreOverrideCursor()
+        if not cands:
+            QMessageBox.information(self, "登録データ出力", "出力できる MV / BGM がありません（アップロード済みのものを選択してください）。")
             return
-        dlg = ExportDialog(self, items, self.config)
-        if dlg.exec():
-            self.config_store.save(self.config)
-            log.info("Infinite Archive JSON を出力しました: %s", dlg.output_path)
+        dlg = ExportDialog(self, cands, self.config, self.history, self.ffmpeg,
+                           lambda k: public_url(self.config.public_base_url, k))
+        dlg.exec()
+        self.config_store.save(self.config)
+        if dlg.output_path:
+            log.info("ポートフォリオ登録データを出力しました: %s", dlg.output_path)
 
     def export_session_json(self):
         jobs = [j for j in (self._selected_jobs() or self.manager.jobs) if j.state == JobState.DONE and j.history_id]
@@ -916,7 +925,7 @@ class MainWindow(QMainWindow):
         rows = [r for r in reversed(self.history.recent(self.config.bucket)) if r["id"] in ids]
         if not rows:
             self.tabs.setCurrentIndex(3)
-            QMessageBox.information(self, "JSON 出力", "このセッションでアップロードしたファイルがありません。［履歴］タブから選んで出力できます。")
+            QMessageBox.information(self, "ポートフォリオ登録", "このセッションでアップロードしたファイルがありません。［履歴］タブから選んで出力できます。")
             return
         self._export(rows)
 

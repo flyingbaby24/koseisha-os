@@ -1,0 +1,11 @@
+{
+  "categories": [
+    { "id": "music-videos", "enabled": true,  "schemaType": "VideoObject", "label": { "en": "Music Videos", "ja": "ミュージックビデオ" } },
+    { "id": "music", "enabled": false, "schemaType": "MusicRecording", "label": { "en": "Music", "ja": "音楽" } },
+    { "id": "games", "enabled": false, "schemaType": "VideoGame", "label": { "en": "Games", "ja": "ゲーム" } },
+    { "id": "applications", "enabled": false, "schemaType": "SoftwareApplication", "label": { "en": "Applications", "ja": "アプリケーション" } },
+    { "id": "research", "enabled": false, "schemaType": "ScholarlyArticle", "label": { "en": "Research", "ja": "研究" } },
+    { "id": "visual-arts", "enabled": false, "schemaType": "VisualArtwork", "label": { "en": "Visual Arts", "ja": "ビジュアルアート" } },
+    { "id": "product-development", "enabled": false, "schemaType": "Product", "label": { "en": "Product Development", "ja": "プロダクト開発" } }
+  ]
+}
