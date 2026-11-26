@@ -49,6 +49,7 @@ const tr = {
   ">About</a>":">概要</a>",
   ">Log</a>":">開発ログ</a>",
   ">Contact</a>":">連絡先</a>",
+  ">Store</a>":">ストア</a>",
   "aria-label=\"Language\"":"aria-label=\"言語\"",
   "<a href=\"index.html\" hreflang=\"en\" lang=\"en\" aria-current=\"page\">EN</a>":"<a href=\"index.html\" hreflang=\"en\" lang=\"en\">EN</a>",
   "<a href=\"index-ja.html\" hreflang=\"ja\" lang=\"ja\">日本語</a>\n        </nav>":"<a href=\"index-ja.html\" hreflang=\"ja\" lang=\"ja\" aria-current=\"page\">日本語</a>\n        </nav>",
@@ -127,8 +128,10 @@ const tr = {
   "Official game site":"ゲーム公式サイト",
   "A personal music library and playlist player for desktop, Android and iOS.":"デスクトップ、Android、iOSで使える個人用の音楽ライブラリ兼プレイリストプレーヤー。",
   "Launch JinnSP":"JinnSPを起動",
-  "An experimental product exploring the relationship between the body, the ground and movement.":"身体・地面・動きの関係を探る実験的なプロダクト。",
-  "Not yet public":"未公開",
+  "An experimental product exploring the relationship between the body, the ground and movement. Its first product, Jinn Sole, a 1.0 mm conductive TPU insole, is available from the Jinn Project Store.":"身体・地面・動きの関係を探る実験的なプロダクト。最初の製品である厚さ1.0mmの導電TPUインソール「Jinn Sole」を、Jinn Projectの公式ストアで取り扱っています。",
+  "<span class=\"status status-live\">Store</span>":"<span class=\"status status-live\">ストア</span>",
+  "Visit the store <span":"ストアを見る <span",
+  ">Jinn Project Store</a>":">Jinn Project 公式ストア</a>",
   "New to JinnSP? ":"JinnSPを初めて使う方へ：",
   "Read the JinnSP guide →":"JinnSPガイドを読む →",
 
@@ -219,6 +222,7 @@ const routes = [
   ['href="research/stratagems/?lang=en"', 'href="research/stratagems/?lang=ja"'],
   ['href="kunizukuri/index-en.html"', 'href="kunizukuri/"'],
   ['href="jinnsp/"', 'href="jinnsp/index-ja.html"'],
+  ['href="https://store.jinn-project.com/?lang=en"', 'href="https://store.jinn-project.com/?lang=ja"'],
 ];
 
 const escapeAttr = (s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
