@@ -153,7 +153,7 @@ const tr = {
   "Official game site":"ゲーム公式サイト",
   "A personal music library and playlist player for desktop, Android and iOS.":"デスクトップ、Android、iOSで使える個人用の音楽ライブラリ兼プレイリストプレーヤー。",
   "Launch JinnSP":"JinnSPを起動",
-  "An experimental product exploring the relationship between the body, the ground and movement. Its first product, Jinn Sole, a 1.0 mm conductive TPU insole, is available from the Jinn Project Store.":"身体・地面・動きの関係を探る実験的なプロダクト。最初の製品である厚さ1.0mmの導電TPUインソール「Jinn Sole」を、Jinn Projectの公式ストアで取り扱っています。",
+  "An experimental product exploring the relationship between the body, the ground and movement. Jinn Sole, a thin and flexible 1.0 mm insole made of carbon-filled conductive TPU (Shore A 80), is available from the Jinn Project Store.":"身体・地面・動きの関係を探る実験的なプロダクト。カーボン配合導電TPU（ショアA 80）でつくられた厚さ1.0mmの薄く柔軟なインソール「Jinn Sole」を、Jinn Projectの公式ストアで取り扱っています。",
   "<span class=\"status status-live\">Store</span>":"<span class=\"status status-live\">ストア</span>",
   "Visit the store <span":"ストアを見る <span",
   ">Jinn Project Store</a>":">Jinn Project 公式ストア</a>",
