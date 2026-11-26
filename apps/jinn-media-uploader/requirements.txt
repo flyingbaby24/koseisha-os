@@ -1,0 +1,4 @@
+# Runtime dependencies (Windows 10/11, Python 3.12).
+boto3>=1.36,<2
+keyring>=25,<26
+PySide6-Essentials==6.8.3

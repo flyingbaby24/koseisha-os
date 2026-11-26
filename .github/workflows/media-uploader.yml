@@ -1,0 +1,154 @@
+name: Jinn Media Uploader
+
+# Builds the Windows EXE, tests it, and (on request) verifies it against the real
+# Cloudflare R2 bucket. The live run only writes under _selftest/jmu-<run id>/,
+# checks every pre-existing object is unchanged, and deletes only its own test objects.
+on:
+  push:
+    paths:
+      - "apps/jinn-media-uploader/**"
+      - ".github/workflows/media-uploader.yml"
+  pull_request:
+    paths:
+      - "apps/jinn-media-uploader/**"
+      - ".github/workflows/media-uploader.yml"
+  workflow_dispatch:
+    inputs:
+      r2_live:
+        description: "Run the live Cloudflare R2 verification (needs R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY secrets)"
+        type: boolean
+        default: false
+      size_mib:
+        description: "Size of the live test upload in MiB"
+        default: "320"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: media-uploader-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    name: Build, test and verify (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: apps/jinn-media-uploader
+    env:
+      JINN_UPLOADER_HOME: ${{ runner.temp }}\jmu-home
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            apps/jinn-media-uploader/requirements.txt
+            apps/jinn-media-uploader/requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Download FFmpeg (Windows build)
+        run: |
+          $urls = @(
+            "https://github.com/GyanD/codexffmpeg/releases/download/7.1.1/ffmpeg-7.1.1-essentials_build.zip",
+            "https://github.com/GyanD/codexffmpeg/releases/download/7.1/ffmpeg-7.1-essentials_build.zip",
+            "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+          )
+          $ok = $false
+          foreach ($u in $urls) {
+            try { Invoke-WebRequest -Uri $u -OutFile ffmpeg.zip -UseBasicParsing; $ok = $true; Write-Host "Downloaded $u"; break }
+            catch { Write-Host "Failed: $u" }
+          }
+          if (-not $ok) { throw "FFmpeg download failed" }
+          Write-Host "SHA256 $((Get-FileHash ffmpeg.zip -Algorithm SHA256).Hash)"
+          Expand-Archive ffmpeg.zip -DestinationPath ffmpeg-src -Force
+          $exe = Get-ChildItem ffmpeg-src -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+          New-Item -ItemType Directory -Force ffmpeg | Out-Null
+          Copy-Item $exe.FullName ffmpeg\
+          Copy-Item (Join-Path $exe.DirectoryName "ffprobe.exe") ffmpeg\
+          $lic = Get-ChildItem ffmpeg-src -Recurse -Filter "LICENSE*" | Select-Object -First 1
+          if ($lic) { Copy-Item $lic.FullName ffmpeg\LICENSE.txt }
+          "$PWD\ffmpeg" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          & .\ffmpeg\ffmpeg.exe -hide_banner -version | Select-Object -First 1
+
+      - name: Unit and integration tests (incl. 330 MiB multipart upload to a local S3 server)
+        run: python -m pytest -q -p no:cacheprovider -m "large or not large"
+
+      - name: Build EXE (PyInstaller)
+        run: pyinstaller --noconfirm JinnMediaUploader.spec
+
+      - name: Assemble package
+        run: |
+          $pkg = "package\JinnMediaUploader"
+          New-Item -ItemType Directory -Force $pkg, reports | Out-Null
+          Copy-Item dist\JinnMediaUploader.exe $pkg\
+          Copy-Item ffmpeg $pkg\ffmpeg -Recurse
+          Copy-Item README.md $pkg\README.md
+          Get-ChildItem $pkg -Recurse | Select-Object FullName, Length | Format-Table -AutoSize
+
+      - name: Start local S3 test server
+        run: |
+          Start-Process -FilePath python -ArgumentList @("-m", "moto.server", "-H", "127.0.0.1", "-p", "5055") -WindowStyle Hidden
+          for ($i = 0; $i -lt 30; $i++) {
+            try { Invoke-WebRequest http://127.0.0.1:5055/moto-api/ -UseBasicParsing -TimeoutSec 2 | Out-Null; break } catch { Start-Sleep 1 }
+          }
+
+      - name: EXE self-test (Credential Manager, FFmpeg, 320 MiB multipart via the EXE)
+        run: |
+          $p = Start-Process -FilePath "package\JinnMediaUploader\JinnMediaUploader.exe" `
+            -ArgumentList @("--selftest", "--endpoint", "http://127.0.0.1:5055", "--report", "$PWD\reports\selftest.json") `
+            -Wait -PassThru
+          python scripts/print_report.py reports/selftest.json
+          if ($p.ExitCode -ne 0) { throw "self-test failed with exit code $($p.ExitCode)" }
+
+      - name: EXE GUI screenshot
+        continue-on-error: true
+        run: |
+          $p = Start-Process -FilePath "package\JinnMediaUploader\JinnMediaUploader.exe" `
+            -ArgumentList @("--screenshot", "$PWD\reports\screenshot-upload.png") -Wait -PassThru
+          $p = Start-Process -FilePath "package\JinnMediaUploader\JinnMediaUploader.exe" `
+            -ArgumentList @("--screenshot", "$PWD\reports\screenshot-usage.png", "--tab", "2") -Wait -PassThru
+          Get-ChildItem reports
+
+      - name: Live Cloudflare R2 verification
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.r2_live) || contains(github.event.head_commit.message, '[r2-live]') }}
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          SIZE_MIB: ${{ inputs.size_mib || '320' }}
+        run: |
+          if (-not $env:R2_ACCOUNT_ID -or -not $env:R2_ACCESS_KEY_ID -or -not $env:R2_SECRET_ACCESS_KEY) {
+            throw "Repository secrets R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY are not configured"
+          }
+          $p = Start-Process -FilePath "package\JinnMediaUploader\JinnMediaUploader.exe" `
+            -ArgumentList @("--r2-verify", "--store-env-credentials", "--forget-credentials", "--cleanup",
+                            "--size-mib", $env:SIZE_MIB, "--report", "$PWD\reports\r2-verify.json") `
+            -Wait -PassThru
+          python scripts/print_report.py reports/r2-verify.json
+          if ($p.ExitCode -ne 0) { throw "live R2 verification failed with exit code $($p.ExitCode)" }
+
+      - name: Upload EXE package
+        uses: actions/upload-artifact@v4
+        with:
+          name: JinnMediaUploader-win64
+          path: apps/jinn-media-uploader/package/
+          retention-days: 30
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-reports
+          path: apps/jinn-media-uploader/reports/
+          retention-days: 30
