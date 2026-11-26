@@ -75,7 +75,8 @@ test('top pages expose one h1, landmarks, labelled images and safe external link
 });
 
 test('Japanese top page carries no untranslated English sentences', () => {
-  const names = /\b(Jinn Project|Source of Thought|ThoughtMap|Stratagems Atlas|Grounding Sole|Mandalizm|JinnSP|Daidarabotchi|Thought|Body|Material|System|Cyber Shrine|Family|Card|Skill|Formation|Resonance|Hate System|Skill Generation|Web|Three\.js|OSS|PWA|Android|iOS|ORCID|GitHub|Patreon|Atlas|Issue|EN|English|AI|embedding)\b/g;
+  // Proper names stay in their original form; music video titles are names too.
+  const names = /\b(Guardians of the Original|Trace of Choices|Wrapped Too Beautifully|Meaning Hollow|Million consumer|Infinite Archive|Jinn Project|Source of Thought|ThoughtMap|Stratagems Atlas|Grounding Sole|Mandalizm|JinnSP|Daidarabotchi|Thought|Body|Material|System|Cyber Shrine|Family|Card|Skill|Formation|Resonance|Hate System|Skill Generation|Web|Three\.js|OSS|PWA|Android|iOS|ORCID|GitHub|Patreon|Atlas|Issue|EN|English|AI|embedding)\b/g;
   const leftovers = visibleText(read('index-ja.html'))
     .map(t => t.replace(names, ''))
     .filter(t => /[A-Za-z]{2,}(?:\s+[A-Za-z]{2,}){2,}/.test(t));

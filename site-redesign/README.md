@@ -24,13 +24,14 @@ landscape, Mandalizm's painted output) and its subject is structure
 | - | --- | --- | --- |
 | — | Hero (`#top`) | Who we are in one sentence, two CTAs, project field, "Now" strip of live releases | 5-slide auto carousel |
 | 01 | Flagship (`#source-of-thought`) | Source of Thought: capture, key facts, game-site CTA, gallery/roadmap/blog | Flagship + carousel slide 1 |
-| 02 | Work (`#projects`) | All 7 projects, uniform cards with status, filter (Games / Research / Apps & products) | "Five entry points" + orphan card |
-| 03 | Research (`#research`, `#publications`) | Corpus → ThoughtMap → expressions loop; ORCID/GitHub/ThoughtMap intro | Ecosystem + Research + Publications (3 sections) |
-| 04 | About (`#about`) | Four domains, three principles, verifiable figures | *(new)* + animated stats |
-| 05 | Log (`#development`) | Latest 4 dev articles, rendered in HTML | JS-injected list |
-| 06 | Contact (`#contact`) | Linktree, Patreon, GitHub | Footer-only links |
+| 02 | Infinite Archive (`#infinite-archive`) | The spatial museum of music videos (portfolio.jinn-project.com): real captures of the corridor and of a work being viewed, a reel of works floating at staggered heights, Enter Infinite Archive / library links (EN → `/`, JA → `/ja/`) | *(new, 2026-11)* |
+| 03 | Work (`#projects`) | All projects, uniform cards with status, filter (Games / Research / Apps & products / Art & media) | "Five entry points" + orphan card |
+| 04 | Research (`#research`, `#publications`) | Corpus → ThoughtMap → expressions loop; ORCID/GitHub/ThoughtMap intro | Ecosystem + Research + Publications (3 sections) |
+| 05 | About (`#about`) | Four domains, three principles, verifiable figures | *(new)* + animated stats |
+| 06 | Log (`#development`) | Latest 4 dev articles, rendered in HTML | JS-injected list |
+| 07 | Contact (`#contact`) | Linktree, Patreon, GitHub | Footer-only links |
 
-Navigation: 10 mixed items → 5 in-page items (Work, Research, About, Log, Contact)
+Navigation: 10 mixed items → 5 in-page items (Work, Research, About, Log, Contact) and, since 2026-11, Portfolio ↗ (the Infinite Archive)
 plus a language switch (EN / 日本語) that keeps the reader's `#section`.
 Every anchor that sub-pages link to (`#top`, `#projects`, `#research`,
 `#publications`, `#contact`) is kept and covered by a test.
