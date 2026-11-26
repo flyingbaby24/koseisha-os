@@ -122,6 +122,13 @@ jobs:
             -ArgumentList @("--screenshot", "$PWD\reports\screenshot-usage.png", "--tab", "2") -Wait -PassThru
           Get-ChildItem reports
 
+      - name: Upload EXE package
+        uses: actions/upload-artifact@v4
+        with:
+          name: JinnMediaUploader-win64
+          path: apps/jinn-media-uploader/package/
+          retention-days: 30
+
       - name: Live Cloudflare R2 verification
         if: ${{ (github.event_name == 'workflow_dispatch' && inputs.r2_live) || contains(github.event.head_commit.message, '[r2-live]') }}
         env:
@@ -139,13 +146,6 @@ jobs:
             -Wait -PassThru
           python scripts/print_report.py reports/r2-verify.json
           if ($p.ExitCode -ne 0) { throw "live R2 verification failed with exit code $($p.ExitCode)" }
-
-      - name: Upload EXE package
-        uses: actions/upload-artifact@v4
-        with:
-          name: JinnMediaUploader-win64
-          path: apps/jinn-media-uploader/package/
-          retention-days: 30
 
       - name: Upload reports
         if: always()
