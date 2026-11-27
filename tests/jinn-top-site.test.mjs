@@ -123,3 +123,30 @@ test('the top pages show the current ThoughtMap corpus figure in every place', (
     assert.equal(html.split('64,000').length - 1, 4, p);
   }
 });
+
+test('the Zero Flat Insole is the store product and stays apart from products in development', () => {
+  for (const [file, lang] of [['index.html', 'en'], ['index-ja.html', 'ja']]) {
+    const html = read(file);
+    const block = html.match(/<article class="store-product" id="zero-flat"[\s\S]*?<\/article>/)?.[0];
+    assert.ok(block, `${file}: store product block`);
+    assert.match(block, /data-store-product="https:\/\/store\.jinn-project\.com\/api\/products\/insole"/, `${file}: live price source`);
+    // Every store link names its language and carries the website UTM tags.
+    const links = [...html.matchAll(/href="(https:\/\/store\.jinn-project\.com[^"]*)"/g)].map(m => m[1].replace(/&amp;/g, '&'));
+    assert.ok(links.length >= 5, `${file}: store links`);
+    for (const link of links) {
+      const url = new URL(link);
+      assert.equal(url.searchParams.get('lang'), lang, `${file}: ${link}`);
+      assert.equal(url.searchParams.get('utm_source'), 'jinn-project', `${file}: ${link}`);
+      assert.equal(url.searchParams.get('utm_medium'), 'website', `${file}: ${link}`);
+      assert.ok(url.searchParams.get('utm_content'), `${file}: ${link}`);
+    }
+    assert.ok(links.some(l => l.includes('/products/insole?') && l.endsWith('#research')), `${file}: research link`);
+    // No price is written into the page; it comes from the store or is left to the store.
+    assert.doesNotMatch(block, /[¥￥]\s?\d/, `${file}: no hard-coded price`);
+    // Grounding Sole remains an in-development card with no store link.
+    const sole = html.match(/<article class="project-card project-sole" id="p-sole">[\s\S]*?<\/article>/)?.[0];
+    assert.ok(sole, `${file}: Grounding Sole card`);
+    assert.match(sole, /status-dev/, `${file}: Grounding Sole in development`);
+    assert.doesNotMatch(sole, /store\.jinn-project\.com/, `${file}: Grounding Sole is not sold`);
+  }
+});

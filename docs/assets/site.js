@@ -108,4 +108,35 @@
       reveal.observe(el);
     }
   }
+
+  // Jinn Project Store product: price, sizes and sales status are read live from the
+  // store, so this page never shows a price or "on sale" the store does not.
+  const product = document.querySelector('[data-store-product]');
+  if (product && 'fetch' in window) {
+    const label = (key) => product.dataset[key] || '';
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 8000);
+    fetch(product.dataset.storeProduct, { signal: controller.signal, credentials: 'omit' })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
+      .then((item) => {
+        const sizes = (item.sizes || []).filter((size) => size.active !== false);
+        const onSale = Boolean(item.buyable) && sizes.some((size) => size.inStock);
+        const soldOut = item.status === 'SOLD_OUT' || (Boolean(item.buyable) && !onSale);
+        const status = product.querySelector('[data-store-status]');
+        status.textContent = label(onSale ? 'labelOnsale' : soldOut ? 'labelSoldout' : 'labelSoon');
+        status.classList.toggle('status-live', onSale);
+        const price = product.querySelector('[data-store-price]');
+        if (item.displayPrice > 0) {
+          const currency = String(item.currency || 'jpy').toUpperCase();
+          price.textContent = new Intl.NumberFormat(root.lang === 'ja' ? 'ja-JP' : 'en-US', { style: 'currency', currency }).format(item.displayPrice) + ' ';
+          const tax = document.createElement('small');
+          tax.textContent = label('labelTax');
+          price.append(tax);
+        } else price.textContent = label('labelTba');
+        if (sizes.length) product.querySelector('[data-store-sizes]').textContent = sizes.map((size) => (size.label ? `${size.code} (${size.label})` : size.code)).join(' · ');
+        const buy = product.querySelector('[data-store-buy]');
+        buy.firstChild.textContent = label(onSale ? 'labelBuy' : 'labelView') + ' ';
+      })
+      .catch(() => {});
+  }
 })();

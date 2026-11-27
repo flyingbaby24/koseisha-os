@@ -271,6 +271,26 @@ a.project-card:hover .card-cta>span[aria-hidden]{transform:translateX(4px)}
 .work-more{margin-top:28px;color:var(--paper-2)}
 .work-more a{color:var(--signal);font-weight:600}
 .work-more a:hover{text-decoration:underline;text-underline-offset:4px}
+/* Jinn Project Store product: the one product on sale, kept apart from the project cards. */
+.store-product{margin-top:16px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:28px;padding:12px;border:1px solid var(--rule-strong);background:var(--ink-1)}
+.store-product-media{position:relative;display:block;min-height:260px;background:radial-gradient(circle at 50% 55%,rgba(111,220,140,.07),transparent 65%),var(--ink-2)}
+.store-product-media img{position:absolute;inset:20px;width:calc(100% - 40px);height:calc(100% - 40px);object-fit:contain}
+.store-product-body{display:flex;flex-direction:column;gap:14px;padding:14px 6px 10px}
+.store-product-body .card-meta{justify-content:flex-start;gap:16px;padding:0}
+.store-product-title{font:400 var(--display-3)/1.05 var(--serif)}
+.store-product-ja{display:block;margin-top:8px;font:500 .9375rem/1.4 var(--sans);color:var(--paper-2)}
+.store-product-text{color:var(--paper-2);max-width:58ch;text-wrap:pretty}
+.store-product-facts{display:flex;flex-wrap:wrap;gap:10px 40px}
+.store-product-facts dt{font:500 .6875rem/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--paper-3)}
+.store-product-facts dd{margin-top:6px;font:600 1.125rem/1.3 var(--sans);color:var(--paper)}
+.store-product-facts dd small{margin-left:6px;font:500 .75rem/1 var(--sans);color:var(--paper-3)}
+.store-product-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px 28px;margin-top:4px}
+.store-product-link{color:var(--signal);font-weight:600}
+.store-product-link:hover{text-decoration:underline;text-underline-offset:4px}
+.store-product-note{font-size:.8125rem;color:var(--paper-3)}
+.store-product-body .card-meta{flex-wrap:wrap}
+.store-product-body .card-meta>span:last-child{text-align:left}
+@media (max-width:699px){.store-product{grid-template-columns:minmax(0,1fr);gap:8px}.store-product-media{min-height:0;height:220px}.store-product-actions .btn{width:100%}}
 
 /* ---------- Research loop ---------- */
 .loop{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;counter-reset:step}
